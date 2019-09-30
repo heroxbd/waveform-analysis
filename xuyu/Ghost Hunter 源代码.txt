@@ -1,0 +1,91 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import h5py
+import copy
+import scipy
+from scipy import stats
+import time
+
+import torch
+from torch import nn, optim
+import torch.nn.functional as F
+from torch.utils.data import DataLoader, TensorDataset
+
+fr = h5py.File('../data/train_data_1.h5', 'r')
+data = fr['data']
+label = fr['label']
+x = torch.from_numpy(data[:].reshape(-1,1,1029)).float()
+y = torch.from_numpy(label[:]).float()
+fr.close()
+
+train_dataset = TensorDataset(x[:1200000], y[:1200000])
+valid_dataset = TensorDataset(x[1200000:], y[1200000:])
+
+train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
+valid_loader = DataLoader(valid_dataset, batch_size=64, shuffle=False)
+
+class MLP(nn.Module):
+    def __init__(self):
+        super(MLP, self).__init__()
+        self.conv = nn.Sequential(
+            nn.Conv1d(in_channels=1, out_channels=4, kernel_size=7, stride=1, padding=3), # batch, 4, 1029
+            nn.LeakyReLU(0.1),
+            nn.Conv1d(in_channels=4, out_channels=8, kernel_size=7, stride=1, padding=3), # batch, 8, 1029
+            nn.LeakyReLU(0.1),
+            nn.ConvTranspose1d(in_channels=8, out_channels=4, kernel_size=7, stride=1, padding=3), # batch, 8, 1029
+            nn.LeakyReLU(0.1),
+            nn.ConvTranspose1d(in_channels=4, out_channels=1, kernel_size=7, stride=1, padding=3), # batch, 4, 1029
+            nn.LeakyReLU(0.1)
+        )
+        
+    def forward(self, x):
+        x = self.conv(x)
+        x = x.view(x.size(0), -1)
+        return x
+
+model = MLP().cuda()
+optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+def my_loss(x,y):
+    dis = torch.pow((x-y), 2)
+    avg_dis = torch.sum(dis,dim=1).float()/torch.sum(y, dim=1).float()
+#     argx = torch.argsort(torch.round(x))
+#     argy = torch.argsort(y)
+#     argdis = torch.abs(argx-argy)
+#     avg_argdis = torch.sum(argdis,dim=1).float()/torch.sum(y, dim=1).float()
+    sum_dis = avg_dis
+    return torch.mean(sum_dis)
+
+model = model.train()
+best_loss = 1000.
+for epoch in range(50):
+    running_loss = 0.0
+    running_acc = 0.0
+    for i, (data, label) in enumerate(train_loader):
+        data = data.float().cuda()
+        label = label.cuda()
+        
+        out = model(data)
+        loss = my_loss(out, label)
+        running_loss += loss.data.item()*label.size(0)
+        
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        
+    model.eval()
+    valid_loss = 0.0
+    valid_acc = 0.0
+    for (data, label) in valid_loader:
+        data = data.float().cuda()
+        label = label.cuda()
+        out = model(data)
+        loss = my_loss(out, label)
+        valid_loss += loss.data.item() * label.size(0)
+    print('Finish {} epoch, Train Loss: {:.6f}, Valid Loss: {:.6f}'.format(epoch+1, running_loss/(len(train_dataset)), valid_loss/(len(valid_dataset))))
+    cur_loss = valid_loss / (len(valid_dataset))
+    if cur_loss < best_loss:
+        best_model = copy.deepcopy(model)
+        best_loss = cur_loss
+
+torch.save(best_model.state_dict(), 'model_conv1d_test_1.pt')
