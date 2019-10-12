@@ -1,0 +1,6 @@
+*.dat
+*.fits
+*.csv
+*.pyc
+.DS_Store
+__pycache__/
