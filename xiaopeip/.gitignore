@@ -1,0 +1,7 @@
+data/*.h5
+.vscode
+__pycache__
+*.png
+result/*.h5
+playg
+.vs
