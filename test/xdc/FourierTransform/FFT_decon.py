@@ -19,16 +19,27 @@ EXP = 4
 import numpy as np
 import h5py
 import time
-import standard
+# import standard
 import matplotlib.pyplot as plt
 from scipy.fftpack import fft,ifft
+import argparse
 
-fipt = "/home/xudacheng/Downloads/GHdataset/playground/playground-data.h5"
-fopt = "/home/xudacheng/Downloads/GHdataset/playground/first-submission-spe.h5"
+psr = argparse.ArgumentParser()
+psr.add_argument('-o', dest='opt', help='output')
+psr.add_argument('ipt', help='input')
+psr.add_argument('--ref')
+args = psr.parse_args()
+fipt = args.ipt
+fopt = args.opt
+single_pe_path = args.ref
+
+# fipt = "/home/xudacheng/Downloads/GHdataset/playground/playground-data.h5"
+# fopt = "/home/xudacheng/Downloads/GHdataset/playground/first-submission-spe.h5"
 
 def generate_eff_ft():
     opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint8), ('PETime', np.uint16), ('Weight', np.float16)])
-    model = generate_model(standard.single_pe_path) # extract the model
+    # model = generate_model(standard.single_pe_path) # extract the model
+    model = generate_model(single_pe_path) # extract the model
     
     model = np.where(model > AXE, model - AXE, 0) # cut off unnecessary part to reduce statistical fluctuation
     

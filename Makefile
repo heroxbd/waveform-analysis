@@ -1,5 +1,11 @@
+test/xdc/FourierTransform/submission_fft.h5: zincm-problem.h5 test/xdc/FourierTransform/single_pe.h5
+	python3 test/xdc/FourierTransform/FFT_decon.py $< --ref $(word 2,$^) -o $@
+
 test/xdc/FourierTransform/single_pe.h5: ztraining-0.h5
 	python3 test/xdc/FourierTransform/standard.py $^ -o $@
+
+zincm-problem.h5: %:
+	wget 'https://cloud.tsinghua.edu.cn/f/3babd73926ce47c8893a/?dl=1&first.h5' -O $@
 
 ztraining-0.h5: %:
 	wget 'https://cloud.tsinghua.edu.cn/f/0499334a4239427798c1/?dl=1&first.h5' -O $@
