@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 """
 Created on Sat Aug 24 19:51:47 2019
@@ -8,6 +8,7 @@ Created on Sat Aug 24 19:51:47 2019
 Generate standard response model of single pe's waveform
 """
 
+import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -57,7 +58,7 @@ def generate_standard(h5_path, single_pe_path):
                 # The 21th position is the spe incoming time
                 num = num + 1 # preparing for next record
             
-        print("\rProcess:|{}>{}|{:6.2f}%".format(int((20*i)/l)*'-', (19 - int((20*i)/l))*' ', 100 * ((i+1) / l)), end='') # show process bar
+        print("\rSingle PE Generating:|{}>{}|{:6.2f}%".format(int((20*i)/l)*'-', (19 - int((20*i)/l))*' ', 100 * ((i+1) / l)), end='') # show process bar
     print('\n')
     
     dt = dt[np.where(dt['EventID'] > 0)] # cut empty dt part
@@ -92,11 +93,12 @@ def generate_standard(h5_path, single_pe_path):
     with h5py.File(single_pe_path, "w") as spp:
         spp.create_dataset('Sketchy', data=dt, compression='gzip') # save the spe events
 
-def main():
-    start_t = time.time()
-    generate_standard(h5_path, single_pe_path) # generate response model
-    end_t = time.time()
-    print('The total time is {}'.format(end_t - start_t))
+def main(h5_path, single_pe_path):
+    # start_t = time.time()
+    if not os.path.exists(single_pe_path):
+        generate_standard(h5_path, single_pe_path) # generate response model
+    # end_t = time.time()
+    # print('The total time is {}'.format(end_t - start_t))
 
 if __name__ == '__main__':
-    main()
+    main(h5_path, single_pe_path)

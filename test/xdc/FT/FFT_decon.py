@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 """
 Created on Sun Aug 25 16:33:11 2019
@@ -36,7 +36,7 @@ single_pe_path = args.ref
 # fipt = "/home/xudacheng/Downloads/GHdataset/playground/playground-data.h5"
 # fopt = "/home/xudacheng/Downloads/GHdataset/playground/first-submission-spe.h5"
 
-def generate_eff_ft():
+def generate_eff_ft(fopt, fipt, single_pe_path):
     opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint8), ('PETime', np.uint16), ('Weight', np.float16)])
     # model = generate_model(standard.single_pe_path) # extract the model
     model = generate_model(single_pe_path) # extract the model
@@ -60,17 +60,19 @@ def generate_eff_ft():
         dt = np.zeros(l * Length_pe, dtype = opdt)
         start = 0
         end = 0
+        start_t = time.time()
         for i in range(l):
-            wf_input = ent[i]['Waveform']
-            wf_input = np.mean(wf_input[900:1000]) - wf_input # baseline reverse
-            wf_input = np.where(wf_input > 0, wf_input, 0) # cut off all negative values
-            wf_input = np.where(wf_input > AXE, wf_input - AXE, 0) # corresponding AXE cut
-            wf_k = fft(wf_input) # fft for waveform input
-            spec = np.divide(wf_k, model_k) # divide for deconvolution
-            pf = ifft(spec)
-            pf = pf.real
+            #wf_input = ent[i]['Waveform']
+            #wf_input = np.mean(wf_input[900:1000]) - wf_input # baseline reverse
+            #wf_input = np.where(wf_input > 0, wf_input, 0) # cut off all negative values
+            #wf_input = np.where(wf_input > AXE, wf_input - AXE, 0) # corresponding AXE cut
+            #wf_k = fft(wf_input) # fft for waveform input
+            #spec = np.divide(wf_k, model_k) # divide for deconvolution
+            #pf = ifft(spec)
+            #pf = pf.real
             
-            pf = np.where(pf > KNIFE, pf, 0) # cut off all small values
+            #pf = np.where(pf > KNIFE, pf, 0) # cut off all small values
+            pf = np.zeros(400)
             lenpf = np.size(np.where(pf > 0))
             if lenpf == 0:
                 pf[300] = 1 # when there is no prediction of single pe, assume the 301th is single pe
@@ -86,10 +88,13 @@ def generate_eff_ft():
             dt['ChannelID'][start:end] = ent[i]['ChannelID'] # integrated saving related information
             start = end
             
-            print("\rProcess:|{}>{}|{:6.2f}%".format(int((20*i)/l)*'-', (19 - int((20*i)/l))*' ', 100 * ((i+1) / l)), end='') # show process bar
+            print('\rAnsw Generating:|{}>{}|{:6.2f}%'.format(int((20*i)/l)*'-', (19 - int((20*i)/l))*' ', 100 * ((i+1) / l)), end='') # show process bar
+        end_t = time.time()
         print('\n')
         dt = dt[np.where(dt['Weight'] > 0)] # cut empty dt part
-        opt.create_dataset('Answer', data = dt, compression='gzip')
+        dset = opt.create_dataset('Answer', data = dt, compression='gzip')
+        dset.attrs['totalTime'] = end_t - start_t
+        dset.attrs['totalLength'] = l
         print('The output file path is {}'.format(fopt), end = ' ', flush=True)
 
 def generate_model(spe_path):
@@ -103,11 +108,11 @@ def generate_model(spe_path):
     speFile.close()
     return stdmodel
 
-def main():
-    start_t = time.time()
-    generate_eff_ft()
-    end_t = time.time()
-    print('The total time is {}'.format(end_t - start_t))
+def main(fopt, fipt, single_pe_path):
+    # start_t = time.time()
+    generate_eff_ft(fopt, fipt, single_pe_path)
+    # end_t = time.time()
+    # print('The total time is {}'.format(end_t - start_t))
 
 if __name__ == '__main__':
-    main()
+    main(fopt, fipt, single_pe_path)
