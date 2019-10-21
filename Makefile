@@ -1,6 +1,6 @@
 SHELL=bash
 
-range:=$(shell echo {0..0})
+range:=$(shell echo {0..9})
 xdcFTp=test/xdc/FT
 
 define recon-tpl
