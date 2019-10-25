@@ -62,17 +62,17 @@ def generate_eff_ft(fopt, fipt, single_pe_path):
         end = 0
         start_t = time.time()
         for i in range(l):
-            #wf_input = ent[i]['Waveform']
-            #wf_input = np.mean(wf_input[900:1000]) - wf_input # baseline reverse
-            #wf_input = np.where(wf_input > 0, wf_input, 0) # cut off all negative values
-            #wf_input = np.where(wf_input > AXE, wf_input - AXE, 0) # corresponding AXE cut
-            #wf_k = fft(wf_input) # fft for waveform input
-            #spec = np.divide(wf_k, model_k) # divide for deconvolution
-            #pf = ifft(spec)
-            #pf = pf.real
+            wf_input = ent[i]['Waveform']
+            wf_input = np.mean(wf_input[900:1000]) - wf_input # baseline reverse
+            wf_input = np.where(wf_input > 0, wf_input, 0) # cut off all negative values
+            wf_input = np.where(wf_input > AXE, wf_input - AXE, 0) # corresponding AXE cut
+            wf_k = fft(wf_input) # fft for waveform input
+            spec = np.divide(wf_k, model_k) # divide for deconvolution
+            pf = ifft(spec)
+            pf = pf.real
             
-            #pf = np.where(pf > KNIFE, pf, 0) # cut off all small values
-            pf = np.zeros(400)
+            pf = np.where(pf > KNIFE, pf, 0) # cut off all small values
+            #pf = np.zeros(400)
             lenpf = np.size(np.where(pf > 0))
             if lenpf == 0:
                 pf[300] = 1 # when there is no prediction of single pe, assume the 301th is single pe
@@ -88,9 +88,8 @@ def generate_eff_ft(fopt, fipt, single_pe_path):
             dt['ChannelID'][start:end] = ent[i]['ChannelID'] # integrated saving related information
             start = end
             
-            print('\rAnsw Generating:|{}>{}|{:6.2f}%'.format(int((20*i)/l)*'-', (19 - int((20*i)/l))*' ', 100 * ((i+1) / l)), end='') # show process bar
+            print('\rAnsw Generating:|{}>{}|{:6.2f}%'.format(((20*i)//l)*'-', (19-(20*i)//l)*' ', 100 * ((i+1) / l)), end='' if i != l-1 else '\n') # show process bar
         end_t = time.time()
-        print('\n')
         dt = dt[np.where(dt['Weight'] > 0)] # cut empty dt part
         dset = opt.create_dataset('Answer', data = dt, compression='gzip')
         dset.attrs['totalTime'] = end_t - start_t

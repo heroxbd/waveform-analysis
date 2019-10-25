@@ -58,8 +58,7 @@ def generate_standard(h5_path, single_pe_path):
                 # The 21th position is the spe incoming time
                 num = num + 1 # preparing for next record
             
-        print("\rSingle PE Generating:|{}>{}|{:6.2f}%".format(int((20*i)/l)*'-', (19 - int((20*i)/l))*' ', 100 * ((i+1) / l)), end='') # show process bar
-    print('\n')
+        print("\rSingle PE Generating:|{}>{}|{:6.2f}%".format(((20*i)//l)*'-', (19 - (20*i)//l)*' ', 100 * ((i+1) / l)), end=''if i != l-1 else '\n') # show process bar
     
     dt = dt[np.where(dt['EventID'] > 0)] # cut empty dt part
     print('There are {} spe in {} waveforms'.format(num, l)) # show the amount of spe in l events

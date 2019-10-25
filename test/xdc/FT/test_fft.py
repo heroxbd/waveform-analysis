@@ -26,7 +26,7 @@ def wpdistance(df_ans, df_sub):
     p = 0
     ejd = e_sub[p]
     # append an additional largest eid, so that the last event is also graded
-    for eid, i0, i in zip(e_ans, np.nditer(i_ans), it.chain(np.nditer(i_ans[1:]), [len(df_ans)])):
+    for eid, c, i0, i in zip(e_ans, range(gl), np.nditer(i_ans), it.chain(np.nditer(i_ans[1:]), [len(df_ans)])):
         while ejd < eid:
             p += 1
             ejd = e_sub[p]
@@ -40,6 +40,7 @@ def wpdistance(df_ans, df_sub):
                                                   df_sub[j0:j]['PETime'], v_weights=wl)
         Q = i-i0; q = np.sum(wl)
         pois += np.abs(Q - q) * scipy.stats.poisson.pmf(Q, Q)
+        print('\rGrading Process:|{}>{}|{:6.2f}%'.format(((20 * c)//gl)*'-', (19-(20*c)//gl)*' ', 100 * ((c+1)/gl)), end = '' if c != gl-1 else '\n')
 
     return dists/gl, pois/gl
 
@@ -61,5 +62,4 @@ if __name__ == '__main__':
     with open(args.rec, 'w+') as csvf:
         csvwr = csv.writer(csvf)
         csvwr.writerow([args.spe, args.ipt, str(totTime), str(totLen), str(wdist), str(pdist)])
- 
 
