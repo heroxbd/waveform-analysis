@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html>
+	<head>
+<meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="清华大学开源软件镜像站，致力于为国内和校内用户提供高质量的开源软件镜像、Linux镜像源服务，帮助用户更方便地获取开源软件。本镜像站由清华大学TUNA团队负责维护。">
+<meta name="keywords" content="镜像站,镜像源,Linux,软件源,开源">
+<meta name="author" content="TUNA">
+<link rel="shortcut icon" href="/static/img/favicon.png">
+<title>清华大学开源软件镜像站 | Tsinghua Open Source Mirror</title>
+<link rel="stylesheet" href="/static/css/bootstrap.css">
+<link rel="stylesheet" href="/static/css/bootstrap-select.min.css">
+<link rel="stylesheet" href="/static/css/font-awesome.min.css" >
+<link rel="stylesheet" href="/static/css/style.css">
+<link rel="stylesheet" href="/static/css/spinkit.css">
+<link rel="stylesheet" href="/static/css/thuhidden.css">
+<script src="/static/js/jquery.min.js"></script>
+<script src="/static/js/bootstrap.min.js"></script>
+<script src="/static/js/bootstrap-select.min.js"></script>
+<script src="/static/js/vue.min.js"></script>
+<script src="/static/js/markup.min.js"></script>
+<script src="/static/js/webfont.js"></script>
+<script src="/static/js/thuhidden.js"></script>
+</head>
+
+	<body>
+		<div class="navbar navbar-default" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="/"><span class="thuhidden"><img src="/static/img/logo-small.png" srcset="/static/img/logo-small.png 1x, /static/img/logo-small@2x.png 2x, /static/img/logo-small@3x.png 3x, /static/img/logo-small@4x.png 4x" alt=""/> 清华大学</span>开源软件镜像站</a>
+    </div>
+    <div class="navbar-collapse collapse navbar-right">
+      <ul class="nav navbar-nav">
+        <li><a href="https://tuna.moe/">HOME</a></li>
+        <li><a href="https://tuna.moe/events/">EVENTS</a></li>
+        <li><a href="https://tuna.moe/blog/">BLOG</a></li>
+        <li><a href="https://tuna.moe/feed.xml">RSS</a></li>
+	<li><a href="https://podcast.tuna.moe/">PODCAST</a></li>
+        <li class="active"><a href="http://mirrors.tuna.tsinghua.edu.cn/">MIRRORS</a></li>
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div>
+</div>
+
+	
+		<div id="mirrors">
+			<div class="spacing hidden-xs"></div>
+
+			<div class="container">
+				<div class="row">
+					
+					<div class="col-md-8 table-responsive" id="mirror-list">
+						<div class="row">
+						  <h3 id="mirror-title"><span class="fa fa-cube"></span> 镜像列表 </h3>
+						  <input type="search" v-model="filter" id="search" placeholder="搜索" autocomplete="off">
+						</div>
+						<table class="table" v-if="mirrorList.length">
+							<thead>
+								<tr class="row">
+									<th class="col-sm-8">Name</th>
+									<th class="col-sm-4">Last Update</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr v-for="mir in filteredMirrorList" :class="['row', 'status-'+mir.status]" :key="mir.name">
+									<template v-if="mir.is_master">
+									<td class="col-md-8">
+										<a class="mirror-item-label"  data-toggle="popover" data-trigger="hover" data-placement="right" 
+											:data-content="mir.description" :href="getURL(mir)">
+											{{mir.name}}
+											<span class="label label-new" v-if='mir.is_new'>new</span>
+											<a v-if='mir.help_url' :href="mir.help_url"><i class="fa fa-question-circle" title="Help"></i></a>
+										</a>
+									</td>
+									<td class="col-md-4">
+										{{mir.last_update}}<span v-if="mir.show_status" :class="['label', 'label-status', mir.label, 'hidden-xs']">{{mir.status}}</span>
+									</td>
+									</template>
+								</tr>
+							</tbody>
+						</table>
+						<div v-else class="sk-wave">
+							<div class="sk-rect sk-rect1"></div>
+							<div class="sk-rect sk-rect2"></div>
+							<div class="sk-rect sk-rect3"></div>
+							<div class="sk-rect sk-rect4"></div>
+							<div class="sk-rect sk-rect5"></div>
+						</div>
+					</div>
+					
+					<div class="col-md-4">
+						<div class="spacing hidden-xs"></div>
+						<div id="wizard">
+						</div>
+						<div id="news">
+							<h4><span class="fa fa-bullhorn"></span> 新闻公告 </h4>
+							<ul>
+								
+								<li><a href="/news/#release-logs"><strong>2019-07-26</strong> 本站访问日志现已公开发布</a></li>
+								
+								<li><a href="/news/#anaconda-restored"><strong>2019-07-21</strong> Anaconda 相关镜像已恢复</a></li>
+								
+								<li><a href="/news/#restore-anaconda"><strong>2019-06-15</strong> Anaconda 镜像即将恢复</a></li>
+								
+							</ul>
+							<div class="text-right"><a href="/news/"> more <span class="fa fa-angle-double-right"></span> </a></div>
+						</div>
+						<div class="thuhidden">
+							<h4> <span class="fa fa-link"></span> 域名选择 </h4>
+							<ul>
+								<li><a href="https://mirrors.tuna.tsinghua.edu.cn/">https://mirrors.tuna.tsinghua.edu.cn/</a> 自动选择 </li>
+								<li><a href="https://mirrors6.tuna.tsinghua.edu.cn/">https://mirrors6.tuna.tsinghua.edu.cn/</a> 只解析 IPv6</li>
+								<li><a href="https://mirrors4.tuna.tsinghua.edu.cn/">https://mirrors4.tuna.tsinghua.edu.cn/</a> 只解析 IPv4</li>
+							</ul>
+						</div>
+						<div id="download-link">
+							<h4><span class="fa fa-file-archive-o"></span> 下载链接 </h4>
+							<p>常用发行版 iso 和应用工具安装包直接下载</p>
+							<button type="button" class="btn btn-info" data-toggle="modal" data-target="#isoModal">
+								获取下载链接
+							</button>
+						</div>
+						<div class="thuhidden">
+							<h4> <span class="fa fa-envelope-o"></span> 联系我们 </h4>
+							<ul>
+								<li><strong>意见反馈</strong> <br /> <a href="https://github.com/tuna/issues">https://github.com/tuna/issues</a></li>
+								<li><strong>发送邮件</strong> <br /> <a id="eib1gieB"></a></li>
+								<li><strong>在线交流</strong> <br /> <a href="https://fishroom.tuna.moe/log/tuna/today"> #tuna at freenode </a></li>
+							</ul>
+						</div>
+						<div>
+							<h4> <span class="fa fa-external-link"></span> 相关链接 </h4>
+							<ul>
+								<li><a href="/help/">使用帮助</a></li>
+								<li><a href="/status/#server-status">服务器状态</a></li>
+								<li><a href="/status/#syncing-status">同步状态</a></li>
+								<li class="thuhidden"><a href="https://tuna.moe/">清华大学 TUNA 协会</a></li>
+								<li><a href="https://github.com/tuna/tunasync">镜像管理器源码</a></li>
+								<li><a href="https://github.com/tuna/tunasync-scripts">自定义镜像脚本</a></li>
+							</ul>
+						</div>
+					</div>
+				</div>
+			</div><!--/container -->
+		</div><!--/mirrors -->
+
+		
+<div id="footerwrap" class="tuna-foot-1">
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-4 col-md-4">
+        <p class="thuhidden">本站由清华大学信息化技术中心支持创办，由清华大学 TUNA 协会运行维护。</p>
+        <p class="thuhidden">清华大学 TUNA 协会，全名清华大学学生网络与开源软件协会，是由清华大学热爱网络技术和开源软件的极客组成的学生技术社团。</p>
+        <p>本站相关源码可在 <a href="https://github.com/tuna/tunasync"><em>这里(镜像管理器)</em></a> 和 <a href="https://github.com/tuna/mirror-web"><em>这里(镜像站网页)</em></a> 获取。</p>
+        <p class="thuhidden">根据相关法律法规，本站不对欧盟用户提供服务。</p>
+      </div>
+
+      <div class="col-lg-4 col-md-4">
+        <h4>Contact Us</h4>
+        <div class="thuhidden">
+          <ul class="social">
+            <li>
+            <a href="https://groups.google.com/forum/#!forum/tuna-general"><i class="fa fa-envelope"></i> Mailing List</a>
+            </li>
+            <li>
+            IRC: <a href="https://webchat.freenode.net/?channels=%23tuna">#tuna at freenode</a>
+            </li>
+            <li>
+            <a href="https://github.com/tuna/"><i class="fa fa-github"></i> GitHub </a>
+            </li>
+            <li>
+            <a href="http://weibo.com/u/5402274706"><i class="fa fa-weibo"></i> 新浪微博</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="col-lg-4 col-md-4"  align="center">
+        <img class="img-responsive thuhidden" style="margin-top:5%" src="/static/img/logo-white.png" srcset="/static/img/logo-white.png 1x, /static/img/logo-white@2x.png 2x, /static/img/logo-white@3x.png 3x, /static/img/logo-white@4x.png 4x" />
+      </div>
+    </div><!--/row -->
+  </div><!--/container -->
+</div><!--/footerwrap -->
+
+<div id="footerwrap" class="tuna-foot-2">
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-4 col-md-4">
+        <p class="thuhidden">本站由清华大学信息化技术中心支持创办，由清华大学 TUNA 协会运行维护。</p>
+        <p class="thuhidden">清华大学 TUNA 协会，全名清华大学学生网络与开源软件协会，是由清华大学热爱网络技术和开源软件的极客组成的学生技术社团。</p>
+        <p>本站相关源码可在 <a href="https://github.com/tuna/tunasync"><em>这里(镜像管理器)</em></a> 和 <a href="https://github.com/tuna/mirror-web"><em>这里(镜像站网页)</em></a> 获取。</p>
+        <p class="thuhidden">根据相关法律法规，本站不对欧盟用户提供服务。</p>
+      </div>
+
+      <div class="col-lg-4 col-md-4">
+        <h4>Contact Us</h4>
+        <div class="thuhidden">
+          <ul class="social">
+            <li>
+            <a href="https://groups.google.com/forum/#!forum/tuna-general"><i class="fa fa-envelope"></i> Mailing List</a>
+            </li>
+            <li>
+            IRC: <a href="https://webchat.freenode.net/?channels=%23tuna">#tuna at freenode</a>
+            </li>
+            <li>
+            <a href="https://github.com/tuna/"><i class="fa fa-github"></i> GitHub </a>
+            </li>
+            <li>
+            <a href="http://weibo.com/u/5402274706"><i class="fa fa-weibo"></i> 新浪微博</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="col-lg-4 col-md-4"  align="center">
+        <img class="img-responsive thuhidden" style="margin-top:5%" src="/static/img/logo-white.png" srcset="/static/img/logo-white.png 1x, /static/img/logo-white@2x.png 2x, /static/img/logo-white@3x.png 3x, /static/img/logo-white@4x.png 4x" />
+      </div>
+    </div><!--/row -->
+  </div><!--/container -->
+</div><!--/footerwrap -->
+
+
+<script>
+WebFont.load({
+	custom: {
+		families: ['Lato']
+	}
+});
+</script>
+
+		<!-- iso download wizard modal -->
+		<!-- Modal -->
+		
+		<div class="modal fade" id="isoModal" tabindex="-1" role="dialog" aria-labelledby="isoModalLabel" aria-hidden="true">
+		  <div class="modal-dialog modal-lg" role="document">
+		    <div class="modal-content">
+		      <div class="modal-header">
+		        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+		          <span aria-hidden="true">&times;</span>
+		        </button>
+		        <h4 class="modal-title" id="isoModalLabel">获取安装镜像</h4>
+		      </div>
+		      <div class="modal-body">
+					<div class="row">
+						<div class="col-md-12">
+							<ul class="nav nav-tabs">
+								<li role="presentation" :class="[curCategory === 'os' ? 'active' : '']" @click="switchCategory('os')"><a href="#">操作系统</a></li>
+								<li role="presentation" :class="[curCategory === 'app' ? 'active' : '']" @click="switchCategory('app')"><a href="#">应用软件</a></li>
+							</ul>
+						</div>
+						<div class="col-md-3">
+							<ul class="nav nav-pills nav-stacked">
+								<li v-for="distro in curDistroList" :class="[selected.distro == distro.distro ? 'active' : '']">
+									<a href="#" @click="switchDistro(distro)">{{ distro.distro }}</a>
+								</li>
+							</ul>
+						</div>
+						<div class="col-md-9">
+							<h3>{{selected.distro}}</h3>
+							<ul>
+								<template v-for="url in selected.urls">
+								<li><a :href="url.url">{{url.name}}</a></li>
+								</template>
+							</ul>
+						</div>
+					</div>
+
+		      </div>
+		    </div>
+		  </div>
+		</div><!-- /iso download wizard modal -->
+		
+
+	</body>
+	
+	
+	<script src="/static/js/index.js"></script>
+	<script src="/static/js/browser-update.js"></script>
+</html>
+<!--
+	vim: ts=2 sts=2 sw=2 noexpandtab
+-->
