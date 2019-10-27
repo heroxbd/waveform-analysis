@@ -50,7 +50,6 @@ if __name__ == '__main__':
     psr.add_argument('-r', dest='ref', help='reference')
     psr.add_argument('ipt', help="input to be graded")
     psr.add_argument('-rec', help='csv record of w&p-dist')
-    psr.add_argument('-spe', help='Single pe used to deconvolution')
     args = psr.parse_args()
 
     with h5py.File(args.ref) as ref, h5py.File(args.ipt) as ipt:
@@ -58,8 +57,9 @@ if __name__ == '__main__':
         df_sub = ipt['Answer'][...]
         totTime = ipt['Answer'].attrs['totalTime']
         totLen = ipt['Answer'].attrs['totalLength']
+		spePath = ipt['Answer'].attrs['totalLength']
     wdist, pdist = wpdistance(df_ans, df_sub)
     with open(args.rec, 'w+') as csvf:
         csvwr = csv.writer(csvf)
-        csvwr.writerow([args.spe, args.ipt, str(totTime), str(totLen), str(wdist), str(pdist)])
+        csvwr.writerow([str(spePath), args.ipt, str(totTime), str(totLen), str(wdist), str(pdist)])
 

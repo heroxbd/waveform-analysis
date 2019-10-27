@@ -6,8 +6,8 @@ xdcFTp=test/xdc/FT
 define recon-tpl
 $(xdcFTp)/spe$(1)/record.csv: $(range:%=$(xdcFTp)/spe$(1)/record-%.csv)
 	cat $$^ > $$@
-$(xdcFTp)/spe$(1)/record-%.csv: ztraining-%.h5 $(xdcFTp)/spe$(1)/submission-%.h5 $(xdcFTp)/spe$(1)/single_pe.h5
-	python3 $(xdcFTp)/test_fft.py $$(word 2,$$^) -r $$< -spe $$(word 3,$$^) -rec $$@
+$(xdcFTp)/spe$(1)/record-%.csv: ztraining-%.h5 $(xdcFTp)/spe$(1)/submission-%.h5
+	python3 $(xdcFTp)/test_fft.py $$(word 2,$$^) -r $$< -rec $$@
 $(xdcFTp)/spe$(1)/submission-%.h5 : ztraining-%.h5 $(xdcFTp)/spe$(1)/single_pe.h5
 	python3 $(xdcFTp)/FFT_decon.py $$< --ref $$(word 2,$$^) -o $$@
 $(xdcFTp)/spe$(1)/single_pe.h5: ztraining-$(1).h5
