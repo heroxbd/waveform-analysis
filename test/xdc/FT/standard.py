@@ -36,7 +36,7 @@ def generate_standard(h5_path, single_pe_path):
     l = min(len(wf), 10000) # limit l to below 5, l is the amount of event
     wf = wf[0 : l]
     answ = answ[0 : 20*l] # assume 1 waveform has less than 20 answers
-    dt = np.zeros(int(l/10), dtype = npdt) # assume 10 Events has less than 1 single pe event among them
+    dt = np.zeros(l//10, dtype = npdt) # assume 10 Events has less than 1 single pe event among them
     num = 0
     
     for i in range(l):
@@ -60,6 +60,7 @@ def generate_standard(h5_path, single_pe_path):
             
         print("\rSingle PE Generating:|{}>{}|{:6.2f}%".format(((20*i)//l)*'-', (19 - (20*i)//l)*' ', 100 * ((i+1) / l)), end=''if i != l-1 else '\n') # show process bar
     
+    ztrfile.close()
     dt = dt[np.where(dt['EventID'] > 0)] # cut empty dt part
     print('There are {} spe in {} waveforms'.format(num, l)) # show the amount of spe in l events
     '''

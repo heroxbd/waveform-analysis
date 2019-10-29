@@ -3,5 +3,6 @@
 *.csv
 *.pyc
 *.h5
+*.png
 .DS_Store
 __pycache__/

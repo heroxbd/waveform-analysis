@@ -94,6 +94,7 @@ def generate_eff_ft(fopt, fipt, single_pe_path):
         dset = opt.create_dataset('Answer', data = dt, compression='gzip')
         dset.attrs['totalTime'] = end_t - start_t
         dset.attrs['totalLength'] = l
+        dset.attrs['spePath'] = single_pe_path
         print('The output file path is {}'.format(fopt), end = ' ', flush=True)
 
 def generate_model(spe_path):

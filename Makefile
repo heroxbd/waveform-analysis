@@ -1,13 +1,18 @@
 SHELL=bash
-
-range:=$(shell echo {0..9})
+range:=$(shell echo {0..0})
 xdcFTp=test/xdc/FT
+
+.PHONY:all
+
+all: $(xdcFTp)/spe0/submission-0.h5
 
 define recon-tpl
 $(xdcFTp)/spe$(1)/record.csv: $(range:%=$(xdcFTp)/spe$(1)/record-%.csv)
 	cat $$^ > $$@
-$(xdcFTp)/spe$(1)/record-%.csv: ztraining-%.h5 $(xdcFTp)/spe$(1)/submission-%.h5
-	python3 $(xdcFTp)/test_fft.py $$(word 2,$$^) -r $$< -rec $$@
+$(xdcFTp)/spe$(1)/record-%.csv: $(xdcFTp)/spe$(1)/distrecord-%.h5
+	python3 $(xdcFTp)/
+$(xdcFTp)/spe$(1)/distrecord-%.h5: ztraining-%.h5 $(xdcFTp)/spe$(1)/submission-%.h5
+	python3 $(xdcFTp)/test_fft.py $$(word 2,$$^) -r $$< -o $$@
 $(xdcFTp)/spe$(1)/submission-%.h5 : ztraining-%.h5 $(xdcFTp)/spe$(1)/single_pe.h5
 	python3 $(xdcFTp)/FFT_decon.py $$< --ref $$(word 2,$$^) -o $$@
 $(xdcFTp)/spe$(1)/single_pe.h5: ztraining-$(1).h5
@@ -15,8 +20,8 @@ $(xdcFTp)/spe$(1)/single_pe.h5: ztraining-$(1).h5
 	python3 $(xdcFTp)/standard.py $$^ -o $$@
 endef
 
-$(xdcFTp)/record.csv: $(range:%=$(xdcFTp)/spe%/record.csv)
-	cat $^ > $@
+#$(xdcFTp)/record.csv: $(range:%=$(xdcFTp)/spe%/record.csv)
+#	cat $^ > $@
 
 $(foreach i,$(range),$(eval $(call recon-tpl,$(i))))
 
