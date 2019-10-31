@@ -53,7 +53,7 @@ def generate_eff_ft(fopt, fipt, single_pe_path):
     
     model_k = fft(model_raw)
     
-    with h5py.File(fipt, 'r') as ipt, h5py.File(fopt, "w") as opt:
+    with h5py.File(fipt, 'r') as ipt, h5py.File(fopt, 'w') as opt:
         ent = ipt['Waveform']
         l = len(ent)
         print('{} waveforms will be computed'.format(l))

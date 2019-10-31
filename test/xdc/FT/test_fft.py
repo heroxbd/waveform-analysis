@@ -16,7 +16,7 @@ def wpdistance(df_ans, df_sub):
     e_ans, i_ans = np.unique(e_ans, return_index=True)
     gl = len(e_ans)
 
-    opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint8), ('wdist', np.float16), ('pdist', np.float16)])
+    opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint8), ('wdist', np.float32), ('pdist', np.float32)])
     dt = np.zeros(gl, dtype=opdt)
 
     e_sub = df_sub['EventID']*30 + df_sub['ChannelID']
@@ -52,7 +52,7 @@ def wpdistance(df_ans, df_sub):
 if __name__ == '__main__':
     import argparse
     psr = argparse.ArgumentParser()
-    psr.add_argument('-r', dest='ref', help='reference')
+    psr.add_argument('--ref', dest='ref', help='reference')
     psr.add_argument('ipt', help="input to be graded")
     psr.add_argument('-o', dest='opt', help='output')
     args = psr.parse_args()
@@ -64,9 +64,9 @@ if __name__ == '__main__':
         totLen = ipt['Answer'].attrs['totalLength']
         spePath = ipt['Answer'].attrs['spePath']
     dt = wpdistance(df_ans, df_sub)
-    wd = dt['wdist'].average()
-    pd = dt['pdist'].average()
-    with h5py.File(args.opt, "w") as h5f:
+    # wd = dt['wdist'].average()
+    # pd = dt['pdist'].average()
+    with h5py.File(args.opt, 'w') as h5f:
         dset = h5f.create_dataset('Record', data=dt, compression='gzip')
         dset.attrs['totalTime'] = totTime
         dset.attrs['totalLength'] = totLen
