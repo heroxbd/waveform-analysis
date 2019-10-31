@@ -11,7 +11,7 @@ $(xdcFTp)/spe$(1)/record.csv: $(range:%=$(xdcFTp)/spe$(1)/record-%.csv)
 $(xdcFTp)/spe$(1)/record-%.csv: $(xdcFTp)/spe$(1)/distrecord-%.h5
 	python3 $(xdcFTp)/record_dist.py $$^ -o $$@
 $(xdcFTp)/distpic$(1).zip: $(range:%=$(xdcFTp)/distpic$(1)/distpic-$(1)-%.png)
-	zip -r $$@ $$(dir $$<)
+	zip -j $$@ $$^
 $(xdcFTp)/distpic$(1)/distpic-$(1)-%.png: $(xdcFTp)/spe$(1)/distrecord-%.h5
 	mkdir -p $$(dir $$@)
 	python3 $(xdcFTp)/draw_dist.py $$^ -o $$@
@@ -28,7 +28,7 @@ $(xdcFTp)/record.csv: $(range:%=$(xdcFTp)/spe%/record.csv)
 	cat $^ > $@
 
 $(xdcFTp)/distpic.zip: $(range:%=$(xdcFTp)/distpic%.zip)
-	zip -r $@ $^
+	zip -j $@ $^
 
 $(foreach i,$(range),$(eval $(call recon-tpl,$(i))))
 

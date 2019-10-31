@@ -4,5 +4,6 @@
 *.pyc
 *.h5
 *.png
+*.zip
 .DS_Store
 __pycache__/
