@@ -17,6 +17,6 @@ if __name__ == '__main__':
         totLen = dt.attrs['totalLength']
         wd = dt['wdist'].mean()
         pd = dt['pdist'].mean()
-    with open(args.ipt, 'w+') as csvf:
+    with open(args.opt, 'w+') as csvf:
         csvwr = csv.writer(csvf)
         csvwr.writerow([spePath, args.ipt, str(totTime), str(totLen), str(wd), str(pd)])
