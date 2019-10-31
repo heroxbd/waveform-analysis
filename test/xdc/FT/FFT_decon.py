@@ -53,7 +53,7 @@ def generate_eff_ft(fopt, fipt, single_pe_path):
     
     model_k = fft(model_raw)
     
-    with h5py.File(fipt, 'r') as ipt, h5py.File(fopt, 'w') as opt:
+    with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt, h5py.File(fopt, 'w') as opt:
         ent = ipt['Waveform']
         l = len(ent)
         print('{} waveforms will be computed'.format(l))
@@ -98,7 +98,7 @@ def generate_eff_ft(fopt, fipt, single_pe_path):
         print('The output file path is {}'.format(fopt), end = ' ', flush=True)
 
 def generate_model(spe_path):
-    speFile = h5py.File(spe_path, 'r')
+    speFile = h5py.File(spe_path, 'r', libver='latest', swmr=True)
     spemean = np.mean(speFile['Sketchy']['speWf'], axis = 0)
     base_vol = np.mean(spemean[70:120])
     stdmodel = base_vol - spemean[20:120] # stdmodel[0] is the single pe's incoming time & baseline inverse

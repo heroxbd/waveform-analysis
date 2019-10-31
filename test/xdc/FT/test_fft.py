@@ -57,7 +57,7 @@ if __name__ == '__main__':
     psr.add_argument('-o', dest='opt', help='output')
     args = psr.parse_args()
 
-    with h5py.File(args.ref) as ref, h5py.File(args.ipt) as ipt:
+    with h5py.File(args.ref, 'r', libver='latest', swmr=True) as ref, h5py.File(args.ipt, 'r', libver='latest', swmr=True) as ipt:
         df_ans = ref['GroundTruth'][...]
         df_sub = ipt['Answer'][...]
         totTime = ipt['Answer'].attrs['totalTime']

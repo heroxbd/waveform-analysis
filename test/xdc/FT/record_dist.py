@@ -9,7 +9,7 @@ psr.add_argument('ipt', help='input')
 args = psr.parse_args()
 
 if __name__ == '__main__':
-    with h5py.File(args.ipt, 'r') as distfile:
+    with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as distfile:
         dt = distfile['Record']
         l = len(dt)
         spePath = dt.attrs['spePath']
