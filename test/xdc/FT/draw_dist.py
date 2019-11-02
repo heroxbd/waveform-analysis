@@ -28,7 +28,7 @@ if __name__ == '__main__':
         plt.hist(dt['pdist'], bins=100, density=1)
         plt.title(r'P-dist histogram')
         plt.subplot(122)
-        plt.hist2d(dt['wdist'], dt['pdist'], bins=(100, 100), density=1)
+        plt.hist2d(dt['wdist'], dt['pdist'], bins=(100, 100))
         plt.xlabel('W-dist')
         plt.ylabel('P-dist')
         plt.title(r'W&P-dist histogram')

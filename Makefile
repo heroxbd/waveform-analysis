@@ -1,5 +1,5 @@
 SHELL=bash
-range:=$(shell echo {0..1})
+range:=$(shell echo {0..9})
 xdcFTp=test/xdc/FT
 
 .PHONY:all
