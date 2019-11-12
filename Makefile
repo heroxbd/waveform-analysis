@@ -5,32 +5,27 @@ xdcFTp=test/xdc/FT
 .PHONY:all
 all: $(xdcFTp)/distpic.zip $(xdcFTp)/record.csv
 
-define recon-tpl
-$(xdcFTp)/spe$(1)/record.csv: $(range:%=$(xdcFTp)/spe$(1)/record-%.csv)
-	cat $$^ > $$@
-$(xdcFTp)/spe$(1)/record-%.csv: $(xdcFTp)/spe$(1)/distrecord-%.h5
-	python3 $(xdcFTp)/record_dist.py $$^ -o $$@
-$(xdcFTp)/distpic$(1).zip: $(range:%=$(xdcFTp)/distpic$(1)/distpic-$(1)-%.png)
-	zip -j $$@ $$^
-$(xdcFTp)/distpic$(1)/distpic-$(1)-%.png: $(xdcFTp)/spe$(1)/distrecord-%.h5
-	mkdir -p $$(dir $$@)
-	python3 $(xdcFTp)/draw_dist.py $$^ -o $$@
-$(xdcFTp)/spe$(1)/distrecord-%.h5: ztraining-%.h5 $(xdcFTp)/spe$(1)/submission-%.h5
-	python3 $(xdcFTp)/test_fft.py $$(word 2,$$^) --ref $$< -o $$@
-$(xdcFTp)/spe$(1)/submission-%.h5 : ztraining-%.h5 $(xdcFTp)/spe$(1)/single_pe.h5
-	python3 $(xdcFTp)/FFT_decon.py $$< --ref $$(word 2,$$^) -o $$@
-$(xdcFTp)/spe$(1)/single_pe.h5: ztraining-$(1).h5
-	mkdir -p $$(dir $$@)
-	python3 $(xdcFTp)/standard.py $$^ -o $$@
-endef
-
-$(xdcFTp)/record.csv: $(range:%=$(xdcFTp)/spe%/record.csv)
+$(xdcFTp)/record.csv: $(range:%=$(xdcFTp)/record-%.csv)
 	cat $^ > $@
 
-$(xdcFTp)/distpic.zip: $(range:%=$(xdcFTp)/distpic%.zip)
+$(xdcFTp)/record-%.csv: $(xdcFTp)/distrecord-%.h5
+	python3 $(xdcFTp)/record_dist.py $^ -o $@
+
+$(xdcFTp)/distpic.zip: $(range:%=$(xdcFTp)/distpic/distpic-%.png)
 	zip -j $@ $^
 
-$(foreach i,$(range),$(eval $(call recon-tpl,$(i))))
+$(xdcFTp)/distpic/distpic-%.png: $(xdcFTp)/distrecord-%.h5
+	mkdir -p $(dir $@)
+	python3 $(xdcFTp)/draw_dist.py $^ -o $@
+
+$(xdcFTp)/distrecord-%.h5: ztraining-%.h5 $(xdcFTp)/submission-%.h5
+	python3 $(xdcFTp)/test_fft.py $(word 2,$^) --ref $< -o $@
+
+$(xdcFTp)/submission-%.h5 : ztraining-%.h5 $(xdcFTp)/single_pe.h5
+	python3 $(xdcFTp)/FFT_decon.py $< --ref $(word 2,$^) -o $@
+
+$(xdcFTp)/single_pe.h5: $(range:%=ztraining-%.h5)
+	python3 $(xdcFTp)/standard.py $^ -o $@
 
 #zincm-problem.h5: %:
 #	wget 'https://cloud.tsinghua.edu.cn/f/3babd73926ce47c8893a/?dl=1&first.h5' -O $@
