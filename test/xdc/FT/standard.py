@@ -36,7 +36,7 @@ def generate_standard(h5_path, single_pe_path):
         with h5py.File(h5_path[i], 'r', libver='latest', swmr=True) as ztrfile:
         
             wf = ztrfile['Waveform'] # read waveform only
-            answ = pd.read_hdf(h5_path, "GroundTruth") # read h5 file answer
+            answ = pd.read_hdf(h5_path[i], "GroundTruth") # read h5 file answer
             l = len(wf)
             l_s = l_s + l
             
