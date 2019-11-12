@@ -27,7 +27,7 @@ def generate_standard(h5_path, single_pe_path):
     npdt = np.dtype([('TrainSet', np.uint8), ('EventID', np.uint32), ('ChannelID', np.uint8), ('Waveform', np.uint16, 1029), ('speWf', np.uint16, 120)]) # set datatype
     
     zf0 = h5py.File(h5_path[0])
-    dt = np.zeros(len(zf0['Waveform'])*10//15, dtype=npdt)
+    dt = np.zeros(min(len(zf0['Waveform']), 10000)*10//15, dtype=npdt) # assume ratio of single pe is less than 1/15
     zf0.close()
     num = 0
     l_s = 0
@@ -37,13 +37,13 @@ def generate_standard(h5_path, single_pe_path):
         
             wf = ztrfile['Waveform'] # read waveform only
             answ = pd.read_hdf(h5_path[i], "GroundTruth") # read h5 file answer
-            l = len(wf)
+            l = min(len(wf), 10000)
             l_s = l_s + l
             
             for j in range(l):
                 eid = wf[j]['EventID']
                 ch = wf[j]['ChannelID'] # in some Event, the amount of Channel < 30
-                pe = answ.query("EventID=={} & ChannelID=={}".format(eid, ch))
+                pe = answ.query('EventID=={} & ChannelID=={}'.format(eid, ch))
                 pet = pe['PETime'].values # fetch corresponding PETime to the specific EventID & ChannelID
                 unipe, c = np.unique(pet, return_counts=True)
                 
