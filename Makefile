@@ -5,23 +5,26 @@ xdcFTp=test/xdc/FT
 .PHONY:all
 all: $(xdcFTp)/distpic.zip $(xdcFTp)/record.csv
 
-$(xdcFTp)/record.csv: $(range:%=$(xdcFTp)/record-%.csv)
+$(xdcFTp)/record.csv: $(range:%=$(xdcFTp)/record/record-%.csv)
 	cat $^ > $@
 
-$(xdcFTp)/record-%.csv: $(xdcFTp)/distrecord-%.h5
+$(xdcFTp)/record/record-%.csv: $(xdcFTp)/distrecord/distrecord-%.h5
+	mkdir -p $(dir $@)
 	python3 $(xdcFTp)/record_dist.py $^ -o $@
 
 $(xdcFTp)/distpic.zip: $(range:%=$(xdcFTp)/distpic/distpic-%.png)
 	zip -j $@ $^
 
-$(xdcFTp)/distpic/distpic-%.png: $(xdcFTp)/distrecord-%.h5
+$(xdcFTp)/distpic/distpic-%.png: $(xdcFTp)/distrecord/distrecord-%.h5
 	mkdir -p $(dir $@)
 	python3 $(xdcFTp)/draw_dist.py $^ -o $@
 
-$(xdcFTp)/distrecord-%.h5: ztraining-%.h5 $(xdcFTp)/submission-%.h5
+$(xdcFTp)/distrecord/distrecord-%.h5: ztraining-%.h5 $(xdcFTp)/submission/submission-%.h5
+	mkdir -p $(dir $@)
 	python3 $(xdcFTp)/test_fft.py $(word 2,$^) --ref $< -o $@
 
-$(xdcFTp)/submission-%.h5 : ztraining-%.h5 $(xdcFTp)/single_pe.h5
+$(xdcFTp)/submission/submission-%.h5 : ztraining-%.h5 $(xdcFTp)/single_pe.h5
+	mkdir -p $(dir $@)
 	python3 $(xdcFTp)/FFT_decon.py $< --ref $(word 2,$^) -o $@
 
 $(xdcFTp)/single_pe.h5: $(range:%=ztraining-%.h5)
