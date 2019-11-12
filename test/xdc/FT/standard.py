@@ -23,11 +23,13 @@ args = psr.parse_args()
 h5_path = args.ipt
 single_pe_path = args.opt
 
+N = 10000
+
 def generate_standard(h5_path, single_pe_path):
     npdt = np.dtype([('TrainSet', np.uint8), ('EventID', np.uint32), ('ChannelID', np.uint8), ('Waveform', np.uint16, 1029), ('speWf', np.uint16, 120)]) # set datatype
     
     zf0 = h5py.File(h5_path[0])
-    dt = np.zeros(min(len(zf0['Waveform']), 10000)*10//15, dtype=npdt) # assume ratio of single pe is less than 1/15
+    dt = np.zeros(min(len(zf0['Waveform']), N)*10//15, dtype=npdt) # assume ratio of single pe is less than 1/15
     zf0.close()
     num = 0
     l_s = 0
@@ -37,7 +39,7 @@ def generate_standard(h5_path, single_pe_path):
         
             wf = ztrfile['Waveform'] # read waveform only
             answ = pd.read_hdf(h5_path[i], "GroundTruth") # read h5 file answer
-            l = min(len(wf), 10000)
+            l = min(len(wf), N)
             l_s = l_s + l
             
             for j in range(l):
