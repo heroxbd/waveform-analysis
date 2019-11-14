@@ -40,7 +40,7 @@ if __name__ == '__main__':
         plt.title(r'P-dist histogram')
         plt.subplot(122)
         plt.hist2d(dt['wdist'], dt['pdist'], bins=(100, 100), cmap=mycmp)
-        plt.colorbar()
+        plt.colorbar(aspect=50)
         plt.xlabel('W-dist')
         plt.ylabel('P-dist')
         plt.title(r'W&P-dist histogram')
