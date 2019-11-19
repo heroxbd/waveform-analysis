@@ -12,11 +12,10 @@ if __name__ == '__main__':
     with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as distfile:
         dt = distfile['Record']
         l = len(dt)
-        spePath = dt.attrs['spePath']
         totTime = dt.attrs['totalTime']
         totLen = dt.attrs['totalLength']
         wd = dt['wdist'].mean()
         pd = dt['pdist'].mean()
     with open(args.opt, 'w+') as csvf:
         csvwr = csv.writer(csvf)
-        csvwr.writerow([spePath, args.ipt, str(totTime), str(totLen), str(wd), str(pd)])
+        csvwr.writerow([args.ipt, str(totTime), str(totLen), str(wd), str(pd)])

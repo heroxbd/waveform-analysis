@@ -20,8 +20,6 @@ psr = argparse.ArgumentParser()
 psr.add_argument('-o', dest='opt', help='output')
 psr.add_argument('ipt', nargs=10, help='input')
 args = psr.parse_args()
-h5_path = args.ipt
-single_pe_path = args.opt
 
 N = 10000
 
@@ -101,4 +99,4 @@ def main(h5_path, single_pe_path):
         generate_standard(h5_path, single_pe_path) # generate response model
 
 if __name__ == '__main__':
-    main(h5_path, single_pe_path)
+    main(args.ipt, args.opt)
