@@ -44,7 +44,7 @@ fileSet = os.listdir(LoadPath)
 data_name = fileSet[0]
 Data_Name = data_name.replace('.h5','')
 
-Data_set= np.load(data_name)
+Data_set= np.load(LoadPath+data_name)
 WaveData = Data_set['Wave']
 PETData= Data_set['PET']
 #Make Shift For +5 ns
