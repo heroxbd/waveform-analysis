@@ -14,7 +14,7 @@ opt={};(*初始化输出*)
 For[j=1000*(numargs-1)+1,j<=Piecewise[{{1796736,numargs==1797}},1000*numargs],j++,(*根据命令行参数确定循环范围*)
 (*开始循环，读入数据并将波形减去基准电压*)
 ipt=Import[winstring<>"data/alpha-problem.h5","Waveform","TakeElements"->{j}][[1]];
-wave=ipt["Waveform"]-972-aver;
+wave=ipt["Waveform"]-972-aver[[1]];
 event=ipt["EventID"];
 channel=ipt["ChannelID"];
 

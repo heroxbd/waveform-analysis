@@ -1,4 +1,3 @@
-#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 """
 Created on Sun Aug 25 16:33:11 2019
@@ -29,9 +28,6 @@ psr.add_argument('-o', dest='opt', help='output')
 psr.add_argument('ipt', help='input')
 psr.add_argument('--ref')
 args = psr.parse_args()
-fipt = args.ipt
-fopt = args.opt
-single_pe_path = args.ref
 
 # fipt = "/home/xudacheng/Downloads/GHdataset/playground/playground-data.h5"
 # fopt = "/home/xudacheng/Downloads/GHdataset/playground/first-submission-spe.h5"
@@ -115,4 +111,4 @@ def main(fopt, fipt, single_pe_path):
     # print('The total time is {}'.format(end_t - start_t))
 
 if __name__ == '__main__':
-    main(fopt, fipt, single_pe_path)
+    main(args.opt, args.ipt, args.ref)
