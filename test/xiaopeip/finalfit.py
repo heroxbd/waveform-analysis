@@ -38,12 +38,15 @@ def main(fopt, fipt, aver_spe_path):
                 if lowp[-1] >= 1028:
                     lowp = lowp[:-1]
                 panel = np.zeros(1029)
+                ddiff = np.zeros(len(lowp))
                 for j in lowp:
                     head = j-7 if j-7 > 0 else 0
                     tail = j+15+1 if j+15+1 <= 1029 else 1029
                     panel[head:tail] = 1
+                    ddiff[j] = wave[j+1]-wave[j]-wave[j-1]+wave[j-2]
                 nihep = np.argwhere(panel == 1)
-                wave[[i+1]]-wave[[i]]-wave[[i-1]]+wave[[i-2]]
+                xuhao = lowp[ddiff > 1.5]
+                
         print('\rAnsw Generating:|{}>{}|{:6.2f}%'.format(((20*i)//l)*'-', (19-(20*i)//l)*' ', 100 * ((i+1) / l)), end='' if i != l-1 else '\n') # show process bar
     end_t = time.time()
     return 
