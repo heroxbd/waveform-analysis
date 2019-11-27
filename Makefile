@@ -6,18 +6,15 @@ xiaoPp=test/xiaopeip
 
 .PHONY:all0 all1
 
-all1: $(xiaoPp)/submission/submission.h5
+#all1: $(xiaoPp)/submission/submission.h5
+all1: $(xiaoPp)/averape.h5
 
 $(xiaoPp)/submission/submission.h5: $(xiaoPp)/submission/unadjusted.h5
 	python3 $(xiaoPp)/adjust.py $^ -o $@
 
-$(xiaoPp)/submission/unadjusted.h5: $(range1:%=$(xiaoPp)/result/%-pgan.h5)
+$(xiaoPp)/submission/unadjusted.h5: zincm-problem.h5 $(xiaoPp)/averape.h5
 	mkdir -p $(dir $@)
-	python3 $(xiaoPp)/alltran.py $^ -o $@
-
-$(xiaoPp)/result/%-pgan.h5: zincm-problem.h5 $(xiaoPp)/averape.h5
-	mkdir -p $(dir $@)
-	wolframscript -file $(xiaoPp)/finalfit.wl $(patsubst $(xiaoPp)/result/%-pgan.h5, %, $@)
+	python3 $(xiaoPp)/finalfit.py $< --ref $(word 2,$^) -o $@
 
 $(xiaoPp)/averape.h5: ztraining-0.h5
 	python3 $(xiaoPp)/read.py $^ -o $@
@@ -49,7 +46,7 @@ $(xdcFTp)/submission/submission-%.h5 : ztraining-%.h5 $(xdcFTp)/single_pe.h5
 $(xdcFTp)/single_pe.h5: $(range0:%=ztraining-%.h5)
 	python3 $(xdcFTp)/standard.py $^ -o $@
 
-zincm-problem.h5: %:
+zincm-problem.h5:
 	wget 'https://cloud.tsinghua.edu.cn/f/3babd73926ce47c8893a/?dl=1&first.h5' -O $@
 
 ztraining-9.h5:

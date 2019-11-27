@@ -46,9 +46,9 @@ def main(fopt, fipt, aver_spe_path):
                     ddiff[j] = wave[j+1]-wave[j]-wave[j-1]+wave[j-2]
                 nihep = np.argwhere(panel == 1)
                 xuhao = lowp[ddiff > 1.5]
-                
+                possible = np.unique(np.concatenate((lowp[xuhao]-10,lowp[xuhao]-9,lowp[xuhao]-8)))
         print('\rAnsw Generating:|{}>{}|{:6.2f}%'.format(((20*i)//l)*'-', (19-(20*i)//l)*' ', 100 * ((i+1) / l)), end='' if i != l-1 else '\n') # show process bar
-    end_t = time.time()
+        end_t = time.time()
     return 
 
 if __name__ == '__main__':
