@@ -6,8 +6,7 @@ xiaoPp=test/xiaopeip
 
 .PHONY:all0 all1
 
-#all1: $(xiaoPp)/submission/submission.h5
-all1: $(xiaoPp)/averape.h5
+all1: $(xiaoPp)/submission/submission.h5
 
 $(xiaoPp)/submission/submission.h5: $(xiaoPp)/submission/unadjusted.h5
 	python3 $(xiaoPp)/adjust.py $^ -o $@
