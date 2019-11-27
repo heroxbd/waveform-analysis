@@ -10,7 +10,6 @@ psr.add_argument('-o', dest='opt', help='output')
 psr.add_argument('ipt', help='input')
 args = psr.parse_args()
 
-#使用tables输出结果
 class AnswerData(tables.IsDescription):
     EventID    = tables.Int64Col(pos=0)
     ChannelID  = tables.Int16Col(pos=1)
@@ -19,15 +18,12 @@ class AnswerData(tables.IsDescription):
 
 def main(tot_path, final_path):
     h5file = tables.open_file(final_path, mode='w', title='OneTonDetector')
-    # Create tables
     AnswerTable = h5file.create_table('/', 'Answer', AnswerData, 'Answer')
     answer = AnswerTable.row
 
-    #读入文件
     with h5py.File(tot_path) as ipt:
         yuanru=ipt['Answer'][()]
 
-    #按照event和channel分类，获取分界的节点
     eve_p=yuanru[0]['EventID']
     cha_p=yuanru[0]['ChannelID']
     jiedian=[0]
@@ -40,21 +36,19 @@ def main(tot_path, final_path):
             print(n)
     jiedian.append(length)
 
-    #a1,a2,a3是叠加时的系数
     a1,a2,a3=0.9,1.7,0.9
     for i in range(len(jiedian)-1):
         if i%10000==0:
             print(i)
         copy=yuanru[jiedian[i]:jiedian[i+1]].copy()
 
-    #用copy减去舍入后的结果得到零头进行后面的计算
         sheru=np.around(copy['Weight'])
         copy['Weight']=copy['Weight']-sheru
-    #a的作用是获取数组的长度
+
         a=np.unique(np.array([[x-1 for x in copy['PETime']],[x for x in copy['PETime']],[x+1 for x in copy['PETime']]]))
         leftright=np.zeros(len(a)+1,dtype=[('PETime',np.int),('Weight',np.float)])
         k=0
-    #将左右两点的零头和本身的零头乘以不同系数相加
+
         for j in range(len(copy)):
             if k>1 and leftright[k-2]['PETime']==copy[j]['PETime']-1:
                 leftright[k-2]['Weight']+=a1*copy[j]['Weight']
@@ -74,7 +68,6 @@ def main(tot_path, final_path):
             leftright[k]['Weight']+=a3*copy[j]['Weight']
             k+=1
 
-    #若结果大于0.5且大于相邻两点的结果则可能需要补加权重,将这些时刻存入plustime
         plustime=[]
         while True:
             newp=np.argmax(leftright['Weight'])
@@ -88,7 +81,6 @@ def main(tot_path, final_path):
             else:
                 break
 
-    #先将之前舍入后的结果输出
         count=0
         for i1 in range(len(sheru)):
             if sheru[i1]>0:
@@ -98,7 +90,7 @@ def main(tot_path, final_path):
                 answer['PETime'] = copy[i1]['PETime']
                 answer['Weight'] = sheru[i1]
                 answer.append()
-    #如果plustime中的点此前无输出（即之前舍入时被舍掉了），则补加权重输出
+
         for i2 in plustime:
             posi=np.where(copy['PETime']==i2)[0]
             if len(posi)==0 or sheru[posi[0]]==0:
@@ -108,7 +100,7 @@ def main(tot_path, final_path):
                 answer['PETime'] = i2
                 answer['Weight'] = 1.
                 answer.append()
-    #如果修改后事例为空，则保留原有的输出
+
         if len(plustime)+count==0:
             for i3 in range(jiedian[i],jiedian[i+1]):
                 answer['EventID'] =  copy[0]['EventID']
