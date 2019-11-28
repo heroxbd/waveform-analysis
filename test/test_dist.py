@@ -25,7 +25,7 @@ def wpdistance(df_ans, df_sub):
     e_ans, i_ans = np.unique(e_ans, return_index=True)
     gl = len(e_ans)
 
-    opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint8), ('wdist', np.float32), ('pdist', np.float32)])
+    opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint8), ('PEnum', np.uint8), ('wdist', np.float32), ('pdist', np.float32)])
     dt = np.zeros(gl, dtype=opdt)
 
     e_sub = df_sub['EventID']*30 + df_sub['ChannelID']
@@ -50,6 +50,7 @@ def wpdistance(df_ans, df_sub):
         wl = df_sub[j0:j]['Weight']
         dt['wdist'][c] = scipy.stats.wasserstein_distance(df_ans[i0:i]['PETime'], df_sub[j0:j]['PETime'], v_weights=wl)
         Q = i-i0; q = np.sum(wl)
+        dt['PEnum'][c] = Q
         dt['pdist'][c] = np.abs(Q - q) * scipy.stats.poisson.pmf(Q, Q)
         dt['EventID'][c] = eid//30
         dt['ChannelID'][c] = eid % 30

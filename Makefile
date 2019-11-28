@@ -1,24 +1,11 @@
 SHELL=bash
 range0:=$(shell echo {0..9})
-range1:=$(shell echo {0..1797})
 xdcFTp=test/xdc/FT
 xiaoPp=test/xiaopeip
 
-.PHONY:all0 all1
+.PHONY:all0
 
-all1: $(xiaoPp)/submission/submission.h5
-
-$(xiaoPp)/submission/submission.h5: $(xiaoPp)/submission/unadjusted.h5
-	python3 $(xiaoPp)/adjust.py $^ -o $@
-
-$(xiaoPp)/submission/unadjusted.h5: zincm-problem.h5 $(xiaoPp)/averape.h5
-	mkdir -p $(dir $@)
-	python3 $(xiaoPp)/finalfit.py $< --ref $(word 2,$^) -o $@
-
-$(xiaoPp)/averape.h5: ztraining-0.h5
-	python3 $(xiaoPp)/read.py $^ -o $@
-
-all0: $(xdcFTp)/distpic.zip $(xdcFTp)/record.csv
+all0: $(xdcFTp)/dpic.zip $(xdcFTp)/record.csv
 
 $(xdcFTp)/record.csv: $(range0:%=$(xdcFTp)/record/record-%.csv)
 	cat $^ > $@
@@ -27,12 +14,16 @@ $(xdcFTp)/record/record-%.csv: $(xdcFTp)/distrecord/distrecord-%.h5
 	mkdir -p $(dir $@)
 	python3 test/record_dist.py $^ -o $@
 
-$(xdcFTp)/distpic.zip: $(range0:%=$(xdcFTp)/distpic/distpic-%.png)
+$(xdcFTp)/dpic.zip: $(range0:%=$(xdcFTp)/dpic/histpic-%.png) $(range0:%=$(xdcFTp)/dpic/pepic-%.png)
 	zip -j $@ $^
 
-$(xdcFTp)/distpic/distpic-%.png: $(xdcFTp)/distrecord/distrecord-%.h5
+$(xdcFTp)/dpic/pepic-%.png: $(xdcFTp)/distrecord/distrecord-%.h5
 	mkdir -p $(dir $@)
-	python3 test/draw_dist.py $^ -o $@
+	python3 test/draw_dist.py $^ --mode 1 -o $@
+
+$(xdcFTp)/dpic/histpic-%.png: $(xdcFTp)/distrecord/distrecord-%.h5
+	mkdir -p $(dir $@)
+	python3 test/draw_dist.py $^ --mode 0 -o $@
 
 $(xdcFTp)/distrecord/distrecord-%.h5: ztraining-%.h5 $(xdcFTp)/submission/submission-%.h5
 	mkdir -p $(dir $@)
