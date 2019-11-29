@@ -11,6 +11,8 @@ args = psr.parse_args()
 
 import csv
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from matplotlib.colors import ListedColormap
