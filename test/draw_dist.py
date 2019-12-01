@@ -20,7 +20,7 @@ import matplotlib.gridspec as gridspec
 
 plt.rcParams['savefig.dpi'] = 300
 plt.rcParams['figure.dpi'] = 300
-plt.rcParams['font.size'] = 18
+plt.rcParams['font.size'] = 4
 plt.rcParams['lines.markersize'] = np.sqrt(10)
 plt.rcParams['lines.linewidth'] = 1.0
 
@@ -32,16 +32,18 @@ def my_cmap():
     newcmp = ListedColormap(newcolors)
     return newcmp
 
-def draw_pe_w(fig, gs, i_d, pe_wdist):
-    ax = fig.add_subplot(gs[i_d//5, i_d % 5])
-    ax.hist(pe_wdist[i_d], bins=100)
-    ax.set_title('PEnum = {}'.format(i_d))
+def draw_pe_w(fig, gs, i_d, dt_wdist, dt_penum, penum):
+    if i_d in penum:
+        ax = fig.add_subplot(gs[(i_d-1)//10, (i_d-1)%10])
+        ax.hist(dt_wdist[dt_penum == i_d], bins=20)
+        ax.set_title('PEnum={}, '.format(i_d) + r'$\bar{Wdist}$' + '={}'.format(np.mean(dt_wdist[dt_penum == i_d])))
     return
 
-def draw_pe_p(fig, gs, i_d, pe_pdist):
-    ax = fig.add_subplot(gs[(i_d+15)//5, i_d % 5])
-    ax.hist(pe_pdist[i_d], bins=100)
-    ax.set_title('PEnum = {}'.format(i_d))
+def draw_pe_p(fig, gs, i_d, dt_pdist, dt_penum, penum):
+    if i_d in penum:
+        ax = fig.add_subplot(gs[(i_d-1)//10, (i_d-1)%10])
+        ax.hist(dt_pdist[dt_penum == i_d], bins=20)
+        ax.set_title('PEnum={}, '.format(i_d) + r'$\bar{Pdist}$' + '={}'.format(np.mean(dt_pdist[dt_penum == i_d])))
     return
 
 if __name__ == '__main__':
@@ -64,22 +66,25 @@ if __name__ == '__main__':
                 ax3.set_xlabel(r'W-dist')
                 ax3.set_ylabel(r'P-dist')
                 ax3.set_title(r'W&P-dist histogram')
-                fig.suptitle(dt.attrs['spePath'].split('/')[-1] + ' ' + args.ipt.split('/')[-1])
+                fig.suptitle(args.ipt.split('/')[-1])
                 fig.savefig(args.opt)
             elif args.mode == 1:
-                plt.rcParams['figure.figsize'] = (18, 15)
+                plt.rcParams['figure.figsize'] = (20, 20)
                 penum = np.unique(dt['PEnum'])
-                pe_l = len(penum)
-                pe_wdist = {}
-                pe_pdist = {}
-                for i in range(pe_l):
-                    pe_wdist.update({i: dt['wdist'][dt['PEnum'] == penum[i]]})
-                    pe_pdist.update({i: dt['pdist'][dt['PEnum'] == penum[i]]})
+                penum = np.sort(penum)
                 fig = plt.figure()
-                gs = gridspec.GridSpec(6, 5, figure=fig)
-                for i in range(15):
-                    draw_pe_w(fig, gs, i, pe_wdist)
-                for i in range(15):
-                    draw_pe_p(fig, gs, i, pe_pdist)
-                fig.suptitle(dt.attrs['spePath'].split('/')[-1] + ' ' + args.ipt.split('/')[-1] + ' ' + r'W&P-dist histogram')
+                gs = gridspec.GridSpec(10, 10, figure=fig)
+                for i in np.arange(1, min(100, penum.max()) + 1):
+                    draw_pe_w(fig, gs, i, dt['wdist'], dt['PEnum'], penum)
+                fig.suptitle(args.ipt.split('/')[-1] + ' ' + r'W-dist vs PEnum')
+                fig.savefig(args.opt)
+            elif args.mode == 2:
+                plt.rcParams['figure.figsize'] = (20, 20)
+                penum = np.unique(dt['PEnum'])
+                penum = np.sort(penum)
+                fig = plt.figure()
+                gs = gridspec.GridSpec(10, 10, figure=fig)
+                for i in np.arange(1, min(100, penum.max()) + 1):
+                    draw_pe_p(fig, gs, i, dt['pdist'], dt['PEnum'], penum)
+                fig.suptitle(args.ipt.split('/')[-1] + ' ' + r'P-dist vs PEnum')
                 fig.savefig(args.opt)
