@@ -20,7 +20,7 @@ if __name__ == '__main__':
         wd = dt['wdist'].mean()
         pd = dt['pdist'].mean()
         penum, c = np.unique(dt['PEnum'], return_counts=True)
-        pe_c = np.zeros((len(penum), 2)).astype(np.uint16)
+        pe_c = np.zeros((len(penum), 2)).astype(np.uint32)
         pe_dist = np.zeros((len(penum), 2))
         pe_c[:, 0] = penum
         pe_c[:, 1] = c
