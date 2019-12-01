@@ -12,12 +12,16 @@ $(xdcFTp)/record.csv: $(range0:%=$(xdcFTp)/record/record-%.csv)
 
 $(xdcFTp)/record/record-%.csv: $(xdcFTp)/distrecord/distrecord-%.h5
 	mkdir -p $(dir $@)
-	python3 test/record_dist.py $^ -o $@
+	python3 test/csv_dist.py $^ -o $@
 
-$(xdcFTp)/dpic.zip: $(range0:%=$(xdcFTp)/dpic/histpic-%.png) $(range0:%=$(xdcFTp)/dpic/pepic-%.png)
+$(xdcFTp)/dpic.zip: $(range0:%=$(xdcFTp)/dpic/histpic-%.png) $(range0:%=$(xdcFTp)/dpic/pewpic-%.png) $(range0:%=$(xdcFTp)/dpic/peppic-%.png)
 	zip -j $@ $^
 
-$(xdcFTp)/dpic/pepic-%.png: $(xdcFTp)/distrecord/distrecord-%.h5
+$(xdcFTp)/dpic/peppic-%.png: $(xdcFTp)/distrecord/distrecord-%.h5
+	mkdir -p $(dir $@)
+	python3 test/draw_dist.py $^ --mode 2 -o $@
+
+$(xdcFTp)/dpic/pewpic-%.png: $(xdcFTp)/distrecord/distrecord-%.h5
 	mkdir -p $(dir $@)
 	python3 test/draw_dist.py $^ --mode 1 -o $@
 
