@@ -26,7 +26,7 @@ h5file = tables.open_file(filename, "r")
 WaveformTable = h5file.root.Waveform
 Len_Entry = len(WaveformTable)
 print(Len_Entry, "data entries") # Entry 10^6
-# WaveChannel 0-1028, length 1029
+# WaveChannel 0-1028, length 600
 
 # Make Data Matrix
 def make_wave_long_vec(wave_form):

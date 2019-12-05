@@ -121,7 +121,7 @@ for fullname in FullNameVec:
         if EventID == 13381 and ChannelID == 29:
             print('appear')
         if np.sum(Prediction) <= 0:
-            Prediction = np.ones(1029) / 10000
+            Prediction = np.ones(600) / 10000
             print("warning")
         numPE = 0
         for k in range(len(Prediction)):

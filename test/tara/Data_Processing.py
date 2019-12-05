@@ -143,12 +143,12 @@ for epoch in range(25):  # loop over the dataset multiple times
                 output_vec = outputs.data[batch_index_2].numpy()
                 label_vec = labels.data[batch_index_2].numpy()
                 if np.sum(label_vec)<=0:
-                    label_vec = np.ones(1029)/10000
+                    label_vec = np.ones(600)/10000
                     print("warning")
                 if np.sum(output_vec)<=0:
-                    output_vec = np.ones(1029)/10000
+                    output_vec = np.ones(600)/10000
                     print("warning")
-                cost = stats.wasserstein_distance(np.arange(1029), np.arange(1029), output_vec, label_vec)
+                cost = stats.wasserstein_distance(np.arange(600), np.arange(600), output_vec, label_vec)
                 batch_result += cost
             batch_count += 1
         test_performance = batch_result / (BATCHSIZE * batch_count)

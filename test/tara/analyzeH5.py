@@ -49,7 +49,7 @@ def ReadTruth(filename):
 #analyze wave and write the result h5file
 def analyzeWave(waveform,eventId,channelId,delta,outname):
     numPMT=30
-    length=1029
+    length=600
     #eventRange=range(0,max(eventId))
     #max(eventId))
     truth=[]
@@ -277,7 +277,7 @@ def testAnswer(filename):
 #test the wave distribution w-distance with the truth
 def wave2sub(waveform,eventId,channelId,fftif,multisig,delta,outputname):
     numPMT=30
-    length=1029
+    length=600
     truth=[]
     weight=[]
     temptruth=[]
@@ -308,7 +308,7 @@ def wave2sub(waveform,eventId,channelId,fftif,multisig,delta,outputname):
         #spe=np.load("SPE.npy")
         from scipy.io import loadmat
         import os
-        spe=loadmat("SPEAd.mat")['SPE'].reshape(1029)
+        spe=loadmat("SPEAd.mat")['SPE'].reshape(600)
         for index in range(H):
         #print(eventIndex)
         #for pmtIndex in range(0,numPMT):

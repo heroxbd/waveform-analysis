@@ -28,11 +28,11 @@ WaveformTable = h5file.root.Waveform
 GroundTruthTable = h5file.root.GroundTruth
 Len_Entry = len(WaveformTable)
 print(Len_Entry, "data entries") # Entry 10^6
-# WaveChannel 0-1028, length 1029
+# WaveChannel 0-1028, length 600
 
 # Make Data Matrix
 def make_time_long_vec(time_mark_vec):
-    time_long_vec = np.zeros(1029)
+    time_long_vec = np.zeros(600)
     for time_mark in time_mark_vec:
         if time_mark < 1020:
             time_long_vec[time_mark] += 1
