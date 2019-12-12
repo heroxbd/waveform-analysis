@@ -8,15 +8,13 @@ import matplotlib.pyplot as plt
 import argparse
 
 psr = argparse.ArgumentParser()
-psr.add_argument('-o', dest='opt', help='output')
-psr.add_argument('ipt', help='input')
-psr.add_argument('--ref')
+psr.add_argument('-o', dest='opt')
 args = psr.parse_args()
 
 def norm_fit(x, M, p):
     return np.linalg.norm(p - np.matmul(M, x))
 
-def main(fopt, fipt, aver_spe_path):
+def main(fopt, fipt='./../../zincm-problem.h5', aver_spe_path='./averspe.h5'):
     speFile = h5py.File(aver_spe_path, 'r', libver='latest', swmr=True)
     spemean = np.array(speFile['spe'])
     aver = speFile['averzero']
@@ -25,6 +23,7 @@ def main(fopt, fipt, aver_spe_path):
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt, h5py.File(fopt, 'w') as opt:
         ent = ipt['Waveform']
         l = len(ent)
+        l = 10000
         print('{} waveforms will be computed'.format(l))
         dt = np.zeros(l * 1029, dtype=opdt)
         start = 0
@@ -32,7 +31,7 @@ def main(fopt, fipt, aver_spe_path):
         start_t = time.time()
         for i in range(l):
             wf_input = ent[i]['Waveform']
-            wave = wf_input - 972 - aver
+            wave = wf_input - np.mean(wf_input[900:1000])
             lowp = np.argwhere(wave < -6.5).flatten()
             flag = 1
             if len(lowp) != 0:
@@ -50,8 +49,7 @@ def main(fopt, fipt, aver_spe_path):
                     xuhao = np.argwhere(wave[lowp+1]-wave[lowp]-wave[lowp-1]+wave[lowp-2] > 1.5).flatten()
                     if len(xuhao) != 0:
                         possible = np.unique(np.concatenate((lowp[xuhao]-10,lowp[xuhao]-9,lowp[xuhao]-8)))
-                        ans0 = np.zeros((len(possible), 1))
-                        ans0 = np.zeros_like(possible).astype(np.float64)
+                        ans0 = np.ones_like(possible).astype(np.float64) * 0.5
                         b = np.zeros((len(possible), 2))
                         b[:, 1] = np.inf
                         mne = spemean[np.mod(nihep.reshape(len(nihep), 1) - possible.reshape(1, len(possible)), 1029)]
@@ -89,4 +87,4 @@ def main(fopt, fipt, aver_spe_path):
     return 
 
 if __name__ == '__main__':
-    main(args.opt, args.ipt, args.ref)
+    main(args.opt, './../../zincm-problem.h5', './averspe.h5')
