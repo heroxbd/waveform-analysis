@@ -3,16 +3,32 @@ range0:=$(shell echo {0..9})
 xdcFTp=test/xdc/FT
 xiaoPp=test/xiaopeip
 
-.PHONY:all
+.PHONY:all0 all1
 
-all: all1 all0
+all: all1
 
-all1: $(xiaoPp)/submission.h5
+all1: $(range0:%=$(xiaoPp)/hist-%.pdf) $(xiaoPp)/record.csv
 
-$(xiaoPp)/submission.h5: $(xiaoPp)/unadjusted.h5
+$(xiaoPp)/record.csv: $(range0:%=$(xiaoPp)/record/record-%.csv)
+	cat $^ > $@
+
+$(xiaoPp)/record/record-%.csv: $(xiaoPp)/distrecord/distrecord-%.h5
+	mkdir -p $(dir $@)
+	python3 test/csv_dist.py $^ -o $@
+
+$(xiaoPp)/hist-%.pdf: $(xiaoPp)/distrecord/distrecord-%.h5
+	python3 test/draw_dist.py $^ -o $@
+
+$(xiaoPp)/distrecord/distrecord-%.h5: ztraining-%.h5 $(xiaoPp)/submission/submission-%.h5
+	mkdir -p $(dir $@)
+	python3 test/test_dist.py $(word 2,$^) --ref $< -o $@
+
+$(xiaoPp)/submission/submission-%.h5: $(xiaoPp)/unadjusted/unadjusted-%.h5
+	mkdir -p $(dir $@)
 	python3 $(xiaoPp)/adjust.py $^ -o $@
 
-$(xiaoPp)/unadjusted.h5: zincm-problem.h5 $(xiaoPp)/averspe.h5
+$(xiaoPp)/unadjusted/unadjusted-%.h5: ztraining-%.h5 $(xiaoPp)/averspe.h5
+	mkdir -p $(dir $@)
 	python3 $(xiaoPp)/finalfit.py $< --ref $(word 2,$^) -o $@
 
 $(xiaoPp)/averspe.h5: ztraining-0.h5
