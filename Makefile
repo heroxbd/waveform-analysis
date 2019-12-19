@@ -74,6 +74,8 @@ ztraining-1.h5:
 ztraining-0.h5:
 	wget 'https://cloud.tsinghua.edu.cn/f/0499334a4239427798c1/?dl=1&first.h5' -O $@
 
+JUNO-Kaon-50.h5:
+	wget http://hep.tsinghua.edu.cn/~orv/distfiles/JUNO-Kaon-50.h5
 
 .DELETE_ON_ERROR:
 
