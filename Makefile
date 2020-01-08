@@ -127,6 +127,62 @@ $(junoDir)/junoWave1.h5:
 	wget https://cloud.tsinghua.edu.cn/f/496e083a78a94251b623/?dl=1 -O $@
 $(junoDir)/junoWave3.h5:
 	wget https://cloud.tsinghua.edu.cn/f/56e8ca3d3d30414da095/?dl=1 -O $@
+
+PHONY: xdcJuno xppJuno
+xdcJunoOutDir=output/juno/xdc
+xdcSrcDir=test/xdc/FT
+xppJunoOutDir=output/juno/xpp
+xppSrcDir=test/xiaopeip
+xdcJuno: $(junowaveseq:%=$(xdcJunoOutDir)/hist-%.pdf) $(xdcJunoOutDir)/record.csv
+
+$(xdcJunoOutDir)/record.csv: $(junowaveseq:%=$(xdcJunoOutDir)/record/record-%.csv)
+	cat $^ > $@
+
+$(xdcJunoOutDir)/record/record-%.csv: $(xdcJunoOutDir)/distrecord/distrecord-%.h5
+	mkdir -p $(dir $@)
+	python3 test/csv_dist.py $^ -o $@
+
+$(xdcJunoOutDir)/hist-%.pdf: $(xdcJunoOutDir)/distrecord/distrecord-%.h5
+	python3 test/draw_dist.py $^ -o $@
+
+$(xdcJunoOutDir)/distrecord/distrecord-%.h5: $(junoDir)/junoWave%.h5 $(xdcJunoOutDir)/submission/submission-%.h5
+	mkdir -p $(dir $@)
+	python3 test/test_dist.py $(word 2,$^) --ref $< -o $@
+
+$(xdcJunoOutDir)/submission/submission-%.h5 : $(junoDir)/junoWave%.h5 $(xdcJunoOutDir)/single_pe.h5
+	mkdir -p $(dir $@)
+	python3 $(xdcSrcDir)/FFT_decon.py $< --ref $(word 2,$^) -o $@
+
+$(xdcJunoOutDir)/single_pe.h5: $(junowaveseq:%=$(junoDir)/junoWave%.h5)
+	mkdir -p $(dir $@)
+	python3 $(xdcSrcDir)/standard.py $^ -o $@
+xppJuno: $(junowaveseq:%=$(xppJunoOutDir)/hist-%.pdf) $(xppJunoOutDir)/record.csv
+
+$(xppJunoOutDir)/record.csv: $(junowaveseq:%=$(xppJunoOutDir)/record/record-%.csv)
+	cat $^ > $@
+
+$(xppJunoOutDir)/record/record-%.csv: $(xppJunoOutDir)/distrecord/distrecord-%.h5
+	mkdir -p $(dir $@)
+	python3 test/csv_dist.py $^ -o $@
+
+$(xppJunoOutDir)/hist-%.pdf: $(xppJunoOutDir)/distrecord/distrecord-%.h5
+	python3 test/draw_dist.py $^ -o $@
+
+$(xppJunoOutDir)/distrecord/distrecord-%.h5: ztraining-%.h5 $(xppJunoOutDir)/submission/submission-%.h5
+	mkdir -p $(dir $@)
+	python3 test/test_dist.py $(word 2,$^) --ref $< -o $@
+
+$(xppJunoOutDir)/submission/submission-%.h5: $(xppJunoOutDir)/unadjusted/unadjusted-%.h5
+	mkdir -p $(dir $@)
+	python3 $(xppSrcDir)/adjust.py $^ -o $@
+
+$(xppJunoOutDir)/unadjusted/unadjusted-%.h5: ztraining-%.h5 $(xppJunoOutDir)/averspe.h5
+	mkdir -p $(dir $@)
+	python3 $(xppSrcDir)/finalfit.py $< --ref $(word 2,$^) -o $@
+
+$(xppJunoOutDir)/averspe.h5: ztraining-0.h5
+	python3 $(xppSrcDir)/read.py $^ -o $@
+
 .DELETE_ON_ERROR:
 
 .SECONDARY:
