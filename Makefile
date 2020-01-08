@@ -3,7 +3,7 @@ range0:=$(shell echo {0..9})
 xdcFTp=test/xdc/FT
 xiaoPp=test/xiaopeip
 
-.PHONY:all0 all1
+.PHONY:all0 all1 lucyddm
 
 all: all1
 
@@ -57,6 +57,31 @@ $(xdcFTp)/submission/submission-%.h5 : ztraining-%.h5 $(xdcFTp)/single_pe.h5
 $(xdcFTp)/single_pe.h5: $(range0:%=ztraining-%.h5)
 	python3 $(xdcFTp)/standard.py $^ -o $@
 
+lucyOutDir=output/jinping/lucyddm
+lucySrcDir=test/lucyddm
+lucyddm: $(range0:%=$(lucyOutDir)/hist-%.pdf) $(lucyOutDir)/record.csv
+
+$(lucyOutDir)/record.csv: $(range0:%=$(lucyOutDir)/record/record-%.csv)
+	cat $^ > $@
+
+$(lucyOutDir)/record/record-%.csv: $(lucyOutDir)/distrecord/distrecord-%.h5
+	mkdir -p $(dir $@)
+	python3 test/csv_dist.py $^ -o $@
+
+$(lucyOutDir)/hist-%.pdf: $(lucyOutDir)/distrecord/distrecord-%.h5
+	python3 test/draw_dist.py $^ -o $@
+
+$(lucyOutDir)/distrecord/distrecord-%.h5: ztraining-%.h5 $(lucyOutDir)/submission/submission-%.h5
+	mkdir -p $(dir $@)
+	python3 test/test_dist.py $(word 2,$^) --ref $< -o $@
+
+$(lucyOutDir)/submission/submission-%.h5 : ztraining-%.h5 $(lucyOutDir)/spe.h5
+	mkdir -p $(dir $@)
+	python3 $(lucySrcDir)/lucyDDM.py $^ $@ > $@.log 2>&1
+
+$(lucyOutDir)/spe.h5: ztraining-0.h5
+	mkdir -p $(dir $@)
+	python3 $(lucySrcDir)/speGet.py $^ $@ >$@.log 2>&1
 zincm-problem.h5:
 	wget 'https://cloud.tsinghua.edu.cn/f/3babd73926ce47c8893a/?dl=1&first.h5' -O $@
 
@@ -93,6 +118,15 @@ ztraining-0.h5:
 JUNO-Kaon-50.h5:
 	wget http://hep.tsinghua.edu.cn/~orv/distfiles/JUNO-Kaon-50.h5
 
+.PHONY: junoDataset
+
+junoDir=dataset/juno
+junowaveseq=1 3
+junoDataset: $(junowaveseq:%=$(junoDir)/junoWave%.h5)
+$(junoDir)/junoWave1.h5:
+	wget https://cloud.tsinghua.edu.cn/f/496e083a78a94251b623/?dl=1 -O $@
+$(junoDir)/junoWave3.h5:
+	wget https://cloud.tsinghua.edu.cn/f/56e8ca3d3d30414da095/?dl=1 -O $@
 .DELETE_ON_ERROR:
 
 .SECONDARY:
