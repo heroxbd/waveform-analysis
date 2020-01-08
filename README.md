@@ -25,3 +25,16 @@ For each method:
    1. 不直接修改Makefile
    2. 生成branch并对Makefile添加新代码
    3. 程序运行良好的情况下进行pull request
+
+## method
+
+### LucyDDM
+
++ `make lucyddm` 运行jinping数据
++ `make lucyddmJuno`运行**JUNO**数据
++ `make junoDataset`下载**JUNO**数据
+  
+问题：
++ 不同spe产生方式对算法评测有影响，应使用同一个spe
++ 不同算法应放在一个库中，以函数调用执行，方便之后使用同一个框架与并行化
++ 数据和代码应该分离

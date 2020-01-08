@@ -8,5 +8,9 @@
 *.out
 *.dot
 *.pdf
+*.npy
 .DS_Store
 __pycache__/
+.vscode
+output
+
