@@ -81,7 +81,7 @@ $(lucyOutDir)/submission/submission-%.h5 : ztraining-%.h5 $(lucyOutDir)/spe.h5
 
 $(lucyOutDir)/spe.h5: ztraining-0.h5
 	mkdir -p $(dir $@)
-	python3 $(lucySrcDir)/speGet.py $^ $@ >$@.log 2>&1
+	python3 $(lucySrcDir)/speGet.py $^ $@
 zincm-problem.h5:
 	wget 'https://cloud.tsinghua.edu.cn/f/3babd73926ce47c8893a/?dl=1&first.h5' -O $@
 

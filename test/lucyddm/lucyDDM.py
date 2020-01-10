@@ -20,6 +20,8 @@ def ReadWave(filename):
 def lucyDDM_N(waveform, spe):
     signal = np.zeros(waveform.shape)
     length = waveform.shape[0]
+    moveDelta = 10
+    spe = np.append(np.zeros((spe.shape[0]- 2*moveDelta + 1,)), np.abs(spe))
     for i in range(length):
         signal[i, :] = lucyDDM(waveform[i, :], spe, 100)
         print('\rThe analysis processing:|{}>{}|{:6.2f}%'.format(((20*i)//length)*'-', (19 - (20*i)//length)*' ', 100 * ((i+1) / length)), end=''if i != length-1 else '\n') # show process bar
@@ -39,7 +41,7 @@ def lucyDDM(waveform, spe, iterations=50):
     '''
     # abs waveform, spe
     waveform = np.abs(waveform)
-    spe = np.append(np.zeros((spe.shape[0]-1,)), np.abs(spe))
+    # spe = np.append(np.zeros((spe.shape[0]-1,)), np.abs(spe))
     # use the deconvlution method
     wave_deconv = np.full(waveform.shape, 0.5)
     spe_mirror = spe[::-1]
@@ -48,7 +50,7 @@ def lucyDDM(waveform, spe, iterations=50):
         wave_deconv *= convolve(relative_blur, spe_mirror, mode='same')
         # there is no need to set the bound if the spe and the wave are all none negative 
     return wave_deconv
-def writeSubfile(truth, eventId, channelId, sigma, subfile):
+def writeSubfile(truth, eventId, channelId, sigma, moveDelta, subfile):
     answerh5file = tables.open_file(subfile, mode='w', title="OneTonDetector")
     AnswerTable = answerh5file.create_table('/', 'Answer', AnswerData, 'Answer')
     answer = AnswerTable.row
@@ -61,13 +63,13 @@ def writeSubfile(truth, eventId, channelId, sigma, subfile):
         for t in waitWriteTruth:# wait for the null output process
             if truth[i, t] > np.std(truth[i, (t-5):(t+5)]):
                 answer['EventID'] = eventIndex
-                answer['ChannelID'] = pmtIndex
-                answer['PETime'] = t
+                answer['ChannelID'] = channelIndex
+                answer['PETime'] = t - moveDelta
                 answer['Weight'] = truth[i, t]           
                 answer.append()
         print('\rThe writing processing:|{}>{}|{:6.2f}%'.format(((20*i)//length)*'-', (19 - (20*i)//length)*' ', 100 * ((i+1) / length)), end=''if i != length-1 else '\n') # show process bar
     AnswerTable.flush()
-    answerh5.close()
+    answerh5file.close()
 if __name__ == "__main__":
     if len(sys.argv)<2:
         problemfile = './data/simulate/hdf5/ftraining-0.h5'
@@ -90,6 +92,6 @@ if __name__ == "__main__":
         waveformNobase = -waveformNobase
     print('Begin analyze {}'.format(problemfile))
     lucyTruth = lucyDDM_N(waveformNobase, spePart)
-    writeSubfile(lucyTruth, eventId, channelId, 7, subfile)
+    writeSubfile(lucyTruth, eventId, channelId, 7, 9, subfile)
     print('End write {}'.format(subfile))
 
