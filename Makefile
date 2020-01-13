@@ -121,12 +121,12 @@ JUNO-Kaon-50.h5:
 .PHONY: junoDataset
 
 junoDir=dataset/juno
-junowaveseq=1 3
+junowaveseq=2 4
 junoDataset: $(junowaveseq:%=$(junoDir)/junoWave%.h5)
-$(junoDir)/junoWave1.h5:
-	wget https://cloud.tsinghua.edu.cn/f/496e083a78a94251b623/?dl=1 -O $@
-$(junoDir)/junoWave3.h5:
-	wget https://cloud.tsinghua.edu.cn/f/56e8ca3d3d30414da095/?dl=1 -O $@
+$(junoDir)/junoWave2.h5:
+	wget https://cloud.tsinghua.edu.cn/f/f6e4cf503be542d3892f/?dl=1 -O $@
+$(junoDir)/junoWave4.h5:
+	wget https://cloud.tsinghua.edu.cn/f/846ecb6335564714902b/?dl=1 -O $@
 .DELETE_ON_ERROR:
 
 .SECONDARY:
