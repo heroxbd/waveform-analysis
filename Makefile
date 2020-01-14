@@ -1,6 +1,6 @@
 SHELL=bash
 range0:=$(shell echo {0..9})
-xdcFTp=test/xdc
+xdcFTp=test/xdcFT
 xiaoPp=test/xiaopeip
 
 .PHONY:all0 all1 lucyddm
