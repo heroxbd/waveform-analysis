@@ -28,8 +28,8 @@ args = psr.parse_args()
 
 def generate_eff_ft(fopt, fipt, single_pe_path):
     epulse = wfaf.estipulse(fipt)
+    model = wfaf.generate_model(single_pe_path, epulse)
     opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint8), ('PETime', np.uint16), ('Weight', np.float16)])
-    model = wfaf.generate_model(single_pe_path, epulse) # extract the model
     model = compr(model, EXP, AXE, epulse)
 
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt, h5py.File(fopt, 'w') as opt:

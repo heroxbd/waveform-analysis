@@ -14,12 +14,6 @@ psr.add_argument('-o', dest='opt', help='output')
 args = psr.parse_args()
 
 def wpdistance(df_ans, df_sub):
-    '''
-    do the actual grade
-
-    return the mean Wasserstain and Poisson distances.
-    '''
-
     # number of channels is 30
     e_ans = df_ans['EventID']*30 + df_ans['ChannelID']
     e_ans, i_ans = np.unique(e_ans, return_index=True)
@@ -58,14 +52,13 @@ def wpdistance(df_ans, df_sub):
 
     return dt
 
-if __name__ == '__main__':
-    with h5py.File(args.ref, 'r', libver='latest', swmr=True) as ref, h5py.File(args.ipt, 'r', libver='latest', swmr=True) as ipt:
+def main(ref, ipt, opt):
+    with h5py.File(ref, 'r', libver='latest', swmr=True) as ref, h5py.File(ipt, 'r', libver='latest', swmr=True) as ipt:
         df_ans = ref['GroundTruth'][...]
         df_sub = ipt['Answer'][...]
-        totLen = ipt['Answer'].attrs['totalLength']
     dt = wpdistance(df_ans, df_sub)
-    # wd = dt['wdist'].average()
-    # pd = dt['pdist'].average()
-    with h5py.File(args.opt, 'w') as h5f:
+    with h5py.File(opt, 'w') as h5f:
         dset = h5f.create_dataset('Record', data=dt, compression='gzip')
-        dset.attrs['totalLength'] = totLen
+
+if __name__ == '__main__':
+    main(args.ref, args.ipt, args.opt)

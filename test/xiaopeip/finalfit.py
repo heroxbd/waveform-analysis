@@ -17,12 +17,14 @@ def norm_fit(x, M, p):
     return np.linalg.norm(p - np.matmul(M, x))
 
 def main(fopt, fipt, aver_spe_path):
-    speFile = h5py.File(aver_spe_path, 'r', libver='latest', swmr=True)
-    spemean = np.array(speFile['spe'])
+    epulse = wfaf.estipulse(fipt)
+    spemean = wfaf.generate_model(single_pe_path, epulse)
     opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint8), ('PETime', np.uint16), ('Weight', np.float16)])
 
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt, h5py.File(fopt, 'w') as opt:
         ent = ipt['Waveform']
+        Length_pe = len(ent['Waveform'][0])
+        spemean = np.concatenate([spemean, np.zeros(Length_pe - len(spemean))])
         l = len(ent)
         print('{} waveforms will be computed'.format(l))
         dt = np.zeros(l * 1029, dtype=opdt)
