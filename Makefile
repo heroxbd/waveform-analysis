@@ -41,7 +41,7 @@ $(xdcFTp)/distrecord/distrecord-%.h5: ztraining-%.h5 $(xdcFTp)/submission/submis
 	python3 test/test_dist.py $(word 2,$^) --ref $< -o $@
 $(xdcFTp)/submission/submission-%.h5 : ztraining-%.h5 $(xdcFTp)/single_pe.h5
 	mkdir -p $(dir $@)
-	python3 $(xdcFTp)/FFT_decon.py $< --ref $(word 2,$^) -o $@
+	python3 $(xdcFTp)/FFT_decon.py $< --ref $(word 2,$^) -o $@ -k 0.05 -a 4 -e 4
 $(xdcFTp)/single_pe.h5: $(range0:%=ztraining-%.h5)
 	python3 test/speGet.py $^ -o $@
 

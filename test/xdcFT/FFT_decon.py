@@ -16,20 +16,23 @@ import wf_analysis_func as wfaf
 import matplotlib.pyplot as plt
 from scipy.fftpack import fft,ifft
 
-KNIFE = 0.05
-AXE = 4
-EXP = 4
-
 psr = argparse.ArgumentParser()
 psr.add_argument('-o', dest='opt', help='output')
 psr.add_argument('ipt', help='input')
 psr.add_argument('--ref')
+psr.add_argument('-k', dest='kni')
+psr.add_argument('-a', dest='axe')
+psr.add_argument('-e', dest='exp')
 args = psr.parse_args()
+
+KNIFE = args.kni
+AXE = args.axe
+EXP = args.exp
 
 def generate_eff_ft(fopt, fipt, single_pe_path):
     epulse = wfaf.estipulse(fipt)
     model = wfaf.generate_model(single_pe_path, epulse)
-    opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint8), ('PETime', np.uint16), ('Weight', np.float16)])
+    opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PETime', np.uint16), ('Weight', np.float16)])
     model = compr(model, EXP, AXE, epulse)
 
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt, h5py.File(fopt, 'w') as opt:
@@ -45,7 +48,7 @@ def generate_eff_ft(fopt, fipt, single_pe_path):
         for i in range(l):
             wf_input = ent[i]['Waveform']
             wf_input = preman(wf_input, AXE, epulse)
-            wf_k = fft(wf_input) # fft for waveform input
+            wf_k = fft(wf_input)  # fft for waveform input
             spec = np.divide(wf_k, model_k) # divide for deconvolution
             pf = ifft(spec)
             pf = pf.real

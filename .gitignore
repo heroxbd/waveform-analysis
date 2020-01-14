@@ -9,6 +9,7 @@
 *.dot
 *.pdf
 *.npy
+*.ipynb
 .DS_Store
 __pycache__/
 .vscode
