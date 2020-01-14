@@ -43,7 +43,7 @@ $(xdcFTp)/submission/submission-%.h5 : ztraining-%.h5 $(xdcFTp)/single_pe.h5
 	mkdir -p $(dir $@)
 	python3 $(xdcFTp)/FFT_decon.py $< --ref $(word 2,$^) -o $@
 $(xdcFTp)/single_pe.h5: $(range0:%=ztraining-%.h5)
-	python3 $(xdcFTp)/standard.py $^ -o $@
+	python3 test/speGet.py $^ -o $@
 
 lucyOutDir=output/jinping/lucyddm
 lucySrcDir=test/lucyddm

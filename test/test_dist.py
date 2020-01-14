@@ -62,12 +62,10 @@ if __name__ == '__main__':
     with h5py.File(args.ref, 'r', libver='latest', swmr=True) as ref, h5py.File(args.ipt, 'r', libver='latest', swmr=True) as ipt:
         df_ans = ref['GroundTruth'][...]
         df_sub = ipt['Answer'][...]
-        totTime = ipt['Answer'].attrs['totalTime']
         totLen = ipt['Answer'].attrs['totalLength']
     dt = wpdistance(df_ans, df_sub)
     # wd = dt['wdist'].average()
     # pd = dt['pdist'].average()
     with h5py.File(args.opt, 'w') as h5f:
         dset = h5f.create_dataset('Record', data=dt, compression='gzip')
-        dset.attrs['totalTime'] = totTime
         dset.attrs['totalLength'] = totLen

@@ -1,12 +1,4 @@
-#!/usr/bin/python3
 # -*- coding: utf-8 -*-
-"""
-Created on Sat Aug 24 19:51:47 2019
-
-@author: xudachengthu
-
-Generate standard response model of single pe's waveform
-"""
 
 import os
 import numpy as np
@@ -19,8 +11,8 @@ psr.add_argument('-o', dest='opt', help='output')
 psr.add_argument('ipt', nargs='+', help='input')
 args = psr.parse_args()
 
-N = 1000
-L = 50
+N = 10000
+L = 80
 
 def generate_standard(h5_path, single_pe_path):
     npdt = np.dtype([('TrainSet', np.uint8), ('EventID', np.uint32), ('ChannelID', np.uint8), ('speWf', np.uint16, L)])  # set datatype
@@ -59,30 +51,6 @@ def generate_standard(h5_path, single_pe_path):
     print('{} speWf generated'.format(len(dt)))
     with h5py.File(single_pe_path, "w") as spp:
         spp.create_dataset('SinglePE', data=dt, compression='gzip') # save the spe events
-
-def speplot(dt):
-    plt.rcParams['figure.figsize'] = (10, 6)
-    plt.rcParams['savefig.dpi'] = 300
-    plt.rcParams['figure.dpi'] = 300
-    plt.rcParams['font.size'] = 16 # set figure parameters
-    
-    spemean = np.mean(dt['speWf'], axis = 0) # calculate average fluctuation of waveform
-    plt.figure()
-    plt.xlim(0,50)
-    plt.plot(spemean) # draw the average fluctuation
-    plt.xlabel('ns')
-    plt.ylabel('mV')
-    plt.title("Standard response model")
-    #plt.savefig('spemean.png')
-    plt.close()
-    
-    spemin = np.min(dt['speWf'], axis = 1)
-    u = np.unique(Pt)
-    plt.figure()
-    plt.hist(spemin, len(u), density=1, histtype='bar', cumulative=False) # show the dispersion of minimum of spe waveform
-    plt.xlabel('mV')
-    #plt.savefig('specumu.png')
-    plt.close()
 
 def main(h5_path, single_pe_path):
     if not os.path.exists(single_pe_path):
