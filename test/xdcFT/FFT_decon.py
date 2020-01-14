@@ -12,9 +12,9 @@ import numpy as np
 import h5py
 import sys
 sys.path.append('test')
-import wf_analysis_func as wfaf
 import matplotlib.pyplot as plt
 from scipy.fftpack import fft,ifft
+import wf_analysis_func as wfaf
 
 psr = argparse.ArgumentParser()
 psr.add_argument('-o', dest='opt', help='output')

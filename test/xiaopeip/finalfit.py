@@ -4,8 +4,11 @@ import numpy as np
 from scipy import optimize as opti
 import h5py
 import time
+import sys
+sys.path.append('test')
 import matplotlib.pyplot as plt
 import argparse
+import wf_analysis_func as wfaf
 
 psr = argparse.ArgumentParser()
 psr.add_argument('-o', dest='opt', help='output')

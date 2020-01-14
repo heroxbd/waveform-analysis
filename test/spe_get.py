@@ -32,6 +32,7 @@ def generate_standard(h5_path, single_pe_path):
             for j in range(len(Wf)):
                 wf = Wf[j]
                 pt = (np.around(np.sort(Pt[np.logical_and(ptev == wfev[j], ptch == wfch[j])])) + 0.1).astype(int)
+                pt = pt[pt >= 0]
                 if len(pt) == 1 and pt[0] < Length_pe - L:
                     ps = pt
                 else:

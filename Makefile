@@ -1,18 +1,18 @@
 SHELL=bash
-range0=$(shell echo {0..9})
 jinpDir=dataset/jinp
 jinpwaveseq=$(shell echo {0..9})
 junoDir=dataset/juno
 junowaveseq=2 4
 xdcFTp=test/xdcFT
 xiaoPp=test/xiaopeip
+xiaoPseq=$(shell echo {0..99})
 lucySrcDir=test/lucyddm
 lucyOutDir=output/jinping/lucyddm
 
 .PHONY:xdcFT xiaopeip lucyddm
 
-xiaopeip: $(range0:%=$(xiaoPp)/hist-%.pdf) $(xiaoPp)/record.csv
-$(xiaoPp)/record.csv: $(range0:%=$(xiaoPp)/record/record-%.csv)
+xiaopeip: $(jinpwaveseq:%=$(xiaoPp)/hist-%.pdf) $(xiaoPp)/record.csv
+$(xiaoPp)/record.csv: $(jinpwaveseq:%=$(xiaoPp)/record/record-%.csv)
 	cat $^ > $@
 $(xiaoPp)/record/record-%.csv: $(xiaoPp)/distrecord/distrecord-%.h5
 	mkdir -p $(dir $@)
@@ -22,17 +22,20 @@ $(xiaoPp)/hist-%.pdf: $(xiaoPp)/distrecord/distrecord-%.h5
 $(xiaoPp)/distrecord/distrecord-%.h5: $(jinpDir)/ztraining-%.h5 $(xiaoPp)/submission/submission-%.h5
 	mkdir -p $(dir $@)
 	python3 test/test_dist.py $(word 2,$^) --ref $< -o $@
-$(xiaoPp)/submission/submission-%.h5: $(xiaoPp)/unadjusted/unadjusted-%.h5
-	mkdir -p $(dir $@)
-	python3 $(xiaoPp)/adjust.py $^ -o $@
-$(xiaoPp)/unadjusted/unadjusted-%.h5: $(jinpDir)/ztraining-%.h5 $(xiaoPp)/averspe.h5
-	mkdir -p $(dir $@)
-	python3 $(xiaoPp)/finalfit.py $< --ref $(word 2,$^) -o $@
+define xpp_split
+$(xiaoPp)/submission/submission-$(1).h5: $(xiaoPseq:%=$(xiaoPp)/unadjusted/unadjusted-$(1)-%.h5)
+	mkdir -p $$(dir $$@)
+	python3 $(xiaoPp)/adjust.py $$^ -o $$@
+$(xiaoPp)/unadjusted/unadjusted-$(1)-%.h5: $(jinpDir)/ztraining-$(1).h5 $(xiaoPp)/averspe.h5
+	mkdir -p $$(dir $$@)
+	python3 $(xiaoPp)/finalfit.py $$< --ref $$(word 2,$$^) -o $$@
+endef
+$(foreach i,$(jinpwaveseq),$(eval $(call xpp_split,$(i))))
 $(xiaoPp)/averspe.h5: $(jinpDir)/ztraining-0.h5
-	python3 $(xiaoPp)/read.py $^ -o $@
+	python3 test/spe_get.py $^ -o $@
 
-xdcFT: $(range0:%=$(xdcFTp)/hist-%.pdf) $(xdcFTp)/record.csv
-$(xdcFTp)/record.csv: $(range0:%=$(xdcFTp)/record/record-%.csv)
+xdcFT: $(jinpwaveseq:%=$(xdcFTp)/hist-%.pdf) $(xdcFTp)/record.csv
+$(xdcFTp)/record.csv: $(jinpwaveseq:%=$(xdcFTp)/record/record-%.csv)
 	cat $^ > $@
 $(xdcFTp)/record/record-%.csv: $(xdcFTp)/distrecord/distrecord-%.h5
 	mkdir -p $(dir $@)
@@ -45,11 +48,11 @@ $(xdcFTp)/distrecord/distrecord-%.h5: $(jinpDir)/ztraining-%.h5 $(xdcFTp)/submis
 $(xdcFTp)/submission/submission-%.h5 : $(jinpDir)/ztraining-%.h5 $(xdcFTp)/single_pe.h5
 	mkdir -p $(dir $@)
 	python3 $(xdcFTp)/FFT_decon.py $< --ref $(word 2,$^) -o $@ -k 0.05 -a 4 -e 4
-$(xdcFTp)/single_pe.h5: $(range0:%=$(jinpDir)/ztraining-%.h5)
+$(xdcFTp)/single_pe.h5: $(jinpDir)/ztraining-0.h5
 	python3 test/spe_get.py $^ -o $@
 
-lucyddm: $(range0:%=$(lucyOutDir)/hist-%.pdf) $(lucyOutDir)/record.csv
-$(lucyOutDir)/record.csv: $(range0:%=$(lucyOutDir)/record/record-%.csv)
+lucyddm: $(jinpwaveseq:%=$(lucyOutDir)/hist-%.pdf) $(lucyOutDir)/record.csv
+$(lucyOutDir)/record.csv: $(jinpwaveseq:%=$(lucyOutDir)/record/record-%.csv)
 	cat $^ > $@
 $(lucyOutDir)/record/record-%.csv: $(lucyOutDir)/distrecord/distrecord-%.h5
 	mkdir -p $(dir $@)
