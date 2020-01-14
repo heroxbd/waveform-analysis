@@ -28,12 +28,20 @@ def generate_standard(h5_path, single_pe_path):
             wfch = ztrfile['Waveform']['ChannelID']
             Wf = ztrfile['Waveform']['Waveform']
             ni = 0
+            Length_pe = len(Wf[0])
             for j in range(len(Wf)):
                 wf = Wf[j]
                 pt = (np.around(np.sort(Pt[np.logical_and(ptev == wfev[j], ptch == wfch[j])])) + 0.1).astype(int)
-                dpta = np.diff(pt, prepend=pt[0])
-                dptb = np.diff(pt, append=pt[-1])
-                ps = pt[np.logical_and(dpta > L, dptb > L)]#long distance to other spe in both forepart & backpart
+                if len(pt) == 1 and pt[0] < Length_pe - L:
+                    ps = pt
+                else:
+                    dpta = np.diff(pt, prepend=pt[0])
+                    dptb = np.diff(pt, append=pt[-1])
+                    ps = pt[np.logical_and(dpta > L, dptb > L)]#long distance to other spe in both forepart & backpart
+                    if dpta[-1] > L and pt[-1] < Length_pe - L:
+                        ps = np.insert(ps, 0, pt[-1])
+                    if dptb[0] > L and pt[0] < Length_pe - L:
+                        ps = np.insert(ps, 0, pt[0])
                 for k in range(len(ps)):
                     dt['TrainSet'][num] = i
                     dt['EventID'][num] = wfev[j]
