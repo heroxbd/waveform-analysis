@@ -1,11 +1,12 @@
 SHELL=bash
 jinpDir=dataset/jinp
-jinpwaveseq=$(shell echo {0..9})
+jinpwaveseq=$(shell seq 0 9)
 junoDir=dataset/juno
 junowaveseq=2 4
 xdcFTp=test/xdcFT
 xiaoPp=test/xiaopeip
-xiaoPseq=$(shell echo {0..99})
+xiaoPl=1
+xiaoPseq=$(shell seq 0 ${xiaoPl})
 lucySrcDir=test/lucyddm
 lucyOutDir=output/jinping/lucyddm
 
@@ -23,12 +24,15 @@ $(xiaoPp)/distrecord/distrecord-%.h5: $(jinpDir)/ztraining-%.h5 $(xiaoPp)/submis
 	mkdir -p $(dir $@)
 	python3 test/test_dist.py $(word 2,$^) --ref $< -o $@
 define xpp_split
-$(xiaoPp)/submission/submission-$(1).h5: $(xiaoPseq:%=$(xiaoPp)/unadjusted/unadjusted-$(1)-%.h5)
+$(xiaoPp)/submission/submission-$(1).h5: $(xiaoPp)/submission/adjusted-$(1).h5
 	mkdir -p $$(dir $$@)
 	python3 $(xiaoPp)/adjust.py $$^ -o $$@
+$(xiaoPp)/submission/adjusted-$(1).h5: $(xiaoPseq:%=$(xiaoPp)/unadjusted/unadjusted-$(1)-%.h5)
+	mkdir -p $$(dir $$@)
+	python3 $(xiaoPp)/integrate.py $$^ --num ${xiaoPl} -o $$@
 $(xiaoPp)/unadjusted/unadjusted-$(1)-%.h5: $(jinpDir)/ztraining-$(1).h5 $(xiaoPp)/averspe.h5
 	mkdir -p $$(dir $$@)
-	python3 $(xiaoPp)/finalfit.py $$< --ref $$(word 2,$$^) -o $$@
+	python3 $(xiaoPp)/finalfit.py $$< --ref $$(word 2,$$^) --num ${xiaoPl} -o $$@
 endef
 $(foreach i,$(jinpwaveseq),$(eval $(call xpp_split,$(i))))
 $(xiaoPp)/averspe.h5: $(jinpDir)/ztraining-0.h5

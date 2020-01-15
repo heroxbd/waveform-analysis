@@ -58,7 +58,7 @@ def generate_standard(h5_path, single_pe_path):
                 break
     dt = dt[:num] # cut empty dt part
     print('{} speWf generated'.format(len(dt)))
-    with h5py.File(single_pe_path, "w") as spp:
+    with h5py.File(single_pe_path, 'w') as spp:
         spp.create_dataset('SinglePE', data=dt, compression='gzip') # save the spe events
 
 def main(h5_path, single_pe_path):
