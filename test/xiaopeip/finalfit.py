@@ -1,34 +1,47 @@
 # -*- coding: utf-8 -*-
 
+import re
 import numpy as np
 from scipy import optimize as opti
 import h5py
-import time
+import sys
+sys.path.append('test')
 import matplotlib.pyplot as plt
+import math
 import argparse
+import wf_analysis_func as wfaf
 
 psr = argparse.ArgumentParser()
 psr.add_argument('-o', dest='opt', help='output')
 psr.add_argument('ipt', help='input')
 psr.add_argument('--ref')
+psr.add_argument('--num', type=int)
 args = psr.parse_args()
 
 def norm_fit(x, M, p):
     return np.linalg.norm(p - np.matmul(M, x))
 
-def main(fopt, fipt, aver_spe_path):
-    speFile = h5py.File(aver_spe_path, 'r', libver='latest', swmr=True)
-    spemean = np.array(speFile['spe'])
+def main(fopt, fipt, single_pe_path):
+    epulse = wfaf.estipulse(fipt)
+    spemean = wfaf.generate_model(single_pe_path, epulse)
     opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint8), ('PETime', np.uint16), ('Weight', np.float16)])
 
-    with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt, h5py.File(fopt, 'w') as opt:
+    with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
         ent = ipt['Waveform']
+        lenfr = math.floor(len(ent)/(args.num+1))
+        num = int(re.findall(r'-\d+\.h5', fopt, flags=0)[0][1:-3])
+        if (num+2)*lenfr > len(ent):
+            ent = ent[num*lenfr:]
+        else:
+            ent = ent[num*lenfr:(num+1)*lenfr]
+
+        Length_pe = len(ent['Waveform'][0])
+        spemean = np.concatenate([spemean, np.zeros(Length_pe - len(spemean))])
         l = len(ent)
         print('{} waveforms will be computed'.format(l))
         dt = np.zeros(l * 1029, dtype=opdt)
         start = 0
         end = 0
-        start_t = time.time()
         for i in range(l):
             wf_input = ent[i]['Waveform']
             wave = wf_input - np.mean(wf_input[900:1000])
@@ -78,12 +91,12 @@ def main(fopt, fipt, aver_spe_path):
             dt['ChannelID'][start:end] = ent[i]['ChannelID']
             start = end
             print('\rAnsw Generating:|{}>{}|{:6.2f}%'.format(((20*i)//l)*'-', (19-(20*i)//l)*' ', 100 * ((i+1) / l)), end='' if i != l-1 else '\n') # show process bar
-        end_t = time.time()
-        dt = dt[np.where(dt['Weight'] > 0)]
+    dt = dt[np.where(dt['Weight'] > 0)]
+    Chnum = np.max(dt['ChannelID'])
+    did = dt['EventID']*Chnum + dt['ChannelID']
+    dt = dt[np.argsort(did)]
+    with h5py.File(fopt, 'w') as opt:
         dset = opt.create_dataset('Answer', data=dt, compression='gzip')
-        dset.attrs['totalTime'] = end_t - start_t
-        dset.attrs['totalLength'] = l
-        dset.attrs['spePath'] = aver_spe_path
         print('The output file path is {}'.format(fopt), end=' ', flush=True)
     return 
 

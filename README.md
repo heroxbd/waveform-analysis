@@ -38,3 +38,7 @@ For each method:
 + 不同spe产生方式对算法评测有影响，应使用同一个spe
 + 不同算法应放在一个库中，以函数调用执行，方便之后使用同一个框架与并行化
 + 数据和代码应该分离
+
+问题的解决
++ 数据放在了dataset文件夹
++ spe_get.py和wf_analysis_func.py用于生成spe

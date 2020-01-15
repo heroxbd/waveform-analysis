@@ -1,6 +1,5 @@
 # -*- COding: utf-8 -*-
 
-
 import numpy as np
 import csv
 import h5py
@@ -15,8 +14,6 @@ if __name__ == '__main__':
     with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as distfile:
         dt = distfile['Record']
         l = len(dt)
-        totTime = dt.attrs['totalTime']
-        totLen = dt.attrs['totalLength']
         wd = dt['wdist'].mean()
         pd = dt['pdist'].mean()
         penum, c = np.unique(dt['PEnum'], return_counts=True)
@@ -29,7 +26,7 @@ if __name__ == '__main__':
             pe_dist[i, 1] = np.mean(dt['pdist'][dt['PEnum'] == penum[i]])
     with open(args.opt, 'w+') as csvf:
         csvwr = csv.writer(csvf)
-        csvwr.writerow([args.ipt, str(totTime), str(totLen), str(wd), str(pd)])
+        csvwr.writerow([args.ipt, str(wd), str(pd)])
         str_pe_c = pe_c.astype(np.str)
         str_pe_dist = pe_dist.astype(np.str)
         for i in range(len(str_pe_dist)):
