@@ -1,187 +1,100 @@
-SHELL=bash
-range0:=$(shell echo {0..9})
-xdcFTp=test/xdc/FT
-xiaoPp=test/xiaopeip
+method:=fft
+negative:=False
+channelidb:=0
+channelide:=30
+eventid:=0
+.PHONY: junoDataset junoAll junoAssess junoViewWave junoSpe jinpingAnswerView
+junoDataDir:=dataset/juno
+junoOutDir:=output/juno
+junodataset:=$(wildcard $(junoDataDir)/hdf5/*/wave.h5)
+junodst:=$(junodataset:$(junoDataDir)/hdf5/%/wave.h5=$(junoOutDir)/wave%/$(method)/answer.h5)
+junodstpdf:=$(junodst:$(junoOutDir)/wave%/$(method)/answer.h5=$(junoOutDir)/wave%/$(method)/distanceDistribution.pdf)
+junodstview:=$(junodst:$(junoOutDir)/wave%/$(method)/answer.h5=$(junoOutDir)/wave%/$(method)/figure/e$(eventid)c$(channelidb)-$(channelide).pdf)
+junoOdstview:=$(junodst:$(junoOutDir)/wave%/$(method)/answer.h5=$(junoOutDir)/wave%/$(method)/figure/Origine$(eventid)c$(channelidb)-$(channelide).pdf)
 
-.PHONY:all0 all1 lucyddm
+junoDataset:
+	mkdir -p $(junoDataDir)/hdf5
+	cd $(junoDataDir)/hdf5 && ./scpJuno.sh
 
-all: all1
-
-all1: $(range0:%=$(xiaoPp)/hist-%.pdf) $(xiaoPp)/record.csv
-
-$(xiaoPp)/record.csv: $(range0:%=$(xiaoPp)/record/record-%.csv)
-	cat $^ > $@
-
-$(xiaoPp)/record/record-%.csv: $(xiaoPp)/distrecord/distrecord-%.h5
+junoAll: $(junodst)
+$(junoOutDir)/wave%/$(method)/answer.h5: $(junoDataDir)/hdf5/%/wave.h5 $(junoOutDir)/spe.h5
 	mkdir -p $(dir $@)
-	python3 test/csv_dist.py $^ -o $@
+	python3 src/main.py $^ $@ $(method) $(negative)
 
-$(xiaoPp)/hist-%.pdf: $(xiaoPp)/distrecord/distrecord-%.h5
-	python3 test/draw_dist.py $^ -o $@
-
-$(xiaoPp)/distrecord/distrecord-%.h5: ztraining-%.h5 $(xiaoPp)/submission/submission-%.h5
+junoSpe: $(junoOutDir)/spe.h5
+$(junoOutDir)/spe.h5: $(junodataset) 
 	mkdir -p $(dir $@)
-	python3 test/test_dist.py $(word 2,$^) --ref $< -o $@
+	python3 src/speGet.py  $^ -o $@ -n $(negative)
 
-$(xiaoPp)/submission/submission-%.h5: $(xiaoPp)/unadjusted/unadjusted-%.h5
+junoAssess: $(junodstpdf)
+$(junoOutDir)/wave%/$(method)/distanceDistribution.pdf: $(junoOutDir)/wave%/$(method)/distanceDistribution.h5
 	mkdir -p $(dir $@)
-	python3 $(xiaoPp)/adjust.py $^ -o $@
-
-$(xiaoPp)/unadjusted/unadjusted-%.h5: ztraining-%.h5 $(xiaoPp)/averspe.h5
+	python3 src/plotDistance.py $< -o $@
+$(junoOutDir)/wave%/$(method)/distanceDistribution.h5: $(junoOutDir)/wave%/$(method)/answer.h5 $(junoDataDir)/hdf5/%/wave.h5 
 	mkdir -p $(dir $@)
-	python3 $(xiaoPp)/finalfit.py $< --ref $(word 2,$^) -o $@
+	python3 src/distance.py $< --ref $(word 2, $^) -o $(dir $@) 
 
-$(xiaoPp)/averspe.h5: ztraining-0.h5
-	python3 $(xiaoPp)/read.py $^ -o $@
-
-all0: $(range0:%=$(xdcFTp)/hist-%.pdf) $(xdcFTp)/record.csv
-
-$(xdcFTp)/record.csv: $(range0:%=$(xdcFTp)/record/record-%.csv)
-	cat $^ > $@
-
-$(xdcFTp)/record/record-%.csv: $(xdcFTp)/distrecord/distrecord-%.h5
+junoAssessAll: $(junoOutDir)/waveAll/$(method)/distanceDistribution.pdf
+$(junoOutDir)/waveAll/$(method)/distanceDistribution.pdf: $(junoOutDir)/waveAll/$(method)/distanceDistribution.h5
 	mkdir -p $(dir $@)
-	python3 test/csv_dist.py $^ -o $@
-
-$(xdcFTp)/hist-%.pdf: $(xdcFTp)/distrecord/distrecord-%.h5
-	python3 test/draw_dist.py $^ -o $@
-
-$(xdcFTp)/distrecord/distrecord-%.h5: ztraining-%.h5 $(xdcFTp)/submission/submission-%.h5
+	python3 src/plotDistance.py $< -o $@
+$(junoOutDir)/waveAll/$(method)/distanceDistribution.h5: $(junodst:$(junoOutDir)/wave%/$(method)/answer.h5=$(junoOutDir)/wave%/$(method)/distanceDistribution.h5)
 	mkdir -p $(dir $@)
-	python3 test/test_dist.py $(word 2,$^) --ref $< -o $@
+	python3 src/merge.py $^ -o $@
 
-$(xdcFTp)/submission/submission-%.h5 : ztraining-%.h5 $(xdcFTp)/single_pe.h5
+junoAnswerView: $(junodstview)
+$(junoOutDir)/wave%/$(method)/figure/e$(eventid)c$(channelidb)-$(channelide).pdf: $(junoOutDir)/wave%/$(method)/answer.h5 $(junoDataDir)/hdf5/%/wave.h5 $(junoOutDir)/spe.h5
 	mkdir -p $(dir $@)
-	python3 $(xdcFTp)/FFT_decon.py $< --ref $(word 2,$^) -o $@
+	python3 src/plotAnswer.py $^ $(dir $@) $(eventid) $(channelidb) $(channelide)
 
-$(xdcFTp)/single_pe.h5: $(range0:%=ztraining-%.h5)
-	python3 $(xdcFTp)/standard.py $^ -o $@
-
-lucyOutDir=output/jinping/lucyddm
-lucySrcDir=test/lucyddm
-lucyddm: $(range0:%=$(lucyOutDir)/hist-%.pdf) $(lucyOutDir)/record.csv
-
-$(lucyOutDir)/record.csv: $(range0:%=$(lucyOutDir)/record/record-%.csv)
-	cat $^ > $@
-
-$(lucyOutDir)/record/record-%.csv: $(lucyOutDir)/distrecord/distrecord-%.h5
+junoOriginAnswerView: $(junoOdstview)
+$(junoOutDir)/wave%/$(method)/figure/Origine$(eventid)c$(channelidb)-$(channelide).pdf: $(junoOutDir)/spe.h5 $(junoDataDir)/hdf5/%/wave.h5
+#output/juno/ztraining-3/lucyddm/figure/e1c0.pdf: $(junoOutDir)/ztraining-3/$(method)/answer.h5 $(junoDataDir)/hdf5/ztraining-3.h5 $(junoOutDir)/spe.h5
 	mkdir -p $(dir $@)
-	python3 test/csv_dist.py $^ -o $@
+	python3 src/fftview.py $^ $(dir $@) $(eventid) $(channelidb) $(channelide)
 
-$(lucyOutDir)/hist-%.pdf: $(lucyOutDir)/distrecord/distrecord-%.h5
-	python3 test/draw_dist.py $^ -o $@
+.PHONY: jinpingDataset jinpingAll jinpingAssess jinpingViewWave jinpingSpe
+jinpingDataDir:=dataset/jinping
+jinpingOutDir:=output/jinping
+jinpingdataset:=$(wildcard $(jinpingDataDir)/hdf5/ztraining-*.h5)
+jinpingdst:=$(jinpingdataset:$(jinpingDataDir)/hdf5/ztraining-%.h5=$(jinpingOutDir)/ztraining-%/$(method)/answer.h5)
+jinpingdstpdf:=$(jinpingdst:answer.h5=distanceDistribution.pdf)
+jinpingdstview:=$(jinpingdst:$(jinpingOutDir)/ztraining%/$(method)/answer.h5=$(jinpingOutDir)/ztraining%/$(method)/figure/e$(eventid)c$(channelidb)-$(channelide).pdf)
+jinpingOdstview:=$(jinpingdst:$(jinpingOutDir)/ztraining%/$(method)/answer.h5=$(jinpingOutDir)/ztraining%/$(method)/figure/Origine$(eventid)c$(channelidb)-$(channelide).pdf)
 
-$(lucyOutDir)/distrecord/distrecord-%.h5: ztraining-%.h5 $(lucyOutDir)/submission/submission-%.h5
+jinpingDataset:
+	mkdir -p $(jinpingDataDir)/hdf5
+
+jinpingAll: $(jinpingdst)
+$(jinpingOutDir)/%/$(method)/answer.h5: $(jinpingDataDir)/hdf5/%.h5 $(jinpingOutDir)/spe.h5
 	mkdir -p $(dir $@)
-	python3 test/test_dist.py $(word 2,$^) --ref $< -o $@
+	python3 src/main.py $^ $@ $(method) $(negative)
 
-$(lucyOutDir)/submission/submission-%.h5 : ztraining-%.h5 $(lucyOutDir)/spe.h5
+jinpingSpe: $(jinpingOutDir)/spe.h5
+$(jinpingOutDir)/spe.h5: $(jinpingDataDir)/hdf5/ztraining-0.h5 
 	mkdir -p $(dir $@)
-	python3 $(lucySrcDir)/lucyDDM.py $^ $@ > $@.log 2>&1
+	python3 src/speGet.py $^ $@
 
-$(lucyOutDir)/spe.h5: ztraining-0.h5
+jinpingAssess: $(jinpingdstpdf)
+
+$(jinpingOutDir)/ztraining-%/$(method)/distanceDistribution.pdf: $(jinpingOutDir)/ztraining-%/$(method)/distanceDistribution.h5
 	mkdir -p $(dir $@)
-	python3 $(lucySrcDir)/speGet.py $^ $@ >$@.log 2>&1
-zincm-problem.h5:
-	wget 'https://cloud.tsinghua.edu.cn/f/3babd73926ce47c8893a/?dl=1&first.h5' -O $@
-
-ztraining-9.h5:
-	wget 'https://cloud.tsinghua.edu.cn/f/04dca9b735494acd9781/?dl=1&first.h5' -O $@
-
-ztraining-8.h5:
-	wget 'https://cloud.tsinghua.edu.cn/f/7f5b09e096e0466c804f/?dl=1&first.h5' -O $@
-
-ztraining-7.h5:
-	wget 'https://cloud.tsinghua.edu.cn/f/cf4359cb07a846bc94f8/?dl=1&first.h5' -O $@
-
-ztraining-6.h5:
-	wget 'https://cloud.tsinghua.edu.cn/f/d4d2cd83b7084f7e8672/?dl=1&first.h5' -O $@
-
-ztraining-5.h5:
-	wget 'https://cloud.tsinghua.edu.cn/f/acc278feed464cafad14/?dl=1&first.h5' -O $@
-
-ztraining-4.h5:
-	wget 'https://cloud.tsinghua.edu.cn/f/00b99bfb7a2e411f8c54/?dl=1&first.h5' -O $@
-
-ztraining-3.h5:
-	wget 'https://cloud.tsinghua.edu.cn/f/9926a7c35a934974872f/?dl=1&first.h5' -O $@
-
-ztraining-2.h5:
-	wget 'https://cloud.tsinghua.edu.cn/f/a445fe1b4bf74357b26d/?dl=1&first.h5' -O $@
-
-ztraining-1.h5:
-	wget 'https://cloud.tsinghua.edu.cn/f/ca29b48212e44332a215/?dl=1&first.h5' -O $@
-
-ztraining-0.h5:
-	wget 'https://cloud.tsinghua.edu.cn/f/0499334a4239427798c1/?dl=1&first.h5' -O $@
-
-JUNO-Kaon-50.h5:
-	wget http://hep.tsinghua.edu.cn/~orv/distfiles/JUNO-Kaon-50.h5
-
-.PHONY: junoDataset
-
-junoDir=dataset/juno
-junowaveseq=1 3
-junoDataset: $(junowaveseq:%=$(junoDir)/junoWave%.h5)
-$(junoDir)/junoWave1.h5:
-	wget https://cloud.tsinghua.edu.cn/f/496e083a78a94251b623/?dl=1 -O $@
-$(junoDir)/junoWave3.h5:
-	wget https://cloud.tsinghua.edu.cn/f/56e8ca3d3d30414da095/?dl=1 -O $@
-
-PHONY: xdcJuno xppJuno
-xdcJunoOutDir=output/juno/xdc
-xdcSrcDir=test/xdc/FT
-xppJunoOutDir=output/juno/xpp
-xppSrcDir=test/xiaopeip
-xdcJuno: $(junowaveseq:%=$(xdcJunoOutDir)/hist-%.pdf) $(xdcJunoOutDir)/record.csv
-
-$(xdcJunoOutDir)/record.csv: $(junowaveseq:%=$(xdcJunoOutDir)/record/record-%.csv)
-	cat $^ > $@
-
-$(xdcJunoOutDir)/record/record-%.csv: $(xdcJunoOutDir)/distrecord/distrecord-%.h5
+	python3 src/plotDistance.py $< -o $@
+$(jinpingOutDir)/ztraining-%/$(method)/distanceDistribution.h5: $(jinpingOutDir)/ztraining-%/$(method)/answer.h5 $(jinpingDataDir)/hdf5/ztraining-%.h5
 	mkdir -p $(dir $@)
-	python3 test/csv_dist.py $^ -o $@
+	python3 src/distance.py $< --ref $(word 2, $^) -o $(dir $@)
 
-$(xdcJunoOutDir)/hist-%.pdf: $(xdcJunoOutDir)/distrecord/distrecord-%.h5
-	python3 test/draw_dist.py $^ -o $@
-
-$(xdcJunoOutDir)/distrecord/distrecord-%.h5: $(junoDir)/junoWave%.h5 $(xdcJunoOutDir)/submission/submission-%.h5
+jinpingAnswerView: $(jinpingdstview)
+$(jinpingOutDir)/%/$(method)/figure/e$(eventid)c$(channelidb)-$(channelide).pdf: $(jinpingOutDir)/%/$(method)/answer.h5 $(jinpingDataDir)/hdf5/%.h5 $(jinpingOutDir)/spe.h5
+#output/jinping/ztraining-3/lucyddm/figure/e1c0.pdf: $(jinpingOutDir)/ztraining-3/$(method)/answer.h5 $(jinpingDataDir)/hdf5/ztraining-3.h5 $(jinpingOutDir)/spe.h5
 	mkdir -p $(dir $@)
-	python3 test/test_dist.py $(word 2,$^) --ref $< -o $@
+	python3 src/plotAnswer.py $^ $(dir $@) $(eventid) $(channelidb) $(channelide)
 
-$(xdcJunoOutDir)/submission/submission-%.h5 : $(junoDir)/junoWave%.h5 $(xdcJunoOutDir)/single_pe.h5
+jinpingOriginAnswerView: $(jinpingOdstview)
+$(jinpingOutDir)/%/$(method)/figure/Origine$(eventid)c$(channelidb)-$(channelide).pdf: $(jinpingOutDir)/%/$(method)/answer.h5 $(jinpingDataDir)/hdf5/%.h5
+#output/jinping/ztraining-3/lucyddm/figure/e1c0.pdf: $(jinpingOutDir)/ztraining-3/$(method)/answer.h5 $(jinpingDataDir)/hdf5/ztraining-3.h5 $(jinpingOutDir)/spe.h5
 	mkdir -p $(dir $@)
-	python3 $(xdcSrcDir)/FFT_decon.py $< --ref $(word 2,$^) -o $@
-
-$(xdcJunoOutDir)/single_pe.h5: $(junowaveseq:%=$(junoDir)/junoWave%.h5)
-	mkdir -p $(dir $@)
-	python3 $(xdcSrcDir)/standard.py $^ -o $@
-xppJuno: $(junowaveseq:%=$(xppJunoOutDir)/hist-%.pdf) $(xppJunoOutDir)/record.csv
-
-$(xppJunoOutDir)/record.csv: $(junowaveseq:%=$(xppJunoOutDir)/record/record-%.csv)
-	cat $^ > $@
-
-$(xppJunoOutDir)/record/record-%.csv: $(xppJunoOutDir)/distrecord/distrecord-%.h5
-	mkdir -p $(dir $@)
-	python3 test/csv_dist.py $^ -o $@
-
-$(xppJunoOutDir)/hist-%.pdf: $(xppJunoOutDir)/distrecord/distrecord-%.h5
-	python3 test/draw_dist.py $^ -o $@
-
-$(xppJunoOutDir)/distrecord/distrecord-%.h5: ztraining-%.h5 $(xppJunoOutDir)/submission/submission-%.h5
-	mkdir -p $(dir $@)
-	python3 test/test_dist.py $(word 2,$^) --ref $< -o $@
-
-$(xppJunoOutDir)/submission/submission-%.h5: $(xppJunoOutDir)/unadjusted/unadjusted-%.h5
-	mkdir -p $(dir $@)
-	python3 $(xppSrcDir)/adjust.py $^ -o $@
-
-$(xppJunoOutDir)/unadjusted/unadjusted-%.h5: ztraining-%.h5 $(xppJunoOutDir)/averspe.h5
-	mkdir -p $(dir $@)
-	python3 $(xppSrcDir)/finalfit.py $< --ref $(word 2,$^) -o $@
-
-$(xppJunoOutDir)/averspe.h5: ztraining-0.h5
-	python3 $(xppSrcDir)/read.py $^ -o $@
+	python3 src/lucyview.py $^ $(dir $@) $(eventid) $(channelidb) $(channelide)
 
 .DELETE_ON_ERROR:
 
