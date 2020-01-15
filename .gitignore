@@ -9,6 +9,7 @@
 *.dot
 *.pdf
 *.npy
+*.eps
 *.ipynb
 .DS_Store
 __pycache__/
