@@ -20,9 +20,9 @@ psr = argparse.ArgumentParser()
 psr.add_argument('-o', dest='opt', help='output')
 psr.add_argument('ipt', help='input')
 psr.add_argument('--ref')
-psr.add_argument('-k', dest='kni')
-psr.add_argument('-a', dest='axe')
-psr.add_argument('-e', dest='exp')
+psr.add_argument('-k', dest='kni', type=float)
+psr.add_argument('-a', dest='axe', type=int)
+psr.add_argument('-e', dest='exp', type=int)
 args = psr.parse_args()
 
 KNIFE = args.kni
@@ -35,7 +35,7 @@ def generate_eff_ft(fopt, fipt, single_pe_path):
     opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PETime', np.uint16), ('Weight', np.float16)])
     model = compr(model, EXP, AXE, epulse)
 
-    with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt, h5py.File(fopt, 'w') as opt:
+    with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
         ent = ipt['Waveform']
         Length_pe = len(ent['Waveform'][0])
         model_raw = np.concatenate([model, np.zeros(Length_pe - len(model))])  # concatenate the model
@@ -74,9 +74,8 @@ def generate_eff_ft(fopt, fipt, single_pe_path):
             
             print('\rAnsw Generating:|{}>{}|{:6.2f}%'.format(((20*i)//l)*'-', (19-(20*i)//l)*' ', 100 * ((i+1) / l)), end='' if i != l-1 else '\n') # show process bar
         dt = dt[np.where(dt['Weight'] > 0)] # cut empty dt part
+    with h5py.File(fopt, 'w') as opt:
         dset = opt.create_dataset('Answer', data = dt, compression='gzip')
-        dset.attrs['totalLength'] = l
-        dset.attrs['spePath'] = single_pe_path
         print('The output file path is {}'.format(fopt), end = ' ', flush=True)
 
 def compr(model, exp, axe, epulse):
@@ -85,7 +84,7 @@ def compr(model, exp, axe, epulse):
         core = model / np.min(model)
         core = np.power(core, exp)
         model = core * np.min(model) # the maximum height of model is unchanged
-        model = np.where(model > 0.02, model, 0) # cut off all small values
+        model = np.where(model < -0.02, model, 0) # cut off all small values
     elif epulse == 1:
         model = np.where(model > axe, model - axe, 0)
         core = model / np.max(model)

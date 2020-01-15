@@ -23,7 +23,7 @@ def generate_model(spe_path, epulse):
         spemean = np.mean(speFile['SinglePE']['speWf'], axis=0)
         base_vol = np.mean(spemean[-10:])
         # stdmodel[0] is the single pe's incoming time
-        stdmodel = spemean[0:-10] - base_vol
+        stdmodel = spemean[:-10] - base_vol
         #stdmodel = np.around(stdmodel / 0.05) * 0.05 # smooth the stdmodel
         # cut off all small values
         if epulse == -1:
