@@ -10,7 +10,7 @@ xiaoPseq=$(shell seq 0 ${xiaoPl})
 lucySrcDir=test/lucyddm
 lucyOutDir=output/jinping/lucyddm
 
-.PHONY:xdcFT xiaopeip lucyddm
+.PHONY:xdcFT xiaopeip lucyddm jinpDataset junoDataset
 
 xiaopeip: $(jinpwaveseq:%=$(xiaoPp)/hist-%.pdf) $(xiaoPp)/record.csv
 $(xiaoPp)/record.csv: $(jinpwaveseq:%=$(xiaoPp)/record/record-%.csv)
@@ -73,8 +73,6 @@ $(lucyOutDir)/spe.h5: $(jinpDir)/ztraining-0.h5
 	mkdir -p $(dir $@)
 	python3 $(lucySrcDir)/speGet.py $^ $@
 
-.PHONY: jinpDataset
-
 jinpDataset: $(jinpwaveseq:%=$(jinpDir)/ztraining-%.h5) $(jinpDir)/zincm-problem.h5
 $(jinpDir)/zincm-problem.h5:
 	mkdir -p $(dir $@)
@@ -113,8 +111,6 @@ $(jinpDir)/ztraining-0.h5:
 JUNO-Kaon-50.h5:
 	wget http://hep.tsinghua.edu.cn/~orv/distfiles/JUNO-Kaon-50.h5
 
-.PHONY: junoDataset
-
 junoDataset: $(junowaveseq:%=$(junoDir)/junoWave%.h5)
 $(junoDir)/junoWave2.h5:
 	mkdir -p $(dir $@)
@@ -122,5 +118,6 @@ $(junoDir)/junoWave2.h5:
 $(junoDir)/junoWave4.h5:
 	mkdir -p $(dir $@)
 	wget https://cloud.tsinghua.edu.cn/f/846ecb6335564714902b/?dl=1 -O $@
+
 .DELETE_ON_ERROR:
 .SECONDARY:
