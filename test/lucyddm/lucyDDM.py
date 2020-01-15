@@ -50,7 +50,7 @@ def lucyDDM(waveform, spe, iterations=50):
         wave_deconv *= convolve(relative_blur, spe_mirror, mode='same')
         # there is no need to set the bound if the spe and the wave are all none negative 
     return wave_deconv
-def writeSubfile(truth, eventId, channelId, sigma, moveDelta, subfile):
+def writeSubfile(truth, eventId, channelId, sigma, moveDelta, subfile, mode='lack'):
     answerh5file = tables.open_file(subfile, mode='w', title="OneTonDetector")
     AnswerTable = answerh5file.create_table('/', 'Answer', AnswerData, 'Answer')
     answer = AnswerTable.row
@@ -60,6 +60,7 @@ def writeSubfile(truth, eventId, channelId, sigma, moveDelta, subfile):
         eventIndex = eventId[i]
         channelIndex = channelId[i]
         waitWriteTruth = rangelist[truth[i, :] > (sigma * np.std(truth[i, :]))]
+        counter = 0
         for t in waitWriteTruth:# wait for the null output process
             if truth[i, t] > np.std(truth[i, (t-5):(t+5)]):
                 answer['EventID'] = eventIndex
@@ -67,6 +68,13 @@ def writeSubfile(truth, eventId, channelId, sigma, moveDelta, subfile):
                 answer['PETime'] = t - moveDelta
                 answer['Weight'] = truth[i, t]           
                 answer.append()
+                counter += 1
+        if counter == 0 and mode == 'full':
+            answer['EventID'] = eventIndex
+            answer['ChannelID'] = channelIndex
+            answer['PETime'] = 300
+            answer['Weight'] = 1           
+            answer.append()    
         print('\rThe writing processing:|{}>{}|{:6.2f}%'.format(((20*i)//length)*'-', (19 - (20*i)//length)*' ', 100 * ((i+1) / length)), end=''if i != length-1 else '\n') # show process bar
     AnswerTable.flush()
     answerh5file.close()
@@ -92,6 +100,6 @@ if __name__ == "__main__":
         waveformNobase = -waveformNobase
     print('Begin analyze {}'.format(problemfile))
     lucyTruth = lucyDDM_N(waveformNobase, spePart)
-    writeSubfile(lucyTruth, eventId, channelId, 7, 9, subfile)
+    writeSubfile(lucyTruth, eventId, channelId, 7, 9, subfile, 'full')
     print('End write {}'.format(subfile))
 
