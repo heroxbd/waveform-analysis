@@ -19,7 +19,7 @@ $(xiaoPp)/record/record-%.csv: $(xiaoPp)/distrecord/distrecord-%.h5
 	mkdir -p $(dir $@)
 	python3 test/csv_dist.py $^ -o $@
 $(xiaoPp)/hist-%.pdf: $(xiaoPp)/distrecord/distrecord-%.h5
-	python3 test/draw_dist.py $^ -o $@
+	python3 test/draw_dist.py $^ --wthres 10 -o $@
 $(xiaoPp)/distrecord/distrecord-%.h5: $(jinpDir)/ztraining-%.h5 $(xiaoPp)/submission/submission-%.h5
 	mkdir -p $(dir $@)
 	python3 test/test_dist.py $(word 2,$^) --ref $< -o $@
@@ -45,7 +45,7 @@ $(xdcFTp)/record/record-%.csv: $(xdcFTp)/distrecord/distrecord-%.h5
 	mkdir -p $(dir $@)
 	python3 test/csv_dist.py $^ -o $@
 $(xdcFTp)/hist-%.pdf: $(xdcFTp)/distrecord/distrecord-%.h5
-	python3 test/draw_dist.py $^ -o $@
+	python3 test/draw_dist.py $^ --wthres 10 -o $@
 $(xdcFTp)/distrecord/distrecord-%.h5: $(jinpDir)/ztraining-%.h5 $(xdcFTp)/submission/submission-%.h5
 	mkdir -p $(dir $@)
 	python3 test/test_dist.py $(word 2,$^) --ref $< -o $@
@@ -62,7 +62,7 @@ $(lucyOutDir)/record/record-%.csv: $(lucyOutDir)/distrecord/distrecord-%.h5
 	mkdir -p $(dir $@)
 	python3 test/csv_dist.py $^ -o $@
 $(lucyOutDir)/hist-%.pdf: $(lucyOutDir)/distrecord/distrecord-%.h5
-	python3 test/draw_dist.py $^ -o $@
+	python3 test/draw_dist.py $^ --wthres 10 -o $@
 $(lucyOutDir)/distrecord/distrecord-%.h5: $(jinpDir)/ztraining-%.h5 $(lucyOutDir)/submission/submission-%.h5
 	mkdir -p $(dir $@)
 	python3 test/test_dist.py $(word 2,$^) --ref $< -o $@
