@@ -6,6 +6,7 @@ import argparse
 psr = argparse.ArgumentParser()
 psr.add_argument('-o', dest='opt', help='output')
 psr.add_argument('ipt', help='input')
+psr.add_argument('--wthres', dest='wth', type=int)
 args = psr.parse_args()
 
 import csv
@@ -24,6 +25,8 @@ plt.rcParams['figure.dpi'] = 300
 plt.rcParams['font.size'] = 16
 plt.rcParams['lines.markersize'] = 2
 plt.rcParams['lines.linewidth'] = 1.0
+
+N = args.wth
 
 def my_cmap():
     plasma = cm.get_cmap('plasma', 65536)
@@ -59,10 +62,10 @@ if __name__ == '__main__':
                 plt.rcParams['figure.figsize'] = (12, 6)
                 fig = plt.figure()
                 ax1 = fig.add_subplot(121)
-                ax1.hist(dtwpi[dtwpi < 10], bins=50)
-                a = (dtwpi < 10).sum()
+                ax1.hist(dtwpi[dtwpi < N], bins=50)
+                a = (dtwpi < N).sum()
                 b = len(dtwpi)
-                ax1.set_title('count {}(<10)/{}={:.2f}'.format(a, b, a/b), fontsize=12)
+                ax1.set_title('count {}(<{})/{}={:.2f}'.format(a, N, b, a/b), fontsize=12)
                 ax1.set_xlabel(r'W-dist/ns')
                 ax2 = fig.add_subplot(122)
                 ax2.hist(dtppi, bins=20)
@@ -80,18 +83,18 @@ if __name__ == '__main__':
         fig = plt.figure()
         gs = gridspec.GridSpec(2, 2, figure=fig)
         ax1 = fig.add_subplot(gs[0, 0])
-        ax1.hist(dt['wdist'][dt['wdist']<10], bins=100, density=1)
-        a = (dt['wdist'] < 10).sum()
+        ax1.hist(dt['wdist'][dt['wdist']<N], bins=100, density=1)
+        a = (dt['wdist'] < N).sum()
         b = len(dt['wdist'])
-        ax1.set_title('count {}(Wd<10)/{}={:.2f}'.format(a, b, a/b), fontsize=12)
+        ax1.set_title('count {}(Wd<{})/{}={:.2f}'.format(a, N, b, a/b), fontsize=12)
         ax2 = fig.add_subplot(gs[1, 0])
         ax2.hist(dt['pdist'], bins=100, density=1)
         ax3 = fig.add_subplot(gs[:, 1])
-        h2 = ax3.hist2d(dt['wdist'][dt['wdist']<10], dt['pdist'][dt['wdist']<10], bins=(200, 200), cmap=mycmp)
+        h2 = ax3.hist2d(dt['wdist'][dt['wdist']<N], dt['pdist'][dt['wdist']<N], bins=(200, 200), cmap=mycmp)
         fig.colorbar(h2[3], ax=ax3, aspect=50)
         ax3.set_xlabel(r'W-dist/ns')
         ax3.set_ylabel(r'P-dist')
-        ax3.set_title(r'W&P-dist histogram, Wd<10', fontsize=12)
+        ax3.set_title('W&P-dist histogram, Wd<{}'.format(N), fontsize=12)
         fig.suptitle(args.ipt.split('/')[-1] + ' Dist stats')
         plt.close()
         pdf.savefig(fig)
