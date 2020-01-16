@@ -27,7 +27,7 @@ def main(unad_path, fopt, upnum):
 
 def totlen(unad_path, num):
     with h5py.File(unad_path, 'r', libver='latest', swmr=True) as up:
-        totl = len(up['Answer']['PETime']) * (num+2) * 2 // 3
+        totl = len(up['Answer']['PETime']) * (num+2) * 3 // 2
     return totl
 
 if __name__ == '__main__':
