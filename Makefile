@@ -24,10 +24,10 @@ $(xiaoPp)/distrecord/distrecord-%.h5: $(jinpDir)/ztraining-%.h5 $(xiaoPp)/submis
 	mkdir -p $(dir $@)
 	python3 test/test_dist.py $(word 2,$^) --ref $< -o $@
 define xpp_split
-$(xiaoPp)/submission/submission-$(1).h5: $(xiaoPp)/submission/adjusted-$(1).h5
+$(xiaoPp)/submission/submission-$(1).h5: $(xiaoPp)/submission/total-$(1).h5
 	mkdir -p $$(dir $$@)
 	python3 $(xiaoPp)/adjust.py $$^ -o $$@
-$(xiaoPp)/submission/adjusted-$(1).h5: $(xiaoPseq:%=$(xiaoPp)/unadjusted/unadjusted-$(1)-%.h5)
+$(xiaoPp)/submission/total-$(1).h5: $(xiaoPseq:%=$(xiaoPp)/unadjusted/unadjusted-$(1)-%.h5)
 	mkdir -p $$(dir $$@)
 	python3 $(xiaoPp)/integrate.py $$^ --num ${xiaoPl} -o $$@
 $(xiaoPp)/unadjusted/unadjusted-$(1)-%.h5: $(jinpDir)/ztraining-$(1).h5 $(xiaoPp)/averspe.h5

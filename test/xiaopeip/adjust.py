@@ -30,13 +30,19 @@ def main(fopt, fipt):
             pet = np.sort(pet)
             wgt_b = np.floor(wgt)
             resi = wgt - wgt_b
-            t = np.convolve(resi, [0.9, 1.7, 0.9], 'same')
+            t = np.convolve(resi, [0.9, 1.7, 0.9], 'full')
+            t = t[1:-1]
             ta = np.diff(t, prepend=t[0])
             tb = np.diff(t, append=t[-1])
             wgt_b[np.logical_and(np.logical_and(ta > 0, tb < 0), resi > 0.5)] += 1
-            wgt = wgt_b[wgt_b > 0]
-            pet = pet[wgt_b > 0]
-            lenpf = len(wgt)
+            if len(wgt_b[wgt_b > 0]) == 0:
+                wgt = 1
+                pet = np.max(pet)
+                lenpf = 1
+            else:
+                wgt = wgt_b[wgt_b > 0]
+                pet = pet[wgt_b > 0]
+                lenpf = len(wgt)
             end = start + lenpf
             dt['PETime'][start:end] = pet
             dt['Weight'][start:end] = wgt
