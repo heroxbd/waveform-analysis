@@ -5,9 +5,13 @@ import numpy as np
 import argparse
 
 psr = argparse.ArgumentParser()
-psr.add_argument('-o', dest='opt', help='output')
-psr.add_argument('ipt', help='input')
+psr.add_argument('-o', dest='opt', help='output file')
+psr.add_argument('ipt', help='input file')
+psr.add_argument('-p', dest='print', action='store_false', help='print bool', default=True)
 args = psr.parse_args()
+
+if args.print:
+    sys.stdout = None
 
 def main(fopt, fipt):
     opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint8), ('PETime', np.uint16), ('Weight', np.uint8)])
@@ -49,11 +53,11 @@ def main(fopt, fipt):
             dt['EventID'][start:end] = e_ans[i]//Chnum
             dt['ChannelID'][start:end] = e_ans[i]%Chnum
             start = end
-            #print('\rAdjusting result:|{}>{}|{:6.2f}%'.format(((20*i)//l)*'-', (19 - (20*i)//l)*' ', 100 * ((i+1) / l)), end=''if i != l-1 else '\n')
+            print('\rAdjusting result:|{}>{}|{:6.2f}%'.format(((20*i)//l)*'-', (19 - (20*i)//l)*' ', 100 * ((i+1) / l)), end=''if i != l-1 else '\n')
     dt = dt[dt['Weight'] > 0]
     with h5py.File(fopt, 'w') as final:
         final.create_dataset('Answer', data=dt, compression='gzip')
-        #print('The output file path is {}'.format(fopt), end=' ', flush=True)
+        print('The output file path is {}'.format(fopt), end=' ', flush=True)
 
 if __name__ == '__main__':
     main(args.opt, args.ipt)

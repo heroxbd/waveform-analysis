@@ -8,10 +8,14 @@ import itertools as it
 import argparse
 
 psr = argparse.ArgumentParser()
-psr.add_argument('--ref', dest='ref', help='reference')
-psr.add_argument('ipt', help="input to be graded")
-psr.add_argument('-o', dest='opt', help='output')
+psr.add_argument('--ref', dest='ref', help='reference file')
+psr.add_argument('ipt', help="input file")
+psr.add_argument('-o', dest='opt', help='output file')
+psr.add_argument('-p', dest='print', action='store_false', help='print bool', default=True)
 args = psr.parse_args()
+
+if args.print:
+    sys.stdout = None
 
 def wpdistance(df_ans, df_sub):
     Chnum = np.max(df_ans['ChannelID'])
@@ -45,7 +49,7 @@ def wpdistance(df_ans, df_sub):
         dt['pdist'][c] = np.abs(Q - q) * scipy.stats.poisson.pmf(Q, Q)
         dt['EventID'][c] = eid//Chnum
         dt['ChannelID'][c] = eid % Chnum
-        #print('\rGrading Process:|{}>{}|{:6.2f}%'.format(((20 * c)//gl)*'-', (19-(20*c)//gl)*' ', 100 * ((c+1)/gl)), end = '' if c != gl-1 else '\n')
+        print('\rGrading Process:|{}>{}|{:6.2f}%'.format(((20 * c)//gl)*'-', (19-(20*c)//gl)*' ', 100 * ((c+1)/gl)), end = '' if c != gl-1 else '\n')
     return dt
 
 def main(ref, ipt, opt):

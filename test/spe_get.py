@@ -1,18 +1,24 @@
 # -*- coding: utf-8 -*-
 
 import os
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
 import h5py
 import argparse
 
 psr = argparse.ArgumentParser()
-psr.add_argument('-o', dest='opt', help='output')
-psr.add_argument('ipt', nargs='+', help='input')
+psr.add_argument('ipt', nargs='+', help='input file')
+psr.add_argument('-o', dest='opt', help='output file')
+psr.add_argument('--num', dest='spenum', type=int, help='num of speWf')
+psr.add_argument('--len', dest='spelen', type=int, help='length of speWf')
+psr.add_argument('-p', dest='print', action='store_false', help='print bool', default=True)
 args = psr.parse_args()
 
-N = 10000
-L = 80
+N = args.spenum
+L = args.spelen
+if args.print:
+    sys.stdout = None
 
 def generate_standard(h5_path, single_pe_path):
     npdt = np.dtype([('TrainSet', np.uint8), ('EventID', np.uint32), ('ChannelID', np.uint8), ('speWf', np.uint16, L)])  # set datatype
@@ -48,7 +54,7 @@ def generate_standard(h5_path, single_pe_path):
                     dt['EventID'][num] = wfev[j]
                     dt['ChannelID'][num] = wfch[j]
                     dt['speWf'][num] = wf[ps[k]:ps[k]+L]
-                    #print('\rSingle PE Generating:|{}>{}|{:6.2f}%'.format(((20*num)//N)*'-', (19 - (20*num)//N)*' ', 100 * ((num+1) / N)), end=''if num != N-1 else '\n')
+                    print('\rSingle PE Generating:|{}>{}|{:6.2f}%'.format(((20*num)//N)*'-', (19 - (20*num)//N)*' ', 100 * ((num+1) / N)), end=''if num != N-1 else '\n')
                     num += 1
                     if num >= N:
                         break
@@ -57,7 +63,7 @@ def generate_standard(h5_path, single_pe_path):
             if num >= N:
                 break
     dt = dt[:num] # cut empty dt part
-    #print('{} speWf generated'.format(len(dt)))
+    print('{} speWf generated'.format(len(dt)))
     with h5py.File(single_pe_path, 'w') as spp:
         spp.create_dataset('SinglePE', data=dt, compression='gzip') # save the spe events
 

@@ -4,9 +4,10 @@ import h5py
 import argparse
 
 psr = argparse.ArgumentParser()
-psr.add_argument('-o', dest='opt', help='output')
-psr.add_argument('ipt', help='input')
-psr.add_argument('--wthres', dest='wth', type=int)
+psr.add_argument('-o', dest='opt', help='output file')
+psr.add_argument('ipt', help='input file')
+psr.add_argument('--wthres', dest='wth', type=int, help='threshold of w-dist')
+psr.add_argument('-p', dest='print', action='store_false', help='print bool', default=True)
 args = psr.parse_args()
 
 import csv
@@ -27,6 +28,8 @@ plt.rcParams['lines.markersize'] = 2
 plt.rcParams['lines.linewidth'] = 1.0
 
 N = args.wth
+if args.print:
+    sys.stdout = None
 
 def my_cmap():
     plasma = cm.get_cmap('plasma', 65536)
@@ -77,7 +80,7 @@ if __name__ == '__main__':
             else:
                 wdist_stats[i, :] = np.nan
                 pdist_stats[i, :] = np.nan
-            #print('\rDrawing Process:|{}>{}|{:6.2f}%'.format(((20*i)//l)*'-', (19-(20*i)//l)*' ', 100*(i+1)/l), end='' if i != l - 1 else '\n')
+            print('\rDrawing Process:|{}>{}|{:6.2f}%'.format(((20*i)//l)*'-', (19-(20*i)//l)*' ', 100*(i+1)/l), end='' if i != l - 1 else '\n')
 
         plt.rcParams['figure.figsize'] = (12, 6)
         fig = plt.figure()

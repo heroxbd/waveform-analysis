@@ -36,7 +36,7 @@ $(xiaoPp)/unadjusted/unadjusted-$(1)-%.h5: $(jinpDir)/ztraining-$(1).h5 $(xiaoPp
 endef
 $(foreach i,$(jinpwaveseq),$(eval $(call xpp_split,$(i))))
 $(xiaoPp)/averspe.h5: $(jinpDir)/ztraining-0.h5
-	python3 test/spe_get.py $^ -o $@
+	python3 test/spe_get.py $^ -o $@ --num 10000 --len 80
 
 xdcFT: $(jinpwaveseq:%=$(xdcFTp)/hist-%.pdf) $(xdcFTp)/record.csv
 $(xdcFTp)/record.csv: $(jinpwaveseq:%=$(xdcFTp)/record/record-%.csv)
@@ -53,7 +53,7 @@ $(xdcFTp)/submission/submission-%.h5 : $(jinpDir)/ztraining-%.h5 $(xdcFTp)/singl
 	mkdir -p $(dir $@)
 	python3 $(xdcFTp)/FFT_decon.py $< --ref $(word 2,$^) -o $@ -k 0.05 -a 4 -e 4
 $(xdcFTp)/single_pe.h5: $(jinpDir)/ztraining-0.h5
-	python3 test/spe_get.py $^ -o $@
+	python3 test/spe_get.py $^ -o $@ --num 10000 --len 80
 
 lucyddm: $(jinpwaveseq:%=$(lucyOutDir)/hist-%.pdf) $(lucyOutDir)/record.csv
 $(lucyOutDir)/record.csv: $(jinpwaveseq:%=$(lucyOutDir)/record/record-%.csv)

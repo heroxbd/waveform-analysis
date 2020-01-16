@@ -12,11 +12,15 @@ import argparse
 import wf_analysis_func as wfaf
 
 psr = argparse.ArgumentParser()
-psr.add_argument('-o', dest='opt', help='output')
-psr.add_argument('ipt', help='input')
-psr.add_argument('--ref')
-psr.add_argument('--num', type=int)
+psr.add_argument('-o', dest='opt', help='output file')
+psr.add_argument('ipt', help='input file')
+psr.add_argument('--ref', dest='ref', help='reference file')
+psr.add_argument('--num', type=int, help='fragment number')
+psr.add_argument('-p', dest='print', action='store_false', help='print bool', default=True)
 args = psr.parse_args()
+
+if args.print:
+    sys.stdout = None
 
 def norm_fit(x, M, p):
     return np.linalg.norm(p - np.matmul(M, x))
@@ -38,7 +42,7 @@ def main(fopt, fipt, single_pe_path):
         Length_pe = len(ent['Waveform'][0])
         spemean = np.concatenate([spemean, np.zeros(Length_pe - len(spemean))])
         l = len(ent)
-        #print('{} waveforms will be computed'.format(l))
+        print('{} waveforms will be computed'.format(l))
         dt = np.zeros(l * 1029, dtype=opdt)
         start = 0
         end = 0
@@ -90,14 +94,14 @@ def main(fopt, fipt, single_pe_path):
             dt['EventID'][start:end] = ent[i]['EventID']
             dt['ChannelID'][start:end] = ent[i]['ChannelID']
             start = end
-            #print('\rAnsw Generating:|{}>{}|{:6.2f}%'.format(((20*i)//l)*'-', (19-(20*i)//l)*' ', 100 * ((i+1) / l)), end='' if i != l-1 else '\n') # show process bar
+            print('\rAnsw Generating:|{}>{}|{:6.2f}%'.format(((20*i)//l)*'-', (19-(20*i)//l)*' ', 100 * ((i+1) / l)), end='' if i != l-1 else '\n')
     dt = dt[dt['Weight'] > 0]
     Chnum = np.max(dt['ChannelID'])
     did = dt['EventID']*Chnum + dt['ChannelID']
     dt = dt[np.argsort(did)]
     with h5py.File(fopt, 'w') as opt:
         dset = opt.create_dataset('Answer', data=dt, compression='gzip')
-        #print('The output file path is {}'.format(fopt), end=' ', flush=True)
+        print('The output file path is {}'.format(fopt), end=' ', flush=True)
     return 
 
 if __name__ == '__main__':

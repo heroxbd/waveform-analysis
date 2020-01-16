@@ -6,10 +6,14 @@ import h5py
 import argparse
 
 psr = argparse.ArgumentParser()
-psr.add_argument('-o', dest='opt', help='output')
-psr.add_argument('ipt', nargs='+', help='input')
-psr.add_argument('--num', type=int)
+psr.add_argument('-o', dest='opt', help='output file')
+psr.add_argument('ipt', nargs='+', help='input file')
+psr.add_argument('--num', type=int, help='fragment number')
+psr.add_argument('-p', dest='print', action='store_false', help='print bool', default=True)
 args = psr.parse_args()
+
+if args.print:
+    sys.stdout = None
 
 def main(unad_path, fopt, upnum):
     opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint8), ('PETime', np.uint16), ('Weight', np.float16)])
@@ -23,7 +27,7 @@ def main(unad_path, fopt, upnum):
     dt = dt[:num]
     with h5py.File(fopt, 'w') as adj:
         adj.create_dataset('Answer', data=dt, compression='gzip')
-        #print('The output file path is {}'.format(fopt), end=' ', flush=True)
+        print('The output file path is {}'.format(fopt), end=' ', flush=True)
 
 def totlen(unad_path, num):
     with h5py.File(unad_path, 'r', libver='latest', swmr=True) as up:
