@@ -77,7 +77,7 @@ if __name__ == '__main__':
             else:
                 wdist_stats[i, :] = np.nan
                 pdist_stats[i, :] = np.nan
-            print('\rDrawing Process:|{}>{}|{:6.2f}%'.format(((20*i)//l)*'-', (19-(20*i)//l)*' ', 100*(i+1)/l), end='' if i != l - 1 else '\n')
+            #print('\rDrawing Process:|{}>{}|{:6.2f}%'.format(((20*i)//l)*'-', (19-(20*i)//l)*' ', 100*(i+1)/l), end='' if i != l - 1 else '\n')
 
         plt.rcParams['figure.figsize'] = (12, 6)
         fig = plt.figure()

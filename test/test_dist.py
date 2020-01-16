@@ -45,7 +45,7 @@ def wpdistance(df_ans, df_sub):
         dt['pdist'][c] = np.abs(Q - q) * scipy.stats.poisson.pmf(Q, Q)
         dt['EventID'][c] = eid//Chnum
         dt['ChannelID'][c] = eid % Chnum
-        print('\rGrading Process:|{}>{}|{:6.2f}%'.format(((20 * c)//gl)*'-', (19-(20*c)//gl)*' ', 100 * ((c+1)/gl)), end = '' if c != gl-1 else '\n')
+        #print('\rGrading Process:|{}>{}|{:6.2f}%'.format(((20 * c)//gl)*'-', (19-(20*c)//gl)*' ', 100 * ((c+1)/gl)), end = '' if c != gl-1 else '\n')
     return dt
 
 def main(ref, ipt, opt):

@@ -48,7 +48,7 @@ def generate_standard(h5_path, single_pe_path):
                     dt['EventID'][num] = wfev[j]
                     dt['ChannelID'][num] = wfch[j]
                     dt['speWf'][num] = wf[ps[k]:ps[k]+L]
-                    print('\rSingle PE Generating:|{}>{}|{:6.2f}%'.format(((20*num)//N)*'-', (19 - (20*num)//N)*' ', 100 * ((num+1) / N)), end=''if num != N-1 else '\n')
+                    #print('\rSingle PE Generating:|{}>{}|{:6.2f}%'.format(((20*num)//N)*'-', (19 - (20*num)//N)*' ', 100 * ((num+1) / N)), end=''if num != N-1 else '\n')
                     num += 1
                     if num >= N:
                         break
@@ -57,7 +57,7 @@ def generate_standard(h5_path, single_pe_path):
             if num >= N:
                 break
     dt = dt[:num] # cut empty dt part
-    print('{} speWf generated'.format(len(dt)))
+    #print('{} speWf generated'.format(len(dt)))
     with h5py.File(single_pe_path, 'w') as spp:
         spp.create_dataset('SinglePE', data=dt, compression='gzip') # save the spe events
 

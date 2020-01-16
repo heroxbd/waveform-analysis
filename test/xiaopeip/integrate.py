@@ -23,7 +23,7 @@ def main(unad_path, fopt, upnum):
     dt = dt[:num]
     with h5py.File(fopt, 'w') as adj:
         adj.create_dataset('Answer', data=dt, compression='gzip')
-        print('The output file path is {}'.format(fopt), end=' ', flush=True)
+        #print('The output file path is {}'.format(fopt), end=' ', flush=True)
 
 def totlen(unad_path, num):
     with h5py.File(unad_path, 'r', libver='latest', swmr=True) as up:

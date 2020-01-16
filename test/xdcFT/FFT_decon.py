@@ -41,7 +41,7 @@ def generate_eff_ft(fopt, fipt, single_pe_path):
         model_raw = np.concatenate([model, np.zeros(Length_pe - len(model))])  # concatenate the model
         model_k = fft(model_raw)
         l = len(ent)
-        print('{} waveforms will be computed'.format(l))
+        #print('{} waveforms will be computed'.format(l))
         dt = np.zeros(l * Length_pe, dtype = opdt)
         start = 0
         end = 0
@@ -72,11 +72,11 @@ def generate_eff_ft(fopt, fipt, single_pe_path):
             dt['ChannelID'][start:end] = ent[i]['ChannelID'] # integrated saving related information
             start = end
             
-            print('\rAnsw Generating:|{}>{}|{:6.2f}%'.format(((20*i)//l)*'-', (19-(20*i)//l)*' ', 100 * ((i+1) / l)), end='' if i != l-1 else '\n') # show process bar
+            #print('\rAnsw Generating:|{}>{}|{:6.2f}%'.format(((20*i)//l)*'-', (19-(20*i)//l)*' ', 100 * ((i+1) / l)), end='' if i != l-1 else '\n') # show process bar
         dt = dt[np.where(dt['Weight'] > 0)] # cut empty dt part
     with h5py.File(fopt, 'w') as opt:
         dset = opt.create_dataset('Answer', data = dt, compression='gzip')
-        print('The output file path is {}'.format(fopt), end = ' ', flush=True)
+        #print('The output file path is {}'.format(fopt), end = ' ', flush=True)
 
 def compr(model, exp, axe, epulse):
     if epulse == -1:
