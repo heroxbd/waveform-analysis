@@ -91,7 +91,7 @@ def main(fopt, fipt, single_pe_path):
             dt['ChannelID'][start:end] = ent[i]['ChannelID']
             start = end
             print('\rAnsw Generating:|{}>{}|{:6.2f}%'.format(((20*i)//l)*'-', (19-(20*i)//l)*' ', 100 * ((i+1) / l)), end='' if i != l-1 else '\n') # show process bar
-    dt = dt[np.where(dt['Weight'] > 0)]
+    dt = dt[dt['Weight'] > 0]
     Chnum = np.max(dt['ChannelID'])
     did = dt['EventID']*Chnum + dt['ChannelID']
     dt = dt[np.argsort(did)]

@@ -50,6 +50,7 @@ def main(fopt, fipt):
             dt['ChannelID'][start:end] = e_ans[i]%Chnum
             start = end
             print('\rAdjusting result:|{}>{}|{:6.2f}%'.format(((20*i)//l)*'-', (19 - (20*i)//l)*' ', 100 * ((i+1) / l)), end=''if i != l-1 else '\n')
+    dt = dt[dt['Weight'] > 0]
     with h5py.File(fopt, 'w') as final:
         final.create_dataset('Answer', data=dt, compression='gzip')
         print('The output file path is {}'.format(fopt), end=' ', flush=True)
