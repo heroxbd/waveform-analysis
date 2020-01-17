@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
-import h5py, sys
+import sys
+import h5py
 import numpy as np
 import argparse
 
@@ -22,7 +23,7 @@ def main(fopt, fipt):
         Cid = ipt['Answer']['ChannelID']
         Pet = ipt['Answer']['PETime']
         Wgt = ipt['Answer']['Weight']
-        Chnum = np.max(Cid)
+        Chnum = len(np.unique(Cid))
         Aid = Eid*Chnum + Cid
         e_ans, i_ans, c_ans = np.unique(Aid, return_index=True, return_counts=True)
         start = 0

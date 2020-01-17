@@ -19,7 +19,7 @@ if args.print:
     sys.stdout = None
 
 def wpdistance(df_ans, df_sub):
-    Chnum = np.max(df_ans['ChannelID'])
+    Chnum = len(np.unique(df_ans['ChannelID']))
     e_ans = df_ans['EventID']*Chnum + df_ans['ChannelID']
     e_ans, i_ans = np.unique(e_ans, return_index=True)
     gl = len(e_ans)
