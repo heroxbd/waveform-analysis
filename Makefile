@@ -22,7 +22,7 @@ $(xiaoPp)/hist-%.pdf: $(xiaoPp)/distrecord/distrecord-%.h5
 	python3 test/draw_dist.py $^ --wthres 10 -o $@
 $(xiaoPp)/distrecord/distrecord-%.h5: $(jinpDir)/ztraining-%.h5 $(xiaoPp)/submission/submission-%.h5
 	mkdir -p $(dir $@)
-	python3 test/test_dist.py $(word 2,$^) --ref $< -o $@
+	python3 test/test_dist.py $(word 2,$^) --ref $< -o $@ > $@.log 2>&1
 define xpp_split
 $(xiaoPp)/submission/submission-$(1).h5: $(xiaoPp)/submission/total-$(1).h5
 	mkdir -p $$(dir $$@)
