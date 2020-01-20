@@ -5,6 +5,7 @@ import numpy as np
 from scipy import optimize as opti
 import h5py
 import sys
+sys.path.append('test')
 import argparse
 import wf_analysis_func as wfaf
 
@@ -13,8 +14,8 @@ psr.add_argument('--event', '-e', type=int, dest='ent')
 psr.add_argument('--channel', '-c', type=int, dest='cha')
 args = psr.parse_args()
 
-fipt = '../dataset/jinp/ztraining-0.h5'
-single_pe_path = 'xiaopeip/averspe.h5'
+fipt = 'dataset/jinp/ztraining-0.h5'
+single_pe_path = 'test/xiaopeip/averspe.h5'
 
 def norm_fit(x, M, p):
     return np.linalg.norm(p - np.matmul(M, x))
@@ -51,7 +52,7 @@ def main():
                     mne = spemean[np.mod(nihep.reshape(len(nihep), 1) - possible.reshape(1, len(possible)), Length_pe)]
                     #ans = opti.fmin_l_bfgs_b(norm_fit, ans0, args=(mne, wave[nihep]), approx_grad=True, bounds=b)
                     #ans = opti.fmin_slsqp(norm_fit, ans0, args=(mne, wave[nihep]), bounds=b, iprint=-1)
-                    ans = opti.fmin_tnc(norm_fit, ans0, args=(mne, wave[nihep]), approx_grad=True, bounds=b, messages=5)
+                    ans = opti.fmin_tnc(norm_fit, ans0, args=(mne, wave[nihep]), approx_grad=True, bounds=b)
                     pf = ans[0]
                     #pf = ans
                 else:
