@@ -40,7 +40,7 @@ def generate_eff_ft(fopt, fipt, single_pe_path):
 
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
         ent = ipt['Waveform']
-        Length_pe = len(ent['Waveform'][0])
+        Length_pe = len(ent[0]['Waveform'])
         model_raw = np.concatenate([model, np.zeros(Length_pe - len(model))])  # concatenate the model
         model_k = fft(model_raw)
         l = len(ent)

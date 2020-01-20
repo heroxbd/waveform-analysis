@@ -50,10 +50,10 @@ def generate_standard(h5_path, single_pe_path):
                     if dptb[0] > L and pt[0] < Length_pe - L:
                         ps = np.insert(ps, 0, pt[0])
                 for k in range(len(ps)):
-                    dt['TrainSet'][num] = i
-                    dt['EventID'][num] = wfev[j]
-                    dt['ChannelID'][num] = wfch[j]
-                    dt['speWf'][num] = wf[ps[k]:ps[k]+L]
+                    dt[num]['TrainSet'] = i
+                    dt[num]['EventID'] = wfev[j]
+                    dt[num]['ChannelID'] = wfch[j]
+                    dt[num]['speWf'] = wf[ps[k]:ps[k]+L]
                     print('\rSingle PE Generating:|{}>{}|{:6.2f}%'.format(((20*num)//N)*'-', (19 - (20*num)//N)*' ', 100 * ((num+1) / N)), end=''if num != N-1 else '\n')
                     num += 1
                     if num >= N:

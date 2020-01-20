@@ -39,7 +39,7 @@ def main(fopt, fipt, single_pe_path):
         else:
             ent = ent[num*lenfr:(num+1)*lenfr]
 
-        Length_pe = len(ent['Waveform'][0])
+        Length_pe = len(ent[0]['Waveform'])
         spemean = np.concatenate([spemean, np.zeros(Length_pe - len(spemean))])
         l = len(ent)
         print('{} waveforms will be computed'.format(l))
@@ -83,11 +83,12 @@ def main(fopt, fipt, single_pe_path):
                 t = np.where(wave == wave.min())[0][:1] - np.argmin(spemean)
                 possible = t if t[0] >= 0 else np.array([0])
                 pf = np.array([1])
-            pf[pf < 0.1] = 0
-            lenpf = np.size(np.where(pf > 0))
-            pet = possible[pf > 0]
+            if np.sum(pf < 0.1) != len(pf):
+                pf[pf < 0.1] = 0
             pwe = pf[pf > 0]
             pwe = pwe.astype(np.float16)
+            lenpf = len(pwe)
+            pet = possible[pf > 0]
             end = start + lenpf
             dt['PETime'][start:end] = pet
             dt['Weight'][start:end] = pwe
