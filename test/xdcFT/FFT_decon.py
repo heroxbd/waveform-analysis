@@ -77,6 +77,7 @@ def generate_eff_ft(fopt, fipt, single_pe_path):
             
             print('\rAnsw Generating:|{}>{}|{:6.2f}%'.format(((20*i)//l)*'-', (19-(20*i)//l)*' ', 100 * ((i+1) / l)), end='' if i != l-1 else '\n')
         dt = dt[np.where(dt['Weight'] > 0)] # cut empty dt part
+        dt = np.sort(dt, kind='stable', order=['EventID', 'ChannelID', 'PETime'])
     with h5py.File(fopt, 'w') as opt:
         dset = opt.create_dataset('Answer', data = dt, compression='gzip')
         print('The output file path is {}'.format(fopt), end = ' ', flush=True)

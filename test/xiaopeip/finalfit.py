@@ -48,7 +48,7 @@ def main(fopt, fipt, single_pe_path):
         end = 0
         for i in range(l):
             wf_input = ent[i]['Waveform']
-            wave = wf_input - np.mean(wf_input[900:1000])
+            wave = wf_input - np.mean(wf_input[900:1000]) # optimization point
             lowp = np.argwhere(wave < -6.5).flatten()
             flag = 1
             lowp = lowp[np.logical_and(lowp > 1, lowp < Length_pe-1)]
@@ -96,9 +96,7 @@ def main(fopt, fipt, single_pe_path):
             start = end
             print('\rAnsw Generating:|{}>{}|{:6.2f}%'.format(((20*i)//l)*'-', (19-(20*i)//l)*' ', 100 * ((i+1) / l)), end='' if i != l-1 else '\n')
     dt = dt[dt['Weight'] > 0]
-    Chnum = len(np.unique(dt['ChannelID']))
-    did = dt['EventID']*Chnum + dt['ChannelID']
-    dt = dt[np.argsort(did)]
+    dt = np.sort(dt, kind='stable', order=['EventID', 'ChannelID', 'PETime'])
     with h5py.File(fopt, 'w') as opt:
         dset = opt.create_dataset('Answer', data=dt, compression='gzip')
         print('The output file path is {}'.format(fopt), end=' ', flush=True)
