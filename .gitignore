@@ -6,10 +6,12 @@
 *.png
 *.zip
 *.swp
+*.swo
 *.log
 *.out
 .vscode/
 dataset/
+Back/
 test/tara/Network_Models*/
 *.npz
 .DS_Store
