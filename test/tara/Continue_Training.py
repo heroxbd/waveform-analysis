@@ -32,7 +32,8 @@ testing_record = open((testing_record_name+".txt"),"a+")
 
 # Loading Data
 LoadPath= "./Pre-Processing_Results_{}/".format(sys.argv[2])
-Data_Name= "ztraining-9_800000-999999"
+#Data_Name= "ztraining-9_800000-999999"
+Data_Name= "abtraining-9_600000-799999"
 data_name= LoadPath+Data_Name+".npz"
 Data_set= np.load(data_name)
 WaveData = Data_set['Wave']
@@ -47,8 +48,7 @@ print("set_splitted")
 print("training_set ",len(Wave_train),", testing_set",len(Wave_test))
 
 # Making Dataset
-train_data = Data.TensorDataset(data_tensor=torch.from_numpy(Wave_train).float(),\
-                              target_tensor=torch.from_numpy(PET_train).float())
+train_data = Data.TensorDataset(data_tensor=torch.from_numpy(Wave_train).float(),target_tensor=torch.from_numpy(PET_train).float())
 train_loader = Data.DataLoader(dataset=train_data, batch_size=BATCHSIZE, shuffle=True)
 
 test_data = Data.TensorDataset(data_tensor=torch.from_numpy(Wave_test).float(),\
@@ -77,7 +77,7 @@ class Net_1(nn.Module):
         x = x.squeeze(1)
         return x
 
-net = torch.load("./Network_Models/ztraining-9_600000-799999_epoch2_loss0.8582") # Pre-trained Model Parameters
+net = torch.load("Network_Models_abtraining-9/abtraining-9_600000-799999.npz_epoch8_loss0.4677") # Pre-trained Model Parameters
 
 optimizer = optim.Adam(net.parameters(), lr=1e-5)  # beginning 1e-3
 checking_period = np.int(0.25*(len(Wave_train)/BATCHSIZE))
