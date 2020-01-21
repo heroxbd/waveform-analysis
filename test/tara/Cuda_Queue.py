@@ -20,19 +20,31 @@ def check_available(gpu_id,min_memory):
 def read_bullentin(fileno) :
     with open("./.bulletin.swp",'r') as fi:
         lines=fi.readlines()
-    File_Numbers = np.array(lines[0].strip('\n').split(','),dtype=np.int)
+    try :
+        File_Numbers = np.array(lines[0].split(),dtype=np.int)
+        last_run_info = np.array(lines[-1].split(),dtype=np.int)
+    except ValueError :
+        raise ValueError("unknown FileNo!")
 
     runNo = np.where(File_Numbers==fileno)[0]
     if len(runNo)==0 : 
         raise ValueError("unknown FileNo!")
     else :
         runNo = runNo[0]
+    
     if runNo==0 :
         if len(lines)!=1 :
             raise FileExistsError("Wrong Format .bullentin.swp")
         else :
             Proceed()
-    elif
+    elif len(lines)=(runNo+1) :
+        if last_run_info[0]==File_Numbers[runNo-1] :
+            if last_run_info[1]==1 :
+                Proceed()
+            else :
+                raise RuntimeError('Load taining Data and model failed, file numer=%d'.format(File_Numbers[runNo-1]))
+        else :
+            raise FileExistsError("Wrong Format .bullentin.swp")
 
 def Proceed() :
     return
