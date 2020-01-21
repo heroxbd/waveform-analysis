@@ -1,4 +1,11 @@
-.PHONY: all
+.PHONY: help 
+
+help:
+	@echo 'Usage:'
+	@echo '  make [FileNo=fileno] model'
+	@echo '  make [FileNo=fileno] Analysis'
+	@echo '       fileno: for example, [0] or [0,1,3] or [2,3,4,5] or simply [`seq -s , 2 5`]'
+	@echo '  example: make FileNo=[`seq -s , 0 7`] model'
 # answer filename
 ansfile = ../../abanswer.h5
 # problem filename
@@ -11,16 +18,21 @@ subfile = Prediction_Results/Prediction_Mod_abanswer.h5
 method = TaraZtrain
 
 # training filename
+FileNo = *
 #trainingfile = ../../ztraining-0.h5
 trainingfile_prefix = ../../dataset/jinp/abtraining-
 trainingfile_suffix = .h5
-trainingfile = $(wildcard $(trainingfile_prefix)[$(shell seq -s "," 0 7)]$(trainingfile_suffix))
-# training storage name
-trainStore_prefix = abtraining-
-trainStore_suffix =  
-trainStore = $(patsubst $(trainingfile_prefix)%$(trainingfile_suffix),$(trainStore_prefix)%$(trainStore_suffix), $(trainingfile))
+trainingfile = $(wildcard $(trainingfile_prefix)$(FileNo)$(trainingfile_suffix))
+# PreProcessing storage name
+PreStore_prefix = Pre-Processing_Results_abtraining-
+PreStore_suffix = / 
+PreStore = $(patsubst $(trainingfile_prefix)%$(trainingfile_suffix),$(PreStore_prefix)%$(PreStore_suffix), $(trainingfile))
+# Network Models storage name
+NetStore_prefix = Network_Models_abtraining-
+NetStore_suffix = / 
+NetStore = $(patsubst $(trainingfile_prefix)%$(trainingfile_suffix),$(NetStore_prefix)%$(NetStore_suffix), $(trainingfile))
 # training log name
-trainlog_prefix = $(trainStore_prefix)
+trainlog_prefix = abtraining-
 trainlog_suffix = .log 
 trainlog = $(patsubst $(trainingfile_prefix)%$(trainingfile_suffix),$(trainlog_prefix)%$(trainlog_suffix), $(trainingfile))
 
@@ -38,14 +50,23 @@ $(subfile): $(problemfile)
 	# python3 Continue_Training.py $(problemfile) $(fileStore)
 
 .PHONY: model
-model: $(trainlog) $(trainStore)
+model: $(NetStore)
 
-$(trainlog) : $(trainingfile)
+$(PreStore_prefix)%$(PreStore_suffix) : $(trainingfile_prefix)%$(trainingfile_suffix)
+	python3 -u Data_Pre-Processing.py $^ $@ > $(trainlog_prefix)$*$(trainlog_suffix) 2>&1
 
-$(trainStore_prefix)%$(trainStore_suffix) : $(trainingfile_prefix)%$(trainingfile_suffix) $(trainlog_prefix)%$(trainlog_suffix)
-	python3 -u Data_Pre-Processing.py $< $@ > $(word 2,$^) 2>&1
-	python3 -u Data_Processing.py $@ >> $(word 2,$^) 2>&1
+$(trainlog) : $(PreStore)
+
+$(NetStore_prefix)%$(NetStore_suffix) : $(PreStore_prefix)%$(PreStore_suffix) $(trainlog_prefix)%$(trainlog_suffix)
+	python3 -u Data_Processing.py $@ $< >> $(word 2,$^) 2>&1
 
 .DELETE_ON_ERROR:
 
 .SECONDARY:
+
+refresh_PreStore : phonyfile 
+	@touch -r $^ $(PreStore)
+	@rm $<
+
+phonyfile :
+	@touch $@

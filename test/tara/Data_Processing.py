@@ -27,7 +27,7 @@ print("Using device "+device.__str__())
 
 
 # Make Saving_Directory
-SavePath = "./Network_Models_{}/".format(sys.argv[1])
+SavePath = sys.argv[1]
 if not os.path.exists(SavePath):
     os.makedirs(SavePath)
 
@@ -39,12 +39,12 @@ training_record = open((training_record_name+".txt"),"a+")
 testing_record = open((testing_record_name+".txt"),"a+")
 
 # Loading Data
-LoadPath= "./Pre-Processing_Results_{}/".format(sys.argv[1])
+LoadPath= sys.argv[2]
 '''
 prefix = 'ftraining-0'
 # Data_Name= "ztraining-9_0-199999"
 Data_Name = prefix+'_0-199999'
-
+p 
 data_name= LoadPath+Data_Name+".npz"
 '''
 fileSet = os.listdir(LoadPath)

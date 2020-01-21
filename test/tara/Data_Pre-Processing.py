@@ -6,7 +6,7 @@ import sys
 ## Initialization
 
 # Make Directory
-SavePath = "./Pre-Processing_Results_{}/".format(sys.argv[2])
+SavePath = sys.argv[2]
 if not os.path.exists(SavePath):
     os.makedirs(SavePath)
 print("training data pre-processing savepath is {}".format(SavePath))
