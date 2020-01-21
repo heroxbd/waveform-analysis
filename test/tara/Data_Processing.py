@@ -20,7 +20,6 @@ import time
 import pytorch_stats_loss as stats_loss
 
 from Cuda_Queue import *
-import time
 
 BATCHSIZE=16
 fileno=int(sys.argv[-1])
@@ -31,7 +30,7 @@ if torch.cuda.is_available():
     for device = np.flip(GPUs)[0:-2] :
     device = GPUs[-1]
     #wait in line
-    while not (QueueUp(fileno) :
+    while not QueueUp(fileno) :
         time.sleep(0.5)
     #your turn, search for idle gpu!
     while not check_available(device,1024*1024*1024*2) : 
