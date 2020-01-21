@@ -21,6 +21,11 @@ import pytorch_stats_loss as stats_loss
 
 BATCHSIZE=16
 
+#detecting cuda device
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') 
+print("Using device "+device.__str__())
+
+
 # Make Saving_Directory
 SavePath = "./Network_Models_{}/".format(sys.argv[2])
 if not os.path.exists(SavePath):
@@ -61,17 +66,17 @@ print("training_set ",len(Wave_train),", testing_set",len(Wave_test))
 # Making Dataset
 #train_data = Data.TensorDataset(data_tensor=torch.from_numpy(Wave_train).float(),\
 #                              target_tensor=torch.from_numpy(PET_train).float())
-train_data = Data.TensorDataset(torch.from_numpy(Wave_train).float(),\
-                              torch.from_numpy(PET_train).float())
+train_data = Data.TensorDataset(torch.from_numpy(Wave_train).float().cuda(device=device),\
+                              torch.from_numpy(PET_train).float().cuda(device=device))
 
-train_loader = Data.DataLoader(dataset=train_data, batch_size=BATCHSIZE, shuffle=True)
+train_loader = Data.DataLoader(dataset=train_data, batch_size=BATCHSIZE, shuffle=True, pin_memory=False)
 
 #test_data = Data.TensorDataset(data_tensor=torch.from_numpy(Wave_test).float(),\
 #                              target_tensor=torch.from_numpy(PET_test).float())
-test_data = Data.TensorDataset(torch.from_numpy(Wave_test).float(),\
-                              torch.from_numpy(PET_test).float())
+test_data = Data.TensorDataset(torch.from_numpy(Wave_test).float().cuda(device=device),\
+                              torch.from_numpy(PET_test).float().cuda(device=device))
 
-test_loader = Data.DataLoader(dataset=test_data, batch_size=BATCHSIZE, shuffle=False)
+test_loader = Data.DataLoader(dataset=test_data, batch_size=BATCHSIZE, shuffle=False, pin_memory=False)
 
 
 # Neural Networks
@@ -96,13 +101,13 @@ class Net_1(nn.Module):
         x = x.squeeze(1)
         return x
 
-net = Net_1()
+net = Net_1().cuda(device=device)
 print(sum(parm.numel() for parm in net.parameters()))
 #optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9) #0.001
 optimizer = optim.Adam(net.parameters(), lr=1e-3)
 checking_period = np.int(0.25*(len(Wave_train)/BATCHSIZE))
 
-embed()
+# embed()
 
 # make loop
 training_result = []
@@ -145,8 +150,8 @@ for epoch in range(25):  # loop over the dataset multiple times
             outputs = net(inputs)
             for batch_index_2 in range(outputs.shape[0]): # range(BATCHSIZE)
                 #  the reminder group of BATCHING may not be BATCH_SIZE
-                output_vec = outputs.data[batch_index_2].numpy()
-                label_vec = labels.data[batch_index_2].numpy()
+                output_vec = outputs.data[batch_index_2].cpu().numpy()
+                label_vec = labels.data[batch_index_2].cpu().numpy()
                 if np.sum(label_vec)<=0:
                     label_vec = np.ones(600)/10000
                     print("warning")
