@@ -27,7 +27,7 @@ print("Using device "+device.__str__())
 
 
 # Make Saving_Directory
-SavePath = "./Network_Models_{}/".format(sys.argv[2])
+SavePath = "./Network_Models_{}/".format(sys.argv[1])
 if not os.path.exists(SavePath):
     os.makedirs(SavePath)
 
@@ -39,7 +39,7 @@ training_record = open((training_record_name+".txt"),"a+")
 testing_record = open((testing_record_name+".txt"),"a+")
 
 # Loading Data
-LoadPath= "./Pre-Processing_Results_{}/".format(sys.argv[2])
+LoadPath= "./Pre-Processing_Results_{}/".format(sys.argv[1])
 '''
 prefix = 'ftraining-0'
 # Data_Name= "ztraining-9_0-199999"
@@ -106,8 +106,6 @@ print(sum(parm.numel() for parm in net.parameters()))
 #optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9) #0.001
 optimizer = optim.Adam(net.parameters(), lr=1e-3)
 checking_period = np.int(0.25*(len(Wave_train)/BATCHSIZE))
-
-# embed()
 
 # make loop
 training_result = []
