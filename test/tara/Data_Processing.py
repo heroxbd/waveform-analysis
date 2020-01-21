@@ -1,3 +1,5 @@
+from IPython import embed #ipython breakpoint inserting
+
 import numpy as np
 import numpy.random as random
 from scipy import stats
@@ -71,6 +73,7 @@ test_data = Data.TensorDataset(torch.from_numpy(Wave_test).float(),\
 
 test_loader = Data.DataLoader(dataset=test_data, batch_size=BATCHSIZE, shuffle=False)
 
+
 # Neural Networks
 class Net_1(nn.Module):
 
@@ -98,6 +101,8 @@ print(sum(parm.numel() for parm in net.parameters()))
 #optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9) #0.001
 optimizer = optim.Adam(net.parameters(), lr=1e-3)
 checking_period = np.int(0.25*(len(Wave_train)/BATCHSIZE))
+
+embed()
 
 # make loop
 training_result = []
