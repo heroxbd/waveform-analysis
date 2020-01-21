@@ -19,13 +19,32 @@ import time
 
 import pytorch_stats_loss as stats_loss
 
+from Cuda_Queue import *
+import time
+
 BATCHSIZE=16
+fileno=int(sys.argv[-1])
 
-#detecting cuda device
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') 
-print("Using device "+device.__str__())
-
-
+#detecting cuda device and wait in line
+if torch.cuda.is_available():
+    GPUs = np.arange(torch.cuda.device_count())
+    for device = np.flip(GPUs)[0:-2] :
+    device = GPUs[-1]
+    #wait in line
+    while not (QueueUp(fileno) :
+        time.sleep(0.5)
+    #your turn, search for idle gpu!
+    while not check_available(device,1024*1024*1024*2) : 
+        if device==0 : device = GPUs[-1]
+        else : device -= 1
+        time.sleep(0.5)
+    print('Using device: gpu {}'.format(device))
+    device = torch.cuda.set_device(device)
+else : 
+    device = 'cpu'
+    print('Using device: cpu')
+    
+# begin loading
 # Make Saving_Directory
 SavePath = sys.argv[1]
 if not os.path.exists(SavePath):
@@ -102,6 +121,10 @@ class Net_1(nn.Module):
         return x
 
 net = Net_1().cuda(device=device)
+
+## finish loading to GPU, give tag on .bulletin.swp
+os.system("echo {} {} >> .bulletin.swp".format(fileno,0))
+
 print(sum(parm.numel() for parm in net.parameters()))
 #optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9) #0.001
 optimizer = optim.Adam(net.parameters(), lr=1e-3)
@@ -176,3 +199,4 @@ np.savez(training_record_name,training_result)
 np.savez(testing_record_name,testing_result)
 training_record.close()
 testing_record.close()
+

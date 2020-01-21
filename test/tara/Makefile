@@ -17,7 +17,7 @@ subfile = Prediction_Results/Prediction_Mod_abanswer.h5
 # method name and will use in the filename prefix
 method = TaraZtrain
 
-# training filename
+# training fileno
 FileNo = *
 #trainingfile = ../../ztraining-0.h5
 trainingfile_prefix = ../../dataset/jinp/abtraining-
@@ -35,6 +35,8 @@ NetStore = $(patsubst $(trainingfile_prefix)%$(trainingfile_suffix),$(NetStore_p
 trainlog_prefix = abtraining-
 trainlog_suffix = .log 
 trainlog = $(patsubst $(trainingfile_prefix)%$(trainingfile_suffix),$(trainlog_prefix)%$(trainlog_suffix), $(trainingfile))
+# reload training fileno
+FileNo = $(patsubst $(trainingfile_prefix)%$(trainingfile_suffix),%, $(trainingfile))
 
 # all: $(fileStore)/$(method)DistanceDistribution.png
 
@@ -60,6 +62,7 @@ $(PreStore_prefix)%$(PreStore_suffix) : $(trainingfile_prefix)%$(trainingfile_su
 $(trainlog) : $(PreStore)
 
 $(NetStore_prefix)%$(NetStore_suffix) : $(PreStore_prefix)%$(PreStore_suffix) $(trainlog_prefix)%$(trainlog_suffix) .finish_pro%.swp
+	echo FileNo > .bulletin.swp
 	python3 -u Data_Processing.py $@ $< >> $(word 2,$^) 2>&1
 	@touch .finish_pro$*.swp
 	@touch $@
