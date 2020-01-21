@@ -36,37 +36,42 @@ trainlog_prefix = abtraining-
 trainlog_suffix = .log 
 trainlog = $(patsubst $(trainingfile_prefix)%$(trainingfile_suffix),$(trainlog_prefix)%$(trainlog_suffix), $(trainingfile))
 
-all: $(fileStore)/$(method)DistanceDistribution.png
+# all: $(fileStore)/$(method)DistanceDistribution.png
 
-$(fileStore)/$(method)DistanceDistribution.png: $(fileStore)/$(method)DistanceDistribution.npy
-	python3 plotDistribution.py $^ $@
+# $(fileStore)/$(method)DistanceDistribution.png: $(fileStore)/$(method)DistanceDistribution.npy
+# 	python3 plotDistribution.py $^ $@
 
-$(fileStore)/$(method)DistanceDistribution.npy: $(subfile) $(ansfile)
-	python3 graderMain.py $(fileStore)/$(method) $^ $@
-$(subfile): $(problemfile)
-	mkdir -p $(fileStore)
-	python3 Prediction_Pre-Processing.py $(problemfile) $(fileStore)
-	python3 Prediction_Processing_Total.py $(problemfile) $(fileStore)
+# $(fileStore)/$(method)DistanceDistribution.npy: $(subfile) $(ansfile)
+# 	python3 graderMain.py $(fileStore)/$(method) $^ $@
+# $(subfile): $(problemfile)
+# 	mkdir -p $(fileStore)
+# 	python3 Prediction_Pre-Processing.py $(problemfile) $(fileStore)
+# 	python3 Prediction_Processing_Total.py $(problemfile) $(fileStore)
 	# python3 Continue_Training.py $(problemfile) $(fileStore)
 
 .PHONY: model
 model: $(NetStore)
 
-$(PreStore_prefix)%$(PreStore_suffix) : $(trainingfile_prefix)%$(trainingfile_suffix)
+$(PreStore_prefix)%$(PreStore_suffix) : $(trainingfile_prefix)%$(trainingfile_suffix) .finish_pre%.swp
 	python3 -u Data_Pre-Processing.py $^ $@ > $(trainlog_prefix)$*$(trainlog_suffix) 2>&1
+	@touch .finish_pre$*.swp
+	@touch $@
 
 $(trainlog) : $(PreStore)
 
-$(NetStore_prefix)%$(NetStore_suffix) : $(PreStore_prefix)%$(PreStore_suffix) $(trainlog_prefix)%$(trainlog_suffix)
+$(NetStore_prefix)%$(NetStore_suffix) : $(PreStore_prefix)%$(PreStore_suffix) $(trainlog_prefix)%$(trainlog_suffix) .finish_pro%.swp
 	python3 -u Data_Processing.py $@ $< >> $(word 2,$^) 2>&1
+	@touch .finish_pro$*.swp
+	@touch $@
 
 .DELETE_ON_ERROR:
 
 .SECONDARY:
 
-refresh_PreStore : phonyfile 
-	@touch -r $^ $(PreStore)
-	@rm $<
+refresh_PreStore : 
+	@touch $(patsubst $(trainlog_prefix)%$(trainlog_suffix),.finish_pre%.swp, $(trainlog))
+	@touch $(PreStore)
 
-phonyfile :
-	@touch $@
+refresh_NetStore : 
+	@touch $(patsubst $(trainlog_prefix)%$(trainlog_suffix),.finish_pro%.swp, $(trainlog))
+	@touch $(NetStore)
