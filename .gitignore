@@ -5,5 +5,12 @@
 *.h5
 *.png
 *.zip
+*.swp
+*.log
+*.out
+.vscode/
+dataset/
+test/tara/Network_Models*/
+*.npz
 .DS_Store
 __pycache__/
