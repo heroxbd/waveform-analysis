@@ -35,8 +35,9 @@ NetStore = $(patsubst $(trainingfile_prefix)%$(trainingfile_suffix),$(NetStore_p
 trainlog_prefix = abtraining-
 trainlog_suffix = .log 
 trainlog = $(patsubst $(trainingfile_prefix)%$(trainingfile_suffix),$(trainlog_prefix)%$(trainlog_suffix), $(trainingfile))
-# reload training fileno
-FileNo = $(patsubst $(trainingfile_prefix)%$(trainingfile_suffix),%, $(trainingfile))
+# reload training fileno and bulletin
+FileNumbers = $(patsubst $(trainingfile_prefix)%$(trainingfile_suffix),%, $(trainingfile))
+
 
 # all: $(fileStore)/$(method)DistanceDistribution.png
 
@@ -54,6 +55,8 @@ FileNo = $(patsubst $(trainingfile_prefix)%$(trainingfile_suffix),%, $(trainingf
 .PHONY: model
 model: $(NetStore)
 
+	
+
 $(PreStore_prefix)%$(PreStore_suffix) : $(trainingfile_prefix)%$(trainingfile_suffix) .finish_pre%.swp
 	python3 -u Data_Pre-Processing.py $^ $@ > $(trainlog_prefix)$*$(trainlog_suffix) 2>&1
 	@touch .finish_pre$*.swp
@@ -61,10 +64,15 @@ $(PreStore_prefix)%$(PreStore_suffix) : $(trainingfile_prefix)%$(trainingfile_su
 
 $(trainlog) : $(PreStore)
 
-$(NetStore_prefix)%$(NetStore_suffix) : $(PreStore_prefix)%$(PreStore_suffix) $(trainlog_prefix)%$(trainlog_suffix) .finish_pro%.swp
-	echo FileNo > .bulletin.swp
-	python3 -u Data_Processing.py $@ $< >> $(word 2,$^) 2>&1
+$(NetStore_prefix)%$(NetStore_suffix) : $(PreStore_prefix)%$(PreStore_suffix) $(trainlog_prefix)%$(trainlog_suffix) .finish_pro%.swp FileNumbers
+	python3 -u Data_Processing.py $@ $< $* >> $(word 2,$^) 2>&1
 	@touch .finish_pro$*.swp
+	@touch $@
+
+FileNumbers :
+	echo $(FileNumbers) > ./.bulletin.swp
+
+.finish%.swp :
 	@touch $@
 
 .DELETE_ON_ERROR:

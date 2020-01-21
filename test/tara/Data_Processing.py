@@ -27,7 +27,6 @@ fileno=int(sys.argv[-1])
 #detecting cuda device and wait in line
 if torch.cuda.is_available():
     GPUs = np.arange(torch.cuda.device_count())
-    for device = np.flip(GPUs)[0:-2] :
     device = GPUs[-1]
     #wait in line
     while not QueueUp(fileno) :
@@ -37,8 +36,9 @@ if torch.cuda.is_available():
         if device==0 : device = GPUs[-1]
         else : device -= 1
         time.sleep(0.5)
+    device = int(device)
     print('Using device: gpu {}'.format(device))
-    device = torch.cuda.set_device(device)
+    torch.cuda.set_device(device)
 else : 
     device = 'cpu'
     print('Using device: cpu')
