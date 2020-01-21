@@ -15,10 +15,14 @@ method = TaraZtrain
 trainingfile_prefix = ../../dataset/jinp/abtraining-
 trainingfile_suffix = .h5
 trainingfile = $(wildcard $(trainingfile_prefix)[$(shell seq -s "," 0 7)]$(trainingfile_suffix))
-# model name prefix
+# training storage name
 trainStore_prefix = abtraining-
 trainStore_suffix =  
 trainStore = $(patsubst $(trainingfile_prefix)%$(trainingfile_suffix),$(trainStore_prefix)%$(trainStore_suffix), $(trainingfile))
+# training log name
+trainlog_prefix = $(trainStore_prefix)
+trainlog_suffix = .log 
+trainlog = $(patsubst $(trainingfile_prefix)%$(trainingfile_suffix),$(trainlog_prefix)%$(trainlog_suffix), $(trainingfile))
 
 all: $(fileStore)/$(method)DistanceDistribution.png
 
@@ -34,11 +38,13 @@ $(subfile): $(problemfile)
 	# python3 Continue_Training.py $(problemfile) $(fileStore)
 
 .PHONY: model
-model: $(trainStore)
+model: $(trainlog) $(trainStore)
 
-$(trainStore_prefix)%$(trainStore_suffix) : $(trainingfile_prefix)%$(trainingfile_suffix)
-	python3 Data_Pre-Processing.py $^ $@
-	python3 Data_Processing.py $^
+$(trainlog) : $(trainingfile)
+
+$(trainStore_prefix)%$(trainStore_suffix) : $(trainingfile_prefix)%$(trainingfile_suffix) $(trainlog_prefix)%$(trainlog_suffix)
+	python3 -u Data_Pre-Processing.py $< $@ > $(word 2,$^) 2>&1
+	python3 -u Data_Processing.py $@ >> $(word 2,$^) 2>&1
 
 .DELETE_ON_ERROR:
 
