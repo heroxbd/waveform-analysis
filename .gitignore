@@ -12,6 +12,7 @@
 *.ipynb
 .vscode/
 dataset/
+Finished_Models/
 Back/
 test/tara/Network_Models*/
 *.npz
