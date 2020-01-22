@@ -6,6 +6,7 @@ from scipy import optimize as opti
 import h5py
 import sys
 sys.path.append('test')
+import matplotlib.pyplot as plt
 import argparse
 import wf_analysis_func as wfaf
 
@@ -14,7 +15,7 @@ psr.add_argument('--event', '-e', type=int, dest='ent')
 psr.add_argument('--channel', '-c', type=int, dest='cha')
 args = psr.parse_args()
 
-fipt = 'dataset/jinp/ztraining-0.h5'
+fipt = '/Users/xudachengthu/Downloads/ztraining-1.h5'
 single_pe_path = 'test/xiaopeip/averspe.h5'
 
 def norm_fit(x, M, p):
@@ -26,10 +27,15 @@ def main():
     opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint8), ('PETime', np.uint16), ('Weight', np.float16)])
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
         ent = ipt['Waveform']
+        Chnum = len(np.unique(ent[0:args.ent*30]['ChannelID']))
+        a = max(args.ent*Chnum-10000, 0)
+        b = min(args.ent*Chnum+10000, len(ent))
+        ent = ent[a:b]
         Length_pe = len(ent[0]['Waveform'])
         spemean = np.concatenate([spemean, np.zeros(Length_pe - len(spemean))])
         i = np.where(np.logical_and(ent['EventID'] == args.ent, ent['ChannelID'] == args.cha))[0][0]
         wf_input = ent[i]['Waveform']
+        #plt.plot(wf_input)
         wave = wf_input - np.mean(wf_input[900:1000])
         lowp = np.argwhere(wave < -6.5).flatten()
         flag = 1
