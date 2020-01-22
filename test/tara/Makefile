@@ -56,7 +56,7 @@ trainlog = $(patsubst $(trainingfile_prefix)%$(trainingfile_suffix),$(trainlog_p
 .PHONY: model
 model:  $(NetStore)
 
-$(PreStore_prefix)%$(PreStore_suffix) : $(trainingfile_prefix)%$(trainingfile_suffix) .finish_pre%.swp
+$(PreStore_prefix)%$(PreStore_suffix) : $(trainingfile_prefix)%$(trainingfile_suffix)
 	python3 -u Data_Pre-Processing.py $< $@ > $(trainlog_prefix)_Pre-$*$(trainlog_suffix) 2>&1
 #@touch $@
 #@touch .finish_pre$*.swp
