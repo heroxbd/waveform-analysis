@@ -23,9 +23,12 @@ def check_waiting_list(fileno) :
         lines=fi.readlines()
     try :
         File_Numbers = np.array(lines[0].split(),dtype=np.int)
-        last_run_info = np.array(lines[-1].split(),dtype=np.int)
     except ValueError :
         raise FileExistsError("Wrong Format .bullentin.swp")
+    except IndexError : 
+        return False
+    else :
+        last_run_info = np.array(lines[-1].split(),dtype=np.int)
 
     runNo = np.where(File_Numbers==fileno)[0]
     if len(runNo)==0 : 
