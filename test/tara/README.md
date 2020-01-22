@@ -56,3 +56,6 @@ CPU: Intel(R) Core(TM) i7-6500U CPU @ 2.50GHz
 
 ## GPU training status
 After about 3 days of debugging, tara's network is able to train data (generated training dataset, for example ztraining.h5)
+
+### Known bugs:
+when python throw an error and exit, make cannot delete its incomplete output file.
