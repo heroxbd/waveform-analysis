@@ -59,15 +59,13 @@ trainlog = $(patsubst $(trainfile_prefix)%$(trainfile_suffix),$(trainlog_prefix)
 .PHONY: model
 model:  $(NetStore)
 
-$(PreStore_prefix)%$(PreStore_suffix) : $(trainfile_prefix)%$(trainfile_suffix)
-	python3 -u Data_Pre-Processing.py $< $@ > $(trainlog_prefix)_Pre-$*$(trainlog_suffix) 2>&1
-#@touch $@
-#@touch .finish_pre$*.swp
+$(PreStore_prefix)%$(PreStore_suffix)/.finshed : $(trainfile_prefix)%$(trainfile_suffix)
+	python3 -u Data_Pre-Processing.py $< $(PreStore_prefix)$*$(PreStore_suffix) > $(trainlog_prefix)_Pre-$*$(trainlog_suffix) 2>&1
+	touch $@
 
-$(NetStore_prefix)%$(NetStore_suffix) : $(PreStore_prefix)%$(PreStore_suffix) .Bulletin 
-	python3 -u Data_Processing.py $@ $< $* > $(trainlog_prefix)_Train-$*$(trainlog_suffix) 2>&1
-#@touch .finish_pro$*.swp
-#@touch $@
+$(NetStore_prefix)%$(NetStore_suffix)/.finshed : $(PreStore_prefix)%$(PreStore_suffix) .Bulletin 
+	python3 -u Data_Processing.py $@ $< $(NetStore_prefix)$*$(NetStore_suffix) > $(trainlog_prefix)_Train-$*$(trainlog_suffix) 2>&1
+	touch $@
 
 .Bulletin : 
 	rm -f ./.bulletin.swp
