@@ -2,11 +2,12 @@
 
 help:
 	@echo 'Usage:'
-	@echo '  make [FileNo=fileno] model'
-	@echo '  make [FileNo=fileno] Analysis'
-	@echo '       fileno: for example, [0] or [0,1,3] or [2,3,4,5] or simply [`seq -s , 2 5`]'
-	@echo '  example: make FileNo=[`seq -s , 0 7`] model'
-	@echo '  model prerequisite: data file, for example ../../dataset/jinp/abtraining-?.h5'
+	@echo '  make [FileNo=fileno] [DataDir=/path/to/data/dir/] [data_name_prefix=prefix] model'
+	# @echo '  make [FileNo=fileno] Analysis'
+	@echo '       fileno: "[%d,%d,...]" for example, [0] or [0,1,3] or [2,3,4,5] or simply [`seq -s , 2 5`]'
+	@echo '       DataDir: path to data directory. The "/" at the end is essential'
+	@echo '       data file name shoud obey "{prefix}%d.h5", for example abtraining-0.h5, "abtraining-" is the prefix'
+	@echo '  example: make FileNo=[`seq -s , 0 7`] DataDir=/data/JUNO_DATA/Jinping_DATA_Train/dataset/jinp/ data_name_prefix=abtraining- model'
 # answer filename
 # ansfile = ../../abanswer.h5
 # problem filename
@@ -20,24 +21,26 @@ method = TaraZtrain
 
 # training fileno
 FileNo = *
-#trainingfile = ../../ztraining-0.h5
-trainingfile_prefix = ../../dataset/jinp/abtraining-
-trainingfile_suffix = .h5
-trainingfile = $(wildcard $(trainingfile_prefix)$(FileNo)$(trainingfile_suffix))
+#training filename
+DataDir = /data/JUNO_DATA/Jinping_DATA_Train/dataset/jinp/
+data_name_prefix = abtraining-
+trainfile_prefix = $(DataDir)$(data_name_prefix)
+trainfile_suffix = .h5
+trainfile = $(wildcard $(trainfile_prefix)$(FileNo)$(trainfile_suffix))
 # PreProcessing storage name
-PreStore_prefix = Pre-Processing_Results_abtraining-
+PreStore_prefix = $(DataDir)Pre-Processing_Results_$(data_name_prefix)
 PreStore_suffix = / 
-PreStore = $(patsubst $(trainingfile_prefix)%$(trainingfile_suffix),$(PreStore_prefix)%$(PreStore_suffix), $(trainingfile))
+PreStore = $(patsubst $(trainfile_prefix)%$(trainfile_suffix),$(PreStore_prefix)%$(PreStore_suffix), $(trainfile))
 # Network Models storage name
-NetStore_prefix = Network_Models_abtraining-
+NetStore_prefix = $(DataDir)Network_Models_$(data_name_prefix)
 NetStore_suffix = / 
-NetStore = $(patsubst $(trainingfile_prefix)%$(trainingfile_suffix),$(NetStore_prefix)%$(NetStore_suffix), $(trainingfile))
+NetStore = $(patsubst $(trainfile_prefix)%$(trainfile_suffix),$(NetStore_prefix)%$(NetStore_suffix), $(trainfile))
 # training log name
-trainlog_prefix = abtraining
+trainlog_prefix = $(data_name_prefix)
 trainlog_suffix = .log 
-trainlog = $(patsubst $(trainingfile_prefix)%$(trainingfile_suffix),$(trainlog_prefix)%$(trainlog_suffix), $(trainingfile))
+trainlog = $(patsubst $(trainfile_prefix)%$(trainfile_suffix),$(trainlog_prefix)%$(trainlog_suffix), $(trainfile))
 # finish flag
-# finish_pro = $(patsubst $(trainingfile_prefix)%$(trainingfile_suffix),.finish_pro%.swp, $(trainingfile))
+# finish_pro = $(patsubst $(trainfile_prefix)%$(trainfile_suffix),.finish_pro%.swp, $(trainfile))
 
 
 # all: $(fileStore)/$(method)DistanceDistribution.png
@@ -56,7 +59,7 @@ trainlog = $(patsubst $(trainingfile_prefix)%$(trainingfile_suffix),$(trainlog_p
 .PHONY: model
 model:  $(NetStore)
 
-$(PreStore_prefix)%$(PreStore_suffix) : $(trainingfile_prefix)%$(trainingfile_suffix)
+$(PreStore_prefix)%$(PreStore_suffix) : $(trainfile_prefix)%$(trainfile_suffix)
 	python3 -u Data_Pre-Processing.py $< $@ > $(trainlog_prefix)_Pre-$*$(trainlog_suffix) 2>&1
 #@touch $@
 #@touch .finish_pre$*.swp

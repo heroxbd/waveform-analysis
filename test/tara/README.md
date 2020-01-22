@@ -54,4 +54,5 @@ Our model has balanced the result generation speed and the training accuracy. Ti
 CPU: Intel(R) Core(TM) i7-6500U CPU @ 2.50GHz   
 *If more CPU kernels or GPU kernels are used, the training and generation speed will be significantly higher.*
 
-
+## GPU training status
+After about 3 days of debugging, tara's network is able to train data (generated training dataset, for example ztraining.h5)
