@@ -66,14 +66,14 @@ def QueueUp(fileno):
         file.writelines(lines)
     return False #newly append, may not success. Need rerun QueueUp to check
 
-def wait_in_line(fileno) :
+def wait_in_line(fileno,min_memory) :
     GPUs = np.arange(pynvml.nvmlDeviceGetCount())
     device = GPUs[-1]
     #wait in line
     while not check_waiting_list(fileno) :
         time.sleep(0.5)
     #your turn, search for idle gpu!
-    while not check_available(device,1024*1024*1024*2) : 
+    while not check_available(device,min_memory) : 
         if device==0 : device = GPUs[-1]
         else : device -= 1
         time.sleep(0.5)
