@@ -15,7 +15,7 @@ psr.add_argument('--event', '-e', type=int, dest='ent')
 psr.add_argument('--channel', '-c', type=int, dest='cha')
 args = psr.parse_args()
 
-fipt = '/Users/xudachengthu/Downloads/ztraining-1.h5'
+fipt = 'dataset/jinp/ztraining-1.h5'
 single_pe_path = 'test/xiaopeip/averspe.h5'
 
 def norm_fit(x, M, p):
