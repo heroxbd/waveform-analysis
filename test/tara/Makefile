@@ -65,20 +65,20 @@ $(NetStore_prefix)%$(NetStore_suffix) : $(PreStore_prefix)%$(PreStore_suffix) .B
 #@touch .finish_pro$*.swp
 #@touch $@
 
-.Bulletin :
-	@rm -f ./.bulletin.swp
+.Bulletin : 
+	rm -f ./.bulletin.swp
 
 .finish%.swp :
 	@touch $@
 
-.DELETE_ON_ERROR: $(NetStore) $(PreStore)
+.DELETE_ON_ERROR: 
 
 .SECONDARY:
 
-refresh_PreStore : 
-	@touch $(patsubst $(trainlog_prefix)%$(trainlog_suffix),.finish_pre%.swp, $(trainlog))
-	@touch $(PreStore)
-
-refresh_NetStore : 
-	@touch $(patsubst $(trainlog_prefix)%$(trainlog_suffix),.finish_pro%.swp, $(trainlog))
-	@touch $(NetStore)
+#refresh_PreStore : 
+#	@touch $(patsubst $(trainlog_prefix)%$(trainlog_suffix),.finish_pre%.swp, $(trainlog))
+#	@touch $(PreStore)
+#
+#refresh_NetStore : 
+#	@touch $(patsubst $(trainlog_prefix)%$(trainlog_suffix),.finish_pro%.swp, $(trainlog))
+#	@touch $(NetStore)
