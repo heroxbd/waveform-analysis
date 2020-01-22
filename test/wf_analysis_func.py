@@ -10,12 +10,13 @@ def estipulse(h5_path):
         flag = 0
         i = 0
         while flag == 0:
-            mm = np.max(Wf[i]) - np.min(Wf[i])
+            mm = np.ptp(Wf[i])
             mean = np.mean(Wf[i])
-            if np.max(Wf[i]) - mean > 4/5*mm:
+            if np.max(Wf[i]) - mean > 3/4*mm:
                 flag = 1
-            if mean - np.min(Wf[i]) > 4/5*mm:
+            if mean - np.min(Wf[i]) > 3/4*mm:
                 flag = -1
+            i += 1
     return flag
 
 def generate_model(spe_path, epulse):
