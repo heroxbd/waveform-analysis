@@ -6,14 +6,15 @@ help:
 	@echo '  make [FileNo=fileno] Analysis'
 	@echo '       fileno: for example, [0] or [0,1,3] or [2,3,4,5] or simply [`seq -s , 2 5`]'
 	@echo '  example: make FileNo=[`seq -s , 0 7`] model'
+	@echo '  model prerequisite: data file, for example ../../dataset/jinp/abtraining-?.h5'
 # answer filename
-ansfile = ../../abanswer.h5
+# ansfile = ../../abanswer.h5
 # problem filename
-problemfile = ../../abtest.h5
+# problemfile = ../../abtest.h5
 # name of the directory will be made to store the result
-fileStore = abtraining-9
+# fileStore = abtraining-9
 # submission file will be generated
-subfile = Prediction_Results/Prediction_Mod_abanswer.h5
+# subfile = Prediction_Results/Prediction_Mod_abanswer.h5
 # method name and will use in the filename prefix
 method = TaraZtrain
 
@@ -36,7 +37,7 @@ trainlog_prefix = abtraining
 trainlog_suffix = .log 
 trainlog = $(patsubst $(trainingfile_prefix)%$(trainingfile_suffix),$(trainlog_prefix)%$(trainlog_suffix), $(trainingfile))
 # finish flag
-finish_pro = $(patsubst $(trainingfile_prefix)%$(trainingfile_suffix),.finish_pro%.swp, $(trainingfile))
+# finish_pro = $(patsubst $(trainingfile_prefix)%$(trainingfile_suffix),.finish_pro%.swp, $(trainingfile))
 
 
 # all: $(fileStore)/$(method)DistanceDistribution.png
@@ -68,12 +69,12 @@ $(NetStore_prefix)%$(NetStore_suffix) : $(PreStore_prefix)%$(PreStore_suffix) .B
 .Bulletin : 
 	rm -f ./.bulletin.swp
 
-.finish%.swp :
-	@touch $@
-
 .DELETE_ON_ERROR: 
 
 .SECONDARY:
+
+# .finish%.swp :
+# 	@touch $@
 
 #refresh_PreStore : 
 #	@touch $(patsubst $(trainlog_prefix)%$(trainlog_suffix),.finish_pre%.swp, $(trainlog))
