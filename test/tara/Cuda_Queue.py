@@ -54,7 +54,8 @@ def QueueUp(fileno):
     if os.path.exists(".bulletin.swp"):
         with open(".bulletin.swp",'r') as file:
             lines=file.readlines()
-        L = lines[0].split()
+        if len(lines)!=0 : L = lines[0].split()
+        else : L[0]=str(fileno)
         if str(fileno) in set(L) :
             return True #already in line (successful)
         L=np.append(L,str(fileno))
