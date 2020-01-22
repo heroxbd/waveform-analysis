@@ -18,7 +18,7 @@ def check_available(gpu_id,min_memory):
     else :
         return False
 
-def QueueUp(fileno) :
+def check_waiting_list(fileno) :
     with open("./.bulletin.swp",'r') as fi:
         lines=fi.readlines()
     try :
@@ -47,3 +47,36 @@ def QueueUp(fileno) :
         else :
             raise FileExistsError("Wrong Format .bullentin.swp")
     return False
+
+def QueueUp(fileno):
+    lines=[""]
+    L=[""]
+    if os.path.exists(".bulletin.swp"):
+        with open(".bulletin.swp",'r') as file:
+            lines=file.readlines()
+        L = lines[0].split()
+        if str(fileno) in set(L) :
+            return True #already in line (successful)
+        L=np.append(L,str(fileno))
+    else :
+        L[0]=str(fileno)
+    L = ' '.join(L)
+    lines[0]=L+'\n'
+    with open(".bulletin.swp",'w') as file:
+        file.writelines(lines)
+    return False #newly append, may not success. Need rerun QueueUp to check
+
+def wait_in_line(fileno) :
+    GPUs = np.arange(pynvml.nvmlDeviceGetCount())
+    device = GPUs[-1]
+    #wait in line
+    while not check_waiting_list(fileno) :
+        time.sleep(0.5)
+    #your turn, search for idle gpu!
+    while not check_available(device,1024*1024*1024*2) : 
+        if device==0 : device = GPUs[-1]
+        else : device -= 1
+        time.sleep(0.5)
+    device = int(device)
+    print('Using device: gpu {}'.format(device))
+    return device

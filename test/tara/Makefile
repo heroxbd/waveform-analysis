@@ -53,21 +53,20 @@ FileNumbers = $(patsubst $(trainingfile_prefix)%$(trainingfile_suffix),%, $(trai
 	# python3 Continue_Training.py $(problemfile) $(fileStore)
 
 .PHONY: model
-model: $(NetStore)
+model:  $(NetStore)
 
-	
+$(PreStore_prefix)%$(PreStore_suffix) : $(trainingfile_prefix)%$(trainingfile_suffix) #.finish_pre%.swp
+	python3 -u Data_Pre-Processing.py $< $@ > $(trainlog_prefix)$*$(trainlog_suffix) 2>&1
+#@touch .finish_pre$*.swp
+#@touch $@
 
-$(PreStore_prefix)%$(PreStore_suffix) : $(trainingfile_prefix)%$(trainingfile_suffix) .finish_pre%.swp
-	python3 -u Data_Pre-Processing.py $^ $@ > $(trainlog_prefix)$*$(trainlog_suffix) 2>&1
-	@touch .finish_pre$*.swp
-	@touch $@
+$(NetStore_prefix)%$(NetStore_suffix) : $(PreStore_prefix)%$(PreStore_suffix) .Bulletin
+	python3 -u Data_Processing.py $@ $< $* >> $(trainlog_prefix)$*$(trainlog_suffix) 2>&1
+#@touch .finish_pro$*.swp
+#@touch $@
 
-$(trainlog) : $(PreStore)
-
-$(NetStore_prefix)%$(NetStore_suffix) : $(PreStore_prefix)%$(PreStore_suffix) $(trainlog_prefix)%$(trainlog_suffix) .finish_pro%.swp FileNumbers
-	python3 -u Data_Processing.py $@ $< $* >> $(word 2,$^) 2>&1
-	@touch .finish_pro$*.swp
-	@touch $@
+.Bulletin :
+	@rm -f ./.bulletin.swp
 
 FileNumbers :
 	echo $(FileNumbers) > ./.bulletin.swp
