@@ -3,11 +3,11 @@
 help:
 	@echo 'Usage:'
 	@echo '  make [FileNo=fileno] [DataDir=/path/to/data/dir/] [data_name_prefix=prefix] model'
-	# @echo '  make [FileNo=fileno] Analysis'
+# @echo '  make [FileNo=fileno] Analysis'
 	@echo '       fileno: "[%d,%d,...]" for example, [0] or [0,1,3] or [2,3,4,5] or simply [`seq -s , 2 5`]'
 	@echo '       DataDir: path to data directory. The "/" at the end is essential'
 	@echo '       data file name shoud obey "{prefix}%d.h5", for example abtraining-0.h5, "abtraining-" is the prefix'
-	@echo '  example: make FileNo=[`seq -s , 0 7`] DataDir=/data/JUNO_DATA/Jinping_DATA_Train/dataset/jinp/ data_name_prefix=abtraining- model'
+	@echo '  example: make FileNo=[`seq -s , 0 7`] DataDir=dataset/jinp/ data_name_prefix=abtraining- model'
 # answer filename
 # ansfile = ../../abanswer.h5
 # problem filename
@@ -22,7 +22,7 @@ method = TaraZtrain
 # training fileno
 FileNo = *
 #training filename
-DataDir = /data/JUNO_DATA/Jinping_DATA_Train/dataset/jinp/
+DataDir = dataset/jinp/
 data_name_prefix = abtraining-
 trainfile_prefix = $(DataDir)$(data_name_prefix)
 trainfile_suffix = .h5
