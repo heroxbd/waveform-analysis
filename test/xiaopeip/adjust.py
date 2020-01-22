@@ -39,7 +39,7 @@ def main(fopt, fipt):
             t = t[1:-1]
             ta = np.diff(t, prepend=t[0])
             tb = np.diff(t, append=t[-1])
-            wgt_b[np.logical_and(np.logical_and(ta > 0, tb < 0), resi > 0.5)] += 1
+            wgt_b[np.logical_and(np.logical_and(ta > 0, tb < 0), t > 0.5)] += 1
             if len(wgt_b[wgt_b > 0]) == 0:
                 wgt = 1
                 pet = np.max(pet)

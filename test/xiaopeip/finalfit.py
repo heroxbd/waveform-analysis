@@ -61,7 +61,7 @@ def main(fopt, fipt, single_pe_path):
                 nihep = np.argwhere(panel == 1).flatten()
                 xuhao = np.argwhere(wave[lowp+1]-wave[lowp]-wave[lowp-1]+wave[lowp-2] > 1.5).flatten()
                 if len(xuhao) != 0:
-                    possible = np.unique(np.concatenate((lowp[xuhao]-10,lowp[xuhao]-9,lowp[xuhao]-8)))
+                    possible = np.unique(np.concatenate((lowp[xuhao]-10,lowp[xuhao]-9,lowp[xuhao]-8,lowp[xuhao]-7)))
                     possible = possible[np.logical_and(possible>=0, possible<Length_pe)]
                     if len(possible) != 0:
                         ans0 = np.zeros_like(possible).astype(np.float64)
