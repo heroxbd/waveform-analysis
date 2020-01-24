@@ -2,6 +2,7 @@ import tables
 import numpy as np
 import os
 import sys
+import h5py
 
 ## Initialization
 
@@ -28,13 +29,13 @@ WaveformTable = h5file.root.Waveform
 GroundTruthTable = h5file.root.GroundTruth
 Len_Entry = len(WaveformTable)
 print(Len_Entry, "data entries") # Entry 10^6
-# WaveChannel 0-1028, length 600
 
 # Make Data Matrix
-def make_time_long_vec(time_mark_vec):
-    time_long_vec = np.zeros(600)
+def make_time_long_vec(time_mark_vec,WindowSize):
+    time_long_vec = np.zeros(WindowSize)
+    time_long_vec = np.zeros(WindowSize)
     for time_mark in time_mark_vec:
-        if time_mark < 600-9:
+        if time_mark < WindowSize-9:
             time_long_vec[time_mark] += 1
     if len(time_mark_vec) == 0:
         print("non-PET-event")
@@ -43,8 +44,10 @@ def make_time_long_vec(time_mark_vec):
 def make_wave_long_vec(wave_form):
     # non_negative_peak + zero_base_level
     shift= np.argmax(np.bincount(wave_form)) #make baseline shifts, normally 972
-    shift_wave=-wave_form+shift #non_negative_peak + zero_base_level
-    return shift_wave
+    shift_wave=wave_form-shift 
+    #non_negative_peak + zero_base_level
+    if np.max(shift_wave) >= -np.min(shift_wave) : return shift_wave
+    if np.max(shift_wave) < -np.min(shift_wave) : return -shift_wave
 
 def search_PETime(event_id,channel_id,PETtable,starting_point):
     PET_num = 0
@@ -77,12 +80,14 @@ ChanMat=[]
 WaveMat=[]
 PETMat=[]
 
+WindowSize = len(WaveformTable[0]['Waveform'])
+
 for entry in range(Num_Entry):
     EventId = WaveformTable[entry]['EventID']
     ChannelId = WaveformTable[entry]['ChannelID']
     Waveform = WaveformTable[entry]['Waveform']
     PETime, looking_up_index = search_PETime(EventId,ChannelId,GroundTruthTable,looking_up_index)
-    PETime_Vec = make_time_long_vec(PETime)
+    PETime_Vec = make_time_long_vec(PETime,WindowSize)
     Wave_Vec = make_wave_long_vec(Waveform)
 
     PETMat.append(PETime_Vec)
