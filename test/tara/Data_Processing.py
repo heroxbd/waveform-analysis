@@ -68,6 +68,7 @@ Data_Name = data_name.replace('.h5','')
 Data_set= np.load(LoadPath+data_name)
 WaveData = Data_set['Wave']
 PETData= Data_set['PET']
+WindowSize = len(WaveData[0])
 #Make Shift For +5 ns
 PETData = np.concatenate((np.zeros((len(PETData),5)),PETData[:,5:]),axis=-1)
 print("Data_loaded")
@@ -169,12 +170,12 @@ for epoch in range(25):  # loop over the dataset multiple times
                 output_vec = outputs.data[batch_index_2].cpu().numpy()
                 label_vec = labels.data[batch_index_2].cpu().numpy()
                 if np.sum(label_vec)<=0:
-                    label_vec = np.ones(600)/10000
+                    label_vec = np.ones(WindowSize)/10000
                     print("warning")
                 if np.sum(output_vec)<=0:
-                    output_vec = np.ones(600)/10000
+                    output_vec = np.ones(WindowSize)/10000
                     print("warning")
-                cost = stats.wasserstein_distance(np.arange(600), np.arange(600), output_vec, label_vec)
+                cost = stats.wasserstein_distance(np.arange(WindowSize), np.arange(WindowSize), output_vec, label_vec)
                 batch_result += cost
             batch_count += 1
         test_performance = batch_result / (BATCHSIZE * batch_count)
