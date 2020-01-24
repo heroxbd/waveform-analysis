@@ -81,14 +81,14 @@ print("training_set ",len(Wave_train),", testing_set",len(Wave_test))
 # Making Dataset
 #train_data = Data.TensorDataset(data_tensor=torch.from_numpy(Wave_train).float(),\
 #                              target_tensor=torch.from_numpy(PET_train).float())
-train_data = Data.TensorDataset(torch.from_numpy(Wave_train).cuda(device=device),\
+train_data = Data.TensorDataset(torch.from_numpy(np.array(Wave_train,dtype=np.int16)).float().cuda(device=device),\
                               torch.from_numpy(PET_train).cuda(device=device))
 
 train_loader = Data.DataLoader(dataset=train_data, batch_size=BATCHSIZE, shuffle=True, pin_memory=False)
 
 #test_data = Data.TensorDataset(data_tensor=torch.from_numpy(Wave_test).float(),\
 #                              target_tensor=torch.from_numpy(PET_test).float())
-test_data = Data.TensorDataset(torch.from_numpy(Wave_test).cuda(device=device),\
+test_data = Data.TensorDataset(torch.from_numpy(np.array(Wave_test,dtype=np.int16)).float().cuda(device=device),\
                               torch.from_numpy(PET_test).cuda(device=device))
 
 test_loader = Data.DataLoader(dataset=test_data, batch_size=BATCHSIZE, shuffle=False, pin_memory=False)
