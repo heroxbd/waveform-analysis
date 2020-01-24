@@ -56,7 +56,12 @@ p
 data_name= LoadPath+Data_Name+".npz"
 '''
 fileSet = os.listdir(LoadPath)
-data_name = fileSet[0]
+fileSize = []
+for filename in fileSet :
+    if '.npz' in filename :
+        fileSize.append(os.path.getsize(LoadPath+filename))
+data_name = fileSet[fileSize.index(max(fileSize))]
+#data_name = fileSet[0]
 Data_Name = data_name.replace('.h5','')
 
 Data_set= np.load(LoadPath+data_name)
