@@ -87,7 +87,7 @@ for entry in range(Num_Entry):
     ChannelId = WaveformTable[entry]['ChannelID']
     Waveform = WaveformTable[entry]['Waveform']
     PETime, looking_up_index = search_PETime(EventId,ChannelId,GroundTruthTable,looking_up_index)
-    PETime_Vec = make_time_long_vec(PETime,WindowSize)
+    PETime_Vec = make_time_long_vec(np.array(PETime,dtype=np.int16),WindowSize)
     Wave_Vec = make_wave_long_vec(Waveform)
 
     PETMat.append(PETime_Vec)

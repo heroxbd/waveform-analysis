@@ -60,10 +60,11 @@ fileSize = []
 for filename in fileSet :
     if '.npz' in filename :
         fileSize.append(os.path.getsize(LoadPath+filename))
+    else :
+        fileSize.append(0)
 data_name = fileSet[fileSize.index(max(fileSize))]
 #data_name = fileSet[0]
 Data_Name = data_name.replace('.h5','')
-
 Data_set= np.load(LoadPath+data_name)
 WaveData = Data_set['Wave']
 PETData= Data_set['PET']
