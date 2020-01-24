@@ -34,7 +34,7 @@ print(Len_Entry, "data entries") # Entry 10^6
 def make_time_long_vec(time_mark_vec):
     time_long_vec = np.zeros(600)
     for time_mark in time_mark_vec:
-        if time_mark < 1020:
+        if time_mark < 600-9:
             time_long_vec[time_mark] += 1
     if len(time_mark_vec) == 0:
         print("non-PET-event")
