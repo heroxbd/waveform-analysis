@@ -11,11 +11,13 @@ import argparse
 import wf_analysis_func as wfaf
 
 psr = argparse.ArgumentParser()
+psr.add_argument('ipt', help='input file')
+psr.add_argument('-o', dest='opt', help='output file')
 psr.add_argument('--event', '-e', type=int, dest='ent')
 psr.add_argument('--channel', '-c', type=int, dest='cha')
+psr.add_argument('--save', dest='save', action='store_true', help='save result to h5 file, must include -o argument', default=False)
 args = psr.parse_args()
 
-fipt = 'dataset/jinp/ztraining-1.h5'
 single_pe_path = 'test/xiaopeip/averspe.h5'
 
 def norm_fit(x, M, p):
@@ -25,12 +27,13 @@ def main():
     epulse = -1
     spemean = wfaf.generate_model(single_pe_path, epulse)
     opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint8), ('PETime', np.uint16), ('Weight', np.float16)])
-    with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
+    dt = np.zeros(1029, dtype=opdt)
+    with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as ipt:
         ent = ipt['Waveform']
         Chnum = len(np.unique(ent[0:args.ent*30]['ChannelID']))
-        a = max(args.ent*Chnum-10000, 0)
-        b = min(args.ent*Chnum+10000, len(ent))
-        ent = ent[a:b]
+        a1 = max(args.ent*Chnum-10000, 0)
+        a2 = min(args.ent*Chnum+10000, len(ent))
+        ent = ent[a1:a2]
         Length_pe = len(ent[0]['Waveform'])
         spemean = np.concatenate([spemean, np.zeros(Length_pe - len(spemean))])
         i = np.where(np.logical_and(ent['EventID'] == args.ent, ent['ChannelID'] == args.cha))[0][0]
@@ -55,10 +58,12 @@ def main():
                     ans0 = np.zeros_like(possible).astype(np.float64)
                     b = np.zeros((len(possible), 2))
                     b[:, 1] = np.inf
+                    #b[:, 1] = 5
                     mne = spemean[np.mod(nihep.reshape(len(nihep), 1) - possible.reshape(1, len(possible)), Length_pe)]
                     #ans = opti.fmin_l_bfgs_b(norm_fit, ans0, args=(mne, wave[nihep]), approx_grad=True, bounds=b)
                     #ans = opti.fmin_slsqp(norm_fit, ans0, args=(mne, wave[nihep]), bounds=b, iprint=-1)
-                    ans = opti.fmin_tnc(norm_fit, ans0, args=(mne, wave[nihep]), approx_grad=True, bounds=b)
+                    ans = opti.fmin_tnc(norm_fit, ans0, args=(mne, wave[nihep]), approx_grad=True, bounds=b, maxfun=1000)
+                    print('ans is {}'.format(ans))
                     pf = ans[0]
                     #pf = ans
                 else:
@@ -78,6 +83,16 @@ def main():
         lenpf = len(pwe)
         pet = possible[pf > 0]
         print('PETime = {}, Weight = {}'.format(pet, pwe))
+        dt['PETime'][0:lenpf] = pet
+        dt['Weight'][0:lenpf] = pwe
+        dt['EventID'][0:lenpf] = args.ent
+        dt['ChannelID'][0:lenpf] = args.cha
+        dt = dt[dt['Weight'] > 0]
+        dt = np.sort(dt, kind='stable', order=['EventID', 'ChannelID', 'PETime'])
+        print('dt is {}'.format(dt))
+        if args.save:
+            with h5py.File(fopt, 'w') as opt:
+                dset = opt.create_dataset('Answer', data=dt, compression='gzip')
 
 if __name__ == '__main__':
     main()
