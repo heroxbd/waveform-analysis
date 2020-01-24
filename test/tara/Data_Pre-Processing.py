@@ -39,12 +39,13 @@ def make_time_long_vec(time_mark_vec,WindowSize):
             time_long_vec[time_mark] += 1
     if len(time_mark_vec) == 0:
         print("non-PET-event")
-    return time_long_vec
+    return np.array(time_long_vec,dtype=np.float32)
 
 def make_wave_long_vec(wave_form):
     # non_negative_peak + zero_base_level
-    shift= np.argmax(np.bincount(wave_form)) #make baseline shifts, normally 972
-    shift_wave=wave_form-shift 
+    shift = np.argmax(np.bincount(wave_form)) #make baseline shifts, normally 972
+    shift = np.mean(wave_form[np.abs(wave_form-shift)<3])
+    shift_wave=np.array(wave_form-shift,dtype=np.float32)
     #non_negative_peak + zero_base_level
     if np.max(shift_wave) >= -np.min(shift_wave) : return shift_wave
     if np.max(shift_wave) < -np.min(shift_wave) : return -shift_wave
