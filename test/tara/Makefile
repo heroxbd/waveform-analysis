@@ -1,13 +1,9 @@
-.PHONY: help 
+.PHONY : help 
+
+.PHONY : usage
 
 help:
-	@echo 'Usage:'
-	@echo '  make [FileNo=fileno] [DataDir=/path/to/data/dir/] [data_name_prefix=prefix] model'
-# @echo '  make [FileNo=fileno] Analysis'
-	@echo '       fileno: "[x,y,...]" for example, [0] or [0,1,3] or [2,3,4,5] or simply [`seq -s , 2 5`]'
-	@echo '       DataDir: path to data directory. The "/" at the end is essential'
-	@echo '       data file name shoud obey "{prefix}x.h5", for example abtraining-0.h5, "abtraining-" is the prefix'
-	@echo '  example: make FileNo=[`seq -s , 0 7`] DataDir=dataset/jinp/ data_name_prefix=abtraining- model'
+	@cat ./mannual.txt
 # answer filename
 # ansfile = ../../abanswer.h5
 # problem filename
@@ -23,17 +19,19 @@ method = TaraZtrain
 FileNo = *
 #training filename
 DataDir = dataset/jinp/
+NetWorkDir = $(DataDir)
+ResultDir = $(DataDir)
 data_name_prefix = abtraining-
 trainfile_prefix = $(DataDir)$(data_name_prefix)
 trainfile_suffix = .h5
 trainfile = $(wildcard $(trainfile_prefix)$(FileNo)$(trainfile_suffix))
 # PreProcessing storage name
-PreStore_prefix = $(DataDir)Pre-Processing_Results_$(data_name_prefix)
+PreStore_prefix = $(NetWorkDir)Pre-Processing_Results_$(data_name_prefix)
 PreStore_suffix = / 
 PreStore = $(patsubst $(trainfile_prefix)%$(trainfile_suffix),$(PreStore_prefix)%$(PreStore_flag), $(trainfile))
 PreStore_flag = /.finshed
 # Network Models storage name
-NetStore_prefix = $(DataDir)Network_Models_$(data_name_prefix)
+NetStore_prefix = $(NetWorkDir)Network_Models_$(data_name_prefix)
 NetStore_suffix = / 
 NetStore_flag = /.finshed
 NetStore = $(patsubst $(trainfile_prefix)%$(trainfile_suffix),$(NetStore_prefix)%$(NetStore_flag), $(trainfile))
