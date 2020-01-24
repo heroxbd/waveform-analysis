@@ -45,7 +45,7 @@ def make_wave_long_vec(wave_form):
     # non_negative_peak + zero_base_level
     shift = np.argmax(np.bincount(wave_form)) #make baseline shifts, normally 972
     shift = np.mean(wave_form[np.abs(wave_form-shift)<3])
-    shift_wave=np.array(wave_form-shift,dtype=np.float32)
+    shift_wave=np.array(wave_form-shift,dtype=np.int16)
     #non_negative_peak + zero_base_level
     if np.max(shift_wave) >= -np.min(shift_wave) : return shift_wave
     if np.max(shift_wave) < -np.min(shift_wave) : return -shift_wave
