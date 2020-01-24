@@ -26,13 +26,16 @@ def check_waiting_list(fileno) :
     except ValueError :
         raise FileExistsError("Wrong Format .bullentin.swp")
     except IndexError : 
+        QueueUp(fileno)
         return False
     else :
         last_run_info = np.array(lines[-1].split(),dtype=np.int)
 
     runNo = np.where(File_Numbers==fileno)[0]
     if len(runNo)==0 : 
-        raise ValueError("unknown FileNo!")
+        QueueUp(fileno)
+        return False
+        #raise ValueError("unknown FileNo!")
     else :
         runNo = runNo[0]
     
