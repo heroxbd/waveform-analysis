@@ -184,7 +184,7 @@ for epoch in range(25):  # loop over the dataset multiple times
         testing_result.append(test_performance)
 
         # saving network
-        save_name = SavePath+Data_Name+"_epoch"+str(epoch)+"_loss"+"%.4f" %(test_performance)
+        save_name = SavePath+"_epoch"+str(epoch)+"_loss"+"%.4f" %(test_performance)
         torch.save(net,save_name)
 
 print('Training Finished')
