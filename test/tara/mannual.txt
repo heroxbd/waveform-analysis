@@ -1,11 +1,11 @@
-run "make" or "make help" or "make usage" to view this mannual
+run "make" or "make help" or "make usage" to view this mannual.
 Usage:
-    make [FileNo=fileno] [DataDir=/path/to/data/dir/] [data_name_prefix=prefix] [NetWorkDir=/path/to/network/storage/dir] [MaxSet=max_train_set_number] model
+    make [FileNo=fileno] [TrainDataDir=/path/to/traindata/dir/] [traindata_name_prefix=prefix] [NetWorkDir=/path/to/network/storage/dir] [MaxSet=max_train_set_number] model
  '  make [FileNo=fileno] Analysis
         fileno: "[x,y,...]" for example, [0] or [0,1,3] or [2,3,4,5] or simply [`seq -s , 2 5`]. Default *.
-        DataDir: path to data directory. The "/" at the end is essential
+        TrainDataDir: path to traindata directory. The "/" at the end is essential.
         max_train_set_number: maxium waveform training set number. If set to 0, all waveform will be used. Default 100000.
-        data file name shoud obey "{prefix}x.h5", for example abtraining-0.h5, "abtraining-" is the prefix
-        NetWorkDir: path to PreProcess data and network storage directory. The "/" at the end is essential
-	example: make FileNo=[`seq -s , 0 7`] DataDir=dataset/jinp/ data_name_prefix=abtraining- model
-Please make sure you have rwx access to current dir, read access to DataDir, and rw access to NetWorkDir and ResultDir!
+        traindata file name shoud obey "{prefix}*.h5", for example abtraining-0.h5, "abtraining-" is the prefix
+        NetWorkDir: path to PreProcess traindata and network storage directory. The "/" at the end is essential.
+	example: make FileNo=[`seq -s , 0 7`] TrainDataDir=dataset/jinp/ traindata_name_prefix=abtraining- model
+Please make sure you have rwx access to current dir, read access to TrainDataDir, and rw access to NetWorkDir and ResultDir!
