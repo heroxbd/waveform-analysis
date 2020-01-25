@@ -4,25 +4,19 @@ import os
 import sys
 
 ## Initialization
-fileBriefname = sys.argv[2]
+fullfilename = sys.argv[1]
+SavePath = sys.argv[2]
 # Make Directory
-SavePath = "./{}/Prediction_Pre-Processing_Results/".format(fileBriefname)
 if not os.path.exists(SavePath):
     os.makedirs(SavePath)
-
-
 # Read hdf5 file
-'''
-LoadPath= "./DataSets/"
-FileName = "zincm-problem"
-'''
-LoadPath = '/home/greatofdream/killxbq/'
+# LoadPath = sys.argv[3]
 # FileName = 'training'
 # FileName = 'ztraining-1'
 # filename = LoadPath+FileName+".h5"
-filename = sys.argv[1]
 
-h5file = tables.open_file(filename, "r")
+
+h5file = tables.open_file(fullfilename, "r")
 WaveformTable = h5file.root.Waveform
 Len_Entry = len(WaveformTable)
 print(Len_Entry, "data entries") # Entry 10^6
@@ -31,9 +25,12 @@ print(Len_Entry, "data entries") # Entry 10^6
 # Make Data Matrix
 def make_wave_long_vec(wave_form):
     # non_negative_peak + zero_base_level
-    shift= np.argmax(np.bincount(wave_form)) #make baseline shifts, normally 972
-    shift_wave=-wave_form+shift #non_negative_peak + zero_base_level
-    return shift_wave
+    shift = np.argmax(np.bincount(wave_form)) #make baseline shifts, normally 972
+    shift = np.mean(wave_form[np.abs(wave_form-shift)<3])
+    shift_wave=np.array(wave_form-shift,dtype=np.int16)
+    #non_negative_peak + zero_base_level
+    if np.max(shift_wave) >= -np.min(shift_wave) : return shift_wave
+    if np.max(shift_wave) < -np.min(shift_wave) : return -shift_wave
 
 # Data Pre-Processing
 Num_Entry = Len_Entry #100000 #Len_Entry
