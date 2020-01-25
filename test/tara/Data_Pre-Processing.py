@@ -13,15 +13,7 @@ if not os.path.exists(SavePath):
 print("training data pre-processing savepath is {}".format(SavePath))
 
 # Read hdf5 file
-'''
-LoadPath= "./DataSets/"
-FileName = "ztraining-9"
-'''
-'''
-LoadPath = '/home/greatofdream/killxbq/'
-FileName = 'ftraining-0'
-fullfilename = LoadPath+FileName+".h5"
-'''
+
 fullfilename = sys.argv[1]
 FileName = os.path.basename(fullfilename).replace(".h5",'')
 h5file = tables.open_file(fullfilename, "r")
