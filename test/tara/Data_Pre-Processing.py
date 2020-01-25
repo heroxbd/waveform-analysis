@@ -77,11 +77,11 @@ PETMat=[]
 WindowSize = len(WaveformTable[0]['Waveform'])
 
 class PreProcessedData(tables.IsDescription):
-    PET = tables.Int64Col(pos=0)
+    PET = tables.Col.from_type('int16', shape=WindowSize, pos=0)
     Wave = tables.Col.from_type('int16', shape=WindowSize, pos=1)
     
 #create Pre-Processed output file
-Prefile = tables.open_file(SavePath+"Pre.h5", mode="w", title="Pre-Processed-Training-Data",filters = tables.Filters(complevel=9))
+Prefile = tables.open_file(SavePath+"Pre.h5", mode="w", title="Pre-Processed-Training-Data")
 
 # Create group and tables
 group = "/"
@@ -98,7 +98,7 @@ for entry in range(Num_Entry):
     traindata.append()
 
     # periodic save to avoid memory crash
-    if (entry+1) % save_period ==0 or entry==Num_Entry[-1]:
+    if (entry+1) % save_period ==0 or entry==Num_Entry:
         TrainDataTable.flush()
         print("Data Saved")
 
