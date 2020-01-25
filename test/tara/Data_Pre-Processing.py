@@ -17,9 +17,9 @@ print("training data pre-processing savepath is {}".format(SavePath))
 
 fullfilename = sys.argv[1]
 FileName = os.path.basename(fullfilename).replace(".h5",'')
-with h5py.File(fullfilename, "r") as h5file :
-    WaveformTable = h5file['Waveform'][()]
-    GroundTruthTable = h5file['GroundTruth'][()]
+h5file = h5py.File(fullfilename, "r")
+WaveformTable = h5file['Waveform']
+GroundTruthTable = h5file['GroundTruth']
 Len_Entry = len(WaveformTable)
 print(Len_Entry, "data entries") # Entry 10^6
 
