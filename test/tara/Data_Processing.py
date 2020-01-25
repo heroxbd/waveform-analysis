@@ -65,8 +65,9 @@ for filename in fileSet :
         fileSize.append(0)
 data_name = fileSet[fileSize.index(max(fileSize))]
 Data_set= tables.open_file(LoadPath+data_name,'r').root.TrainDataTable
-if len(sys.argv)==5 :
-    max_set_number = min(int(sys.argv[3]),len(Data_set))
+max_set_number = int(sys.argv[3])
+if max_set_number>0 :
+    max_set_number = min(max_set_number),len(Data_set))
 else :
     max_set_number = -1
 WaveData = Data_set[0:max_set_number]['Wave']

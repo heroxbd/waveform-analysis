@@ -22,8 +22,11 @@ WaveformTable = h5file.root.Waveform
 GroundTruthTable = h5file.root.GroundTruth
 Len_Entry = len(WaveformTable)
 
-if len(sys.argv)==4 :
-    Len_Entry = min(int(sys.argv[3]),Len_Entry)
+max_set_number = int(sys.argv[3])
+if max_set_number>0 :
+    max_set_number = min(max_set_number),len(Len_Entry))
+else :
+    max_set_number = Len_Entry
 
 print(Len_Entry, "data entries") # Entry 10^6
 
