@@ -24,6 +24,7 @@ from Cuda_Queue import *
 
 BATCHSIZE=64
 fileno=int(sys.argv[-1])
+max_set_number = int(sys.argv[3])
 
 #detecting cuda device and wait in line
 if torch.cuda.is_available():
@@ -64,7 +65,7 @@ for filename in fileSet :
     else :
         fileSize.append(0)
 data_name = fileSet[fileSize.index(max(fileSize))]
-Data_set= tables.open_file(LoadPath+data_name,'r').root.TrainDataTable[0:-1]
+Data_set= tables.open_file(LoadPath+data_name,'r').root.TrainDataTable[0:max_set_number]
 WaveData = Data_set['Wave']
 PETData= Data_set['PET']
 WindowSize = len(WaveData[0])
