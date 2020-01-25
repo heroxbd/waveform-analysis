@@ -88,7 +88,7 @@ for entry in range(Num_Entry):
     WaveMat.append(Wave_Vec)
 
     # periodic save to avoid memory crash
-    if (entry+1) % save_period ==0:
+    if (entry+1) % save_period ==0 or entry==Num_Entry-1:
         WaveData = np.array(WaveMat)
         PETData = np.array(PETMat)
         name = SavePath+FileName+"_"+str(start_entry)+'-'+str(entry)
