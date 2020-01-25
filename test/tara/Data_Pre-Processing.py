@@ -49,7 +49,7 @@ Prefile = tables.open_file(SavePath+"Pre.h5", mode="w", title="Pre-Processed-Tra
 
 # Create group and tables
 group = "/"
-TrainDataTable = Prefile.create_table(group, "TrainDataTable", PreProcessedData, "Wave and PET")
+TrainDataTable = h5file.create_table(group, "TrainDataTable", PreProcessedData, "Wave and PET")
 traindata = TrainDataTable.row
 
 for entry in range(Num_Entry):
@@ -108,5 +108,7 @@ def search_PETime(event_id,channel_id,PETtable,starting_point):
             index += 1
         else:
             break
+        else:
+            pass
     ending_point = index
     return PET_total, ending_point
