@@ -16,7 +16,7 @@ import tables
 BATCHSIZE=16
 
 # Make Saving_Directory
-SavePath = "./Prediction_Results"
+SavePath = sys.argv[1]
 if not os.path.exists(SavePath):
     os.makedirs(SavePath)
 
@@ -42,30 +42,11 @@ class Net_1(nn.Module):
         x = x.squeeze(1)
         return x
 
-net = torch.load("./Network_Models/ftraining-0_0-199999_epoch24_loss0.9691") # Pre-trained Model Parameters
+net = torch.load(sys.argv[3]) # Pre-trained Model Parameters
 
 # Data Settings
-LoadPath= "./{}/Prediction_Pre-Processing_Results/".format(sys.argv[2])
-SavingPeriod= 200000
-DataNameVec = []
-# Make Name Group
-'''
-for count in range(8):
-    start= count*SavingPeriod
-    end = (count+1)*SavingPeriod-1
-    name = str(start)+'-'+str(end)
-    DataNameVec.append(name)
-
-#DataNameVec.append('1600000-1605329')
-#DataNameVec.append('1200000-1341564')
-DataNameVec.append('1600000-1796735')
-
-FullNameVec=[]
-for name in DataNameVec:
-    FullName = LoadPath + 'prediction_' + name + '.npz'
-    FullNameVec.append(FullName)
-'''
-FullNameVec = [LoadPath+i for i in os.listdir(LoadPath)]
+LoadPath= sys.argv[2]
+LoadingPeriod= 200000
 # h5 file handling
 # Define the database columns
 class AnswerData(tables.IsDescription):
@@ -85,19 +66,23 @@ answer = AnswerTable.row
 
 
 start_time = time.time()
-# Start Loop on Files:
-for fullname in FullNameVec:
-    # Loading Data
-    Data_set = np.load(fullname)
-    EventData = Data_set['Event']
-    ChanData = Data_set['Chan']
-    WaveData = Data_set['Wave']
-    print(fullname)
-    print("Data_loaded")
-    print(len(EventData),len(WaveData),len(WaveData))
 
+# Loading Data
+PreFile =  tables.open_file(LoadPath+"Pre.h")
+Data_set = PreFile.root.TestDataTable
+WindowSize = len(Data_set['Wave'][0])
+print(fullname)
+Total_entries = len(Data_set)
+print(Total_entries)
+
+entryList = np.arange(Total_entries,LoadingPeriod)
+entryList = np.append(entryList,Total_entries)
+for k,entry in enumerate(entryList) :
+    EventData = Data_set[entry:entryList(k+1)]['Event']
+    ChanData = Data_set[entry:entryList(k+1)]['Chan']
+    WaveData = Data_set[entry:entryList(k+1)]['Wave']
     # Making Dataset
-    predict_data = torch.from_numpy(WaveData).float()
+    predict_data = torch.from_numpy(WaveData).cuda(device=2).float()
     predict_loader = Data.DataLoader(dataset=predict_data,batch_size=BATCHSIZE,shuffle=False)
 
     # Makeing Output
@@ -105,7 +90,7 @@ for fullname in FullNameVec:
     for i,data in enumerate(predict_loader,0):
         inputs = Variable(data)
         outputs = net(inputs)
-        batch_output = outputs.data.numpy()
+        batch_output = outputs.data.cpu().numpy()
         Output_Data.extend(batch_output)
     OutputData = np.array(Output_Data)
     # make shift for -5 s
@@ -113,15 +98,15 @@ for fullname in FullNameVec:
     # In signal detection tasks, non-shifted version is wanted as the result
 
     # Write data
-    filter_limit = 0 #5e-5
+    filter_limit = 0.9/WindowSize
     for j in range(len(OutputData)):   # OutputData
         Prediction=OutputData[j]       # OutputData
         EventID=EventData[j]
         ChannelID=ChanData[j]
-        if EventID == 13381 and ChannelID == 29:
-            print('appear')
+        # if EventID == 13381 and ChannelID == 29:
+        #     print('appear') ??
         if np.sum(Prediction) <= 0:
-            Prediction = np.ones(600) / 10000
+            Prediction = np.ones(WindowSize) / WindowSize
             print("warning")
         numPE = 0
         for k in range(len(Prediction)):
@@ -143,12 +128,13 @@ for fullname in FullNameVec:
         # Make mark
         if (j+1) % 10000 == 0:
             print(j+1)
+            
+    # Flush into the output file
+    AnswerTable.flush()
 
-# Flush into the output file
-end_time=time.time()
 
-AnswerTable.flush()
 h5file.close()
+end_time=time.time()
 print("Prediction_Generated")
 
 toc = end_time-start_time #~1200s 20min
