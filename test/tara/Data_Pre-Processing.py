@@ -24,9 +24,7 @@ Len_Entry = len(WaveformTable)
 
 max_set_number = int(sys.argv[3])
 if max_set_number>0 :
-    max_set_number = min(max_set_number),len(Len_Entry))
-else :
-    max_set_number = Len_Entry
+    Len_Entry = min(max_set_number,Len_Entry)
 
 print(Len_Entry, "data entries") # Entry 10^6
 

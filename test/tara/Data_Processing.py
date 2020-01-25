@@ -64,10 +64,11 @@ for filename in fileSet :
     else :
         fileSize.append(0)
 data_name = fileSet[fileSize.index(max(fileSize))]
-Data_set= tables.open_file(LoadPath+data_name,'r').root.TrainDataTable
+PreFile = tables.open_file(LoadPath+data_name,'r')
+Data_set= PreFile.root.TrainDataTable
 max_set_number = int(sys.argv[3])
 if max_set_number>0 :
-    max_set_number = min(max_set_number),len(Data_set))
+    max_set_number = min(max_set_number,len(Data_set))
 else :
     max_set_number = -1
 WaveData = Data_set[0:max_set_number]['Wave']
@@ -199,4 +200,4 @@ np.savez(training_record_name,training_result)
 np.savez(testing_record_name,testing_result)
 training_record.close()
 testing_record.close()
-
+PreFile.close()
