@@ -17,6 +17,8 @@ method = TaraZtrain
 
 # training fileno
 FileNo = *
+# max training set
+MaxSet = 100000
 #training filename
 DataDir = dataset/jinp/
 NetWorkDir = $(DataDir)
@@ -60,11 +62,11 @@ trainlog = $(patsubst $(trainfile_prefix)%$(trainfile_suffix),$(trainlog_prefix)
 model:  $(NetStore)
 
 $(PreStore_prefix)%$(PreStore_flag) : $(trainfile_prefix)%$(trainfile_suffix)
-	python3 -u Data_Pre-Processing.py $< $(PreStore_prefix)$*$(PreStore_suffix) > $(trainlog_prefix)_Pre-$*$(trainlog_suffix) 2>&1
+	python3 -u Data_Pre-Processing.py $< $(PreStore_prefix)$*$(PreStore_suffix) $(MaxSet) > $(trainlog_prefix)_Pre-$*$(trainlog_suffix) 2>&1
 	touch $@
 
 $(NetStore_prefix)%$(NetStore_flag) : $(PreStore_prefix)%$(PreStore_flag) .Bulletin 
-	python3 -u Data_Processing.py $(NetStore_prefix)$*$(NetStore_suffix) $(PreStore_prefix)$*$(PreStore_suffix) $* > $(trainlog_prefix)_Train-$*$(trainlog_suffix) 2>&1
+	python3 -u Data_Processing.py $(NetStore_prefix)$*$(NetStore_suffix) $(PreStore_prefix)$*$(PreStore_suffix) $(MaxSet) $* > $(trainlog_prefix)_Train-$*$(trainlog_suffix) 2>&1
 	touch $@
 
 .Bulletin : 
