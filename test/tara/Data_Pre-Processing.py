@@ -1,3 +1,5 @@
+import time
+time_start = time.time()
 import numpy as np
 import os
 import sys
@@ -111,3 +113,5 @@ print("Pre-processing Finished")
 
 h5file.close()
 
+time_end = time.time()
+print('consuming time: {}s'.format(time_end-time_start))
