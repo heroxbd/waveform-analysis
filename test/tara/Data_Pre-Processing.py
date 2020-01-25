@@ -23,6 +23,8 @@ GroundTruthTable = h5file.root.GroundTruth
 Len_Entry = len(WaveformTable)
 print(Len_Entry, "data entries") # Entry 10^6
 
+
+
 # Data Pre-Processing
 Num_Entry = Len_Entry #100000 #Len_Entry
 
@@ -40,38 +42,43 @@ PETMat=[]
 
 WindowSize = len(WaveformTable[0]['Waveform'])
 
-class PreProcessedData(tables.IsDescription):
-    PET = tables.Int64Col(pos=0)
-    Wave = tables.Col.from_type('int16', shape=WindowSize, pos=1)
-    
-#create Pre-Processed output file
-Prefile = tables.open_file(SavePath+"Pre.h5", mode="w", title="Pre-Processed-Training-Data",filters = tables.Filters(complevel=9))
-
-# Create group and tables
-group = "/"
-TrainDataTable = h5file.create_table(group, "TrainDataTable", PreProcessedData, "Wave and PET")
-traindata = TrainDataTable.row
-
 for entry in range(Num_Entry):
     EventId = WaveformTable[entry]['EventID']
     ChannelId = WaveformTable[entry]['ChannelID']
     Waveform = WaveformTable[entry]['Waveform']
     PETime, looking_up_index = search_PETime(EventId,ChannelId,GroundTruthTable,looking_up_index)
-    traindata['PET'] = make_time_long_vec(np.array(PETime,dtype=np.int16),WindowSize)
-    traindata['Wave'] = make_wave_long_vec(Waveform)
-    traindata.append()
+    PETime_Vec = make_time_long_vec(np.array(PETime,dtype=np.int16),WindowSize)
+    Wave_Vec = make_wave_long_vec(Waveform)
+
+    PETMat.append(PETime_Vec)
+    WaveMat.append(Wave_Vec)
 
     # periodic save to avoid memory crash
-    if (entry+1) % save_period ==0 or entry==Num_Entry[-1]:
-        TrainDataTable.flush()
+    if (entry+1) % save_period ==0:
+        WaveData = np.array(WaveMat)
+        PETData = np.array(PETMat)
+        name = SavePath+FileName+"_"+str(start_entry)+'-'+str(entry)
+        np.savez(name, Wave=WaveData, PET=PETData)
+        start_entry = entry+1
+        WaveMat = []
+        PETMat = []
         print("Data Saved")
 
     # check point
     if (entry+1)%5000==0:
         print(entry+1)
 
+
+# Data Save for the final round
+WaveData = np.array(WaveMat)
+PETData = np.array(PETMat)
+name = SavePath+FileName+"_"+str(start_entry)+'-'+str(Num_Entry)
+np.savez(name, Wave=WaveData, PET=PETData)
+print("Data Saved")
+print("Pre-processing Finished")
+
 h5file.close()
-Prefile.close()
+
 time_end = time.time()
 print('consuming time: {}s'.format(time_end-time_start))
 # end Pre-Processing
