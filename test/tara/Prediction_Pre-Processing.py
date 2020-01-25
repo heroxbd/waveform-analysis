@@ -16,9 +16,6 @@ if not os.path.exists(SavePath):
 h5file = tables.open_file(fullfilename, "r")
 WaveformTable = h5file.root.Waveform
 Len_Entry = len(WaveformTable)
-max_set_number = int(sys.argv[3])
-if max_set_number>0 :
-    Len_Entry = min(max_set_number,Len_Entry)
 print(Len_Entry, "data entries") # Entry 10^6
 # WaveChannel 0-1028, length 600
 
@@ -44,7 +41,7 @@ WindowSize = len(WaveformTable[0]['Waveform'])
 class PreProcessedData(tables.IsDescription):
     EventID    = tables.Int64Col(pos=0)
     ChannelID  = tables.Int16Col(pos=1)
-    Waveform   = tables.Col.from_type('int16', shape=windowSize, pos=2)
+    Waveform   = tables.Col.from_type('int16', shape=WindowSize, pos=2)
 #create Pre-Processed output file
 Prefile = tables.open_file(SavePath+"Pre.h5", mode="w", title="Pre-Processed-Training-Data")
 
@@ -58,7 +55,7 @@ entry_index = 0
 
 
 for entry in range(Num_Entry):
-    testdata["EvenID"] = WaveformTable[entry]['EventID']
+    testdata["EventID"] = WaveformTable[entry]['EventID']
     testdata["ChannelID"] = WaveformTable[entry]['ChannelID']
     Waveform = WaveformTable[entry]['Waveform']
     testdata["Waveform"] = make_wave_long_vec(Waveform)
