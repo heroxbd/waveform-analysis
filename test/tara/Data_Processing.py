@@ -16,6 +16,7 @@ import torch.nn.functional as F
 import os
 import sys
 import time
+import tables
 
 import pytorch_stats_loss as stats_loss
 
@@ -58,14 +59,12 @@ data_name= LoadPath+Data_Name+".npz"
 fileSet = os.listdir(LoadPath)
 fileSize = []
 for filename in fileSet :
-    if '.npz' in filename :
+    if '.h5' in filename :
         fileSize.append(os.path.getsize(LoadPath+filename))
     else :
         fileSize.append(0)
 data_name = fileSet[fileSize.index(max(fileSize))]
-#data_name = fileSet[0]
-Data_Name = data_name.replace('.h5','')
-Data_set= np.load(LoadPath+data_name)
+Data_set= tables.open_file(LoadPath+data_name,'r').root.TrainDataTable[0:-1]
 WaveData = Data_set['Wave']
 PETData= Data_set['PET']
 WindowSize = len(WaveData[0])
