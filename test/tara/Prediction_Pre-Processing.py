@@ -59,6 +59,7 @@ for entry in range(Num_Entry):
     testdata["ChannelID"] = WaveformTable[entry]['ChannelID']
     Waveform = WaveformTable[entry]['Waveform']
     testdata["Waveform"] = make_wave_long_vec(Waveform)
+    testdata.append()
 
     # periodic save to avoid memory crash
     if (entry+1) % save_period ==0 or entry==Num_Entry:

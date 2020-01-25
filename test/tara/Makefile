@@ -16,36 +16,58 @@ help:
 method = TaraZtrain
 
 # training fileno
-FileNo = *
+TrainFileNo = *
+# training fileno
+TestFileNo = *
 # max training set
 MaxSet = 100000
+TrainDataDir = dataset/jinp/
+NetWorkDir = $(TrainDataDir)
+ResultDir = $(TrainDataDir)
+TestDataDir = $(TrainDataDir)
 #training filename
-DataDir = dataset/jinp/
-NetWorkDir = $(DataDir)
-ResultDir = $(DataDir)
-data_name_prefix = abtraining-
-trainfile_prefix = $(DataDir)$(data_name_prefix)
+train_data_name_prefix = abtraining-
+trainfile_prefix = $(TrainDataDir)$(train_data_name_prefix)
 trainfile_suffix = .h5
-trainfile = $(wildcard $(trainfile_prefix)$(FileNo)$(trainfile_suffix))
+trainfile = $(wildcard $(trainfile_prefix)$(TrainFileNo)$(trainfile_suffix))
+#test filename
+test_data_name_prefix = zincm-problem-
+testfile_prefix = $(TestDataDir)$(test_data_name_prefix)
+testfile_suffix = .h5
+testfile = $(wildcard $(testfile_prefix)$(TestFileNo)$(testfile_suffix))
+# PreAnalysis storage name
+PreAnalysis_prefix = $(NetWorkDir)Pre-Processing_Results_$(test_data_name_prefix)
+PreAnalysis_suffix = / 
+PreAnalysis = $(patsubst $(testfile_prefix)%$(testfile_suffix),$(PreAnalysis_prefix)%$(PreAnalysis_flag), $(testfile))
+PreAnalysis_flag = /.finshed
 # PreProcessing storage name
-PreStore_prefix = $(NetWorkDir)Pre-Processing_Results_$(data_name_prefix)
+PreStore_prefix = $(NetWorkDir)Pre-Processing_Results_$(test_data_name_prefix)
 PreStore_suffix = / 
-PreStore = $(patsubst $(trainfile_prefix)%$(trainfile_suffix),$(PreStore_prefix)%$(PreStore_flag), $(trainfile))
+PreStore = $(patsubst $(testfile_prefix)%$(testfile_suffix),$(PreStore_prefix)%$(PreStore_flag), $(testfile))
 PreStore_flag = /.finshed
 # Network Models storage name
-NetStore_prefix = $(NetWorkDir)Network_Models_$(data_name_prefix)
+NetStore_prefix = $(NetWorkDir)Network_Models_$(train_data_name_prefix)
 NetStore_suffix = / 
 NetStore_flag = /.finshed
 NetStore = $(patsubst $(trainfile_prefix)%$(trainfile_suffix),$(NetStore_prefix)%$(NetStore_flag), $(trainfile))
+# test log name
+testlog_prefix = $(test_data_name_prefix)
+testlog_suffix = .log 
+testlog = $(patsubst $(testfile_prefix)%$(testfile_suffix),$(testlog_prefix)%$(testlog_suffix), $(testfile))
 # training log name
-trainlog_prefix = $(data_name_prefix)
+trainlog_prefix = $(train_data_name_prefix)
 trainlog_suffix = .log 
 trainlog = $(patsubst $(trainfile_prefix)%$(trainfile_suffix),$(trainlog_prefix)%$(trainlog_suffix), $(trainfile))
 # finish flag
 # finish_pro = $(patsubst $(trainfile_prefix)%$(trainfile_suffix),.finish_pro%.swp, $(trainfile))
 
 
-# all: $(fileStore)/$(method)DistanceDistribution.png
+#Result: $(fileStore)/$(method)DistanceDistribution.png
+PreProcess: $(PreAnalysis)
+
+$(PreAnalysis_prefix)%$(PreAnalysis_flag) : $(testfile_prefix)%$(testfile_suffix)
+	python3 -u Prediction_Pre-Processing.py $< $(PreAnalysis_prefix)$*$(PreAnalysis_suffix) > $(testlog_prefix)_Pre-$*$(testlog_suffix) 2>&1
+	touch $@
 
 # $(fileStore)/$(method)DistanceDistribution.png: $(fileStore)/$(method)DistanceDistribution.npy
 # 	python3 plotDistribution.py $^ $@
