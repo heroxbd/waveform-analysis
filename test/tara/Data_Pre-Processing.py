@@ -1,4 +1,3 @@
-import tables
 import numpy as np
 import os
 import sys
@@ -16,9 +15,9 @@ print("training data pre-processing savepath is {}".format(SavePath))
 
 fullfilename = sys.argv[1]
 FileName = os.path.basename(fullfilename).replace(".h5",'')
-h5file = tables.open_file(fullfilename, "r")
-WaveformTable = h5file.root.Waveform
-GroundTruthTable = h5file.root.GroundTruth
+h5file = h5py.File(fullfilename, "r")
+WaveformTable = h5file['Waveform']
+GroundTruthTable = h5file['GroundTruth']
 Len_Entry = len(WaveformTable)
 print(Len_Entry, "data entries") # Entry 10^6
 
