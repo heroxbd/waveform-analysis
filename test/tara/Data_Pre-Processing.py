@@ -21,6 +21,10 @@ h5file = tables.open_file(fullfilename, "r")
 WaveformTable = h5file.root.Waveform
 GroundTruthTable = h5file.root.GroundTruth
 Len_Entry = len(WaveformTable)
+
+if len(sys.argv)==4 :
+    Len_Entry = min(int(sys.argv[3]),Len_Entry)
+
 print(Len_Entry, "data entries") # Entry 10^6
 
 # Make Data Matrix
