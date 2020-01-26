@@ -42,7 +42,7 @@ class Net_1(nn.Module):
         x = x.squeeze(1)
         return x
 
-net = torch.load(sys.argv[3]).cuda(device=2)# Pre-trained Model Parameters
+net = torch.load(sys.argv[3])# Pre-trained Model Parameters
 
 # Data Settings
 LoadPath= sys.argv[2]
@@ -81,7 +81,7 @@ for k,entry in enumerate(entryList[0:-2]) :
     ChanData = Data_set[entry:entryList[k+1]]['ChannelID']
     WaveData = Data_set[entry:entryList[k+1]]['Waveform']
     # Making Dataset
-    predict_data = torch.from_numpy(WaveData).cuda(device=2)
+    predict_data = torch.from_numpy(WaveData)
     predict_loader = Data.DataLoader(dataset=predict_data,batch_size=BATCHSIZE,shuffle=False)
 
     # Makeing Output
