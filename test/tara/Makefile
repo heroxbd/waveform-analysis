@@ -41,9 +41,9 @@ PreAnalysis_suffix = /
 PreAnalysis = $(patsubst $(testfile_prefix)%$(testfile_suffix),$(PreAnalysis_prefix)%$(PreAnalysis_flag), $(testfile))
 PreAnalysis_flag = /.finshed
 # PreProcessing storage name
-PreStore_prefix = $(NetWorkDir)Pre-Processing_Results_$(test_data_name_prefix)
+PreStore_prefix = $(NetWorkDir)Pre-Processing_Results_$(train_data_name_prefix)
 PreStore_suffix = / 
-PreStore = $(patsubst $(testfile_prefix)%$(testfile_suffix),$(PreStore_prefix)%$(PreStore_flag), $(testfile))
+PreStore = $(patsubst $(trainfile_prefix)%$(trainfile_suffix),$(PreStore_prefix)%$(PreStore_flag), $(trainfile))
 PreStore_flag = /.finshed
 # Network Models storage name
 NetStore_prefix = $(NetWorkDir)Network_Models_$(train_data_name_prefix)
