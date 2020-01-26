@@ -42,7 +42,7 @@ class Net_1(nn.Module):
         x = x.squeeze(1)
         return x
 
-net = torch.load(sys.argv[3]) # Pre-trained Model Parameters
+net = torch.load(sys.argv[3])# Pre-trained Model Parameters
 
 # Data Settings
 LoadPath= sys.argv[2]
@@ -57,7 +57,7 @@ class AnswerData(tables.IsDescription):
 
 # Create the output file and the group
 # h5file = tables.open_file("./Prediction_Results/Prediction_Mod_ztraining.h5", mode="w", title="OneTonDetector")
-h5file = tables.open_file("./Prediction_Results/Prediction_Mod_{}.h5".format(sys.argv[2]), mode="w", title="OneTonDetector")
+h5file = tables.open_file(SavePath+"Prediction.h5", mode="w", title="OneTonDetector")
 
 
 # Create tables
@@ -68,27 +68,26 @@ answer = AnswerTable.row
 start_time = time.time()
 
 # Loading Data
-PreFile =  tables.open_file(LoadPath+"Pre.h")
+PreFile =  tables.open_file(LoadPath+"Pre.h5")
 Data_set = PreFile.root.TestDataTable
-WindowSize = len(Data_set['Wave'][0])
-print(fullname)
+WindowSize = len(Data_set[0]['Waveform'])
 Total_entries = len(Data_set)
 print(Total_entries)
 
-entryList = np.arange(Total_entries,LoadingPeriod)
+entryList = np.arange(0,Total_entries,LoadingPeriod)
 entryList = np.append(entryList,Total_entries)
-for k,entry in enumerate(entryList) :
-    EventData = Data_set[entry:entryList(k+1)]['Event']
-    ChanData = Data_set[entry:entryList(k+1)]['Chan']
-    WaveData = Data_set[entry:entryList(k+1)]['Wave']
+for k,entry in enumerate(entryList[0:-2]) :
+    EventData = Data_set[entry:entryList[k+1]]['EventID']
+    ChanData = Data_set[entry:entryList[k+1]]['ChannelID']
+    WaveData = Data_set[entry:entryList[k+1]]['Waveform']
     # Making Dataset
-    predict_data = torch.from_numpy(WaveData).cuda(device=2).float()
+    predict_data = torch.from_numpy(WaveData)
     predict_loader = Data.DataLoader(dataset=predict_data,batch_size=BATCHSIZE,shuffle=False)
 
     # Makeing Output
     Output_Data = []
     for i,data in enumerate(predict_loader,0):
-        inputs = Variable(data)
+        inputs = Variable(data).float()
         outputs = net(inputs)
         batch_output = outputs.data.cpu().numpy()
         Output_Data.extend(batch_output)
@@ -134,6 +133,7 @@ for k,entry in enumerate(entryList) :
 
 
 h5file.close()
+PreFile.close()
 end_time=time.time()
 print("Prediction_Generated")
 
