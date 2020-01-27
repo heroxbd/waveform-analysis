@@ -28,7 +28,7 @@ def norm_fit(x, M, p):
 def main(fopt, fipt, single_pe_path):
     epulse = wfaf.estipulse(fipt)
     spemean = wfaf.generate_model(single_pe_path, epulse)
-    opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint8), ('PETime', np.uint16), ('Weight', np.float16)])
+    opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint8), ('PETime', np.uint16), ('Weight', np.float16), ('RCode', np.int8)])
 
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
         ent = ipt['Waveform']
@@ -72,6 +72,7 @@ def main(fopt, fipt, single_pe_path):
                         #ans = opti.fmin_slsqp(norm_fit, ans0, args=(mne, wave[nihep]), bounds=b, iprint=-1)
                         #ans = opti.fmin_tnc(norm_fit, ans0, args=(mne, wave[nihep]), approx_grad=True, bounds=b, messages=0, maxfun=10000)
                         pf = ans[0]
+                        rc = ans[2]['warnflag']
                     else:
                         flag = 0
                 else:
@@ -82,6 +83,7 @@ def main(fopt, fipt, single_pe_path):
                 t = np.where(wave == wave.min())[0][:1] - np.argmin(spemean)
                 possible = t if t[0] >= 0 else np.array([0])
                 pf = np.array([1])
+                rc = -2
             if np.sum(pf < 0.1) != len(pf):
                 pf[pf < 0.1] = 0
             pwe = pf[pf > 0]
@@ -93,6 +95,7 @@ def main(fopt, fipt, single_pe_path):
             dt['Weight'][start:end] = pwe
             dt['EventID'][start:end] = ent[i]['EventID']
             dt['ChannelID'][start:end] = ent[i]['ChannelID']
+            dt['RCode'][start:end] = rc
             start = end
             print('\rAnsw Generating:|{}>{}|{:6.2f}%'.format(((20*i)//l)*'-', (19-(20*i)//l)*' ', 100 * ((i+1) / l)), end='' if i != l-1 else '\n')
     dt = dt[dt['Weight'] > 0]
