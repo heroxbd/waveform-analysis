@@ -23,39 +23,39 @@ TestFileNo = *
 MaxSet = 100000
 TrainDataDir = dataset/jinp/
 NetWorkDir = $(TrainDataDir)
-ResultDir = $(TrainDataDir)
-TestDataDir = $(TrainDataDir)
+TestDataDir = dataset/jinp/
+ResultDir = $(TestDataDir)
 #training filename
-train_data_name_prefix = abtraining-
-trainfile_prefix = $(TrainDataDir)$(train_data_name_prefix)
+traindata_name_prefix = abtraining-
+trainfile_prefix = $(TrainDataDir)$(traindata_name_prefix)
 trainfile_suffix = .h5
 trainfile = $(wildcard $(trainfile_prefix)$(TrainFileNo)$(trainfile_suffix))
 #test filename
-test_data_name_prefix = zincm-problem-
-testfile_prefix = $(TestDataDir)$(test_data_name_prefix)
+testdata_name_prefix = zincm-problem-
+testfile_prefix = $(TestDataDir)$(testdata_name_prefix)
 testfile_suffix = .h5
 testfile = $(wildcard $(testfile_prefix)$(TestFileNo)$(testfile_suffix))
 # PreAnalysis storage name
-PreAnalysis_prefix = $(NetWorkDir)Pre-Processing_Results_$(test_data_name_prefix)
+PreAnalysis_prefix = $(ResultDir)Pre-Processing_Results_$(testdata_name_prefix)
 PreAnalysis_suffix = / 
 PreAnalysis = $(patsubst $(testfile_prefix)%$(testfile_suffix),$(PreAnalysis_prefix)%$(PreAnalysis_flag), $(testfile))
 PreAnalysis_flag = /.finshed
 # PreProcessing storage name
-PreStore_prefix = $(NetWorkDir)Pre-Processing_Results_$(test_data_name_prefix)
+PreStore_prefix = $(NetWorkDir)Pre-Processing_Results_$(traindata_name_prefix)
 PreStore_suffix = / 
-PreStore = $(patsubst $(testfile_prefix)%$(testfile_suffix),$(PreStore_prefix)%$(PreStore_flag), $(testfile))
+PreStore = $(patsubst $(trainfile_prefix)%$(trainfile_suffix),$(PreStore_prefix)%$(PreStore_flag), $(trainfile))
 PreStore_flag = /.finshed
 # Network Models storage name
-NetStore_prefix = $(NetWorkDir)Network_Models_$(train_data_name_prefix)
+NetStore_prefix = $(NetWorkDir)Network_Models_$(traindata_name_prefix)
 NetStore_suffix = / 
 NetStore_flag = /.finshed
 NetStore = $(patsubst $(trainfile_prefix)%$(trainfile_suffix),$(NetStore_prefix)%$(NetStore_flag), $(trainfile))
 # test log name
-testlog_prefix = $(test_data_name_prefix)
+testlog_prefix = $(testdata_name_prefix)
 testlog_suffix = .log 
 testlog = $(patsubst $(testfile_prefix)%$(testfile_suffix),$(testlog_prefix)%$(testlog_suffix), $(testfile))
 # training log name
-trainlog_prefix = $(train_data_name_prefix)
+trainlog_prefix = $(traindata_name_prefix)
 trainlog_suffix = .log 
 trainlog = $(patsubst $(trainfile_prefix)%$(trainfile_suffix),$(trainlog_prefix)%$(trainlog_suffix), $(trainfile))
 # finish flag
@@ -78,7 +78,6 @@ $(PreAnalysis_prefix)%$(PreAnalysis_flag) : $(testfile_prefix)%$(testfile_suffix
 # 	mkdir -p $(fileStore)
 # 	python3 Prediction_Pre-Processing.py $(problemfile) $(fileStore)
 # 	python3 Prediction_Processing_Total.py $(problemfile) $(fileStore)
-	# python3 Continue_Training.py $(problemfile) $(fileStore)
 
 .PHONY: model
 model:  $(NetStore)
