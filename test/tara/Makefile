@@ -38,13 +38,18 @@ testfile = $(wildcard $(testfile_prefix)$(TestFileNo)$(testfile_suffix))
 # PreAnalysis storage name
 PreAnalysis_prefix = $(ResultDir)Pre-Processing_Results_$(testdata_name_prefix)
 PreAnalysis_suffix = / 
-PreAnalysis = $(patsubst $(testfile_prefix)%$(testfile_suffix),$(PreAnalysis_prefix)%$(PreAnalysis_flag), $(testfile))
 PreAnalysis_flag = /.finshed
+PreAnalysis = $(patsubst $(testfile_prefix)%$(testfile_suffix),$(PreAnalysis_prefix)%$(PreAnalysis_flag), $(testfile))
+# Result storage name
+Result_prefix = $(ResultDir)Analyzing_Results_$(testdata_name_prefix)
+Result_suffix = / 
+Result_flag = /.finshed
+Result = $(patsubst $(testfile_prefix)%$(testfile_suffix),$(Result_prefix)%$(Result_flag), $(testfile))
 # PreProcessing storage name
 PreStore_prefix = $(NetWorkDir)Pre-Processing_Results_$(traindata_name_prefix)
 PreStore_suffix = / 
-PreStore = $(patsubst $(trainfile_prefix)%$(trainfile_suffix),$(PreStore_prefix)%$(PreStore_flag), $(trainfile))
 PreStore_flag = /.finshed
+PreStore = $(patsubst $(trainfile_prefix)%$(trainfile_suffix),$(PreStore_prefix)%$(PreStore_flag), $(trainfile))
 # Network Models storage name
 NetStore_prefix = $(NetWorkDir)Network_Models_$(traindata_name_prefix)
 NetStore_suffix = / 
@@ -61,12 +66,13 @@ trainlog = $(patsubst $(trainfile_prefix)%$(trainfile_suffix),$(trainlog_prefix)
 # finish flag
 # finish_pro = $(patsubst $(trainfile_prefix)%$(trainfile_suffix),.finish_pro%.swp, $(trainfile))
 
+Analysis : $(Result)
 
-#Result: $(fileStore)/$(method)DistanceDistribution.png
-PreProcess: $(PreAnalysis)
+$(Result_prefix)%$(Result_flag) : $(word 1,$(NetStore)) $(PreAnalysis_prefix)%$(PreAnalysis_flag)
+	python3 -u Prediction_Processing.py $(dir $<) $(dir $(word 2,$^)) $(dir $@) > $(testlog_prefix)_Train-$*$(testlog_suffix) 2>&1
 
 $(PreAnalysis_prefix)%$(PreAnalysis_flag) : $(testfile_prefix)%$(testfile_suffix)
-	python3 -u Prediction_Pre-Processing.py $< $(PreAnalysis_prefix)$*$(PreAnalysis_suffix) > $(testlog_prefix)_Pre-$*$(testlog_suffix) 2>&1
+	python3 -u Prediction_Pre-Processing.py $< $(dir $@) > $(testlog_prefix)_Pre-$*$(testlog_suffix) 2>&1
 	touch $@
 
 # $(fileStore)/$(method)DistanceDistribution.png: $(fileStore)/$(method)DistanceDistribution.npy
@@ -83,11 +89,11 @@ $(PreAnalysis_prefix)%$(PreAnalysis_flag) : $(testfile_prefix)%$(testfile_suffix
 model:  $(NetStore)
 
 $(PreStore_prefix)%$(PreStore_flag) : $(trainfile_prefix)%$(trainfile_suffix)
-	python3 -u Data_Pre-Processing.py $< $(PreStore_prefix)$*$(PreStore_suffix) $(MaxSet) > $(trainlog_prefix)_Pre-$*$(trainlog_suffix) 2>&1
+	python3 -u Data_Pre-Processing.py $< $(dir $@) $(MaxSet) > $(trainlog_prefix)_Pre-$*$(trainlog_suffix) 2>&1
 	touch $@
 
 $(NetStore_prefix)%$(NetStore_flag) : $(PreStore_prefix)%$(PreStore_flag) .Bulletin 
-	python3 -u Data_Processing.py $(NetStore_prefix)$*$(NetStore_suffix) $(PreStore_prefix)$*$(PreStore_suffix) $(MaxSet) $* > $(trainlog_prefix)_Train-$*$(trainlog_suffix) 2>&1
+	python3 -u Data_Processing.py $(dir $@) $(dir $<) $(MaxSet) $* > $(trainlog_prefix)_Train-$*$(trainlog_suffix) 2>&1
 	touch $@
 
 .Bulletin : 
