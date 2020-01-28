@@ -69,7 +69,7 @@ trainlog = $(patsubst $(trainfile_prefix)%$(trainfile_suffix),$(trainlog_prefix)
 Analysis : $(Result)
 
 $(Result_prefix)%$(Result_flag) : $(word 1,$(NetStore)) $(PreAnalysis_prefix)%$(PreAnalysis_flag)
-	python3 -u Prediction_Processing.py $(dir $<) $(dir $(word 2,$^)) $(dir $@) > $(testlog_prefix)_Train-$*$(testlog_suffix) 2>&1
+	python3 -u Prediction_Processing_Total.py $(dir $<) $(dir $(word 2,$^)) $(dir $@) > $(testlog_prefix)_Train-$*$(testlog_suffix) 2>&1
 
 $(PreAnalysis_prefix)%$(PreAnalysis_flag) : $(testfile_prefix)%$(testfile_suffix)
 	python3 -u Prediction_Pre-Processing.py $< $(dir $@) > $(testlog_prefix)_Pre-$*$(testlog_suffix) 2>&1
