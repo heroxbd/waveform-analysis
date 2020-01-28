@@ -26,7 +26,7 @@ NetWorkDir = $(TrainDataDir)
 TestDataDir = dataset/jinp/
 ResultDir = $(TestDataDir)
 #training filename
-traindata_name_prefix = abtraining-
+traindata_name_prefix = ztraining-
 trainfile_prefix = $(TrainDataDir)$(traindata_name_prefix)
 trainfile_suffix = .h5
 trainfile = $(wildcard $(trainfile_prefix)$(TrainFileNo)$(trainfile_suffix))

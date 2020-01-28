@@ -1,4 +1,5 @@
 import numpy as np
+import re
 
 import torch
 import torch.utils.data as Data
@@ -13,10 +14,12 @@ import time
 import tables
 
 
-BATCHSIZE=16
+BATCHSIZE=160
 
 # Make Saving_Directory
-SavePath = sys.argv[1]
+NetDir = sys.argv[1]
+LoadPath= sys.argv[2]
+SavePath = sys.argv[3]
 if not os.path.exists(SavePath):
     os.makedirs(SavePath)
 
@@ -42,10 +45,16 @@ class Net_1(nn.Module):
         x = x.squeeze(1)
         return x
 
-net = torch.load(sys.argv[3])# Pre-trained Model Parameters
+fileSet = os.listdir(NetDir)
+matchrule = re.compile(r"_epoch(\d+)_loss(\d+(\.\d*)?|\.\d+)([eE]([-+]?\d+))?")
+NetLoss_reciprocal = []
+for filename in fileSet :
+    if "_epoch" in filename : NetLoss_reciprocal.append(1/float(matchrule.match(filename)[2]))
+    else : NetLoss_reciprocal.append(0)
+net_name = fileSet[NetLoss_reciprocal.index(max(NetLoss_reciprocal))]
+net = torch.load(NetDir+net_name).cuda(device=2)# Pre-trained Model Parameters
 
 # Data Settings
-LoadPath= sys.argv[2]
 LoadingPeriod= 200000
 # h5 file handling
 # Define the database columns
@@ -81,13 +90,13 @@ for k,entry in enumerate(entryList[0:-2]) :
     ChanData = Data_set[entry:entryList[k+1]]['ChannelID']
     WaveData = Data_set[entry:entryList[k+1]]['Waveform']
     # Making Dataset
-    predict_data = torch.from_numpy(WaveData)
+    predict_data = torch.from_numpy(WaveData).cuda(device=2)
     predict_loader = Data.DataLoader(dataset=predict_data,batch_size=BATCHSIZE,shuffle=False)
 
     # Makeing Output
     Output_Data = []
     for i,data in enumerate(predict_loader,0):
-        inputs = Variable(data).float()
+        inputs = Variable(data).float().cuda(device=2)
         outputs = net(inputs)
         batch_output = outputs.data.cpu().numpy()
         Output_Data.extend(batch_output)
