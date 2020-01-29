@@ -49,7 +49,7 @@ for filename in fileSet :
     if "_epoch" in filename : NetLoss_reciprocal.append(1/float(matchrule.match(filename)[2]))
     else : NetLoss_reciprocal.append(0)
 net_name = fileSet[NetLoss_reciprocal.index(max(NetLoss_reciprocal))]
-net = torch.load(NetDir+net_name).cuda(device=2)# Pre-trained Model Parameters
+net = torch.load(NetDir+net_name).cpu()# Pre-trained Model Parameters
 
 # Data Settings
 LoadingPeriod= 25600
@@ -89,13 +89,13 @@ for k,entry in enumerate(entryList[0:1]) :
     ChanData = Data_set[entry:entryList[k+1]]['ChannelID']
     WaveData = Data_set[entry:entryList[k+1]]['Waveform']
     # Making Dataset
-    predict_data = torch.from_numpy(WaveData).cuda(device=2)
+    predict_data = torch.from_numpy(WaveData).float()
     predict_loader = Data.DataLoader(dataset=predict_data,batch_size=BATCHSIZE,shuffle=False)
 
     # Makeing Output
     Output_Data = []
     for i,data in enumerate(predict_loader,0):
-        inputs = Variable(data).float().cuda(device=2)
+        inputs = Variable(data)
         outputs = net(inputs)
         batch_output = outputs.data.cpu().numpy()
         Output_Data.extend(batch_output)
@@ -103,6 +103,42 @@ for k,entry in enumerate(entryList[0:1]) :
     # make shift for -5 s
     # OutPuts = np.concatenate((OutputData[:,5:],np.zeros((len(OutputData),5))),axis=-1)
     # In signal detection tasks, non-shifted version is wanted as the result
+
+    # Write data
+    filter_limit = 0.9/WindowSize
+    for j in range(len(OutputData)):   # OutputData
+        Prediction=OutputData[j]       # OutputData
+        EventID=EventData[j]
+        ChannelID=ChanData[j]
+        # if EventID == 13381 and ChannelID == 29:
+        #     print('appear') ??
+        if np.sum(Prediction) <= 0:
+            Prediction = np.ones(WindowSize) / WindowSize
+            print("warning")
+        numPE = 0
+        for k in range(len(Prediction)):
+            if Prediction[k]>filter_limit:
+                answer['EventID'] = EventID
+                answer['ChannelID'] = ChannelID
+                answer['PETime'] = k
+                answer['Weight'] = Prediction[k]
+                answer.append()
+                numPE += 1
+        if numPE == 0 :
+            answer['EventID'] = EventID
+            answer['ChannelID'] = ChannelID
+            answer['PETime'] = 300
+            answer['Weight'] = 1
+            answer.append()
+            print(EventID,ChannelID)
+
+        # Make mark
+        if (j+1) % 10000 == 0:
+            print(j+1)
+            
+    # Flush into the output file
+    AnswerTable.flush()
+
 
 h5file.close()
 PreFile.close()
