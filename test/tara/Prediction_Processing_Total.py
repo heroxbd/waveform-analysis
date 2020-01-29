@@ -13,9 +13,6 @@ import time
 
 import tables
 
-
-BATCHSIZE=160
-
 # Make Saving_Directory
 NetDir = sys.argv[1]
 LoadPath= sys.argv[2]
@@ -55,7 +52,8 @@ net_name = fileSet[NetLoss_reciprocal.index(max(NetLoss_reciprocal))]
 net = torch.load(NetDir+net_name).cuda(device=2)# Pre-trained Model Parameters
 
 # Data Settings
-LoadingPeriod= 200000
+LoadingPeriod= 3200
+BATCHSIZE=3200
 # h5 file handling
 # Define the database columns
 class AnswerData(tables.IsDescription):
@@ -85,7 +83,8 @@ print(Total_entries)
 
 entryList = np.arange(0,Total_entries,LoadingPeriod)
 entryList = np.append(entryList,Total_entries)
-for k,entry in enumerate(entryList[0:-2]) :
+#for k,entry in enumerate(entryList[0:-2]) :
+for k,entry in enumerate(entryList[0:1]) :
     EventData = Data_set[entry:entryList[k+1]]['EventID']
     ChanData = Data_set[entry:entryList[k+1]]['ChannelID']
     WaveData = Data_set[entry:entryList[k+1]]['Waveform']
@@ -105,42 +104,6 @@ for k,entry in enumerate(entryList[0:-2]) :
     # OutPuts = np.concatenate((OutputData[:,5:],np.zeros((len(OutputData),5))),axis=-1)
     # In signal detection tasks, non-shifted version is wanted as the result
 
-    # Write data
-    filter_limit = 0.9/WindowSize
-    for j in range(len(OutputData)):   # OutputData
-        Prediction=OutputData[j]       # OutputData
-        EventID=EventData[j]
-        ChannelID=ChanData[j]
-        # if EventID == 13381 and ChannelID == 29:
-        #     print('appear') ??
-        if np.sum(Prediction) <= 0:
-            Prediction = np.ones(WindowSize) / WindowSize
-            print("warning")
-        numPE = 0
-        for k in range(len(Prediction)):
-            if Prediction[k]>filter_limit:
-                answer['EventID'] = EventID
-                answer['ChannelID'] = ChannelID
-                answer['PETime'] = k
-                answer['Weight'] = Prediction[k]
-                answer.append()
-                numPE += 1
-        if numPE == 0 :
-            answer['EventID'] = EventID
-            answer['ChannelID'] = ChannelID
-            answer['PETime'] = 300
-            answer['Weight'] = 1
-            answer.append()
-            print(EventID,ChannelID)
-
-        # Make mark
-        if (j+1) % 10000 == 0:
-            print(j+1)
-            
-    # Flush into the output file
-    AnswerTable.flush()
-
-
 h5file.close()
 PreFile.close()
 end_time=time.time()
@@ -148,22 +111,3 @@ print("Prediction_Generated")
 
 toc = end_time-start_time #~1200s 20min
 print("Time of Computing",toc)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
