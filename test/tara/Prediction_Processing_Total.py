@@ -19,6 +19,9 @@ LoadPath= sys.argv[2]
 SavePath = sys.argv[3]
 if not os.path.exists(SavePath):
     os.makedirs(SavePath)
+    
+# use cpu or gpu
+device = torch.device('cpu')
 
 #Neural Networks
 class Net_1(nn.Module):
@@ -49,7 +52,7 @@ for filename in fileSet :
     if "_epoch" in filename : NetLoss_reciprocal.append(1/float(matchrule.match(filename)[2]))
     else : NetLoss_reciprocal.append(0)
 net_name = fileSet[NetLoss_reciprocal.index(max(NetLoss_reciprocal))]
-net = torch.load(NetDir+net_name).cpu()# Pre-trained Model Parameters
+net = torch.load(NetDir+net_name,device=device)# Pre-trained Model Parameters
 
 # Data Settings
 LoadingPeriod= 25600
@@ -66,12 +69,9 @@ class AnswerData(tables.IsDescription):
 # h5file = tables.open_file("./Prediction_Results/Prediction_Mod_ztraining.h5", mode="w", title="OneTonDetector")
 h5file = tables.open_file(SavePath+"Prediction.h5", mode="w", title="OneTonDetector")
 
-
 # Create tables
 AnswerTable = h5file.create_table("/", "Answer", AnswerData, "Answer")
 answer = AnswerTable.row
-
-
 
 # Loading Data
 PreFile =  tables.open_file(LoadPath+"Pre.h5")
@@ -89,7 +89,7 @@ for k,entry in enumerate(entryList[0:1]) :
     ChanData = Data_set[entry:entryList[k+1]]['ChannelID']
     WaveData = Data_set[entry:entryList[k+1]]['Waveform']
     # Making Dataset
-    predict_data = torch.from_numpy(WaveData).float()
+    predict_data = torch.from_numpy(WaveData,device=device).float()
     predict_loader = Data.DataLoader(dataset=predict_data,batch_size=BATCHSIZE,shuffle=False)
 
     # Makeing Output
