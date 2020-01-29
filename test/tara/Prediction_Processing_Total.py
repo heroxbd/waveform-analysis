@@ -52,7 +52,7 @@ net_name = fileSet[NetLoss_reciprocal.index(max(NetLoss_reciprocal))]
 net = torch.load(NetDir+net_name).cuda(device=2)# Pre-trained Model Parameters
 
 # Data Settings
-LoadingPeriod= 3200
+LoadingPeriod= 25600
 BATCHSIZE=3200
 # h5 file handling
 # Define the database columns
@@ -72,7 +72,6 @@ AnswerTable = h5file.create_table("/", "Answer", AnswerData, "Answer")
 answer = AnswerTable.row
 
 
-start_time = time.time()
 
 # Loading Data
 PreFile =  tables.open_file(LoadPath+"Pre.h5")
@@ -83,6 +82,7 @@ print(Total_entries)
 
 entryList = np.arange(0,Total_entries,LoadingPeriod)
 entryList = np.append(entryList,Total_entries)
+start_time = time.time()
 #for k,entry in enumerate(entryList[0:-2]) :
 for k,entry in enumerate(entryList[0:1]) :
     EventData = Data_set[entry:entryList[k+1]]['EventID']
