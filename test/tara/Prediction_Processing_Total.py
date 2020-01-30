@@ -57,8 +57,7 @@ if device==torch.device('cpu') : net=net.cpu()
 else : net=net.cuda(device)
 
 # Data Settings
-LoadingPeriod= 12800
-BATCHSIZE=3200
+LoadingPeriod= 3200
 # h5 file handling
 # Define the database columns
 class AnswerData(tables.IsDescription):
@@ -83,7 +82,7 @@ Total_entries = len(Data_set)
 print(Total_entries)
 
 filter_limit = 0.9/WindowSize # for generate answer from prediction
-Timeline = torch.arange(WindowSize)
+Timeline = torch.arange(WindowSize,device=device).repeat([LoadingPeriod,1])
 entryList = np.arange(0,Total_entries,LoadingPeriod)
 entryList = np.append(entryList,Total_entries)
 start_time = time.time()
@@ -93,30 +92,33 @@ for k,entry in enumerate(entryList[0:1]) :
     ChanData = Data_set[entry:entryList[k+1]]['ChannelID']
     WaveData = Data_set[entry:entryList[k+1]]['Waveform']
     # Making Dataset
-    predict_data = torch.tensor(WaveData,device=device).float()
-    predict_loader = Data.DataLoader(dataset=predict_data,batch_size=BATCHSIZE,shuffle=False)
+    inputs = torch.tensor(WaveData,device=device).float()
 
+    #calculating
+    Prediction = net(inputs).data
+    # checking for no pe event
+    PETimes = Prediction>filter_limit
+    pe_numbers = PETimes.sum(1)
+    no_pe_found = pe_numbers==0 
+    guessed_petime = F.relu(inputs[no_pe_found].max(1)[1]-7)
+    PETimes[no_pe_found,guessed_petime] = True
+    Prediction[no_pe_found,guessed_petime] = 1
+    pen_numbers[no_pe_found] = 1
+    
+    
     # Makeing Output and write submission file
-    for i,data in enumerate(predict_loader,0):
-        inputs = Variable(data)
-        outputs = net(inputs)
-        Prediction = outputs.data
-        PETimes = Prediction>filter_limit
-        if len(PETime)==0 :
-            answer['PETime'] = inputs.max(0)[1]-7
-            answer['Weight'] = 1
-            answer['EventID'] = EventData[i]
-            answer['ChannelID'] = ChanData[i]
-            answer.append()
-            print("warning: Event {0}, Channel {1}".format(EventID,ChannelID))
-        else :
-            PETimes = Timeline[PETimes]
-            for PETime in PETimes :
-                answer['PETime'] = PETime
-                answer['Weight'] = Prediction[PETime]
-                answer['EventID'] = EventData[i]
-                answer['ChannelID'] = ChanData[i]
-                answer.append()
+    Weights = Prediction[PETimes].cpu().numpy()
+    PETimes = Timeline[PETimes].cpu().numpy()
+    pe_numbers = pe_numbers.cpu().numpy()
+    EventData = np.repeat(EventData,pe_numbers)
+    ChanData = np.repeat(ChanData,pe_numbers)
+    for i in range(len(PETimes)) :
+        answer['PETime'] = PETimes[i]
+        answer['Weight'] = Weight[i]
+        answer['EventID'] = EventData[i]
+        answer['ChannelID'] = ChanData[i]
+        answer.append()
+        
     # Make mark
     print("Processing entry {0}, Progress {1}%".format(k*LoadingPeriod,k*LoadingPeriod/Total_entries*100))
             
