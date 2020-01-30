@@ -22,7 +22,7 @@ if not os.path.exists(SavePath):
     os.makedirs(SavePath)
     
 # use cpu or gpu
-device = torch.device('cpu')
+device = torch.device(2)
 
 #Neural Networks
 class Net_1(nn.Module):
@@ -58,7 +58,7 @@ if device==torch.device('cpu') : net=net.cpu()
 else : net=net.cuda(device)
 
 # Data Settings
-LoadingPeriod= 3200
+LoadingPeriod= 4000
 # h5 file handling
 # Define the database columns
 class AnswerData(tables.IsDescription):
@@ -69,7 +69,7 @@ class AnswerData(tables.IsDescription):
 
 # Create the output file and the group
 # h5file = tables.open_file("./Prediction_Results/Prediction_Mod_ztraining.h5", mode="w", title="OneTonDetector")
-h5file = tables.open_file(SavePath+"Prediction.h5", mode="w", title="OneTonDetector")
+h5file = tables.open_file(SavePath+"Prediction.h5", mode="w", title="OneTonDetector",filters=tables.Filters(complevel=9))
 
 # Create tables
 AnswerTable = h5file.create_table("/", "Answer", AnswerData, "Answer")
@@ -82,19 +82,26 @@ WindowSize = len(Data_set[0]['Waveform'])
 Total_entries = len(Data_set)
 print(Total_entries)
 
-filter_limit = 0.9/WindowSize # for generate answer from prediction
+# Prepare for data and generating answer from prediction
+filter_limit = 0.9/WindowSize 
 Timeline = torch.arange(WindowSize,device=device).repeat([LoadingPeriod,1])
 entryList = np.arange(0,Total_entries,LoadingPeriod)
 entryList = np.append(entryList,Total_entries)
 start_time = time.time()
-#for k,entry in enumerate(entryList[0:-2]) :
-for k,entry in enumerate(entryList[0:1]) :
-    EventData = Data_set[entry:entryList[k+1]]['EventID']
-    ChanData = Data_set[entry:entryList[k+1]]['ChannelID']
-    WaveData = Data_set[entry:entryList[k+1]]['Waveform']
+# Loop for batched data
+for k in range(len(entryList)-1) :
     # Making Dataset
+    EventData = Data_set[entryList[k]:entryList[k+1]]['EventID']
+    ChanData = Data_set[entryList[k]:entryList[k+1]]['ChannelID']
+    WaveData = Data_set[entryList[k]:entryList[k+1]]['Waveform']
     inputs = torch.tensor(WaveData,device=device).float()
 
+    # Make mark
+    print("Processing entry {0}, Progress {1}%".format(k*LoadingPeriod,k*LoadingPeriod/Total_entries*100))
+    
+    if len(EventData)!=len(Timeline) : 
+        Timeline = torch.arange(WindowSize,device=device).repeat([len(EventData),1])
+                    
     #calculating
     Prediction = net(inputs).data
     # checking for no pe event
@@ -102,11 +109,11 @@ for k,entry in enumerate(entryList[0:1]) :
     pe_numbers = PETimes.sum(1)
     no_pe_found = pe_numbers==0 
     if no_pe_found.any() :
-        print(inputs[no_pe_found].max(1)[1]-7)
+        print("I cannot find any pe in Event {0}, Channel {1} (entry {2})".format(EventData[no_pe_found.cpu().numpy()],ChanData[no_pe_found.cpu().numpy()],k*LoadingPeriod+np.arange(LoadingPeriod)[no_pe_found.cpu().numpy()]))
         guessed_petime = F.relu(inputs[no_pe_found].max(1)[1]-7)
         PETimes[no_pe_found,guessed_petime] = True
         Prediction[no_pe_found,guessed_petime] = 1
-        pen_numbers[no_pe_found] = 1
+        pe_numbers[no_pe_found] = 1
     
     
     # Makeing Output and write submission file
@@ -122,9 +129,6 @@ for k,entry in enumerate(entryList[0:1]) :
         answer['ChannelID'] = ChanData[i]
         answer.append()
         
-    # Make mark
-    print("Processing entry {0}, Progress {1}%".format(k*LoadingPeriod,k*LoadingPeriod/Total_entries*100))
-            
     # Flush into the output file
     AnswerTable.flush()
 
