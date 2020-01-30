@@ -1,3 +1,4 @@
+from IPython import embed #ipython breakpoint inserting
 import numpy as np
 import re
 
@@ -100,10 +101,12 @@ for k,entry in enumerate(entryList[0:1]) :
     PETimes = Prediction>filter_limit
     pe_numbers = PETimes.sum(1)
     no_pe_found = pe_numbers==0 
-    guessed_petime = F.relu(inputs[no_pe_found].max(1)[1]-7)
-    PETimes[no_pe_found,guessed_petime] = True
-    Prediction[no_pe_found,guessed_petime] = 1
-    pen_numbers[no_pe_found] = 1
+    if no_pe_found.any() :
+        print(inputs[no_pe_found].max(1)[1]-7)
+        guessed_petime = F.relu(inputs[no_pe_found].max(1)[1]-7)
+        PETimes[no_pe_found,guessed_petime] = True
+        Prediction[no_pe_found,guessed_petime] = 1
+        pen_numbers[no_pe_found] = 1
     
     
     # Makeing Output and write submission file
@@ -114,7 +117,7 @@ for k,entry in enumerate(entryList[0:1]) :
     ChanData = np.repeat(ChanData,pe_numbers)
     for i in range(len(PETimes)) :
         answer['PETime'] = PETimes[i]
-        answer['Weight'] = Weight[i]
+        answer['Weight'] = Weights[i]
         answer['EventID'] = EventData[i]
         answer['ChannelID'] = ChanData[i]
         answer.append()
