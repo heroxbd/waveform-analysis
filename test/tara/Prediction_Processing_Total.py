@@ -57,7 +57,7 @@ if device==torch.device('cpu') : net=net.cpu()
 else : net=net.cuda(device)
 
 # Data Settings
-LoadingPeriod= 25600
+LoadingPeriod= 12800
 BATCHSIZE=3200
 # h5 file handling
 # Define the database columns
@@ -82,6 +82,8 @@ WindowSize = len(Data_set[0]['Waveform'])
 Total_entries = len(Data_set)
 print(Total_entries)
 
+filter_limit = 0.9/WindowSize # for generate answer from prediction
+Timeline = torch.arange(WindowSize)
 entryList = np.arange(0,Total_entries,LoadingPeriod)
 entryList = np.append(entryList,Total_entries)
 start_time = time.time()
@@ -94,49 +96,29 @@ for k,entry in enumerate(entryList[0:1]) :
     predict_data = torch.tensor(WaveData,device=device).float()
     predict_loader = Data.DataLoader(dataset=predict_data,batch_size=BATCHSIZE,shuffle=False)
 
-    # Makeing Output
-    Output_Data = []
+    # Makeing Output and write submission file
     for i,data in enumerate(predict_loader,0):
         inputs = Variable(data)
         outputs = net(inputs)
-        batch_output = outputs.data.cpu().numpy()
-        Output_Data.extend(batch_output)
-    OutputData = np.array(Output_Data)
-    # make shift for -5 s
-    # OutPuts = np.concatenate((OutputData[:,5:],np.zeros((len(OutputData),5))),axis=-1)
-    # In signal detection tasks, non-shifted version is wanted as the result
-
-    # Write data
-    filter_limit = 0.9/WindowSize
-    for j in range(len(OutputData)):   # OutputData
-        Prediction=OutputData[j]       # OutputData
-        EventID=EventData[j]
-        ChannelID=ChanData[j]
-        # if EventID == 13381 and ChannelID == 29:
-        #     print('appear') ??
-        if np.sum(Prediction) <= 0:
-            Prediction = np.ones(WindowSize) / WindowSize
-            print("warning")
-        numPE = 0
-        for k in range(len(Prediction)):
-            if Prediction[k]>filter_limit:
-                answer['EventID'] = EventID
-                answer['ChannelID'] = ChannelID
-                answer['PETime'] = k
-                answer['Weight'] = Prediction[k]
-                answer.append()
-                numPE += 1
-        if numPE == 0 :
-            answer['EventID'] = EventID
-            answer['ChannelID'] = ChannelID
-            answer['PETime'] = 300
+        Prediction = outputs.data
+        PETimes = Prediction>filter_limit
+        if len(PETime)==0 :
+            answer['PETime'] = inputs.max(0)[1]-7
             answer['Weight'] = 1
+            answer['EventID'] = EventData[i]
+            answer['ChannelID'] = ChanData[i]
             answer.append()
-            print(EventID,ChannelID)
-
-        # Make mark
-        if (j+1) % 10000 == 0:
-            print(j+1)
+            print("warning: Event {0}, Channel {1}".format(EventID,ChannelID))
+        else :
+            PETimes = Timeline[PETimes]
+            for PETime in PETimes :
+                answer['PETime'] = PETime
+                answer['Weight'] = Prediction[PETime]
+                answer['EventID'] = EventData[i]
+                answer['ChannelID'] = ChanData[i]
+                answer.append()
+    # Make mark
+    print("Processing entry {0}, Progress {1}%".format(k*LoadingPeriod,k*LoadingPeriod/Total_entries*100))
             
     # Flush into the output file
     AnswerTable.flush()
