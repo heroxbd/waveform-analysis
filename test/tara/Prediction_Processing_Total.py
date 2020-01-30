@@ -44,11 +44,6 @@ class Net_1(nn.Module):
         x = F.relu(self.conv4(x))
         x = x.squeeze(1)
         return x
-    
-    def to_device(self,device):
-        if device == torch.device('cpu') :
-            self=self.cpu()
-        else : self=self.cuda(device)
 
 fileSet = os.listdir(NetDir)
 matchrule = re.compile(r"_epoch(\d+)_loss(\d+(\.\d*)?|\.\d+)([eE]([-+]?\d+))?")
@@ -57,7 +52,9 @@ for filename in fileSet :
     if "_epoch" in filename : NetLoss_reciprocal.append(1/float(matchrule.match(filename)[2]))
     else : NetLoss_reciprocal.append(0)
 net_name = fileSet[NetLoss_reciprocal.index(max(NetLoss_reciprocal))]
-net = torch.load(NetDir+net_name).to_device(device)# Pre-trained Model Parameters
+net = torch.load(NetDir+net_name)#Pre-trained Model Parameters
+if device==torch.device('cpu') : net=net.cpu()
+else : net=net.cuda(device)
 
 # Data Settings
 LoadingPeriod= 25600
@@ -94,7 +91,7 @@ for k,entry in enumerate(entryList[0:1]) :
     ChanData = Data_set[entry:entryList[k+1]]['ChannelID']
     WaveData = Data_set[entry:entryList[k+1]]['Waveform']
     # Making Dataset
-    predict_data = torch.from_numpy(WaveData,device=device).float()
+    predict_data = torch.tensor(WaveData,device=device).float()
     predict_loader = Data.DataLoader(dataset=predict_data,batch_size=BATCHSIZE,shuffle=False)
 
     # Makeing Output
