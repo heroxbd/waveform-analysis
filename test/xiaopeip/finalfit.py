@@ -71,7 +71,10 @@ def main(fopt, fipt, single_pe_path):
                         ans = opti.fmin_l_bfgs_b(norm_fit, ans0, args=(mne, wave[nihep]), approx_grad=True, bounds=b, maxfun=100000)
                         #ans = opti.fmin_slsqp(norm_fit, ans0, args=(mne, wave[nihep]), bounds=b, iprint=-1)
                         #ans = opti.fmin_tnc(norm_fit, ans0, args=(mne, wave[nihep]), approx_grad=True, bounds=b, messages=0, maxfun=10000)
-                        pf = ans[0]
+                        if len(ans[0]) != 0:
+                            pf = ans[0]
+                        else:
+                            flag = 0
                     else:
                         flag = 0
                 else:

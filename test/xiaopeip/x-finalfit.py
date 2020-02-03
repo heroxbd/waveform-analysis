@@ -72,7 +72,9 @@ def main(fopt, fipt, single_pe_path):
                         #ans = opti.fmin_slsqp(norm_fit, ans0, args=(mne, wave[nihep]), bounds=b, iprint=-1)
                         #ans = opti.fmin_tnc(norm_fit, ans0, args=(mne, wave[nihep]), approx_grad=True, bounds=b, messages=0, maxfun=10000)
                         pf = ans[0]
+                        print(pf)
                         rc = ans[2]['warnflag']
+                        print(rc)
                     else:
                         flag = 0
                 else:
@@ -97,7 +99,7 @@ def main(fopt, fipt, single_pe_path):
             dt['ChannelID'][start:end] = ent[i]['ChannelID']
             dt['RCode'][start:end] = rc
             start = end
-            print('\rAnsw Generating:|{}>{}|{:6.2f}%'.format(((20*i)//l)*'-', (19-(20*i)//l)*' ', 100 * ((i+1) / l)), end='' if i != l-1 else '\n')
+            #print('\rAnsw Generating:|{}>{}|{:6.2f}%'.format(((20*i)//l)*'-', (19-(20*i)//l)*' ', 100 * ((i+1) / l)), end='' if i != l-1 else '\n')
     dt = dt[dt['Weight'] > 0]
     dt = np.sort(dt, kind='stable', order=['EventID', 'ChannelID', 'PETime'])
     with h5py.File(fopt, 'w') as opt:
