@@ -3,7 +3,7 @@ jinpDir=dataset/jinp
 xiaoPp=test/xiaopeip
 
 xtest=xtest
-xtestPl=99
+xtestPl=0
 xtestseq=$(shell seq 0 ${xtestPl})
 
 xall: $(xtest)/total-hist-x.pdf $(xtest)/total-record-x.csv $(xtest)/submission-hist-x.pdf $(xtest)/submission-record-x.csv
@@ -31,9 +31,9 @@ $(xtest)/submission/total-x.h5: $(xtestseq:%=$(xtest)/unadjusted/unadjusted-x-%.
 	python3 $(xiaoPp)/integrate.py $^ --num ${xtestPl} -o $@
 $(xtest)/unadjusted/unadjusted-x-%.h5: $(xtest)/ztraining-x.h5 $(xiaoPp)/averspe.h5
 	mkdir -p $(dir $@)
-	python3 $(xiaoPp)/finalfit.py $< --ref $(word 2,$^) --num ${xtestPl} -o $@
+	python3 $(xiaoPp)/y-finalfit.py $< --ref $(word 2,$^) --num ${xtestPl} -o $@
 $(xtest)/ztraining-x.h5: $(jinpDir)/ztraining-1.h5
 	mkdir -p $(dir $@)
-	python3 test/cut_data.py $^ -o $@ -a -1 -b 10000
+	python3 test/cut_data.py $^ -o $@ -a -1 -b 4
 $(xiaoPp)/averspe.h5: $(jinpDir)/ztraining-0.h5
 	python3 test/spe_get.py $^ -o $@ --num 10000 --len 80

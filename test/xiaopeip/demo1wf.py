@@ -3,6 +3,7 @@
 import re
 import numpy as np
 from scipy import optimize as opti
+import scipy.stats
 import h5py
 import sys
 sys.path.append('test')
@@ -26,6 +27,7 @@ def norm_fit(x, M, p):
 def main():
     epulse = -1
     spemean = wfaf.generate_model(single_pe_path, epulse)
+    print('spemean is {}'.format(spemean))
     opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint8), ('PETime', np.uint16), ('Weight', np.float16)])
     dt = np.zeros(1029, dtype=opdt)
     with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as ipt:
@@ -60,9 +62,10 @@ def main():
                     b[:, 1] = np.inf
                     #b[:, 1] = 5
                     mne = spemean[np.mod(nihep.reshape(len(nihep), 1) - possible.reshape(1, len(possible)), Length_pe)]
-                    #ans = opti.fmin_l_bfgs_b(norm_fit, ans0, args=(mne, wave[nihep]), approx_grad=True, bounds=b)
+                    print('mne is {}, its shape is {}'.format(mne, mne.shape))
+                    ans = opti.fmin_l_bfgs_b(norm_fit, ans0, args=(mne, wave[nihep]), approx_grad=True, bounds=b, maxfun=100000)
                     #ans = opti.fmin_slsqp(norm_fit, ans0, args=(mne, wave[nihep]), bounds=b, iprint=-1)
-                    ans = opti.fmin_tnc(norm_fit, ans0, args=(mne, wave[nihep]), approx_grad=True, bounds=b, maxfun=10000)
+                    #ans = opti.fmin_tnc(norm_fit, ans0, args=(mne, wave[nihep]), approx_grad=True, bounds=b, messages=0, maxfun=10000)
                     print('ans is {}'.format(ans))
                     pf = ans[0]
                     #pf = ans
@@ -93,6 +96,14 @@ def main():
         if args.save:
             with h5py.File(fopt, 'w') as opt:
                 dset = opt.create_dataset('Answer', data=dt, compression='gzip')
+        tth = ipt['GroundTruth']
+        b = min(args.ent*30*30, len(tth))
+        tth = tth[0:b]
+        j = np.where(np.logical_and(tth['EventID'] == args.ent, tth['ChannelID'] == args.cha))
+        wdist = scipy.stats.wasserstein_distance(tth[j]['PETime'], pet, v_weights=pwe)
+        Q = len(j[0]); q = np.sum(pwe)
+        pdist = np.abs(Q - q) * scipy.stats.poisson.pmf(Q, Q)
+        print('wdist is {}, pdist is {}'.format(wdist, pdist))
 
 if __name__ == '__main__':
     main()
