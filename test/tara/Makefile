@@ -75,15 +75,11 @@ $(PreAnalysis_prefix)%$(PreAnalysis_flag) : $(testfile_prefix)%$(testfile_suffix
 	python3 -u Prediction_Pre-Processing.py $< $(dir $@) > $(testlog_prefix)_Pre-$*$(testlog_suffix) 2>&1
 	touch $@
 
-# $(fileStore)/$(method)DistanceDistribution.png: $(fileStore)/$(method)DistanceDistribution.npy
-# 	python3 plotDistribution.py $^ $@
+#$(Result_prefix)%$(Result_suffix)DistanceDistribution.png: $(Result_prefix)%$(Result_suffix)DistanceDistribution.npy
+#	python3 plotDistribution.py $^ $@
 
-# $(fileStore)/$(method)DistanceDistribution.npy: $(subfile) $(ansfile)
-# 	python3 graderMain.py $(fileStore)/$(method) $^ $@
-# $(subfile): $(problemfile)
-# 	mkdir -p $(fileStore)
-# 	python3 Prediction_Pre-Processing.py $(problemfile) $(fileStore)
-# 	python3 Prediction_Processing_Total.py $(problemfile) $(fileStore)
+$(Result_prefix)%$(Result_suffix)DistanceDistribution.npy: $(subfile) $(ansfile)
+	python3 graderMain.py $(fileStore)/$(method) $^ $@
 
 .PHONY: model
 model:  $(NetStore)
