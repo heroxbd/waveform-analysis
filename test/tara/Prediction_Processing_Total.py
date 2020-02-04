@@ -13,16 +13,49 @@ import os,sys
 import time
 
 import tables
+from Cuda_Queue import *
 
+#detecting cuda device and wait in line
+if torch.cuda.is_available():
+    while not QueueUp(fileno) : continue # append fileno to waiting list (first line of .bulletin.swp)
+    device=wait_in_line(fileno,1024*1024*1024*1.5)
+    torch.cuda.set_device(device)
+else : 
+    device = 'cpu'
+    print('Using device: cpu')
+    
+# begin loading
+# Make Saving_Directory
+SavePath = sys.argv[1]
+if not os.path.exists(SavePath):
+    os.makedirs(SavePath)
+
+localtime = time.strftime("%Y-%m-%d_%H:%M:%S", time.localtime())
+training_record_name = SavePath+"training_record_"+localtime
+testing_record_name = SavePath+"testing_record_"+localtime
+
+training_record = open((training_record_name+".txt"),"a+")
+testing_record = open((testing_record_name+".txt"),"a+")
+
+# Loading Data
+LoadPath= sys.argv[2]
+'''
+prefix = 'ftraining-0'
+# Data_Name= "ztraining-9_0-199999"
+Data_Name = prefix+'_0-199999'
+p 
+data_name= LoadPath+Data_Name+".npz"
+'''
+fileSet = os.listdir(LoadPath)
+fileSize = []
+for filename in fileSet :
+    if '.h5' in filename :
 # Make Saving_Directory
 NetDir = sys.argv[1]
 LoadPath= sys.argv[2]
 SavePath = sys.argv[3]
 if not os.path.exists(SavePath):
     os.makedirs(SavePath)
-    
-# use cpu or gpu
-device = torch.device(2)
 
 #Neural Networks
 class Net_1(nn.Module):
@@ -101,7 +134,12 @@ for k in range(len(entryList)-1) :
     
     if len(EventData)!=len(Timeline) : 
         Timeline = torch.arange(WindowSize,device=device).repeat([len(EventData),1])
-                    
+    
+    if k==0 :
+        if device!=torch.device('cpu') :
+        ## finish loading to GPU, give tag on .bulletin.swp
+        os.system("echo {} {} >> .bulletin.swp".format(fileno,0))
+    
     #calculating
     Prediction = net(inputs).data
     # checking for no pe event

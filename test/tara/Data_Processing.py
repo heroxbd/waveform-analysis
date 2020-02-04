@@ -123,8 +123,9 @@ class Net_1(nn.Module):
 
 net = Net_1().cuda(device=device)
 
-## finish loading to GPU, give tag on .bulletin.swp
-os.system("echo {} {} >> .bulletin.swp".format(fileno,0))
+if device!=torch.device('cpu') :
+    ## finish loading to GPU, give tag on .bulletin.swp
+    os.system("echo {} {} >> .bulletin.swp".format(fileno,0))
 
 print(sum(parm.numel() for parm in net.parameters()))
 #optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9) #0.001
