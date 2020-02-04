@@ -31,28 +31,28 @@ trainfile_prefix = $(TrainDataDir)$(traindata_name_prefix)
 trainfile_suffix = .h5
 trainfile = $(wildcard $(trainfile_prefix)$(TrainFileNo)$(trainfile_suffix))
 #test filename
-testdata_name_prefix = zincm-problem-
+testdata_name_prefix = ztraining-
 testfile_prefix = $(TestDataDir)$(testdata_name_prefix)
 testfile_suffix = .h5
 testfile = $(wildcard $(testfile_prefix)$(TestFileNo)$(testfile_suffix))
 # PreAnalysis storage name
-PreAnalysis_prefix = $(ResultDir)Pre-Processing_Results_$(testdata_name_prefix)
-PreAnalysis_suffix = / 
+PreAnalysis_prefix = $(ResultDir)PreAnalysis_Results_$(testdata_name_prefix)
+PreAnalysis_suffix = /
 PreAnalysis_flag = /.finshed
 PreAnalysis = $(patsubst $(testfile_prefix)%$(testfile_suffix),$(PreAnalysis_prefix)%$(PreAnalysis_flag), $(testfile))
 # Result storage name
 Result_prefix = $(ResultDir)Analyzing_Results_$(testdata_name_prefix)
-Result_suffix = / 
+Result_suffix = /
 Result_flag = /.finshed
 Result = $(patsubst $(testfile_prefix)%$(testfile_suffix),$(Result_prefix)%$(Result_flag), $(testfile))
 # PreProcessing storage name
 PreStore_prefix = $(NetWorkDir)Pre-Processing_Results_$(traindata_name_prefix)
-PreStore_suffix = / 
+PreStore_suffix = /
 PreStore_flag = /.finshed
 PreStore = $(patsubst $(trainfile_prefix)%$(trainfile_suffix),$(PreStore_prefix)%$(PreStore_flag), $(trainfile))
 # Network Models storage name
 NetStore_prefix = $(NetWorkDir)Network_Models_$(traindata_name_prefix)
-NetStore_suffix = / 
+NetStore_suffix = /
 NetStore_flag = /.finshed
 NetStore = $(patsubst $(trainfile_prefix)%$(trainfile_suffix),$(NetStore_prefix)%$(NetStore_flag), $(trainfile))
 # test log name
@@ -63,8 +63,11 @@ testlog = $(patsubst $(testfile_prefix)%$(testfile_suffix),$(testlog_prefix)%$(t
 trainlog_prefix = $(traindata_name_prefix)
 trainlog_suffix = .log 
 trainlog = $(patsubst $(trainfile_prefix)%$(trainfile_suffix),$(trainlog_prefix)%$(trainlog_suffix), $(trainfile))
-# finish flag
-# finish_pro = $(patsubst $(trainfile_prefix)%$(trainfile_suffix),.finish_pro%.swp, $(trainfile))
+# Grading file name
+grade_prefix = $(Result_prefix)
+#grade_prefix = TaraZtrain
+grade_suffix = $(Result_suffix)DistanceDistribution.npy
+grade = $(patsubst $(testfile_prefix)%$(testfile_suffix),$(grade_prefix)%$(grade_suffix), $(testfile))
 
 Analysis : $(Result)
 
@@ -78,7 +81,9 @@ $(PreAnalysis_prefix)%$(PreAnalysis_flag) : $(testfile_prefix)%$(testfile_suffix
 #$(Result_prefix)%$(Result_suffix)DistanceDistribution.png: $(Result_prefix)%$(Result_suffix)DistanceDistribution.npy
 #	python3 plotDistribution.py $^ $@
 
-$(Result_prefix)%$(Result_suffix)DistanceDistribution.npy: $(Result_prefix)%$(Result_flag) $(testfile_prefix)%$(testfile_suffix)
+Grade : $(grade)
+
+$(grade_prefix)%$(grade_suffix) : $(Result_prefix)%$(Result_flag) $(testfile_prefix)%$(testfile_suffix)
 	python3 graderMain.py $(method) $(dir $<)Prediction.h5 $(word 2,$^)
 
 .PHONY: model
