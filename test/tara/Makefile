@@ -13,7 +13,7 @@ help:
 # submission file will be generated
 # subfile = Prediction_Results/Prediction_Mod_abanswer.h5
 # method name and will use in the filename prefix
-method = TaraZtrain
+method = Tara
 
 # training fileno
 TrainFileNo = *
@@ -78,8 +78,8 @@ $(PreAnalysis_prefix)%$(PreAnalysis_flag) : $(testfile_prefix)%$(testfile_suffix
 #$(Result_prefix)%$(Result_suffix)DistanceDistribution.png: $(Result_prefix)%$(Result_suffix)DistanceDistribution.npy
 #	python3 plotDistribution.py $^ $@
 
-$(Result_prefix)%$(Result_suffix)DistanceDistribution.npy: $(subfile) $(ansfile)
-	python3 graderMain.py $(fileStore)/$(method) $^ $@
+$(Result_prefix)%$(Result_suffix)DistanceDistribution.npy: $(Result_prefix)%$(Result_flag) $(testfile_prefix)%$(testfile_suffix)
+	python3 graderMain.py $(method) $(dir $<)Prediction.h5 $(word 2,$^)
 
 .PHONY: model
 model:  $(NetStore)
