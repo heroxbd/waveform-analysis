@@ -123,7 +123,7 @@ class Net_1(nn.Module):
 
 net = Net_1().cuda(device=device)
 
-if device!=torch.device('cpu') :
+if device!='cpu' :
     ## finish loading to GPU, give tag on .bulletin.swp
     os.system("echo {} {} >> .bulletin.swp".format(fileno,0))
 
