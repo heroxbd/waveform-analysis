@@ -31,9 +31,9 @@ $(xtest)/submission/total-x.h5: $(xtestseq:%=$(xtest)/unadjusted/unadjusted-x-%.
 	python3 $(xiaoPp)/integrate.py $^ --num ${xtestPl} -o $@
 $(xtest)/unadjusted/unadjusted-x-%.h5: $(xtest)/ztraining-x.h5 $(xiaoPp)/averspe.h5
 	mkdir -p $(dir $@)
-	python3 $(xiaoPp)/y-finalfit.py $< --ref $(word 2,$^) --num ${xtestPl} -o $@
+	python3 $(xiaoPp)/finalfit.py $< --ref $(word 2,$^) --num ${xtestPl} -o $@
 $(xtest)/ztraining-x.h5: $(jinpDir)/ztraining-1.h5
 	mkdir -p $(dir $@)
-	python3 test/cut_data.py $^ -o $@ -a -1 -b 4
+	python3 test/cut_data.py $^ -o $@ -a -1 -b 0
 $(xiaoPp)/averspe.h5: $(jinpDir)/ztraining-0.h5
 	python3 test/spe_get.py $^ -o $@ --num 10000 --len 80

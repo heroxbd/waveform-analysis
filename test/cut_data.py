@@ -15,12 +15,15 @@ def main(fopt, fipt, a, b):
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
         Tr = ipt['GroundTruth']
         Wf = ipt['Waveform']
-        if a < 0:
+        if a < 0 and b > 0:
             wf = Wf[Wf['EventID'] < b]
             tr = Tr[Tr['EventID'] < b]
-        elif b < 0:
+        elif b <= 0 and a >= 0:
             wf = Wf[Wf['EventID'] >= a]
             tr = Tr[Tr['EventID'] >= a]
+        elif a < 0 and b <= 0:
+            wf = Wf[:]
+            tr = Tr[:]
         else:
             wf = Wf[np.logical_and(Wf['EventID'] >= a, Wf['EventID'] < b)]
             tr = Tr[np.logical_and(Tr['EventID'] >= a, Tr['EventID'] < b)]

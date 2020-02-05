@@ -66,14 +66,14 @@ def main(fopt, fipt, single_pe_path):
                     if len(possible) != 0:
                         ans0 = np.zeros_like(possible).astype(np.float64)
                         b = np.zeros((len(possible), 2))
+                        b[:, 0] = 0.1
                         b[:, 1] = np.inf
                         mne = spemean[np.mod(nihep.reshape(len(nihep), 1) - possible.reshape(1, len(possible)), Length_pe)]
                         ans = opti.fmin_l_bfgs_b(norm_fit, ans0, args=(mne, wave[nihep]), approx_grad=True, bounds=b, maxfun=100000)
                         #ans = opti.fmin_slsqp(norm_fit, ans0, args=(mne, wave[nihep]), bounds=b, iprint=-1)
                         #ans = opti.fmin_tnc(norm_fit, ans0, args=(mne, wave[nihep]), approx_grad=True, bounds=b, messages=0, maxfun=10000)
-                        if len(ans[0]) != 0:
-                            pf = ans[0]
-                        else:
+                        pf = ans[0]
+                        if np.sum(pf <= 0.1) == len(pf):
                             flag = 0
                     else:
                         flag = 0
@@ -85,12 +85,10 @@ def main(fopt, fipt, single_pe_path):
                 t = np.where(wave == wave.min())[0][:1] - np.argmin(spemean)
                 possible = t if t[0] >= 0 else np.array([0])
                 pf = np.array([1])
-            if np.sum(pf < 0.1) != len(pf):
-                pf[pf < 0.1] = 0
-            pwe = pf[pf > 0]
+            pwe = pf[pf > 0.1]
             pwe = pwe.astype(np.float16)
             lenpf = len(pwe)
-            pet = possible[pf > 0]
+            pet = possible[pf > 0.1]
             end = start + lenpf
             dt['PETime'][start:end] = pet
             dt['Weight'][start:end] = pwe
