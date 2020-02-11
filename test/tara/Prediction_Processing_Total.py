@@ -19,6 +19,7 @@ from Cuda_Queue import *
 NetDir = sys.argv[1]
 fullfilename = sys.argv[2]
 SavePath = sys.argv[3]
+fileno=int(sys.argv[-1])
 if not os.path.exists(SavePath):
     os.makedirs(SavePath)
 
@@ -27,6 +28,7 @@ if torch.cuda.is_available():
     while not QueueUp(fileno) : continue # append fileno to waiting list (first line of .bulletin.swp)
     device=wait_in_line(fileno,1024*1024*1024*1.5)
     torch.cuda.set_device(device)
+    device=torch.device(device)
 else : 
     device = 'cpu'
     print('Using device: cpu')
@@ -61,6 +63,7 @@ for filename in fileSet :
     if "_epoch" in filename : NetLoss_reciprocal.append(1/float(matchrule.match(filename)[2]))
     else : NetLoss_reciprocal.append(0)
 net_name = fileSet[NetLoss_reciprocal.index(max(NetLoss_reciprocal))]
+embed()
 net = torch.load(NetDir+net_name,map_location=device)#Pre-trained Model Parameters
 
 # Data Settings
@@ -113,8 +116,8 @@ for k in range(len(entryList)-1) :
     # Making Dataset
     EventData = Data_set[entryList[k]:entryList[k+1]]['EventID']
     ChanData = Data_set[entryList[k]:entryList[k+1]]['ChannelID']
-    WaveData = make_wave_long_vec(Data_set[entryList[k]:entryList[k+1]]['Waveform'])
-    inputs = torch.tensor(WaveData,device=device).float()
+    WaveData = Data_set[entryList[k]:entryList[k+1]]['Waveform']
+    inputs = make_wave_long_vec(torch.tensor(WaveData,device=device))
 
     # Make mark
     print("Processing entry {0}, Progress {1}%".format(k*LoadingPeriod,k*LoadingPeriod/Total_entries*100))
@@ -159,7 +162,7 @@ for k in range(len(entryList)-1) :
 
 
 h5file.close()
-PreFile.close()
+RawDataFile.close()
 end_time=time.time()
 print("Prediction_Generated")
 
