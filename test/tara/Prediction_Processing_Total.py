@@ -17,7 +17,7 @@ from Cuda_Queue import *
 
 # Make Saving_Directory
 NetDir = sys.argv[1]
-LoadPath= sys.argv[2]
+fullfilename = sys.argv[2]
 SavePath = sys.argv[3]
 if not os.path.exists(SavePath):
     os.makedirs(SavePath)
@@ -79,13 +79,27 @@ class AnswerData(tables.IsDescription):
 # h5file = tables.open_file("./Prediction_Results/Prediction_Mod_ztraining.h5", mode="w", title="OneTonDetector")
 h5file = tables.open_file(SavePath+"Prediction.h5", mode="w", title="OneTonDetector",filters=tables.Filters(complevel=9))
 
+def make_wave_long_vec(wave_form_tensor):
+    batchsize = wave_form_tensor.size()[0]
+    # non_negative_peak + zero_base_level
+    pedestal = wave_form_tensor.mode()[0].reshape(batchsize,1)
+    shift_wave = wave_form_tensor-pedestal
+    #non_negative_peak + zero_base_level
+    is_positive_pluse = (shift_wave.max(1)[0]+shift_wave.min(1)[0])>0
+    is_positive_pluse = (is_positive_pluse.int()-1)*2+1
+    shift_wave = shift_wave * (is_positive_pluse.reshape(batchsize,1))
+    isBsln = abs(shift_wave)<3
+    pedestal = (shift_wave*isBsln).sum(1).float()/isBsln.sum(1)
+    shift_wave = shift_wave-pedestal.repeat([WindowSize,1]).permute(1,0)
+    return shift_wave
+
 # Create tables
 AnswerTable = h5file.create_table("/", "Answer", AnswerData, "Answer")
 answer = AnswerTable.row
 
 # Loading Data
-PreFile =  tables.open_file(LoadPath+"Pre.h5")
-Data_set = PreFile.root.TestDataTable
+RawDataFile =  tables.open_file(fullfilename)
+Data_set = RawDataFile.root.Waveform
 WindowSize = len(Data_set[0]['Waveform'])
 Total_entries = len(Data_set)
 print(Total_entries)
@@ -101,7 +115,7 @@ for k in range(len(entryList)-1) :
     # Making Dataset
     EventData = Data_set[entryList[k]:entryList[k+1]]['EventID']
     ChanData = Data_set[entryList[k]:entryList[k+1]]['ChannelID']
-    WaveData = Data_set[entryList[k]:entryList[k+1]]['Waveform']
+    WaveData = make_wave_long_vec(Data_set[entryList[k]:entryList[k+1]]['Waveform'])
     inputs = torch.tensor(WaveData,device=device).float()
 
     # Make mark
