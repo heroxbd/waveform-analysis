@@ -64,27 +64,28 @@ trainlog_prefix = $(traindata_name_prefix)
 trainlog_suffix = .log 
 trainlog = $(patsubst $(trainfile_prefix)%$(trainfile_suffix),$(trainlog_prefix)%$(trainlog_suffix), $(trainfile))
 # Grading file name
-grade_prefix = $(Result_prefix)
+#grade_prefix = $(Result_prefix)
 #grade_prefix = TaraZtrain
-grade_suffix = $(Result_suffix)DistanceDistribution.npy
-grade = $(patsubst $(testfile_prefix)%$(testfile_suffix),$(grade_prefix)%$(grade_suffix), $(testfile))
+#grade_suffix = $(Result_suffix)DistanceDistribution.npy
+#grade = $(patsubst $(testfile_prefix)%$(testfile_suffix),$(grade_prefix)%$(grade_suffix), $(testfile))
 
 Analysis : $(Result)
 
 $(Result_prefix)%$(Result_flag) : $(word 1,$(NetStore)) $(PreAnalysis_prefix)%$(PreAnalysis_flag)
-	python3 -u Prediction_Processing_Total.py $(dir $<) $(dir $(word 2,$^)) $(dir $@) > $(testlog_prefix)_Train-$*$(testlog_suffix) 2>&1
+	python3 -u Prediction_Processing_Total.py $(dir $<) $(dir $(word 2,$^)) $(dir $@) > $(testlog_prefix)_Analysis-$*$(testlog_suffix) 2>&1
+	touch $@
 
 $(PreAnalysis_prefix)%$(PreAnalysis_flag) : $(testfile_prefix)%$(testfile_suffix)
 	python3 -u Prediction_Pre-Processing.py $< $(dir $@) > $(testlog_prefix)_Pre-$*$(testlog_suffix) 2>&1
 	touch $@
 
-#$(Result_prefix)%$(Result_suffix)DistanceDistribution.png: $(Result_prefix)%$(Result_suffix)DistanceDistribution.npy
-#	python3 plotDistribution.py $^ $@
+Grade : $(patsubst $(Result_prefix)%$(Result_flag),$(Result_prefix)%$(Result_suffix)DistanceDistribution.png, $(Result))
 
-Grade : $(grade)
+$(Result_prefix)%$(Result_suffix)DistanceDistribution.png: $(Result_prefix)%$(Result_suffix)DistanceDistribution.npy
+	python3 plotDistribution.py $^ $@
 
-$(grade_prefix)%$(grade_suffix) : $(Result_prefix)%$(Result_flag) $(testfile_prefix)%$(testfile_suffix)
-	python3 graderMain.py $(method) $(dir $<)Prediction.h5 $(word 2,$^)
+$(Result_prefix)%$(Result_suffix)DistanceDistribution.npy : $(Result_prefix)%$(Result_flag) $(testfile_prefix)%$(testfile_suffix)
+	python3 graderMain.py $(Result_prefix)$*$(Result_suffix) $(dir $<)Prediction.h5 $(word 2,$^)
 
 .PHONY: model
 model:  $(NetStore)

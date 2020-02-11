@@ -61,9 +61,7 @@ for filename in fileSet :
     if "_epoch" in filename : NetLoss_reciprocal.append(1/float(matchrule.match(filename)[2]))
     else : NetLoss_reciprocal.append(0)
 net_name = fileSet[NetLoss_reciprocal.index(max(NetLoss_reciprocal))]
-net = torch.load(NetDir+net_name)#Pre-trained Model Parameters
-if device==torch.device('cpu') : net=net.cpu()
-else : net=net.cuda(device)
+net = torch.load(NetDir+net_name,map_location=device)#Pre-trained Model Parameters
 
 # Data Settings
 LoadingPeriod= 4000
@@ -125,9 +123,9 @@ for k in range(len(entryList)-1) :
         Timeline = torch.arange(WindowSize,device=device).repeat([len(EventData),1])
     
     if k==0 :
-        if device!=torch.device('cpu') :
-        ## finish loading to GPU, give tag on .bulletin.swp
-        os.system("echo {} {} >> .bulletin.swp".format(fileno,0))
+        if device!='cpu' :
+            ## finish loading to GPU, give tag on .bulletin.swp
+            os.system("echo {} {} >> .bulletin.swp".format(fileno,0))
     
     #calculating
     Prediction = net(inputs).data
