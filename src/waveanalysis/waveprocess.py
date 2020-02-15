@@ -3,26 +3,20 @@ import h5py
 from scipy.signal import convolve
 import tables
 import numpy as np
+
+from scipy.fftpack import fft, ifft
 class AnswerData(tables.IsDescription):
     EventID=tables.Int64Col(pos=0)
     ChannelID=tables.Int16Col(pos=1)
     PETime=tables.Int16Col(pos=2)
     Weight=tables.Float32Col(pos=3)
-def ReadWave(filename):
-    h5file=tables.open_file(filename,"r")
-    waveTable=h5file.root.Waveform
-    entry=0
-    wave=waveTable[:]['Waveform']
-    eventId=waveTable[:]['EventID']
-    channelId=waveTable[:]['ChannelID']
-    h5file.close()
-    return (wave,eventId,channelId)
-def lucyDDM_N(waveform, spe, moveDelta):
-    signal = np.zeros(waveform.shape)
-    length = waveform.shape[0]
-    spe = np.append(np.zeros((spe.shape[0]- 2*moveDelta - 1,)), np.abs(spe))
+def lucyDDM_N(waveforms, spe):
+    signal = np.zeros(waveforms.shape)
+    length = waveforms.shape[0]
+    moveDelta = 10
+    spe = np.append(np.zeros((spe.shape[0]- 2*moveDelta + 1,)), np.abs(spe))
     for i in range(length):
-        signal[i, :] = lucyDDM(waveform[i, :], spe, 100)
+        signal[i, :] = lucyDDM(waveforms[i, :], spe, 100)
         print('\rThe analysis processing:|{}>{}|{:6.2f}%'.format(((20*i)//length)*'-', (19 - (20*i)//length)*' ', 100 * ((i+1) / length)), end=''if i != length-1 else '\n') # show process bar
     return signal
 def lucyDDM(waveform, spe, iterations=50):
@@ -37,22 +31,25 @@ def lucyDDM(waveform, spe, iterations=50):
     Returns
     -------
     signal : 1d array
+    
+    References
+    ----------
+    .. [1] https://en.wikipedia.org/wiki/Richardson%E2%80%93Lucy_deconvolution
+    .. [2] https://github.com/scikit-image/scikit-image/blob/master/skimage/restoration/deconvolution.py#L329
     '''
     # abs waveform, spe
-    waveform[waveform<0] = 0.0001
-    waveform = waveform.astype(np.float)
-    spe = spe.astype(np.float)
+    waveform = np.abs(waveform)
     waveform = waveform/np.sum(spe)
     # spe = np.append(np.zeros((spe.shape[0]-1,)), np.abs(spe))
     # use the deconvlution method
-    wave_deconv = np.array(waveform) #np.full(waveform.shape, 0.5)
+    wave_deconv = np.full(waveform.shape, 0.5)
     spe_mirror = spe[::-1]
     for _ in range(iterations):
         relative_blur = waveform / convolve(wave_deconv, spe, mode='same')
         wave_deconv *= convolve(relative_blur, spe_mirror, mode='same')
         # there is no need to set the bound if the spe and the wave are all none negative 
     return wave_deconv
-def writeSubfile(truth, eventId, channelId, sigma, subfile, moveDelta):
+def writeSubfile(truth, eventId, channelId, sigma, moveDelta, subfile, mode='lack'):
     answerh5file = tables.open_file(subfile, mode='w', title="OneTonDetector")
     AnswerTable = answerh5file.create_table('/', 'Answer', AnswerData, 'Answer')
     answer = AnswerTable.row
@@ -66,7 +63,7 @@ def writeSubfile(truth, eventId, channelId, sigma, subfile, moveDelta):
         for t in waitWriteTruth:# wait for the null output process
             if truth[i, t] > np.std(truth[i, (t-5):(t+5)]):
                 answer['EventID'] = eventIndex
-                answer['ChannelID'] = pmtIndex
+                answer['ChannelID'] = channelIndex
                 answer['PETime'] = t - moveDelta
                 answer['Weight'] = truth[i, t]           
                 answer.append()
@@ -80,30 +77,49 @@ def writeSubfile(truth, eventId, channelId, sigma, subfile, moveDelta):
         print('\rThe writing processing:|{}>{}|{:6.2f}%'.format(((20*i)//length)*'-', (19 - (20*i)//length)*' ', 100 * ((i+1) / length)), end=''if i != length-1 else '\n') # show process bar
     AnswerTable.flush()
     answerh5file.close()
-if __name__ == "__main__":
-    if len(sys.argv)<2:
-        problemfile = './data/simulate/hdf5/ftraining-0.h5'
-        subfile = './data/analysis/LucyDDM_python/ftraining-0/ftraining-0Answer.h5'
-        spe = np.load('analysis/LucyDDM_python/spe.npy')
-    else:
-        problemfile = sys.argv[1]
-        subfile = sys.argv[3]
-        # spe = np.load(sys.argv[2])
-        with h5py.File(sys.argv[2]) as ipt:
-            spe = ipt['spe'][:]
-    spePart = spe[0:40].reshape((40,))
-    if spePart[0]==0:
-        spePart[0] = np.abs(spePart[1])
-    (waveform, eventId, channelId) = ReadWave(problemfile)
-    numPMT = np.max(channelId)
-    length = waveform.shape[1]
-    waveformNobase = (np.sum(waveform[:, 0:150], axis=1)/150).reshape((waveform.shape[0], 1)).repeat(length, axis=1)- waveform
-    if np.min(waveformNobase[0,:])<-10:
-        waveformNobase = -waveformNobase
-    print('Begin analyze {}'.format(problemfile))
-    moveDelta = 9
-    # move template to avoid divide 0
-    lucyTruth = lucyDDM_N(waveformNobase, spePart, moveDelta)
-    writeSubfile(lucyTruth, eventId, channelId, 1, subfile, moveDelta)
-    print('End write {}'.format(subfile))
+def xdcFTspe(spe, length, AXE=4, EXP=4):
+    stdmodel = np.where(stdmodel>0.02, spe, 0)
+    model = fft(stdmodel)
+    model = np.where(model > AXE, model - AXE, 0)
+    core = model / np.max(model)
+    for i in range(len(core)):
+        core[i] = pow(core[i], EXP)
+    model = core * np.max(model)
+    model = np.where(model > 0.02, model, 0)
+    model_raw = np.concatenate([model, np.zeros(length - len(model))])
+    model_k = fft(model_raw)
+    return model_k
+def xdcFT(waveform, spefft, KNIFE=0.05, AXE=4):
+    wf_input = np.mean(waveform[-101:-1]) - waveform
+    wf_input = np.where(wf_input > 0, wf_input, 0)
+    wf_input = np.where(wf_input > AXE, wf_input - AXE, 0)
+    wf_k = fft(wf_input)
+    spec = np.divide(wf_k, spefft)
+    pf = ifft(spec)
+    pf = pf.real
+    pf = np.where(pf >KNIFE, pf, 0)
+    lenpf = np.size(np.where(pf>0))
+    if lenpf ==0:
+        pf[300] = 1
+        lenpf = 1
+    pet = np.where(pf>0)[0]
+    pwe = pf[pf > 0]
+    pwe = pwe.astype(np.float16)
+    return pet, pwe
+def xdcFTN(waveforms, spe, eventID, channelID):
+    opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint8), ('PETime', np.uint16), ('Weight', np.float16)])
+    length = waveforms.shape[0]
+    start = 0
+    dt = np.zeros(50 * length, dtype=opdt)
+    spefft =xdcFTspe(spe, waveforms.shape[1])
+    for i in range(length):
+        pet, pwe = xdcFT(waveforms[i], spefft)
+        end = start + len(pet)
+        dt['PETime'][start:end] = pet
+        dt['Weight'][start:end] = pwe
+        dt['EventID'][start:end] = eventID[i]
+        dt['ChannelID'][start:end] = channelID[i]
+        start = end
+        print('\rThe analysis processing:|{}>{}|{:6.2f}%'.format(((20*i)//length)*'-', (19 - (20*i)//length)*' ', 100 * ((i+1) / length)), end=''if i != length-1 else '\n') # show process bar
+    return dt[0:end]
 

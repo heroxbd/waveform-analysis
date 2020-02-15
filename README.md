@@ -42,3 +42,9 @@ For each method:
 问题的解决
 + 数据放在了dataset文件夹
 + spe_get.py和wf_analysis_func.py用于生成spe
+### xdc
+
+问题：
++ arg数目
++ 训练数据集有问题，所以需要程序检查;PETime 非整数，需要检查
++ waveform数据长度需动态得到

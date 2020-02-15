@@ -84,5 +84,5 @@ if __name__ == "__main__":
     if num == 0:
         print("warning, nospe")
     else:
-        np.save('./spe.npy', speWaveSum/num)
+        # np.save('./spe.npy', speWaveSum/num)
         writeSpeH5(speWaveSum/num, outFile)
