@@ -1,6 +1,7 @@
 from IPython import embed #ipython breakpoint inserting
 import numpy as np
 import re
+from scipy.stats import mode
 
 import torch
 import torch.utils.data as Data
@@ -79,19 +80,16 @@ class AnswerData(tables.IsDescription):
 # h5file = tables.open_file("./Prediction_Results/Prediction_Mod_ztraining.h5", mode="w", title="OneTonDetector")
 h5file = tables.open_file(SavePath+"Prediction.h5", mode="w", title="OneTonDetector",filters=tables.Filters(complevel=9))
 
-def make_wave_long_vec(wave_form_tensor):
-    batchsize = wave_form_tensor.size()[0]
+def make_wave_long_vec(waveform_set):
+    batchsize = len(waveform_set)
     # non_negative_peak + zero_base_level
-    pedestal = wave_form_tensor.mode()[0].reshape(batchsize,1)
-    shift_wave = wave_form_tensor-pedestal
+    pedestal = mode(waveform_set,1)[0]
+    shift_wave = waveform_set-pedestal
     #non_negative_peak + zero_base_level
-    is_positive_pluse = (shift_wave.max(1)[0]+shift_wave.min(1)[0])>0
-    is_positive_pluse = (is_positive_pluse.int()-1)*2+1
+    is_positive_pluse = (shift_wave.max(1)+shift_wave.min(1))>0
+    is_positive_pluse = (is_positive_pluse-1)*2+1
     shift_wave = shift_wave * (is_positive_pluse.reshape(batchsize,1))
-    isBsln = abs(shift_wave)<3
-    pedestal = (shift_wave*isBsln).sum(1).float()/isBsln.sum(1)
-    shift_wave = shift_wave-pedestal.repeat([WindowSize,1]).permute(1,0)
-    return shift_wave
+    return torch.tensor(shift_wave,device=device).float()
 
 # Create tables
 AnswerTable = h5file.create_table("/", "Answer", AnswerData, "Answer")
@@ -116,7 +114,7 @@ for k in range(len(entryList)-1) :
     EventData = Data_set[entryList[k]:entryList[k+1]]['EventID']
     ChanData = Data_set[entryList[k]:entryList[k+1]]['ChannelID']
     WaveData = Data_set[entryList[k]:entryList[k+1]]['Waveform']
-    inputs = make_wave_long_vec(torch.tensor(WaveData,device=device))
+    inputs = make_wave_long_vec(WaveData)
 
     # Make mark
     print("Processing entry {0}, Progress {1}%".format(k*LoadingPeriod,k*LoadingPeriod/Total_entries*100))
