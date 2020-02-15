@@ -7,7 +7,7 @@
 *.zip
 *.swp
 *.swo
-*.log
+*log*
 *.out
 *.ipynb
 .vscode/
