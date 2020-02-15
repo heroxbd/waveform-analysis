@@ -1,7 +1,6 @@
 from IPython import embed #ipython breakpoint inserting
 import numpy as np
 import re
-from scipy.stats import mode
 
 import torch
 import torch.utils.data as Data
@@ -80,16 +79,14 @@ class AnswerData(tables.IsDescription):
 # h5file = tables.open_file("./Prediction_Results/Prediction_Mod_ztraining.h5", mode="w", title="OneTonDetector")
 h5file = tables.open_file(SavePath+"Prediction.h5", mode="w", title="OneTonDetector",filters=tables.Filters(complevel=9))
 
-def make_wave_long_vec(waveform_set):
-    batchsize = len(waveform_set)
+def make_wave_long_vec(wave_form):
     # non_negative_peak + zero_base_level
-    pedestal = mode(waveform_set,1)[0]
-    shift_wave = waveform_set-pedestal
+    shift = np.argmax(np.bincount(wave_form)) #make baseline shifts, normally 972
+    shift = np.mean(wave_form[np.abs(wave_form-shift)<3])
+    shift_wave=np.array(wave_form-shift,dtype=np.int16)
     #non_negative_peak + zero_base_level
-    is_positive_pluse = (shift_wave.max(1)+shift_wave.min(1))>0
-    is_positive_pluse = (is_positive_pluse-1)*2+1
-    shift_wave = shift_wave * (is_positive_pluse.reshape(batchsize,1))
-    return torch.tensor(shift_wave,device=device).float()
+    if np.max(shift_wave) >= -np.min(shift_wave) : return shift_wave
+    if np.max(shift_wave) < -np.min(shift_wave) : return -shift_wave
 
 # Create tables
 AnswerTable = h5file.create_table("/", "Answer", AnswerData, "Answer")
@@ -114,7 +111,9 @@ for k in range(len(entryList)-1) :
     EventData = Data_set[entryList[k]:entryList[k+1]]['EventID']
     ChanData = Data_set[entryList[k]:entryList[k+1]]['ChannelID']
     WaveData = Data_set[entryList[k]:entryList[k+1]]['Waveform']
-    inputs = make_wave_long_vec(WaveData)
+    for i in range(len(WaveData)) :
+        WaveData[i] = make_wave_long_vec(WaveData[i])
+    inputs = torch.tensor(WaveData,device=device).float()
 
     # Make mark
     print("Processing entry {0}, Progress {1}%".format(k*LoadingPeriod,k*LoadingPeriod/Total_entries*100))
