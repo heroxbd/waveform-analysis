@@ -63,7 +63,6 @@ for filename in fileSet :
     if "_epoch" in filename : NetLoss_reciprocal.append(1/float(matchrule.match(filename)[2]))
     else : NetLoss_reciprocal.append(0)
 net_name = fileSet[NetLoss_reciprocal.index(max(NetLoss_reciprocal))]
-embed()
 net = torch.load(NetDir+net_name,map_location=device)#Pre-trained Model Parameters
 
 # Data Settings
