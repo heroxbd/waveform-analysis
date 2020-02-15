@@ -7,6 +7,7 @@ output = sys.argv[2]
 method = output.split('Distance')[0]
 
 distanceDistri = np.load(filename)
+distanceDistri=distanceDistri[distanceDistri!=0]
 
 tmax=max(distanceDistri)
 tmin=min(distanceDistri)
