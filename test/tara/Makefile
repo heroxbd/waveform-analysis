@@ -41,7 +41,6 @@ $(Result_prefix)%/.Analyzing_finished : $(word 1,$(NetStore)) $(testfile_prefix)
 	touch $@
 
 Grade : $(patsubst $(testfile_prefix)%.h5,$(Result_prefix)%/DistanceDistribution.png,$(testfile))
-	echo $^
 
 $(Result_prefix)%/DistanceDistribution.png: $(Result_prefix)%/DistanceDistribution.npy
 	python3 plotDistribution.py $^ $@
