@@ -6,7 +6,6 @@ usage : help
 
 help:
 	@cat ./mannual.txt
-method = Tara
 
 # training fileno
 TrainFileNo = 0
@@ -33,6 +32,8 @@ Result = $(patsubst $(testfile_prefix)%.h5,$(Result_prefix)%/.Analyzing_finished
 NetStore_prefix = $(NetStorageDir)Network_Models_$(traindata_name_prefix)
 NetStore = $(patsubst $(trainfile_prefix)%.h5,$(NetStore_prefix)%/.Taining_finished, $(trainfile))
 
+.PHONY : Grade Analysis model .Bulletin
+
 Analysis : $(Result)
 
 $(Result_prefix)%/.Analyzing_finished : $(word 1,$(NetStore)) $(testfile_prefix)%.h5 .Bulletin
@@ -48,7 +49,6 @@ $(Result_prefix)%/DistanceDistribution.png: $(Result_prefix)%/DistanceDistributi
 $(Result_prefix)%/DistanceDistribution.npy : $(Result_prefix)%/.Analyzing_finished $(testfile_prefix)%.h5
 	python3 graderMain.py $(Result_prefix)$*/ $(dir $<)Prediction.h5 $(word 2,$^)
 
-.PHONY: model
 model:  $(NetStore)
 
 $(NetStore_prefix)%/.PreProcessing_finished : $(trainfile_prefix)%.h5
