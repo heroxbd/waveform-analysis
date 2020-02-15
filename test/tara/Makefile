@@ -1,97 +1,61 @@
 .PHONY : help 
 
+usage : help
+
 .PHONY : usage
 
 help:
 	@cat ./mannual.txt
-# answer filename
-# ansfile = ../../abanswer.h5
-# problem filename
-# problemfile = ../../abtest.h5
-# name of the directory will be made to store the result
-# fileStore = abtraining-9
-# submission file will be generated
-# subfile = Prediction_Results/Prediction_Mod_abanswer.h5
-# method name and will use in the filename prefix
 method = Tara
 
 # training fileno
-TrainFileNo = *
+TrainFileNo = 0
 # training fileno
 TestFileNo = *
 # max training set
 MaxSet = 100000
 TrainDataDir = dataset/jinp/
-NetWorkDir = $(TrainDataDir)
+NetStorageDir = ./
 TestDataDir = dataset/jinp/
-ResultDir = $(TestDataDir)
+ResultStorageDir = ./
 #training filename
 traindata_name_prefix = ztraining-
 trainfile_prefix = $(TrainDataDir)$(traindata_name_prefix)
-trainfile_suffix = .h5
-trainfile = $(wildcard $(trainfile_prefix)$(TrainFileNo)$(trainfile_suffix))
+trainfile = $(wildcard $(trainfile_prefix)$(TrainFileNo).h5)
 #test filename
 testdata_name_prefix = ztraining-
 testfile_prefix = $(TestDataDir)$(testdata_name_prefix)
-testfile_suffix = .h5
-testfile = $(wildcard $(testfile_prefix)$(TestFileNo)$(testfile_suffix))
-# PreAnalysis storage name
-PreAnalysis_prefix = $(ResultDir)PreAnalysis_Results_$(testdata_name_prefix)
-PreAnalysis_suffix = /
-PreAnalysis_flag = /.finshed
-PreAnalysis = $(patsubst $(testfile_prefix)%$(testfile_suffix),$(PreAnalysis_prefix)%$(PreAnalysis_flag), $(testfile))
+testfile = $(wildcard $(testfile_prefix)$(TestFileNo).h5)
 # Result storage name
-Result_prefix = $(ResultDir)Analyzing_Results_$(testdata_name_prefix)
-Result_suffix = /
-Result_flag = /.finshed
-Result = $(patsubst $(testfile_prefix)%$(testfile_suffix),$(Result_prefix)%$(Result_flag), $(testfile))
-# PreProcessing storage name
-PreStore_prefix = $(NetWorkDir)Pre-Processing_Results_$(traindata_name_prefix)
-PreStore_suffix = /
-PreStore_flag = /.finshed
-PreStore = $(patsubst $(trainfile_prefix)%$(trainfile_suffix),$(PreStore_prefix)%$(PreStore_flag), $(trainfile))
+Result_prefix = $(ResultStorageDir)Analyzing_Results_$(testdata_name_prefix)
+Result = $(patsubst $(testfile_prefix)%.h5,$(Result_prefix)%/.finished, $(testfile))
 # Network Models storage name
-NetStore_prefix = $(NetWorkDir)Network_Models_$(traindata_name_prefix)
-NetStore_suffix = /
-NetStore_flag = /.finshed
-NetStore = $(patsubst $(trainfile_prefix)%$(trainfile_suffix),$(NetStore_prefix)%$(NetStore_flag), $(trainfile))
-# test log name
-testlog_prefix = $(testdata_name_prefix)
-testlog_suffix = .log 
-testlog = $(patsubst $(testfile_prefix)%$(testfile_suffix),$(testlog_prefix)%$(testlog_suffix), $(testfile))
-# training log name
-trainlog_prefix = $(traindata_name_prefix)
-trainlog_suffix = .log 
-trainlog = $(patsubst $(trainfile_prefix)%$(trainfile_suffix),$(trainlog_prefix)%$(trainlog_suffix), $(trainfile))
-# Grading file name
-#grade_prefix = $(Result_prefix)
-#grade_prefix = TaraZtrain
-#grade_suffix = $(Result_suffix)DistanceDistribution.npy
-#grade = $(patsubst $(testfile_prefix)%$(testfile_suffix),$(grade_prefix)%$(grade_suffix), $(testfile))
+NetStore_prefix = $(NetStorageDir)Network_Models_$(traindata_name_prefix)
+NetStore = $(patsubst $(trainfile_prefix)%.h5,$(NetStore_prefix)%/.Taining_finished, $(trainfile))
 
 Analysis : $(Result)
 
-$(Result_prefix)%$(Result_flag) : $(word 1,$(NetStore)) $(testfile_prefix)%$(testfile_suffix)
-	python3 -u Prediction_Processing_Total.py $(dir $<) $(word 2,$^) $(dir $@) $* > $(testlog_prefix)_Analysis-$*$(testlog_suffix) 2>&1
+$(Result_prefix)%/.Predicting_finished : $(word 1,$(NetStore)) $(testfile_prefix)%.h5
+	python3 -u Prediction_Processing_Total.py $(dir $<) $(word 2,$^) $(dir $@) $* > $(dir $@)/Analysis.log 2>&1
 	touch $@
 
-Grade : $(patsubst $(Result_prefix)%$(Result_flag),$(Result_prefix)%$(Result_suffix)DistanceDistribution.png, $(Result))
+Grade : $(patsubst $(testfile_prefix)%.h5,$(Result_prefix)%/DistanceDistribution.png,$(testfile))
 
-$(Result_prefix)%$(Result_suffix)DistanceDistribution.png: $(Result_prefix)%$(Result_suffix)DistanceDistribution.npy
+$(Result_prefix)%/DistanceDistribution.png: $(Result_prefix)%/DistanceDistribution.npy
 	python3 plotDistribution.py $^ $@
 
-$(Result_prefix)%$(Result_suffix)DistanceDistribution.npy : $(Result_prefix)%$(Result_flag) $(testfile_prefix)%$(testfile_suffix)
-	python3 graderMain.py $(Result_prefix)$*$(Result_suffix) $(dir $<)Prediction.h5 $(word 2,$^)
+$(Result_prefix)%/DistanceDistribution.npy : $(Result_prefix)%/.Predicting_finished $(testfile_prefix)%.h5
+	python3 graderMain.py $(Result_prefix)$*/ $(dir $<)Prediction.h5 $(word 2,$^)
 
 .PHONY: model
 model:  $(NetStore)
 
-$(PreStore_prefix)%$(PreStore_flag) : $(trainfile_prefix)%$(trainfile_suffix)
-	python3 -u Data_Pre-Processing.py $< $(dir $@) $(MaxSet) > $(trainlog_prefix)_Pre-$*$(trainlog_suffix) 2>&1
+$(NetStore_prefix)%/.PreProcessing_finished : $(trainfile_prefix)%.h5
+	python3 -u Data_Pre-Processing.py $< $(dir $@) $(MaxSet) > $(dir $@)/PreProcess.log 2>&1
 	touch $@
 
-$(NetStore_prefix)%$(NetStore_flag) : $(PreStore_prefix)%$(PreStore_flag) .Bulletin 
-	python3 -u Data_Processing.py $(dir $@) $(dir $<) $(MaxSet) $* > $(trainlog_prefix)_Train-$*$(trainlog_suffix) 2>&1
+$(NetStore_prefix)%/.Taining_finished : $(NetStore_prefix)%/.PreProcessing_finished .Bulletin 
+	python3 -u Data_Processing.py $(dir $@) $(dir $<) $(MaxSet) $* > $(dir $@)/Train.log  2>&1
 	touch $@
 
 .Bulletin : 
@@ -100,14 +64,3 @@ $(NetStore_prefix)%$(NetStore_flag) : $(PreStore_prefix)%$(PreStore_flag) .Bulle
 .DELETE_ON_ERROR: 
 
 .SECONDARY:
-
-# .finish%.swp :
-# 	@touch $@
-
-#refresh_PreStore : 
-#	@touch $(patsubst $(trainlog_prefix)%$(trainlog_suffix),.finish_pre%.swp, $(trainlog))
-#	@touch $(PreStore)
-#
-#refresh_NetStore : 
-#	@touch $(patsubst $(trainlog_prefix)%$(trainlog_suffix),.finish_pro%.swp, $(trainlog))
-#	@touch $(NetStore)
