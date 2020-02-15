@@ -14,7 +14,8 @@
 dataset/
 Finished_Models/
 Back/
-test/tara/Network_Models*/
+Network_Models*/
+Analyzing_Results*/
 *.npz
 .DS_Store
 __pycache__/
