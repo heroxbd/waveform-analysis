@@ -1,0 +1,21 @@
+run "make" or "make help" or "make usage" to view this mannual.
+Usage:
+For training network model : make model
+    make [TrainFileNo=fileno] [TrainDataDir=/path/to/traindata/dir/] [traindata_name_prefix=prefix] [NetStorageDir=/path/to/network/storage/dir] [MaxSet=max_train_set_number] model
+        traindata_name_prefix: traindata file name shoud obey "{prefix}*.h5", for example abtraining-0.h5, "abtraining-" is the prefix
+        TrainFileNo: "[x,y,...]" for example, [0] or [0,1,3] or [2,3,4,5] or simply [`seq -s , 2 5`]. Default * (match for all existing fileno).
+        TrainDataDir: path to traindata directory. The "/" at the end is essential.
+        max_train_set_number: maxium waveform training set number. If set to 0, all waveform will be used. Default 100000.
+        NetStorageWorkDir: path to PreProcess traindata and network storage directory. The "/" at the end is essential.
+	example: make FileNo=[`seq -s , 0 7`] TrainDataDir=dataset/jinp/
+    traindata_name_prefix=abtraining- model
+
+For using network model to conduct waveform analysis : make Analysis
+    make [TestFileNo=fileno] [TestDataDir=/path/to/traindata/dir/] [testdata_name_prefix=prefix] [NetStorageStore=/path/to/network/dir] [ResultStorageDir=/path/to/result/dir] Analysis
+        testdata_name_prefix: testdata file name shoud obey "{prefix}*.h5", for example zinc-problem-0.h5, "zinc-problem-" is the prefix
+        TestFileNo: "[x,y,...]" for example, [0] or [0,1,3] or [2,3,4,5] or simply [`seq -s , 2 5`]. Default * (match for all existing fileno).
+        TestDataDir: path to testdata directory. The "/" at the end is essential.
+        NetStore: path to trained network storage directory, typically have a name contains "Network_Models_" and traindata_name_prefix, and the dir contains network parameters file "_epoch*_loss*.npz" and a .Training_finished file. The "/" at the end is essential.
+        ResultDir: path to PreProcess testdata and prediction result storage directory. The "/" at the end is essential.
+
+Please make sure you have rwx access to current dir, read access to TrainDataDir, and rw access to NetWorkDir and ResultDir!
