@@ -19,7 +19,7 @@ from Cuda_Queue import *
 NetDir = sys.argv[1]
 fullfilename = sys.argv[2]
 SavePath = sys.argv[3]
-fileno=int(sys.argv[-1])
+fileno=-int(sys.argv[-1])-1
 if not os.path.exists(SavePath):
     os.makedirs(SavePath)
 
