@@ -15,18 +15,29 @@ def main(fopt, fipt, a, b):
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
         Tr = ipt['GroundTruth']
         Wf = ipt['Waveform']
+        Chnum = len(np.unique(Wf['ChannelID']))
+        Wf_num = Wf['EventID'] * Chnum + Wf['ChannelID']
+        Wf_num = Wf_num - Wf_num[0]
+        Tr_num = Tr['EventID'] * Chnum + Tr['ChannelID']
+        Tr_num = Tr_num - Tr_num[0]
+        if b > len(Wf_num):
+            print('b exceeded Waveform_num which is {}'.format(len(Wf_num)))
         if a < 0 and b > 0:
-            wf = Wf[Wf['EventID'] < b]
-            tr = Tr[Tr['EventID'] < b]
+            Nb = Wf_num[b]
+            wf = Wf[Wf_num < Nb]
+            tr = Tr[Tr_num < Nb]
         elif b <= 0 and a >= 0:
-            wf = Wf[Wf['EventID'] >= a]
-            tr = Tr[Tr['EventID'] >= a]
+            Na = Wf_num[a]
+            wf = Wf[Wf_num >= Na]
+            tr = Tr[Tr_num >= Na]
         elif a < 0 and b <= 0:
             wf = Wf[:]
             tr = Tr[:]
         else:
-            wf = Wf[np.logical_and(Wf['EventID'] >= a, Wf['EventID'] < b)]
-            tr = Tr[np.logical_and(Tr['EventID'] >= a, Tr['EventID'] < b)]
+            Na = Wf_num[a]
+            Nb = Wf_num[b]
+            wf = Wf[np.logical_and(Wf_num >= Na, Wf_num < Nb)]
+            tr = Tr[np.logical_and(Tr_num >= Na, Tr_num < Nb)]
     with h5py.File(fopt, 'w') as opt:
         dset = opt.create_dataset('GroundTruth', data=tr, compression='gzip')
         dset = opt.create_dataset('Waveform', data=wf, compression='gzip')

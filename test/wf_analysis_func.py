@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 import numpy as np
+from scipy import stats
 import matplotlib.pyplot as plt
 import h5py
 
@@ -59,3 +60,8 @@ def speplot(dt):
     plt.xlabel('mV')
     #plt.savefig('specumu.png')
     plt.close()
+
+def find_base(waveform):
+    m = stats.mode(waveform)[0][0]
+    base_line = np.mean(waveform[np.logical_and(waveform < m + 4, waveform > m - 4)])
+    return base_line

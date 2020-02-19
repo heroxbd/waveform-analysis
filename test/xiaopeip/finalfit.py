@@ -40,15 +40,18 @@ def main(fopt, fipt, single_pe_path):
             ent = ent[num*lenfr:(num+1)*lenfr]
 
         Length_pe = len(ent[0]['Waveform'])
-        spemean = np.concatenate([spemean, np.zeros(Length_pe - len(spemean))])
+        if Length_pe >= len(spemean):
+            spemean = np.concatenate([spemean, np.zeros(Length_pe - len(spemean))])
+        else:
+            print('Single PE too long which is {}'.format(len(spemean)))
         l = len(ent)
         print('{} waveforms will be computed'.format(l))
-        dt = np.zeros(l * 1029, dtype=opdt)
+        dt = np.zeros(l * (Length_pe//5), dtype=opdt)
         start = 0
         end = 0
         for i in range(l):
             wf_input = ent[i]['Waveform']
-            wave = wf_input - np.mean(wf_input[900:1000]) # optimization point
+            wave = wf_input - wfaf.find_base(wf_input) # optimization point
             lowp = np.argwhere(wave < -6.5).flatten()
             flag = 1
             lowp = lowp[np.logical_and(lowp > 1, lowp < Length_pe-1)]
