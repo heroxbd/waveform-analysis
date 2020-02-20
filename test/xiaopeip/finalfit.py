@@ -28,7 +28,7 @@ def norm_fit(x, M, p):
 def main(fopt, fipt, single_pe_path):
     epulse = wfaf.estipulse(fipt)
     spemean = wfaf.generate_model(single_pe_path, epulse)
-    opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint8), ('PETime', np.uint16), ('Weight', np.float16)])
+    opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PETime', np.uint16), ('Weight', np.float16)])
 
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
         ent = ipt['Waveform']

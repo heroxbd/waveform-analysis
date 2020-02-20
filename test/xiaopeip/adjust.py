@@ -15,7 +15,7 @@ if args.print:
     sys.stdout = None
 
 def main(fopt, fipt):
-    opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint8), ('PETime', np.uint16), ('Weight', np.uint8)])
+    opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PETime', np.uint16), ('Weight', np.uint8)])
     idt = np.dtype([('PETime', np.int16), ('Weight', np.float16), ('Wgt_b', np.uint8)])
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
         N = len(ipt['Answer'])

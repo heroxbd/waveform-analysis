@@ -24,7 +24,7 @@ def wpdistance(df_ans, df_sub):
     e_ans, i_ans = np.unique(e_ans, return_index=True)
     gl = len(e_ans)
 
-    opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint8), ('PEnum', np.uint16), ('wdist', np.float32), ('pdist', np.float32)])
+    opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PEnum', np.uint16), ('wdist', np.float32), ('pdist', np.float32)])
     dt = np.zeros(gl, dtype=opdt)
 
     e_sub = df_sub['EventID']*Chnum + df_sub['ChannelID']

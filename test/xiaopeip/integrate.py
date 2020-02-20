@@ -17,7 +17,7 @@ if args.print:
     sys.stdout = None
 
 def main(unad_path, fopt, upnum):
-    opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint8), ('PETime', np.uint16), ('Weight', np.float16)])
+    opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PETime', np.uint16), ('Weight', np.float16)])
     N = totlen(unad_path[0], upnum)
     dt = np.zeros(N, dtype=opdt)
     num = 0
