@@ -20,15 +20,12 @@ import tables
 
 import pytorch_stats_loss as stats_loss
 
-from Cuda_Queue import *
-
 BATCHSIZE=64
 fileno=int(sys.argv[-1])
 
 #detecting cuda device and wait in line
 if torch.cuda.is_available():
-    while not QueueUp(fileno) : continue # append fileno to waiting list (first line of .bulletin.swp)
-    device=wait_in_line(fileno,1024*1024*1024*1.5)
+    device=0
     torch.cuda.set_device(device)
 else : 
     device = 'cpu'

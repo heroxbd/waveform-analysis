@@ -13,7 +13,6 @@ import os,sys
 import time
 
 import tables
-from Cuda_Queue import *
 
 # Make Saving_Directory
 NetDir = sys.argv[1]
@@ -25,8 +24,7 @@ if not os.path.exists(SavePath):
 
 #detecting cuda device and wait in line
 if torch.cuda.is_available():
-    while not QueueUp(fileno) : continue # append fileno to waiting list (first line of .bulletin.swp)
-    device=wait_in_line(fileno,1024*1024*1024*1.5)
+    device=0
     torch.cuda.set_device(device)
     device=torch.device(device)
 else : 
