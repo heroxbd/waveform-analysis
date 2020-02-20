@@ -21,7 +21,7 @@ if args.print:
     sys.stdout = None
 
 def generate_standard(h5_path, single_pe_path):
-    npdt = np.dtype([('TrainSet', np.uint8), ('EventID', np.uint32), ('ChannelID', np.uint8), ('speWf', np.uint16, L)])  # set datatype
+    npdt = np.dtype([('TrainSet', np.uint8), ('EventID', np.uint32), ('ChannelID', np.uint32), ('speWf', np.uint16, L)])  # set datatype
     dt = np.zeros(N, dtype=npdt)
     num = 0
 

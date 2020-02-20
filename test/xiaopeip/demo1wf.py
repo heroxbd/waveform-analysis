@@ -25,36 +25,38 @@ def norm_fit(x, M, p):
     return np.linalg.norm(p - np.matmul(M, x))
 
 def main():
-    epulse = -1
+    epulse = wfaf.estipulse(args.ipt)
     spemean = wfaf.generate_model(single_pe_path, epulse)
     print('spemean is {}'.format(spemean))
-    opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint8), ('PETime', np.uint16), ('Weight', np.float16)])
-    dt = np.zeros(1029, dtype=opdt)
+    opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PETime', np.uint16), ('Weight', np.float16)])
     with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as ipt:
         ent = ipt['Waveform']
-        Chnum = len(np.unique(ent[0:args.ent*30]['ChannelID']))
+        Length_pe = len(ent[0]['Waveform'])
+        dt = np.zeros(Length_pe, dtype=opdt)
+        Chnum = len(np.unique(ent['ChannelID']))
         a1 = max(args.ent*Chnum-10000, 0)
         a2 = min(args.ent*Chnum+10000, len(ent))
         ent = ent[a1:a2]
-        Length_pe = len(ent[0]['Waveform'])
         spemean = np.concatenate([spemean, np.zeros(Length_pe - len(spemean))])
+        spemean = -1 * epulse * spemean
         i = np.where(np.logical_and(ent['EventID'] == args.ent, ent['ChannelID'] == args.cha))[0][0]
         wf_input = ent[i]['Waveform']
+        wf_input = -1 * epulse * wf_input
         #plt.plot(wf_input)
-        wave = wf_input - np.mean(wf_input[900:1000])
-        lowp = np.argwhere(wave < -6.5).flatten()
+        wave = wf_input - wfaf.find_base(wf_input)
+        lowp = np.argwhere(wave < -40).flatten()
         flag = 1
         lowp = lowp[np.logical_and(lowp > 1, lowp < Length_pe-1)]
         if len(lowp) != 0:
             panel = np.zeros(Length_pe)
             for j in lowp:
-                head = j-7 if j-7 > 0 else 0
-                tail = j+15+1 if j+15+1 <= Length_pe else Length_pe
+                head = j-10 if j-10 > 0 else 0
+                tail = j+20+1 if j+20+1 <= Length_pe else Length_pe
                 panel[head:tail] = 1
             nihep = np.argwhere(panel == 1).flatten()
             xuhao = np.argwhere(wave[lowp+1]-wave[lowp]-wave[lowp-1]+wave[lowp-2] > 1.5).flatten()
             if len(xuhao) != 0:
-                possible = np.unique(np.concatenate((lowp[xuhao]-10, lowp[xuhao]-9, lowp[xuhao]-8,lowp[xuhao]-7)))
+                possible = np.unique(np.concatenate((lowp[xuhao]-11, lowp[xuhao]-10, lowp[xuhao]-9, lowp[xuhao]-8,lowp[xuhao]-7)))
                 possible = possible[np.logical_and(possible >= 0, possible < Length_pe)]
                 if len(possible) != 0:
                     ans0 = np.zeros_like(possible).astype(np.float64)
@@ -97,7 +99,7 @@ def main():
             with h5py.File(fopt, 'w') as opt:
                 dset = opt.create_dataset('Answer', data=dt, compression='gzip')
         tth = ipt['GroundTruth']
-        b = min(args.ent*30*30, len(tth))
+        b = min((args.ent+1)*30*Chnum, len(tth))
         tth = tth[0:b]
         j = np.where(np.logical_and(tth['EventID'] == args.ent, tth['ChannelID'] == args.cha))
         wdist = scipy.stats.wasserstein_distance(tth[j]['PETime'], pet, v_weights=pwe)

@@ -42,6 +42,7 @@ def main(fopt, fipt, single_pe_path):
         Length_pe = len(ent[0]['Waveform'])
         if Length_pe >= len(spemean):
             spemean = np.concatenate([spemean, np.zeros(Length_pe - len(spemean))])
+            spemean = -1 * epulse * spemean
         else:
             print('Single PE too long which is {}'.format(len(spemean)))
         l = len(ent)
@@ -51,20 +52,21 @@ def main(fopt, fipt, single_pe_path):
         end = 0
         for i in range(l):
             wf_input = ent[i]['Waveform']
-            wave = wf_input - wfaf.find_base(wf_input) # optimization point
-            lowp = np.argwhere(wave < -6.5).flatten()
+            wf_input = -1 * epulse * wf_input
+            wave = wf_input - wfaf.find_base(wf_input)
+            lowp = np.argwhere(wave < -40).flatten()
             flag = 1
             lowp = lowp[np.logical_and(lowp > 1, lowp < Length_pe-1)]
             if len(lowp) != 0:
                 panel = np.zeros(Length_pe)
                 for j in lowp:
-                    head = j-7 if j-7 > 0 else 0
-                    tail = j+15+1 if j+15+1 <= Length_pe else Length_pe
+                    head = j-10 if j-10 > 0 else 0
+                    tail = j+20+1 if j+20+1 <= Length_pe else Length_pe
                     panel[head:tail] = 1
                 nihep = np.argwhere(panel == 1).flatten()
                 xuhao = np.argwhere(wave[lowp+1]-wave[lowp]-wave[lowp-1]+wave[lowp-2] > 1.5).flatten()
                 if len(xuhao) != 0:
-                    possible = np.unique(np.concatenate((lowp[xuhao]-10,lowp[xuhao]-9,lowp[xuhao]-8)))
+                    possible = np.unique(np.concatenate((lowp[xuhao]-11, lowp[xuhao]-10, lowp[xuhao]-9, lowp[xuhao]-8)))
                     possible = possible[np.logical_and(possible>=0, possible<Length_pe)]
                     if len(possible) != 0:
                         ans0 = np.zeros_like(possible).astype(np.float64)
