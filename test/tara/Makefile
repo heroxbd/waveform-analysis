@@ -13,9 +13,9 @@ TrainFileNo = 0
 TestFileNo = *
 # max training set
 MaxSet = 100000
-TrainDataDir = dataset/jinp/
+TrainDataDir = ../../dataset/jinp/
 NetStorageDir = ./
-TestDataDir = dataset/jinp/
+TestDataDir = $(TrainDataDir)
 ResultStorageDir = ./
 #training filename
 traindata_name_prefix = ztraining-
