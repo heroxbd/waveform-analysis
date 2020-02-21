@@ -29,12 +29,8 @@ def main(fopt, fipt, single_pe_path):
     epulse = wfaf.estipulse(fipt)
     spemean = wfaf.generate_model(single_pe_path, epulse)
     spemean = -1 * epulse * spemean
-    thres = -6.5
-    p_len = np.sum(spemean <= thres)
-    peak_c = np.argmin(spemean)
-    zero_l = np.where(spemean[peak_c:] == 0)[0][0] + peak_c
-    mar_l = np.sum(spemean[:peak_c] > thres) + 2
-    mar_r = np.sum(spemean[peak_c:zero_l] > thres) + 2
+    peak_c, zero_l, mar_l, mar_r, thres = wfaf.pre_analysis(fipt, epulse, spemean)
+
     opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PETime', np.uint16), ('Weight', np.float16)])
 
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
@@ -57,7 +53,9 @@ def main(fopt, fipt, single_pe_path):
         for i in range(l):
             wf_input = ent[i]['Waveform']
             wf_input = -1 * epulse * wf_input
-            wave = wf_input - wfaf.find_base(wf_input)
+            #wave = wf_input - wfaf.find_base_fast(wf_input)
+            wave = wf_input - wfaf.find_base(wf_input, zero_l)
+            lowp = np.argwhere(wfaf.vali_base(wave, zero_l) == 1)
             lowp = np.argwhere(wave < thres).flatten()
             flag = 1
             lowp = lowp[np.logical_and(lowp > 1, lowp < Length_pe-1)]

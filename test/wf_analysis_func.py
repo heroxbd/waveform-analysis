@@ -61,7 +61,68 @@ def speplot(dt):
     #plt.savefig('specumu.png')
     plt.close()
 
-def find_base(waveform):
+def pre_analysis(h5_path, epulse, spemean):
+    peak_c = np.argmin(spemean)
+    zero_l = np.where(spemean[peak_c:] == 0)[0][0] + peak_c
+    N = 1000
+    a = 0
+    b = 0
+    dt = np.zeros(N).astype(np.float16)
+    with h5py.File(h5_path, 'r', libver='latest', swmr=True) as ztrfile:
+        Wf = ztrfile['Waveform']['Waveform']
+        for i in range(len(Wf)):
+            wave = -1*epulse*Wf[i]
+            vali = vali_base(wave, zero_l)
+            b = a + np.sum(vali == 0)
+            if b >= N:
+                dt[a:] = wave[vali==0][:N-a]-np.mean(wave[vali==0])
+                break
+            else:
+                dt[a:b] = wave[vali==0]-np.mean(wave[vali==0])
+    arr_std = np.std(dt, ddof=1)
+    thres = 2*arr_std
+    mar_l = np.sum(spemean[:peak_c] > thres) + 2
+    mar_r = np.sum(spemean[peak_c:zero_l] > thres) + 2
+    return peak_c, zero_l, mar_l, mar_r, thres
+
+def vali_base(waveform, zero_l):
+    m_l = zero_l*2//3
+    m = stats.mode(waveform)[0][0]
+    vali = np.where(np.abs(waveform - m)<2, 1, 0)
+    pos = omi2pos(vali)
+    pos = rm_frag(pos, m_l)
+    vali = pos2omi(pos, len(waveform))
+    return vali
+
+def find_base(waveform, zero_l):
+    vali = vali_base(waveform, zero_l)
+    base_line = np.mean(waveform[vali == 0])
+    return base_line
+
+def find_base_fast(waveform):
     m = stats.mode(waveform)[0][0]
     base_line = np.mean(waveform[np.logical_and(waveform < m + 4, waveform > m - 4)])
     return base_line
+
+def omi2pos(vali):
+    vali_t = np.concatenate((np.array([0]), vali, np.array([0])), axis=0)
+    dval = np.diff(vali_t)
+    pos_begin = np.argwhere(dval == 1).flatten()
+    pos_end = np.argwhere(dval == -1).flatten()
+    pos = np.concatenate((pos_begin.reshape(len(pos_begin), 1), pos_end.reshape(len(pos_end), 1)), axis = 1).astype(np.int16)
+    return pos
+
+def pos2omi(pos, len_n):
+    vali = np.zeros(len_n).astype(np.int16)
+    for i in range(len(pos)):
+        vali[pos[i][0]:pos[i][1]] = 1
+    return vali
+
+def rm_frag(pos, m_l):
+    n = len(pos)
+    pos_t = []
+    for i in range(n):
+        if pos[i][1] - pos[i][0] > m_l:
+            pos_t.append(pos[i])
+    pos = np.array(pos_t)
+    return pos
