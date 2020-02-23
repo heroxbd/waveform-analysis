@@ -35,7 +35,7 @@ def totlen(unad_path, num):
     n = min(len(unad_path), 3)
     for i in range(n):
         with h5py.File(unad_path[i], 'r', libver='latest', swmr=True) as up:
-            totl = totl + len(up['Answer']['PETime']) * (num+2)
+            totl = totl + len(up['Answer']['PETime']) * ((num+1)*3//2)
     totl = totl // n
     return totl
 

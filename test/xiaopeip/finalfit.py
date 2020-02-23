@@ -72,12 +72,12 @@ def main(fopt, fipt, single_pe_path):
                     possible = possible[np.logical_and(possible>=0, possible<Length_pe)]
                     if len(possible) != 0:
                         ans0 = np.zeros_like(possible).astype(np.float64)
-                        b = np.zeros((len(possible), 2))
+                        b = np.zeros((len(possible), 2)).astype(np.float64)
                         b[:, 1] = np.inf
                         mne = spemean[np.mod(nihep.reshape(len(nihep), 1) - possible.reshape(1, len(possible)), Length_pe)]
                         ans = opti.fmin_l_bfgs_b(norm_fit, ans0, args=(mne, wave[nihep]), approx_grad=True, bounds=b, maxfun=500000)
-                        #ans = opti.fmin_slsqp(norm_fit, ans0, args=(mne, wave[nihep]), bounds=b, iprint=-1)
-                        #ans = opti.fmin_tnc(norm_fit, ans0, args=(mne, wave[nihep]), approx_grad=True, bounds=b, messages=0, maxfun=10000)
+                        #ans = opti.fmin_slsqp(norm_fit, ans0, args=(mne, wave[nihep]), bounds=b, iprint=-1, iter=500000)
+                        #ans = opti.fmin_tnc(norm_fit, ans0, args=(mne, wave[nihep]), approx_grad=True, bounds=b, messages=0, maxfun=500000)
                         pf = ans[0]
                         #print(ans[2]['warnflag'])
                         if np.sum(pf <= 0.1) == len(pf):

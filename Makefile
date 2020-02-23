@@ -32,6 +32,7 @@ $(xiaoPp)/submission/total-$(1).h5: $(xiaoPseq:%=$(xiaoPp)/unadjusted/unadjusted
 	python3 $(xiaoPp)/integrate.py $$^ --num ${xiaoPl} -o $$@
 $(xiaoPp)/unadjusted/unadjusted-$(1)-%.h5: $(jinpDir)/ztraining-$(1).h5 $(xiaoPp)/averspe.h5
 	mkdir -p $$(dir $$@)
+    export OMP_NUM_THREADS=2
 	python3 $(xiaoPp)/finalfit.py $$< --ref $$(word 2,$$^) --num ${xiaoPl} -o $$@
 endef
 $(foreach i,$(jinpwaveseq),$(eval $(call xpp_split,$(i))))
