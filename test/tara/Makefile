@@ -44,7 +44,7 @@ model : $(NetStore)
 .Bulletin:
 	rm -f ./.bulletin.swp
 
-$(Result_prefix)%/.Analyzing_finished : $(word 2,$(NetStore)) $(testfile_prefix)%.h5 | .Bulletin
+$(Result_prefix)%/.Analyzing_finished : $(word 1,$(NetStore)) $(testfile_prefix)%.h5 | .Bulletin
 	mkdir -p $(dir $@)
 	python3 -u Prediction_Processing_Total.py $(dir $<) $(word 1,$^) $(dir $@) $* > $(dir $@)Analysis.log 2>&1
 	touch $@
