@@ -21,6 +21,9 @@ import tables
 import pytorch_stats_loss as stats_loss
 
 BATCHSIZE=64
+BATCHSIZE_fine=16
+lr=1e-3
+lr_fine=1e-5
 fileno=int(sys.argv[-1])
 
 #detecting cuda device and wait in line
@@ -132,8 +135,9 @@ checking_period = np.int(0.25*(len(Wave_train)/BATCHSIZE))
 # make loop
 training_result = []
 testing_result = []
-print("training start")
-for epoch in range(25):  # loop over the dataset multiple times
+print("training start with batchsize={0}, learning rate={1}".format(BATCHSIZE,lr))
+Fine_Train = False
+for epoch in range(10):  # loop over the dataset multiple times
     running_loss = 0.0
     for i, data in enumerate(train_loader, 0):
         # get the inputs
@@ -159,6 +163,15 @@ for epoch in range(25):  # loop over the dataset multiple times
             training_record.write('%.3f '%((running_loss/checking_period)))
             training_result.append((running_loss/checking_period))
             running_loss = 0.0
+
+    if epoch > 0 and not Fine_Train :
+        if np.mean(training_result[-8:-4])*0.98<np.mean(training_result[-3:]) :
+            Fine_Train = True
+            BATCHSIZE = 16
+            optimizer = optim.Adam(net.parameters(), lr=5e-3)
+            train_loader = Data.DataLoader(dataset=train_data, batch_size=BATCHSIZE_fine, shuffle=True, pin_memory=False)
+            print("Switch to Fine Training with batchsize={0}, learning rate={1}".format(BATCHSIZE_fine,lr_fine))
+                
 
     # checking results in testing_s
     if epoch % 4 == 0:
