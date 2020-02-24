@@ -24,11 +24,14 @@ BATCHSIZE=128
 BATCHSIZE_fine=16
 lr=1e-3
 lr_fine=1e-5
+
 fileno=int(sys.argv[-1])
 
 #detecting cuda device and wait in line
 if torch.cuda.is_available():
-    device=0
+    from Cuda_Queue import *
+    while not QueueUp(fileno) : continue # append fileno to waiting list (first line of .bulletin.swp)
+    device=wait_in_line(fileno,1024*1024*1024*1.5,0.7)
     torch.cuda.set_device(device)
 else : 
     device = 'cpu'
