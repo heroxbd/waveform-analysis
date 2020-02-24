@@ -18,7 +18,7 @@ if args.print:
 
 def main(unad_path, fopt, upnum):
     opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PETime', np.uint16), ('Weight', np.float16)])
-    N = totlen(unad_path[0], upnum)
+    N = totlen(unad_path, upnum)
     dt = np.zeros(N, dtype=opdt)
     num = 0
     for i in range(len(unad_path)):
@@ -31,8 +31,12 @@ def main(unad_path, fopt, upnum):
         print('The output file path is {}'.format(fopt), end=' ', flush=True)
 
 def totlen(unad_path, num):
-    with h5py.File(unad_path, 'r', libver='latest', swmr=True) as up:
-        totl = len(up['Answer']['PETime']) * (num+2) * 3 // 2
+    totl = 0
+    n = min(len(unad_path), 3)
+    for i in range(n):
+        with h5py.File(unad_path[i], 'r', libver='latest', swmr=True) as up:
+            totl = totl + len(up['Answer']['PETime']) * ((num+1)*3//2)
+    totl = totl // n
     return totl
 
 if __name__ == '__main__':

@@ -37,8 +37,8 @@ def main():
         a1 = max(args.ent*Chnum-10000, 0)
         a2 = min(args.ent*Chnum+10000, len(ent))
         ent = ent[a1:a2]
-        spemean = np.concatenate([spemean, np.zeros(Length_pe - len(spemean))])
         spemean = -1 * epulse * spemean
+        spemean = np.concatenate([spemean, np.zeros(Length_pe - len(spemean))])
         i = np.where(np.logical_and(ent['EventID'] == args.ent, ent['ChannelID'] == args.cha))[0][0]
         wf_input = ent[i]['Waveform']
         wf_input = -1 * epulse * wf_input
@@ -56,7 +56,7 @@ def main():
             nihep = np.argwhere(panel == 1).flatten()
             xuhao = np.argwhere(wave[lowp+1]-wave[lowp]-wave[lowp-1]+wave[lowp-2] > 1.5).flatten()
             if len(xuhao) != 0:
-                possible = np.unique(np.concatenate((lowp[xuhao]-11, lowp[xuhao]-10, lowp[xuhao]-9, lowp[xuhao]-8,lowp[xuhao]-7)))
+                possible = np.unique(np.concatenate((lowp[xuhao]-11, lowp[xuhao]-10, lowp[xuhao]-9, lowp[xuhao]-8, lowp[xuhao]-7)))
                 possible = possible[np.logical_and(possible >= 0, possible < Length_pe)]
                 if len(possible) != 0:
                     ans0 = np.zeros_like(possible).astype(np.float64)
@@ -70,7 +70,8 @@ def main():
                     #ans = opti.fmin_tnc(norm_fit, ans0, args=(mne, wave[nihep]), approx_grad=True, bounds=b, messages=0, maxfun=10000)
                     print('ans is {}'.format(ans))
                     pf = ans[0]
-                    #pf = ans
+                    if np.sum(pf <= 0.1) == len(pf):
+                        flag = 0
                 else:
                     flag = 0
             else:
@@ -81,12 +82,10 @@ def main():
             t = np.where(wave == wave.min())[0][:1] - np.argmin(spemean)
             possible = t if t[0] >= 0 else np.array([0])
             pf = np.array([1])
-        if np.sum(pf < 0.1) != len(pf):
-            pf[pf < 0.1] = 0
-        pwe = pf[pf > 0]
+        pwe = pf[pf > 0.1]
         pwe = pwe.astype(np.float16)
         lenpf = len(pwe)
-        pet = possible[pf > 0]
+        pet = possible[pf > 0.1]
         print('PETime = {}, Weight = {}'.format(pet, pwe))
         dt['PETime'][0:lenpf] = pet
         dt['Weight'][0:lenpf] = pwe
@@ -102,6 +101,8 @@ def main():
         b = min((args.ent+1)*30*Chnum, len(tth))
         tth = tth[0:b]
         j = np.where(np.logical_and(tth['EventID'] == args.ent, tth['ChannelID'] == args.cha))
+        print('PEnum is {}'.format(len(j[0])))
+        print('The truth is {}'.format(np.sort(tth[j]['PETime'])))
         wdist = scipy.stats.wasserstein_distance(tth[j]['PETime'], pet, v_weights=pwe)
         Q = len(j[0]); q = np.sum(pwe)
         pdist = np.abs(Q - q) * scipy.stats.poisson.pmf(Q, Q)
