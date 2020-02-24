@@ -35,7 +35,7 @@ NetStore = $(patsubst $(trainfile_prefix)%.h5,$(NetStore_prefix)%/.Training_fini
 
 .PHONY : Grade Analysis model .Bulletin
 
-Grade : $(patsubst $(testfile_prefix)%.h5,$(Result_prefix)%/DistanceDistribution.pdf,$(testfile))
+Grade : $(patsubst $(testfile_prefix)%.h5,$(Result_prefix)%/DistanceDistribution.pdf,$(testfile)) $(patsubst $(testfile_prefix)%.h5,$(Result_prefix)%/DistanceDistribution.csv,$(testfile))
 
 Analysis : $(Result)
 
@@ -48,6 +48,9 @@ $(Result_prefix)%/.Analyzing_finished : $(word 2,$(NetStore)) $(testfile_prefix)
 	mkdir -p $(dir $@)
 	python3 -u Prediction_Processing_Total.py $(dir $<) $(word 1,$^) $(dir $@) $* > $(dir $@)Analysis.log 2>&1
 	touch $@
+
+$(Result_prefix)%/DistanceDistribution.csv : $(Result_prefix)%/Record.h5
+	python3 -u ../csv_dist.py $^ -o $@
 
 $(Result_prefix)%/DistanceDistribution.pdf : $(Result_prefix)%/Record.h5
 	python3 -u ../draw_dist.py $^ -o $@ --wth 20
