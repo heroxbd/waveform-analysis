@@ -12,7 +12,8 @@ TrainFileNo = 0
 # training fileno
 TestFileNo = *
 # max training set
-MaxSet = 100000
+MaxSet = 200000
+W_dist_upper_limit=20
 TrainDataDir = ../../dataset/jinp/
 NetStorageDir = ./
 TestDataDir = $(TrainDataDir)
@@ -53,7 +54,7 @@ $(Result_prefix)%/DistanceDistribution.csv : $(Result_prefix)%/Record.h5
 	python3 -u ../csv_dist.py $^ -o $@
 
 $(Result_prefix)%/DistanceDistribution.pdf : $(Result_prefix)%/Record.h5
-	python3 -u ../draw_dist.py $^ -o $@ --wth 20
+	python3 -u ../draw_dist.py $^ -o $@ --wth $(W_dist_upper_limit)
 
 $(Result_prefix)%/Record.h5 : $(Result_prefix)%/.Analyzing_finished $(testfile_prefix)%.h5
 	python3 -u ../test_dist.py $(dir $<)Prediction.h5 --ref $(word 2,$^) -o $@

@@ -20,7 +20,7 @@ import tables
 
 import pytorch_stats_loss as stats_loss
 
-BATCHSIZE=64
+BATCHSIZE=128
 BATCHSIZE_fine=16
 lr=1e-3
 lr_fine=1e-5
@@ -135,9 +135,9 @@ checking_period = np.int(0.25*(len(Wave_train)/BATCHSIZE))
 # make loop
 training_result = []
 testing_result = []
-print("training start with batchsize={0}, learning rate={1}".format(BATCHSIZE,lr))
-Fine_Train = False
-for epoch in range(10):  # loop over the dataset multiple times
+print("training start with batchsize={0}".format(BATCHSIZE))
+Fine_Train = True
+for epoch in range(25):  # loop over the dataset multiple times
     running_loss = 0.0
     for i, data in enumerate(train_loader, 0):
         # get the inputs
@@ -168,9 +168,8 @@ for epoch in range(10):  # loop over the dataset multiple times
         if np.mean(training_result[-8:-4])*0.98<np.mean(training_result[-3:]) :
             Fine_Train = True
             BATCHSIZE = 16
-            optimizer = optim.Adam(net.parameters(), lr=5e-3)
             train_loader = Data.DataLoader(dataset=train_data, batch_size=BATCHSIZE_fine, shuffle=True, pin_memory=False)
-            print("Switch to Fine Training with batchsize={0}, learning rate={1}".format(BATCHSIZE_fine,lr_fine))
+            print("Switch to Fine Training with batchsize={0}".format(BATCHSIZE_fine))
                 
 
     # checking results in testing_s
