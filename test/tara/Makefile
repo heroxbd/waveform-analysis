@@ -35,7 +35,7 @@ NetStore = $(patsubst $(trainfile_prefix)%.h5,$(NetStore_prefix)%/.Training_fini
 
 .PHONY : Grade Analysis model .Bulletin
 
-Grade : $(patsubst $(testfile_prefix)%.h5,$(Result_prefix)%/DistanceDistribution.png,$(testfile))
+Grade : $(patsubst $(testfile_prefix)%.h5,$(Result_prefix)%/DistanceDistribution.pdf,$(testfile))
 
 Analysis : $(Result)
 
@@ -49,11 +49,11 @@ $(Result_prefix)%/.Analyzing_finished : $(word 2,$(NetStore)) $(testfile_prefix)
 	python3 -u Prediction_Processing_Total.py $(dir $<) $(word 1,$^) $(dir $@) $* > $(dir $@)Analysis.log 2>&1
 	touch $@
 
-$(Result_prefix)%/DistanceDistribution.png: $(Result_prefix)%/DistanceDistribution.npy
-	python3 plotDistribution.py $^ $@
+$(Result_prefix)%/DistanceDistribution.pdf : $(Result_prefix)%/Record.h5
+	python3 -u ../draw_dist.py $^ -o $@ --wth 20
 
-$(Result_prefix)%/DistanceDistribution.npy : $(Result_prefix)%/.Analyzing_finished $(testfile_prefix)%.h5
-	python3 graderMain.py $(Result_prefix)$*/ $(dir $<)Prediction.h5 $(word 2,$^)
+$(Result_prefix)%/Record.h5 : $(Result_prefix)%/.Analyzing_finished $(testfile_prefix)%.h5
+	python3 -u ../test_dist.py $(dir $<)Prediction.h5 --ref $(word 2,$^) -o $@
 
 $(NetStore_prefix)%/.PreProcessing_finished : $(trainfile_prefix)%.h5
 	mkdir -p $(dir $@)
