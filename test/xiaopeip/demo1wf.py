@@ -100,10 +100,10 @@ def main():
         lenpf = len(pwe)
         pet = possible[pf > 0.1]
         print('PETime = {}, Weight = {}'.format(pet, pwe))
-        dt['PETime'][0:lenpf] = pet
-        dt['Weight'][0:lenpf] = pwe
-        dt['EventID'][0:lenpf] = args.ent
-        dt['ChannelID'][0:lenpf] = args.cha
+        dt['PETime'][:lenpf] = pet
+        dt['Weight'][:lenpf] = pwe
+        dt['EventID'][:lenpf] = args.ent
+        dt['ChannelID'][:lenpf] = args.cha
         dt = dt[dt['Weight'] > 0]
         dt = np.sort(dt, kind='stable', order=['EventID', 'ChannelID', 'PETime'])
         print('dt is {}'.format(dt))
@@ -118,9 +118,33 @@ def main():
         Q = len(j[0]); q = np.sum(pwe)
         pdist = np.abs(Q - q) * scipy.stats.poisson.pmf(Q, Q)
         print('wdist is {}, pdist is {}'.format(wdist, pdist))
+
+        idt = np.dtype([('PETime', np.int16), ('Weight', np.float16), ('Wgt_b', np.uint8)])
+        seg = np.zeros(np.max(pet) + 3, dtype=idt)
+        seg['PETime'] = np.arange(-1, np.max(pet) + 2)
+        seg['Weight'][np.sort(pet) + 1] = pwe[np.argsort(pet)]
+        seg['Wgt_b'] = np.around(seg['Weight'])
+        resi = seg['Weight'][1:-1] - seg['Wgt_b'][1:-1]
+        t = np.convolve(resi, [0.9, 1.7, 0.9], 'full')
+        ta = np.diff(t, prepend=t[0])
+        tb = np.diff(t, append=t[-1])
+        seg['Wgt_b'][(ta > 0)*(tb < 0)*(t > 0.5)*(seg['Wgt_b'] == 0.0)*(seg['Weight'] > 0)] += 1
+        if np.sum(seg['Wgt_b'][1:-1] > 0) != 0:
+            wgt_a = seg['Wgt_b'][1:-1][seg['Wgt_b'][1:-1] > 0]
+            pet_a = seg['PETime'][1:-1][seg['Wgt_b'][1:-1] > 0]
+        else:
+            wgt_a = 1
+            pet_a = seg['PETime'][np.argmax(seg['Weight'])]
+        dt_a = np.zeros(len(pet_a), dtype=opdt)
+        dt_a['PETime'] = pet_a
+        dt_a['Weight'] = wgt_a
+        dt_a['EventID'] = args.ent
+        dt_a['ChannelID'] = args.cha
+
         if args.save:
             with h5py.File(fopt, 'w') as opt:
-                dset = opt.create_dataset('Answer', data=dt, compression='gzip')
+                dset_un = opt.create_dataset('Answer_un', data=dt, compression='gzip')
+                dset = opt.create_dataset('Answer', data=dt_a, compression='gzip')
             plt.plot(wave, c='b')
             plt.scatter(nihep, wave[nihep], marker='x', c='g')
             plt.scatter(possible, wave[possible], marker='+', c='r')
@@ -130,8 +154,10 @@ def main():
             plt.xlim(200, 500)
             plt.hlines(thres, 200, 500, color='c')
             t, c = np.unique(tru_pet, return_counts=True)
-            plt.vlines(t, -200*c, 0, color='m')
-            plt.vlines(pet, 0, 200*pwe, color='k')
+            plt.vlines(t, 0, 200*c, color='k')
+            plt.vlines(pet_a, -200*wgt_a, 0, color='m')
+            hh = -200*(np.max(wgt_a)+1)
+            plt.vlines(pet, -200*pwe+hh, hh, color='y')
             plt.savefig('demo.png')
             plt.close()
             plt.plot(spemean_r, c='b')
