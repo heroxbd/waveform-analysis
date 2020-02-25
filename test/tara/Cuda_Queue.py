@@ -8,12 +8,12 @@ import pynvml
 pynvml.nvmlInit()
 Number_of_gpus = pynvml.nvmlDeviceGetCount()
 
-def check_available(gpu_id,min_memory):
+def check_available(gpu_id,min_memory,min_utilization):
     cuda_handle = pynvml.nvmlDeviceGetHandleByIndex(gpu_id)
     meminfo = pynvml.nvmlDeviceGetMemoryInfo(cuda_handle)
     mem = meminfo.free
-    utilrate = pynvml.nvmlDeviceGetUtilizationRates(cuda_handle).gpu
-    if utilrate<90 and mem>min_memory :
+    utilization = pynvml.nvmlDeviceGetUtilizationRates(cuda_handle).gpu/100
+    if utilization<(1-min_utilization) and mem>min_memory :
         return True
     else :
         return False
@@ -73,14 +73,14 @@ def QueueUp(fileno):
         file.writelines(lines)
     return False #newly append, may not success. Need rerun QueueUp to check
 
-def wait_in_line(fileno,min_memory) :
+def wait_in_line(fileno,min_memory,min_utilization) :
     GPUs = np.arange(pynvml.nvmlDeviceGetCount())
     device = GPUs[-1]
     #wait in line
     while not check_waiting_list(fileno) :
         time.sleep(0.5)
     #your turn, search for idle gpu!
-    while not check_available(device,min_memory) : 
+    while not check_available(device,min_memory,min_utilization) : 
         if device==0 : device = GPUs[-1]
         else : device -= 1
         time.sleep(0.5)

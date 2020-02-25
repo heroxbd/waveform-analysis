@@ -24,7 +24,9 @@ if not os.path.exists(SavePath):
 
 #detecting cuda device and wait in line
 if torch.cuda.is_available():
-    device=0
+    from Cuda_Queue import *
+    while not QueueUp(fileno) : continue # append fileno to waiting list (first line of .bulletin.swp)
+    device=wait_in_line(fileno,1024*1024*1024*1.5,0.3)
     torch.cuda.set_device(device)
     device=torch.device(device)
 else : 
@@ -83,8 +85,8 @@ def make_wave_long_vec(wave_form):
     shift = np.mean(wave_form[np.abs(wave_form-shift)<3])
     shift_wave=np.array(wave_form-shift,dtype=np.int16)
     #non_negative_peak + zero_base_level
-    if np.max(shift_wave) >= -np.min(shift_wave) : return shift_wave
-    if np.max(shift_wave) < -np.min(shift_wave) : return -shift_wave
+    if np.max(shift_wave) >= -np.min(shift_wave) : return np.array(wave_form-shift,dtype=np.int16)
+    if np.max(shift_wave) < -np.min(shift_wave) : return np.array(shift-wave_form,dtype=np.int16)
 
 # Create tables
 AnswerTable = h5file.create_table("/", "Answer", AnswerData, "Answer")
@@ -111,7 +113,7 @@ for k in range(len(entryList)-1) :
     WaveData = Data_set[entryList[k]:entryList[k+1]]['Waveform']
     for i in range(len(WaveData)) :
         WaveData[i] = make_wave_long_vec(WaveData[i])
-    inputs = torch.tensor(WaveData,device=device).float()
+    inputs = torch.tensor(np.array(WaveData,dtype=np.int16),device=device).float()
 
     # Make mark
     print("Processing entry {0}, Progress {1}%".format(k*LoadingPeriod,k*LoadingPeriod/Total_entries*100))

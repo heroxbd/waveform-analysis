@@ -20,12 +20,18 @@ import tables
 
 import pytorch_stats_loss as stats_loss
 
-BATCHSIZE=64
+BATCHSIZE=128
+BATCHSIZE_fine=16
+lr=1e-3
+lr_fine=1e-5
+
 fileno=int(sys.argv[-1])
 
 #detecting cuda device and wait in line
 if torch.cuda.is_available():
-    device=0
+    from Cuda_Queue import *
+    while not QueueUp(fileno) : continue # append fileno to waiting list (first line of .bulletin.swp)
+    device=wait_in_line(fileno,1024*1024*1024*1.5,0.7)
     torch.cuda.set_device(device)
 else : 
     device = 'cpu'
@@ -102,10 +108,16 @@ class Net_1(nn.Module):
     def __init__(self):
         super(Net_1, self).__init__()
 
-        self.conv1 = nn.Conv1d(1, 25, 9, padding=4)
-        self.conv2 = nn.Conv1d(25, 16, 7, padding=3)
-        self.conv3 = nn.Conv1d(16, 10, 7, padding=3)
-        self.conv4 = nn.Conv1d(10, 1, 1)
+        self.conv1 = nn.Conv1d(1, 15, 7, padding=2)
+        self.conv2 = nn.Conv1d(15, 20, 6, padding=2)
+        self.conv3 = nn.Conv1d(20, 15, 5, padding=2)
+        self.conv4 = nn.Conv1d(15, 10, 5, padding=2)
+        self.conv5 = nn.Conv1d(10, 7, 4, padding=2)
+        self.conv6 = nn.Conv1d(7, 7, 4, padding=2)
+        self.conv7 = nn.Conv1d(7, 7, 4, padding=2)
+        self.conv8 = nn.Conv1d(7, 7, 4, padding=2)
+        self.conv9 = nn.Conv1d(7, 7, 4, padding=1)
+        self.conv10 = nn.Conv1d(7, 1, 1)
 
     def forward(self, x):
         leaky_relu = nn.LeakyReLU(0.05)
@@ -114,7 +126,13 @@ class Net_1(nn.Module):
         x = leaky_relu(self.conv1(x))
         x = leaky_relu(self.conv2(x))
         x = leaky_relu(self.conv3(x))
-        x = F.relu(self.conv4(x))
+        x = leaky_relu(self.conv4(x))
+        x = leaky_relu(self.conv5(x))
+        x = leaky_relu(self.conv6(x))
+        x = leaky_relu(self.conv7(x))
+        x = leaky_relu(self.conv8(x))
+        x = leaky_relu(self.conv9(x))
+        x = F.relu(self.conv10(x))
         x = x.squeeze(1)
         return x
 
@@ -132,7 +150,8 @@ checking_period = np.int(0.25*(len(Wave_train)/BATCHSIZE))
 # make loop
 training_result = []
 testing_result = []
-print("training start")
+print("training start with batchsize={0}".format(BATCHSIZE))
+Fine_Train = True
 for epoch in range(25):  # loop over the dataset multiple times
     running_loss = 0.0
     for i, data in enumerate(train_loader, 0):
@@ -159,6 +178,14 @@ for epoch in range(25):  # loop over the dataset multiple times
             training_record.write('%.3f '%((running_loss/checking_period)))
             training_result.append((running_loss/checking_period))
             running_loss = 0.0
+
+    if epoch > 0 and not Fine_Train :
+        if np.mean(training_result[-8:-4])*0.98<np.mean(training_result[-3:]) :
+            Fine_Train = True
+            BATCHSIZE = 16
+            train_loader = Data.DataLoader(dataset=train_data, batch_size=BATCHSIZE_fine, shuffle=True, pin_memory=False)
+            print("Switch to Fine Training with batchsize={0}".format(BATCHSIZE_fine))
+                
 
     # checking results in testing_s
     if epoch % 4 == 0:
