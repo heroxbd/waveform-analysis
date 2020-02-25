@@ -110,28 +110,5 @@ def main(fopt, fipt, single_pe_path):
         print('The output file path is {}'.format(fopt), end=' ', flush=True)
     return
 
-def omi2pos(vali):
-    vali_t = np.concatenate((np.array([0]), vali, np.array([0])), axis=0)
-    dval = np.diff(vali_t)
-    pos_begin = np.argwhere(dval == 1).flatten()
-    pos_end = np.argwhere(dval == -1).flatten()
-    pos = np.concatenate((pos_begin.reshape(len(pos_begin), 1), pos_end.reshape(len(pos_end), 1)), axis = 1).astype(np.int32)
-    return pos
-
-def pos2omi(pos, len_n):
-    vali = np.zeros(len_n).astype(np.int32)
-    for i in range(len(pos)):
-        vali[pos[i][0]:pos[i][1]] = 1
-    return vali
-
-def rm_frag(pos, fl):
-    n = len(pos)
-    pos_t = []
-    for i in range(n):
-        if pos[i][1] - pos[i][0] > fl:
-            pos_t.append(pos[i])
-    pos = np.array(pos_t)
-    return pos
-
 if __name__ == '__main__':
     main(args.opt, args.ipt, args.ref)
