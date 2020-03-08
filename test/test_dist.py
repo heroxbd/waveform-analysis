@@ -53,12 +53,12 @@ def wpdistance(df_ans, df_sub):
         print('\rGrading Process:|{}>{}|{:6.2f}%'.format(((20 * c)//gl)*'-', (19-(20*c)//gl)*' ', 100 * ((c+1)/gl)), end = '' if c != gl-1 else '\n')
     return dt
 
-def main(ref, ipt, opt):
-    with h5py.File(ref, 'r', libver='latest', swmr=True) as ref, h5py.File(ipt, 'r', libver='latest', swmr=True) as ipt:
+def main(fref, fipt, fopt):
+    with h5py.File(fref, 'r', libver='latest', swmr=True) as ref, h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
         df_ans = ref['GroundTruth']
         df_sub = ipt['Answer']
         dt = wpdistance(df_ans, df_sub)
-    with h5py.File(opt, 'w') as h5f:
+    with h5py.File(fopt, 'w') as h5f:
         dset = h5f.create_dataset('Record', data=dt, compression='gzip')
 
 if __name__ == '__main__':
