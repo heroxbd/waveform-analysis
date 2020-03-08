@@ -31,7 +31,7 @@ fileno=int(sys.argv[-1])
 if torch.cuda.is_available():
     from Cuda_Queue import *
     while not QueueUp(fileno) : continue # append fileno to waiting list (first line of .bulletin.swp)
-    device=wait_in_line(fileno,1024*1024*1024*1.5,0.7)
+    device=wait_in_line(fileno,1024*1024*1024*7.6,0.7)
     torch.cuda.set_device(device)
 else : 
     device = 'cpu'
