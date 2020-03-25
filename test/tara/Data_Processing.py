@@ -18,8 +18,8 @@ import tables
 
 import pytorch_stats_loss as stats_loss
 
-BATCHSIZE=128
-BATCHSIZE_fine=16
+BATCHSIZE=100
+BATCHSIZE_fine=10
 lr=1e-3
 lr_fine=1e-5
 
@@ -72,6 +72,8 @@ if max_set_number>0 :
     max_set_number = min(max_set_number,len(Data_set))
 else :
     max_set_number = -1
+
+print("Reading Data...")
 WaveData = Data_set[0:max_set_number]['Wave']
 PETData= Data_set[0:max_set_number]['PET']
 WindowSize = len(WaveData[0])
