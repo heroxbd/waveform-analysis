@@ -18,8 +18,8 @@ import tables
 
 import pytorch_stats_loss as stats_loss
 
-BATCHSIZE=100
-BATCHSIZE_fine=10
+BATCHSIZE=64
+BATCHSIZE_fine=16
 lr=1e-3
 lr_fine=1e-5
 
