@@ -6,6 +6,8 @@ import torch
 import torch.utils.data as Data
 from torch.nn import functional as F
 
+from JPwaptool_Lite import JPwaptool_Lite
+
 import os,sys
 import time
 
@@ -44,7 +46,7 @@ net_name = fileSet[NetLoss_reciprocal.index(max(NetLoss_reciprocal))]
 net = torch.load(NetDir+net_name,map_location=device)#Pre-trained Model Parameters
 
 # Data Settings
-LoadingPeriod= 4000
+LoadingPeriod= 20000
 # h5 file handling
 # Define the database columns
 class AnswerData(tables.IsDescription):
@@ -57,15 +59,6 @@ class AnswerData(tables.IsDescription):
 # h5file = tables.open_file("./Prediction_Results/Prediction_Mod_ztraining.h5", mode="w", title="OneTonDetector")
 h5file = tables.open_file(SavePath+"Prediction.h5", mode="w", title="OneTonDetector",filters=tables.Filters(complevel=9))
 
-def make_wave_long_vec(wave_form):
-    # non_negative_peak + zero_base_level
-    shift = np.argmax(np.bincount(wave_form)) #make baseline shifts, normally 972
-    shift = np.mean(wave_form[np.abs(wave_form-shift)<3])
-    shift_wave=np.array(wave_form-shift,dtype=np.int16)
-    #non_negative_peak + zero_base_level
-    if np.max(shift_wave) >= -np.min(shift_wave) : return np.array(wave_form-shift,dtype=np.int16)
-    if np.max(shift_wave) < -np.min(shift_wave) : return np.array(shift-wave_form,dtype=np.int16)
-
 # Create tables
 AnswerTable = h5file.create_table("/", "Answer", AnswerData, "Answer")
 answer = AnswerTable.row
@@ -74,6 +67,12 @@ answer = AnswerTable.row
 RawDataFile =  tables.open_file(fullfilename)
 Data_set = RawDataFile.root.Waveform
 WindowSize = len(Data_set[0]['Waveform'])
+if WindowSize>=1000 :
+    stream = JPwaptool_Lite(WindowSize,100,600)
+elif WindowSize==600 :
+    stream = JPwaptool_Lite(WindowSize,50,400)
+else : 
+    raise ValueError("Unknown WindowSize, I don't know how to choose the parameters for pedestal calculatation")
 Total_entries = len(Data_set)
 print(Total_entries)
 
@@ -89,10 +88,10 @@ for k in range(len(entryList)-1) :
     EventData = Data_set[entryList[k]:entryList[k+1]]['EventID']
     ChanData = Data_set[entryList[k]:entryList[k+1]]['ChannelID']
     WaveData = Data_set[entryList[k]:entryList[k+1]]['Waveform']
+    inputs = torch.empty((len(WaveData),WindowSize),device=device)
     for i in range(len(WaveData)) :
-        WaveData[i] = make_wave_long_vec(WaveData[i])
-    inputs = torch.tensor(np.array(WaveData,dtype=np.int16),device=device).float()
-
+        stream.Calculate(WaveData[i])
+        inputs[i] = torch.from_numpy(stream.ChannelInfo.Ped - WaveData[i])
     # Make mark
     print("Processing entry {0}, Progress {1}%".format(k*LoadingPeriod,k*LoadingPeriod/Total_entries*100))
     
