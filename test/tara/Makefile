@@ -47,7 +47,8 @@ model : $(NetStore)
 
 $(Result_prefix)%/.Analyzing_finished : $(word 1,$(NetStore)) $(testfile_prefix)%.h5 | .Bulletin
 	mkdir -p $(dir $@)
-	python3 -u Prediction_Processing_Total.py $(dir $<) $(word 2,$^) $(dir $@) $* > $(dir $@)Analysis.log 2>&1
+	#python3 -u Prediction_Processing_Total.py $(dir $<) $(word 2,$^) $(dir $@) $* > $(dir $@)Analysis.log 2>&1
+	python3 -u WaveformAnalysis.py $(dir $<) $(word 2,$^) $(dir $@) $* > $(dir $@)Analysis.log 2>&1
 	touch $@
 
 $(Result_prefix)%/DistanceDistribution.csv : $(Result_prefix)%/Record.h5
