@@ -22,6 +22,16 @@ import tables
 from JPwaptool_Lite import JPwaptool_Lite
 
 
+def AssignStream(WindowSize) :
+    if WindowSize >= 1000 :
+        stream = JPwaptool_Lite(WindowSize, 100, 600)
+    elif WindowSize == 600 :
+        stream = JPwaptool_Lite(WindowSize, 50, 400)
+    else:
+        raise ValueError("Unknown WindowSize, I don't know how to choose the parameters for pedestal calculatation")
+    return stream
+
+
 time_start = time.time()
 
 
@@ -33,6 +43,8 @@ print("training data pre-processing savepath is {}".format(SavePath))
 # Read hdf5 file
 FileNo = 0
 Len_Entry = 0
+streams = []
+
 while(Len_Entry < Nwav) :
     try :
         h5file = tables.open_file(prefix + "{}".format(FileNo) + ".h5", "r")
@@ -59,12 +71,6 @@ while(Len_Entry < Nwav) :
             is_positive_pulse = False
 
         WindowSize = len(example_wave[0])
-        if WindowSize >= 1000:
-            stream = JPwaptool_Lite(WindowSize, 100, 600)
-        elif WindowSize == 600:
-            stream = JPwaptool_Lite(WindowSize, 50, 400)
-        else:
-            raise ValueError("Unknown WindowSize, I don't know how to choose the parameters for pedestal calculatation")
 
         class PreProcessedData(tables.IsDescription):
             PET = tables.Col.from_type('float32', shape=WindowSize, pos=0)
@@ -88,16 +94,21 @@ while(Len_Entry < Nwav) :
     last_eventid = Waveforms_and_info["EventID"][-1]
     last_channelid = Waveforms_and_info["ChannelID"][-1]
     GroundTruth = GroundTruthTable[0:GroundTruth_Len]
-    TimeSeries = stream.Make_Time_Vector(GroundTruth["EventID"], GroundTruth["ChannelID"], GroundTruth["PETime"], np.int64(last_eventid), np.int16(last_channelid), np.int64(Len_Entry))
+    streams.append(AssignStream(WindowSize))  # re-asign stream to avoid bus error
+    if len(streams) > 1 : del streams[-2]
+    TimeSeries = streams[-1].Make_Time_Vector(GroundTruth["EventID"], GroundTruth["ChannelID"], GroundTruth["PETime"], np.int64(last_eventid), np.int16(last_channelid), np.int64(Len_Entry))
 
-    for i, w in enumerate(Waveforms_and_info) :
-        stream.Calculate(w["Waveform"])
-        traindata[w["ChannelID"]]['Wave'] = stream.ChannelInfo.Ped - w["Waveform"]
+    streams.append(AssignStream(WindowSize))  # re-asign stream to avoid bus error
+    del streams[-2]
+    print("stream reassigned")
+    for i, w in enumerate(Waveforms_and_info) :  # loop all events in this file
+        # check point
+        if (entry) % 100000 == 0:
+            print("Currently in file {0} entry {1}, processed {2} entries, progress {3:.2f}%".format(FileNo, i, entry, entry / args.Nwav * 100))
+        streams[-1].Calculate(w["Waveform"])
+        traindata[w["ChannelID"]]['Wave'] = streams[-1].ChannelInfo.Ped - w["Waveform"]
         traindata[w["ChannelID"]]['PET'] = TimeSeries[i]
         traindata[w["ChannelID"]].append()
-        # check point
-        if (entry) % 10000 == 0:
-            print("Currently in file {0} entry {1}, processed {2} entries, progress {3:.2f}%".format(FileNo, i, entry, entry / args.Nwav))
         entry = entry + 1
 
     for TD in list(TrainDataTable.values()) :
@@ -106,7 +117,7 @@ while(Len_Entry < Nwav) :
     FileNo = FileNo + 1
 
 h5file.close()
-for Pf in Prefile :
+for Pf in list(Prefile.values()) :
     Pf.close()
 time_end = time.time()
 print('consuming time: {}s'.format(time_end - time_start))
