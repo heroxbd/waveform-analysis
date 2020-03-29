@@ -1,82 +1,112 @@
-import time
-time_start = time.time()
-import numpy as np
+import argparse
+psr = argparse.ArgumentParser()
+psr.add_argument('ipt', help='input file prefix')
+psr.add_argument('-o', '--outputdir', dest='opt', help='output_dir')
+psr.add_argument('-N', '--NWaves', dest='Nwav', type=int, help='entries of waves')
+psr.add_argument('-f', '--format', dest='format', default='h5', choices=['h5', 'root'], help='input file format')
+args = psr.parse_args()
+Nwav = args.Nwav
+prefix = args.ipt
+suffix = args.format
+SavePath = args.opt
+if(Nwav <= 100):
+    raise ValueError("NWaves must > 100 !")
+
+
 import os
-import sys
+import time
+
+import numpy as np
 import tables
+
 from JPwaptool_Lite import JPwaptool_Lite
 
-## Initialization
+
+time_start = time.time()
+
 
 # Make Directory
-SavePath = sys.argv[2]
 if not os.path.exists(SavePath):
     os.makedirs(SavePath)
 print("training data pre-processing savepath is {}".format(SavePath))
 
 # Read hdf5 file
+FileNo = 0
+Len_Entry = 0
+while(Len_Entry < Nwav) :
+    try :
+        h5file = tables.open_file(prefix + "{}".format(FileNo) + ".h5", "r")
+    except OSError :
+        raise ValueError("You demand too many training waves while providing insufficient input files!\nCheck if your taining files have continuous file numbers starting with 0.")
+    # Reading file
+    WaveformTable = h5file.root.Waveform
+    if len(WaveformTable) < Nwav :
+        Len_Entry = len(WaveformTable)
+    else :
+        Len_Entry = Nwav
+    Nwav = Nwav - Len_Entry
+    Waveforms_and_info = WaveformTable[0:Len_Entry]
 
-fullfilename = sys.argv[1]
-FileName = os.path.basename(fullfilename).replace(".h5",'')
-h5file = tables.open_file(fullfilename, "r")
-WaveformTable = h5file.root.Waveform
-GroundTruthTable = h5file.root.GroundTruth
-Len_Entry = len(WaveformTable)
+    # Global Initialization
+    if FileNo == 0 :
+        example_wave = Waveforms_and_info[0:100]["Waveform"]
+        is_positive_pulse = (example_wave.max(axis=1) - example_wave.mean(axis=1)) > (example_wave.mean(axis=1) - example_wave.min(axis=1))
+        if sum(is_positive_pulse) > 95 :  # positive pulse
+            is_positive_pulse = True
+        elif sum(is_positive_pulse) > 5 :
+            raise ValueError("ambiguous pulse!")
+        else :
+            is_positive_pulse = False
 
-max_set_number = int(sys.argv[3])
-if max_set_number>0 :
-    Len_Entry = min(max_set_number,Len_Entry)
+        WindowSize = len(example_wave[0])
+        if WindowSize >= 1000:
+            stream = JPwaptool_Lite(WindowSize, 100, 600)
+        elif WindowSize == 600:
+            stream = JPwaptool_Lite(WindowSize, 50, 400)
+        else:
+            raise ValueError("Unknown WindowSize, I don't know how to choose the parameters for pedestal calculatation")
 
-if(Len_Entry<=100) : raise ValueError("max_set_number must > 100 !")
+        class PreProcessedData(tables.IsDescription):
+            PET = tables.Col.from_type('float32', shape=WindowSize, pos=0)
+            Wave = tables.Col.from_type('float32', shape=WindowSize, pos=1)
+        ChannelIDs = set(Waveforms_and_info["ChannelID"])
+        Prefile = dict([])
+        TrainDataTable = dict([])
+        traindata = dict([])
+        for ChannelID in ChannelIDs :
+            # create Pre-Processed output file
+            Prefile[ChannelID] = tables.open_file(SavePath + "Pre_Channel{}.h5".format(ChannelID), mode="w", title="Pre-Processed-Training-Data")
+            # Create group and tables
+            TrainDataTable[ChannelID] = Prefile[ChannelID].create_table("/", "TrainDataTable", PreProcessedData, "Wave and PET")
+            traindata[ChannelID] = TrainDataTable[ChannelID].row
+        entry = 0
 
-print(Len_Entry, "data entries") # Entry 10^6
+    # File Initialize
+    if(is_positive_pulse) : Waveforms_and_info["Waveform"] = Waveforms_and_info["Waveform"].max() - Waveforms_and_info["Waveform"]
+    GroundTruthTable = h5file.root.GroundTruth
+    GroundTruth_Len = min(round(len(GroundTruthTable) / len(WaveformTable) * Len_Entry * 2), len(GroundTruthTable))
+    last_eventid = Waveforms_and_info["EventID"][-1]
+    last_channelid = Waveforms_and_info["ChannelID"][-1]
+    GroundTruth = GroundTruthTable[0:GroundTruth_Len]
+    TimeSeries = stream.Make_Time_Vector(GroundTruth["EventID"], GroundTruth["ChannelID"], GroundTruth["PETime"], np.int64(last_eventid), np.int16(last_channelid), np.int64(Len_Entry))
 
-# Make Data Matrix
-Waveforms_and_info = WaveformTable[0:Len_Entry]
-example_wave = Waveforms_and_info["Waveform"][0:100]
-WindowSize = len(example_wave[0])
-is_positive_pulse = (example_wave.max(axis=1)-example_wave.mean(axis=1))>(example_wave.mean(axis=1)-example_wave.min(axis=1))
-Waveforms = Waveforms_and_info["Waveform"]
-if sum(is_positive_pulse)>95 : #positive pulse
-    Waveforms = Waveforms.max()-Waveforms
-elif sum(is_positive_pulse)>5 : raise ValueError("ambiguous pulse!")
+    for i, w in enumerate(Waveforms_and_info) :
+        stream.Calculate(w["Waveform"])
+        traindata[w["ChannelID"]]['Wave'] = stream.ChannelInfo.Ped - w["Waveform"]
+        traindata[w["ChannelID"]]['PET'] = TimeSeries[i]
+        traindata[w["ChannelID"]].append()
+        # check point
+        if (entry) % 10000 == 0:
+            print("Currently in file {0} entry {1}, processed {2} entries, progress {3:.2f}%".format(FileNo, i, entry, entry / args.Nwav))
+        entry = entry + 1
 
-if WindowSize>=1000 :
-    stream = JPwaptool_Lite(WindowSize,100,600)
-elif WindowSize==600 :
-    stream = JPwaptool_Lite(WindowSize,50,400)
-else : 
-    raise ValueError("Unknown WindowSize, I don't know how to choose the parameters for pedestal calculatation")
+    for TD in list(TrainDataTable.values()) :
+        TD.flush()
 
-class PreProcessedData(tables.IsDescription):
-    PET = tables.Col.from_type('float32', shape=WindowSize, pos=0)
-    Wave = tables.Col.from_type('float32', shape=WindowSize, pos=1)
-    
-#create Pre-Processed output file
-Prefile = tables.open_file(SavePath+"Pre.h5", mode="w", title="Pre-Processed-Training-Data")
+    FileNo = FileNo + 1
 
-# Create group and tables
-group = "/"
-TrainDataTable = Prefile.create_table(group, "TrainDataTable", PreProcessedData, "Wave and PET")
-traindata = TrainDataTable.row
-
-GroundTruth_Len = min(round(len(GroundTruthTable)/len(WaveformTable)*Len_Entry*2),len(GroundTruthTable))
-last_eventid = Waveforms_and_info["EventID"][-1]
-last_channelid = Waveforms_and_info["ChannelID"][-1]
-GroundTruth = GroundTruthTable[0:GroundTruth_Len]
-TimeSeries = stream.Make_Time_Vector(GroundTruth["EventID"],GroundTruth["ChannelID"],GroundTruth["PETime"],np.int64(last_eventid),np.int16(last_channelid),np.int64(Len_Entry))
-
-for entry in range(Len_Entry):
-    stream.Calculate(Waveforms[entry])
-    traindata['Wave'] = stream.ChannelInfo.Ped - Waveforms[entry] 
-    traindata['PET'] = TimeSeries[entry]
-    traindata.append()
-
-    # check point
-    if (entry+1)%5000==0:
-        print(entry+1)
-TrainDataTable.flush()
 h5file.close()
-Prefile.close()
+for Pf in Prefile :
+    Pf.close()
 time_end = time.time()
-print('consuming time: {}s'.format(time_end-time_start))
+print('consuming time: {}s'.format(time_end - time_start))
