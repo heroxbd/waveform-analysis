@@ -7,21 +7,16 @@ usage : help
 help:
 	@cat ./mannual.txt
 
-# training fileno
-TrainFileNo = 0
-# training fileno
-TestFileNo = *
-# max training set
-MaxSet = 200000
-W_dist_upper_limit=20
 TrainDataDir = ../../dataset/jinp/
-NetStorageDir = ./
+NetStorageDir = /srv/work_wuyy/Network_Models_all/
+# Network Models storage name
+NetStore_prefix = $(NetStorageDir)Network_Models_ztraining
+PreStore = $(wildcard /srv/work_wuyy/Network_Models_ztraining-all2/Pre_Channel*.h5)
+NetStore = $(patsubst /srv/work_wuyy/Network_Models_ztraining-all2/Pre_Channel%.h5,$(NetStore_prefix)%/.Training_finished, $(PreStore))
+
+TestFileNo = *
 TestDataDir = $(TrainDataDir)
 ResultStorageDir = ./
-#training filename
-traindata_name_prefix = ztraining-
-trainfile_prefix = $(TrainDataDir)$(traindata_name_prefix)
-trainfile = $(wildcard $(trainfile_prefix)$(TrainFileNo).h5)
 #test filename
 testdata_name_prefix = ztraining-
 testfile_prefix = $(TestDataDir)$(testdata_name_prefix)
@@ -29,9 +24,7 @@ testfile = $(wildcard $(testfile_prefix)$(TestFileNo).h5)
 # Result storage name
 Result_prefix = $(ResultStorageDir)Analyzing_Results_$(testdata_name_prefix)
 Result = $(patsubst $(testfile_prefix)%.h5,$(Result_prefix)%/.Analyzing_finished, $(testfile))
-# Network Models storage name
-NetStore_prefix = $(NetStorageDir)Network_Models_$(traindata_name_prefix)
-NetStore = $(patsubst $(trainfile_prefix)%.h5,$(NetStore_prefix)%/.Training_finished, $(trainfile))
+W_dist_upper_limit=20
 
 
 .PHONY : Grade Analysis model .Bulletin
@@ -65,8 +58,10 @@ $(NetStore_prefix)%/.PreProcessing_finished : $(trainfile_prefix)%.h5
 	python3 -u Data_Pre-Processing.py $< $(dir $@) $(MaxSet) > $(dir $@)PreProcess.log 2>&1
 	touch $@
 
-$(NetStore_prefix)%/.Training_finished : $(NetStore_prefix)%/.PreProcessing_finished | .Bulletin
-	python3 -u Data_Processing.py $(dir $@) $(dir $<) $(MaxSet) $* > $(dir $@)Train.log  2>&1
+#$(NetStore_prefix)%/.Training_finished : $(NetStore_prefix)%/.PreProcessing_finished | .Bulletin
+$(NetStore_prefix)%/.Training_finished : /srv/work_wuyy/Network_Models_ztraining-all2/Pre_Channel%.h5 | .Bulletin
+	mkdir -p $(dir $@)
+	python3 -u Data_Processing.py $^ -n $* -B 16 -o $(dir $@) > $(dir $@)Train.log  2>&1 
 	touch $@
 
 .DELETE_ON_ERROR: 
