@@ -61,7 +61,7 @@ $(NetStore_prefix)%/.PreProcessing_finished : $(trainfile_prefix)%.h5
 #$(NetStore_prefix)%/.Training_finished : $(NetStore_prefix)%/.PreProcessing_finished | .Bulletin
 $(NetStore_prefix)%/.Training_finished : /srv/work_wuyy/Network_Models_ztraining-all2/Pre_Channel%.h5 | .Bulletin
 	mkdir -p $(dir $@)
-	python3 -u Data_Processing.py $^ -n $* -B 16 -o $(dir $@) > $(dir $@)Train.log  2>&1 
+	python3 -u Data_Processing.py $^ -n $* -B 64 -o $(dir $@) > $(dir $@)Train.log  2>&1 
 	touch $@
 
 .DELETE_ON_ERROR: 

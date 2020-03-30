@@ -33,16 +33,7 @@ import pytorch_stats_loss as stats_loss
 lr = 1e-3
 
 # detecting cuda device and wait in line
-if torch.cuda.is_available():
-    from Cuda_Queue import QueueUp, wait_in_line
-    while not QueueUp(ChannelID) : continue  # append fileno to waiting list (first line of .bulletin.swp)
-    device = wait_in_line(ChannelID, 1024 * 1024 * 1024 * 7.6, 0.7)
-    torch.cuda.set_device(device)
-else :
-    device = 'cpu'
-    print('Using device: cpu')
-
-# begin loading
+device = torch.device(1)
 # Make Saving_Directory
 if not os.path.exists(SavePath):
     os.makedirs(SavePath)
@@ -63,7 +54,7 @@ else :
     max_set_number = None
 
 print("Reading Data...")
-WaveData = Data_set[0:max_set_number]['Wave']
+WaveData = (Data_set[0:max_set_number]['Wave'])
 PETData = Data_set[0:max_set_number]['PET']
 WindowSize = len(WaveData[0])
 # Make Shift For +5 ns
@@ -78,7 +69,7 @@ print("training_set ", len(Wave_train), ", testing_set", len(Wave_test))
 # Making Dataset
 # train_data = Data.TensorDataset(data_tensor=torch.from_numpy(Wave_train).float(),\
 #                              target_tensor=torch.from_numpy(PET_train).float())
-train_data = Data.TensorDataset(torch.from_numpy(Wave_train).float().cuda(device=device),
+train_data = Data.TensorDataset(torch.from_numpy(Wave_train).cuda(device=device),
                                 torch.from_numpy(PET_train).cuda(device=device))
 
 train_loader = Data.DataLoader(dataset=train_data, batch_size=BATCHSIZE, shuffle=True, pin_memory=False)
@@ -91,14 +82,42 @@ test_data = Data.TensorDataset(torch.from_numpy(Wave_test).float().cuda(device=d
 test_loader = Data.DataLoader(dataset=test_data, batch_size=BATCHSIZE, shuffle=False, pin_memory=False)
 
 
+def testing(test_loader) :
+    batch_result = 0
+    batch_count = 0
+    for j, data in enumerate(test_loader, 0):
+        inputs, labels = data
+        inputs, labels = Variable(inputs), Variable(labels)
+        outputs = net(inputs)
+        for batch_index_2 in range(outputs.shape[0]):  # range(BATCHSIZE)
+            #  the reminder group of BATCHING may not be BATCH_SIZE
+            output_vec = outputs.data[batch_index_2].cpu().numpy()
+            label_vec = labels.data[batch_index_2].cpu().numpy()
+            if np.sum(label_vec) <= 0:
+                label_vec = np.ones(WindowSize) / 10000
+                #print("warning")
+            if np.sum(output_vec) <= 0:
+                output_vec = np.ones(WindowSize) / 10000
+                #print("warning")
+            cost = stats.wasserstein_distance(np.arange(WindowSize), np.arange(WindowSize), output_vec, label_vec)
+            batch_result += cost
+        batch_count += 1
+    return batch_result / (BATCHSIZE * batch_count)
+
+
 # Neural Networks
 from CNN_Module import Net_1
 
 net = Net_1().cuda(device=device)
 
-if device != 'cpu' :
-    # finish loading to GPU, give tag on .bulletin.swp
-    os.system("echo {} {} >> .bulletin.swp".format(ChannelID, 0))
+loss = 1000
+trial_data = Data.TensorDataset(torch.from_numpy(Wave_test[0:1000]).float().cuda(device=device),
+                                torch.from_numpy(PET_test[0:1000]).cuda(device=device))
+trial_loader = Data.DataLoader(dataset=trial_data, batch_size=BATCHSIZE, shuffle=False, pin_memory=False)
+while(loss > 20) :
+    loss = testing(trial_loader)
+    print(loss)
+    net = Net_1().cuda(device=device)
 
 print(sum(parm.numel() for parm in net.parameters()))
 # optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9) #0.001
@@ -139,30 +158,10 @@ for epoch in range(25):  # loop over the dataset multiple times
 
     # checking results in testing_s
     if epoch % 4 == 0:
-        batch_result = 0
-        batch_count = 0
-        for j, data in enumerate(test_loader, 0):
-            inputs, labels = data
-            inputs, labels = Variable(inputs), Variable(labels)
-            outputs = net(inputs)
-            for batch_index_2 in range(outputs.shape[0]):  # range(BATCHSIZE)
-                #  the reminder group of BATCHING may not be BATCH_SIZE
-                output_vec = outputs.data[batch_index_2].cpu().numpy()
-                label_vec = labels.data[batch_index_2].cpu().numpy()
-                if np.sum(label_vec) <= 0:
-                    label_vec = np.ones(WindowSize) / 10000
-                    print("warning")
-                if np.sum(output_vec) <= 0:
-                    output_vec = np.ones(WindowSize) / 10000
-                    print("warning")
-                cost = stats.wasserstein_distance(np.arange(WindowSize), np.arange(WindowSize), output_vec, label_vec)
-                batch_result += cost
-            batch_count += 1
-        test_performance = batch_result / (BATCHSIZE * batch_count)
+        test_performance = testing(test_loader)
         print("epoch ", str(epoch), " test:", test_performance)
         testing_record.write("%4f " % (test_performance))
         testing_result.append(test_performance)
-
         # saving network
         save_name = SavePath + "_epoch" + str(epoch) + "_loss" + "%.4f" % (test_performance)
         torch.save(net, save_name)
