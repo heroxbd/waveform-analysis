@@ -95,10 +95,10 @@ def testing(test_loader) :
             label_vec = labels.data[batch_index_2].cpu().numpy()
             if np.sum(label_vec) <= 0:
                 label_vec = np.ones(WindowSize) / 10000
-                #print("warning")
+                # print("warning")
             if np.sum(output_vec) <= 0:
                 output_vec = np.ones(WindowSize) / 10000
-                #print("warning")
+                # print("warning")
             cost = stats.wasserstein_distance(np.arange(WindowSize), np.arange(WindowSize), output_vec, label_vec)
             batch_result += cost
         batch_count += 1
@@ -108,16 +108,14 @@ def testing(test_loader) :
 # Neural Networks
 from CNN_Module import Net_1
 
-net = Net_1().cuda(device=device)
+net = torch.load("./Network_Models_ztraining-0/_epoch24_loss0.8157", map_location=device)
 
-loss = 1000
 trial_data = Data.TensorDataset(torch.from_numpy(Wave_test[0:1000]).float().cuda(device=device),
                                 torch.from_numpy(PET_test[0:1000]).cuda(device=device))
 trial_loader = Data.DataLoader(dataset=trial_data, batch_size=BATCHSIZE, shuffle=False, pin_memory=False)
-while(loss > 20) :
-    loss = testing(trial_loader)
-    print(loss)
-    net = Net_1().cuda(device=device)
+
+loss = testing(trial_loader)
+print("Initial loss={}".format(loss))
 
 print(sum(parm.numel() for parm in net.parameters()))
 # optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9) #0.001
@@ -128,7 +126,6 @@ checking_period = np.int(0.25 * (len(Wave_train) / BATCHSIZE))
 training_result = []
 testing_result = []
 print("training start with batchsize={0}".format(BATCHSIZE))
-Fine_Train = True
 for epoch in range(25):  # loop over the dataset multiple times
     running_loss = 0.0
     for i, data in enumerate(train_loader, 0):

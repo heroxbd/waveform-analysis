@@ -12,7 +12,7 @@ SavePath = args.opt
 if(Nwav <= 100):
     raise ValueError("NWaves must > 100 !")
 
-#from IPython import embed
+# from IPython import embed
 from time import time
 start = time()
 time_start = time()
@@ -26,19 +26,13 @@ from JPwaptool_Lite import JPwaptool_Lite
 
 
 @numba.jit
-def Make_Time_Vector(EventIDs, ChannelIDs, PETimes, WindowSize, nWaves) :
-    last_eventid = EventIDs[0]
-    last_channelid = ChannelIDs[0]
+def Make_Time_Vector(GroundTruth, Waveforms) :
     i = 0
-    j = 0
-    Time_Series = np.zeros((nWaves, WindowSize), dtype=np.float)
-    while(j != nWaves) :
-        Time_Series[j][PETimes[i]] = Time_Series[j][PETimes[i]] + 1
-        i = i + 1
-        if last_eventid != EventIDs[i] or last_channelid != ChannelIDs[i] :
-            j = j + 1
-            last_eventid = EventIDs[i]
-            last_channelid = ChannelIDs[i]
+    Time_Series = np.zeros(Waveforms["Waveform"].shape, dtype=np.float32)
+    for j in range(len(Waveforms)) :
+        while(Waveforms["EventID"][j] == GroundTruth["EventID"][i] and (Waveforms["ChannelID"][j] == GroundTruth["ChannelID"][i])) :
+            Time_Series[j][GroundTruth["PETime"][i]] = Time_Series[j][GroundTruth["PETime"][i]] + 1
+            i = i + 1
     return Time_Series
 
 
@@ -84,6 +78,7 @@ while(Nwav != 0) :
         Waveforms_and_info = np.hstack((Waveforms_and_info, WaveformTable[0:Len_Entry]))
         GroundTruth = np.hstack((GroundTruth, GroundTruthTable[0:GroundTruth_Len]))
     FileNo = FileNo + 1
+    h5file.close()
 print("Data Loaded, consuming {:.5f}s".format(time() - start))
 
 # Global Initialization
@@ -111,7 +106,7 @@ TrainDataTable = dict([])
 traindata = dict([])
 for ChannelID in ChannelIDs :
     # create Pre-Processed output file
-    Prefile[ChannelID] = tables.open_file(SavePath + "Pre_Channel{}.h5".format(ChannelID), mode="w", title="Pre-Processed-Training-Data")
+    Prefile[ChannelID] = tables.open_file(SavePath + "/Pre_Channel{}.h5".format(ChannelID), mode="w", title="Pre-Processed-Training-Data")
     # Create group and tables
     TrainDataTable[ChannelID] = Prefile[ChannelID].create_table("/", "TrainDataTable", PreProcessedData, "Wave and PET")
     traindata[ChannelID] = TrainDataTable[ChannelID].row
@@ -121,7 +116,7 @@ if(is_positive_pulse) : Waveforms_and_info["Waveform"] = Waveforms_and_info["Wav
 print("Parameter Configures, consuming {:.5f}s".format(time() - start))
 
 start = time()
-TimeSeries = Make_Time_Vector(GroundTruth["EventID"], GroundTruth["ChannelID"], GroundTruth["PETime"], WindowSize, len(Waveforms_and_info))
+TimeSeries = Make_Time_Vector(GroundTruth, Waveforms_and_info)
 print("TimeSeries Made, consuming {:.5f}s".format(time() - start))
 
 entry = 0
@@ -143,7 +138,6 @@ start = time()
 for TD in list(TrainDataTable.values()) :
     TD.flush()
 
-h5file.close()
 for Pf in list(Prefile.values()) :
     Pf.close()
 print("Data Saved, consuming {:.5f}s".format(time() - start))
