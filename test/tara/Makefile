@@ -12,7 +12,7 @@ NetDir = /srv/work_wuyy/Network_Models_ztraining-all
 PreDir = $(NetDir)/PreProcess
 NetStore_prefix = $(NetDir)/$(data_prefix)Channel
 TrainData = $(wildcard $(TrainDataDir)/$(data_prefix)*.h5)
-PreData = $(shell seq -f "$(NetDir)/PreProcess/Pre_Channel%g.h5" 0 1)
+PreData = $(shell seq -f "$(NetDir)/PreProcess/Pre_Channel%g.h5" 0 29)
 Nets = $(patsubst $(NetDir)/PreProcess/Pre_Channel%.h5, $(NetStore_prefix)%/.Training_finished, $(PreData))
 
 FileNo = *

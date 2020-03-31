@@ -30,10 +30,13 @@ import tables
 
 import pytorch_stats_loss as stats_loss
 
-lr = 1e-3
+lr = 1e-5
 
 # detecting cuda device and wait in line
-device = torch.device(1)
+if ChannelID % 2 == 1 :
+    device = torch.device(0)
+else :
+    device = torch.device(1)
 # Make Saving_Directory
 if not os.path.exists(SavePath):
     os.makedirs(SavePath)
