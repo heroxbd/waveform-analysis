@@ -31,7 +31,7 @@ def main(fopt, fipt, single_pe_path):
     epulse = wfaf.estipulse(fipt)
     spemean = wfaf.generate_model(single_pe_path, epulse)
     spemean = -1 * epulse * spemean
-    peak_c, zero_l, m_l, mar_l, mar_r, thres = wfaf.pre_analysis(fipt, epulse, spemean)
+    peak_c, _, m_l, mar_l, mar_r, thres = wfaf.pre_analysis(fipt, epulse, spemean)
     opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PETime', np.uint16), ('Weight', np.float16)])
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
         ent = ipt['Waveform']
@@ -53,9 +53,9 @@ def main(fopt, fipt, single_pe_path):
         for i in range(l):
             wf_input = ent[i]['Waveform']
             wf_input = -1 * epulse * wf_input
-            #wave = wf_input - wfaf.find_base_fast(wf_input)
+            # wave = wf_input - wfaf.find_base_fast(wf_input)
+            # lowp = np.argwhere(wfaf.vali_base(wave, m_l, thres) == 1).flatten()
             wave = wf_input - wfaf.find_base(wf_input, m_l, thres)
-            #lowp = np.argwhere(wfaf.vali_base(wave, m_l, thres) == 1).flatten()
             lowp = np.argwhere(wave < thres).flatten()
             flag = 1
             lowp = lowp[np.logical_and(lowp > 1, lowp < Length_pe-1)]
@@ -76,10 +76,10 @@ def main(fopt, fipt, single_pe_path):
                         b[:, 1] = np.inf
                         mne = spemean[np.mod(nihep.reshape(len(nihep), 1) - possible.reshape(1, len(possible)), Length_pe)]
                         ans = opti.fmin_l_bfgs_b(norm_fit, ans0, args=(mne, wave[nihep]), approx_grad=True, bounds=b, maxfun=500000)
-                        #ans = opti.fmin_slsqp(norm_fit, ans0, args=(mne, wave[nihep]), bounds=b, iprint=-1, iter=500000)
-                        #ans = opti.fmin_tnc(norm_fit, ans0, args=(mne, wave[nihep]), approx_grad=True, bounds=b, messages=0, maxfun=500000)
+                        # ans = opti.fmin_slsqp(norm_fit, ans0, args=(mne, wave[nihep]), bounds=b, iprint=-1, iter=500000)
+                        # ans = opti.fmin_tnc(norm_fit, ans0, args=(mne, wave[nihep]), approx_grad=True, bounds=b, messages=0, maxfun=500000)
                         pf = ans[0]
-                        #print(ans[2]['warnflag'])
+                        # print(ans[2]['warnflag'])
                         if np.sum(pf <= 0.1) == len(pf):
                             flag = 0
                     else:

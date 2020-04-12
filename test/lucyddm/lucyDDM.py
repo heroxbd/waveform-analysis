@@ -1,30 +1,22 @@
+# -*- coding: utf-8 -*-
+
 import sys
-import h5py
-from scipy.signal import convolve
-import tables
+sys.path.append('test')
 import numpy as np
-class AnswerData(tables.IsDescription):
-    EventID=tables.Int64Col(pos=0)
-    ChannelID=tables.Int16Col(pos=1)
-    PETime=tables.Int16Col(pos=2)
-    Weight=tables.Float32Col(pos=3)
-def ReadWave(filename):
-    h5file=tables.open_file(filename,"r")
-    waveTable=h5file.root.Waveform
-    entry=0
-    wave=waveTable[:]['Waveform']
-    eventId=waveTable[:]['EventID']
-    channelId=waveTable[:]['ChannelID']
-    h5file.close()
-    return (wave,eventId,channelId)
-def lucyDDM_N(waveform, spe, moveDelta):
-    signal = np.zeros(waveform.shape)
-    length = waveform.shape[0]
-    spe = np.append(np.zeros((spe.shape[0]- 2*moveDelta - 1,)), np.abs(spe))
-    for i in range(length):
-        signal[i, :] = lucyDDM(waveform[i, :], spe, 100)
-        print('\rThe analysis processing:|{}>{}|{:6.2f}%'.format(((20*i)//length)*'-', (19 - (20*i)//length)*' ', 100 * ((i+1) / length)), end=''if i != length-1 else '\n') # show process bar
-    return signal
+import h5py
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import argparse
+import wf_analysis_func as wfaf
+
+psr = argparse.ArgumentParser()
+psr.add_argument('-o', dest='opt', help='output file')
+psr.add_argument('ipt', help='input file')
+psr.add_argument('--ref', dest='ref', help='reference file')
+psr.add_argument('-p', dest='print', action='store_false', help='print bool', default=True)
+args = psr.parse_args()
+
 def lucyDDM(waveform, spe, iterations=50):
     '''Lucy deconvolution
     Parameters
@@ -37,73 +29,68 @@ def lucyDDM(waveform, spe, iterations=50):
     Returns
     -------
     signal : 1d array
+
+    References
+    ----------
+    .. [1] https://en.wikipedia.org/wiki/Richardson%E2%80%93Lucy_deconvolution
+    .. [2] https://github.com/scikit-image/scikit-image/blob/master/skimage/restoration/deconvolution.py#L329
     '''
-    # abs waveform, spe
-    waveform[waveform<0] = 0.0001
     waveform = waveform.astype(np.float)
     spe = spe.astype(np.float)
-    waveform = waveform/np.sum(spe)
-    # spe = np.append(np.zeros((spe.shape[0]-1,)), np.abs(spe))
+    waveform = waveform / np.sum(spe)
     # use the deconvlution method
-    wave_deconv = np.array(waveform) #np.full(waveform.shape, 0.5)
+    wave_deconv = np.full(waveform.shape, 0.5)
     spe_mirror = spe[::-1]
     for _ in range(iterations):
-        relative_blur = waveform / convolve(wave_deconv, spe, mode='same')
-        wave_deconv *= convolve(relative_blur, spe_mirror, mode='same')
+        relative_blur = waveform / np.convolve(wave_deconv, spe, 'same')
+        wave_deconv = wave_deconv * np.convolve(relative_blur, spe_mirror, 'same')
         # there is no need to set the bound if the spe and the wave are all none negative 
     return wave_deconv
-def writeSubfile(truth, eventId, channelId, sigma, subfile, moveDelta):
-    answerh5file = tables.open_file(subfile, mode='w', title="OneTonDetector")
-    AnswerTable = answerh5file.create_table('/', 'Answer', AnswerData, 'Answer')
-    answer = AnswerTable.row
-    rangelist = np.arange(truth.shape[1])
-    length = len(eventId)
-    for i in range(length):
-        eventIndex = eventId[i]
-        channelIndex = channelId[i]
-        waitWriteTruth = rangelist[truth[i, :] > (sigma * np.std(truth[i, :]))]
-        counter = 0
-        for t in waitWriteTruth:# wait for the null output process
-            if truth[i, t] > np.std(truth[i, (t-5):(t+5)]):
-                answer['EventID'] = eventIndex
-                answer['ChannelID'] = pmtIndex
-                answer['PETime'] = t - moveDelta
-                answer['Weight'] = truth[i, t]           
-                answer.append()
-                counter += 1
-        if counter == 0 and mode == 'full':
-            answer['EventID'] = eventIndex
-            answer['ChannelID'] = channelIndex
-            answer['PETime'] = 300
-            answer['Weight'] = 1           
-            answer.append()    
-        print('\rThe writing processing:|{}>{}|{:6.2f}%'.format(((20*i)//length)*'-', (19 - (20*i)//length)*' ', 100 * ((i+1) / length)), end=''if i != length-1 else '\n') # show process bar
-    AnswerTable.flush()
-    answerh5file.close()
-if __name__ == "__main__":
-    if len(sys.argv)<2:
-        problemfile = './data/simulate/hdf5/ftraining-0.h5'
-        subfile = './data/analysis/LucyDDM_python/ftraining-0/ftraining-0Answer.h5'
-        spe = np.load('analysis/LucyDDM_python/spe.npy')
-    else:
-        problemfile = sys.argv[1]
-        subfile = sys.argv[3]
-        # spe = np.load(sys.argv[2])
-        with h5py.File(sys.argv[2]) as ipt:
-            spe = ipt['spe'][:]
-    spePart = spe[0:40].reshape((40,))
-    if spePart[0]==0:
-        spePart[0] = np.abs(spePart[1])
-    (waveform, eventId, channelId) = ReadWave(problemfile)
-    numPMT = np.max(channelId)
-    length = waveform.shape[1]
-    waveformNobase = (np.sum(waveform[:, 0:150], axis=1)/150).reshape((waveform.shape[0], 1)).repeat(length, axis=1)- waveform
-    if np.min(waveformNobase[0,:])<-10:
-        waveformNobase = -waveformNobase
-    print('Begin analyze {}'.format(problemfile))
-    moveDelta = 9
-    # move template to avoid divide 0
-    lucyTruth = lucyDDM_N(waveformNobase, spePart, moveDelta)
-    writeSubfile(lucyTruth, eventId, channelId, 1, subfile, moveDelta)
-    print('End write {}'.format(subfile))
 
+def main(fopt, fipt, single_pe_path):
+    epulse = wfaf.estipulse(fipt)
+    spemean = wfaf.generate_model(single_pe_path, epulse)
+    spemean = -1 * epulse * spemean
+    _, _, m_l, _, _, thres = wfaf.pre_analysis(fipt, epulse, spemean)
+    opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PETime', np.uint16), ('Weight', np.float16)])
+    with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
+        ent = ipt['Waveform']
+        Length_pe = len(ent[0]['Waveform'])
+        assert Length_pe >= len(spemean), 'Single PE too long which is {}'.format(len(spemean))
+        spemean = np.concatenate([spemean, np.zeros(Length_pe - len(spemean))])
+        l = len(ent)
+        print('{} waveforms will be computed'.format(l))
+        dt = np.zeros(l * (Length_pe//5), dtype=opdt)
+        start = 0
+        end = 0
+        for i in range(l):
+            wf_input = ent[i]['Waveform']
+            wf_input = -1 * epulse * wf_input
+            #wave = wf_input - wfaf.find_base_fast(wf_input)
+            wave = wf_input - wfaf.find_base(wf_input, m_l, thres)
+            pf = lucyDDM(wave, spemean, 50)
+
+            if np.sum(pf <= 0.1) == len(pf):
+                t = np.where(wave == wave.min())[0][:1] - np.argmin(spemean)
+                possible = t if t[0] >= 0 else np.array([0])
+                pf = np.array([1])
+            pwe = pf[pf > 0.1]
+            pwe = pwe.astype(np.float16)
+            lenpf = len(pwe)
+            pet = possible[pf > 0.1]
+            end = start + lenpf
+            dt['PETime'][start:end] = pet
+            dt['Weight'][start:end] = pwe
+            dt['EventID'][start:end] = ent[i]['EventID']
+            dt['ChannelID'][start:end] = ent[i]['ChannelID']
+            start = end
+            print('\rAnsw Generating:|{}>{}|{:6.2f}%'.format(((20*i)//l)*'-', (19-(20*i)//l)*' ', 100 * ((i+1) / l)), end='' if i != l-1 else '\n')
+    dt = dt[dt['Weight'] > 0]
+    dt = np.sort(dt, kind='stable', order=['EventID', 'ChannelID', 'PETime'])
+    with h5py.File(fopt, 'w') as opt:
+        dset = opt.create_dataset('Answer', data=dt, compression='gzip')
+        print('The output file path is {}'.format(fopt), end=' ', flush=True)
+    return
+
+if __name__ == '__main__':
+    main(args.opt, args.ipt, args.ref)
