@@ -69,10 +69,8 @@ def main(fopt, fipt, single_pe_path):
         spemean = np.where(spemean < 0, -1*spemean, 0)
         for i in range(l):
             wf_input = ent[i]['Waveform']
-            wf_input = -1 * epulse * wf_input
-            # wave = wf_input - wfaf.find_base_fast(wf_input)
-            wave = wf_input - wfaf.find_base(wf_input, m_l, thres)
-            wave = np.where(wave < 0, -1*wave, 0)
+            wave = epulse*wfaf.deduct_base(-1*epulse*wf_input, m_l, thres, 10, 'detail')
+            wave = np.where(wave < 0, 0, wave)
             pf = lucyDDM(wave, spemean, 50)
 
             if np.sum(pf <= 0.1) == len(pf):

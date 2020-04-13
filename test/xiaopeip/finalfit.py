@@ -52,13 +52,10 @@ def main(fopt, fipt, single_pe_path):
         end = 0
         for i in range(l):
             wf_input = ent[i]['Waveform']
-            wf_input = -1 * epulse * wf_input
-            # wave = wf_input - wfaf.find_base_fast(wf_input)
-            # lowp = np.argwhere(wfaf.vali_base(wave, m_l, thres) == 1).flatten()
-            wave = wf_input - wfaf.find_base(wf_input, m_l, thres)
-            lowp = np.argwhere(wave < thres).flatten()
-            flag = 1
+            wave = -1*epulse*wfaf.deduct_base(-1*epulse*wf_input, m_l, thres, 10, 'detail')
+            lowp = np.argwhere(wfaf.vali_base(wave, m_l, thres) == 1).flatten()
             lowp = lowp[np.logical_and(lowp > 1, lowp < Length_pe-1)]
+            flag = 1
             if len(lowp) != 0:
                 panel = np.zeros(Length_pe)
                 for j in lowp:

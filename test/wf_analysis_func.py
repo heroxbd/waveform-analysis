@@ -2,9 +2,8 @@
 
 import os
 import numpy as np
-from scipy import stats
 import matplotlib
-matplotlib.use('Agg')
+# matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import h5py
 
@@ -65,12 +64,14 @@ def speplot(dt):
     plt.close()
     return
 
-def snip_baseline(waveform, iterations=50):
+def snip_baseline(waveform, itera=10):
+    wm = np.min(waveform)
+    waveform = waveform - wm
     v = np.log(np.log(np.sqrt(waveform+1)+1)+1)
     N = len(waveform)
-    for i in range(iterations):
-        v[i:N-i-1] = np.min(v[i:N-i-1], (v[0:N-2*i-1] + v[2*i:N-1])/2)
-    w = np.power(np.exp(np.exp(v) - 1) - 1, 2) - 1
+    for i in range(itera):
+        v[i:N-i] = np.minimum(v[i:N-i], (v[:N-2*i] + v[2*i:])/2)
+    w = np.power(np.exp(np.exp(v) - 1) - 1, 2) - 1 + wm
     return w
 
 def pre_analysis(h5_path, epulse, spemean):
@@ -92,6 +93,7 @@ def pre_analysis(h5_path, epulse, spemean):
             dt = np.zeros(N).astype(np.float128)
             while True:
                 wave = -1*epulse*Wf[i]
+                wave = deduct_base(wave, mode='fast')
                 i = (i + 1)%len(Wf)
                 vali = vali_base(wave, np.sum(spemean < -r*a_std), -r*a_std)
                 a = b
@@ -109,12 +111,22 @@ def pre_analysis(h5_path, epulse, spemean):
     return peak_c, zero_l, m_l, mar_l, mar_r, thres
 
 def vali_base(waveform, m_l, thres):
-    m = stats.mode(waveform)[0][0]
-    vali = np.where(np.abs(waveform - m)>-1*thres, 1, 0)
+    m = np.median(waveform[waveform > np.median(waveform)])
+    vali = np.where(m - waveform > -1*thres, 1, 0) # valid waveform, not dark noise
     pos = omi2pos(vali)
     pos = rm_frag(pos, m_l)
     vali = pos2omi(pos, len(waveform))
     return vali
+
+def deduct_base(waveform, m_l=None, thres=None, itera=10, mode='fast'):
+    wf_flip = -1*waveform
+    baseline = snip_baseline(wf_flip, itera)
+    wave = baseline - wf_flip
+    if mode == 'detail':
+        wave = wave - find_base(wave, m_l, thres)
+    elif mode == 'fast':
+        wave = wave - find_base_fast(wave)
+    return wave
 
 def find_base(waveform, m_l, thres):
     vali = vali_base(waveform, m_l, thres)
@@ -122,7 +134,7 @@ def find_base(waveform, m_l, thres):
     return base_line
 
 def find_base_fast(waveform):
-    m = stats.mode(waveform)[0][0]
+    m = np.median(waveform[waveform > np.median(waveform)])
     base_line = np.mean(waveform[np.logical_and(waveform < m + 4, waveform > m - 4)])
     return base_line
 
