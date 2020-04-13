@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
+
 import os
 import numpy as np
 from scipy import stats
 import matplotlib
-#matplotlib.use('Agg')
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import h5py
 
@@ -28,13 +29,13 @@ def generate_model(spe_path, epulse):
         base_vol = np.mean(spemean[-10:])
         # stdmodel[0] is the single pe's incoming time
         stdmodel = spemean[:-10] - base_vol
-        #stdmodel = np.around(stdmodel / 0.05) * 0.05 # smooth the stdmodel
+        # stdmodel = np.around(stdmodel / 0.05) * 0.05 # smooth the stdmodel
         # cut off all small values
         if epulse == -1:
             stdmodel = np.where(stdmodel < -0.02, stdmodel, 0)
         elif epulse == 1:
             stdmodel = np.where(stdmodel > 0.02, stdmodel, 0)
-        #stdmodel = np.where(stdmodel >= 0, stdmodel, 0) # cut off all negative values
+        # stdmodel = np.where(stdmodel >= 0, stdmodel, 0) # cut off all negative values
     return stdmodel
 
 def speplot(dt):
@@ -51,7 +52,7 @@ def speplot(dt):
     plt.xlabel('ns')
     plt.ylabel('mV')
     plt.title("Standard response model")
-    #plt.savefig('spemean.png')
+    # plt.savefig('spemean.png')
     plt.close()
 
     spemin = np.min(dt['speWf'], axis=1)
@@ -60,7 +61,7 @@ def speplot(dt):
     # show the dispersion of minimum of spe waveform
     plt.hist(spemin, len(u), density=1, histtype='bar', cumulative=False)
     plt.xlabel('mV')
-    #plt.savefig('specumu.png')
+    # plt.savefig('specumu.png')
     plt.close()
 
 def pre_analysis(h5_path, epulse, spemean):

@@ -1,6 +1,6 @@
 SHELL:=bash
 jinpDir:=dataset/jinp
-jinpwaveseq:=$(shell seq 0 9)
+jinpwaveseq:=$(shell seq 0 2)
 junoDir:=dataset/juno
 junowaveseq:=2 4
 xdcFTp:=test/xdcFT

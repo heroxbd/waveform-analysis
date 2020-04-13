@@ -17,6 +17,9 @@ psr.add_argument('--ref', dest='ref', help='reference file')
 psr.add_argument('-p', dest='print', action='store_false', help='print bool', default=True)
 args = psr.parse_args()
 
+if args.print:
+    sys.stdout = None
+
 def lucyDDM(waveform, spe, iterations=50):
     '''Lucy deconvolution
     Parameters
@@ -35,8 +38,8 @@ def lucyDDM(waveform, spe, iterations=50):
     .. [1] https://en.wikipedia.org/wiki/Richardson%E2%80%93Lucy_deconvolution
     .. [2] https://github.com/scikit-image/scikit-image/blob/master/skimage/restoration/deconvolution.py#L329
     '''
-    waveform = waveform.astype(np.float)
-    spe = spe.astype(np.float)
+    waveform = waveform + 0.001
+    spe = spe + 0.001
     waveform = waveform / np.sum(spe)
     # use the deconvlution method
     wave_deconv = np.full(waveform.shape, 0.5)
@@ -63,11 +66,13 @@ def main(fopt, fipt, single_pe_path):
         dt = np.zeros(l * (Length_pe//5), dtype=opdt)
         start = 0
         end = 0
+        spemean = np.where(spemean < 0, -1*spemean, 0)
         for i in range(l):
             wf_input = ent[i]['Waveform']
             wf_input = -1 * epulse * wf_input
-            #wave = wf_input - wfaf.find_base_fast(wf_input)
+            # wave = wf_input - wfaf.find_base_fast(wf_input)
             wave = wf_input - wfaf.find_base(wf_input, m_l, thres)
+            wave = np.where(wave < 0, -1*wave, 0)
             pf = lucyDDM(wave, spemean, 50)
 
             if np.sum(pf <= 0.1) == len(pf):
@@ -77,7 +82,7 @@ def main(fopt, fipt, single_pe_path):
             pwe = pf[pf > 0.1]
             pwe = pwe.astype(np.float16)
             lenpf = len(pwe)
-            pet = possible[pf > 0.1]
+            pet = np.argwhere(pf > 0.1).flatten().astype(np.uint16)
             end = start + lenpf
             dt['PETime'][start:end] = pet
             dt['Weight'][start:end] = pwe
