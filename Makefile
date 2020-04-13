@@ -1,16 +1,40 @@
 SHELL:=bash
 jinpDir:=dataset/jinp
-jinpwaveseq:=$(shell seq 0 2)
+jinpwaveseq:=$(shell seq 0 0)
 junoDir:=dataset/juno
 junowaveseq:=2 4
+fragnum:=99
+fragseq:=$(shell seq 0 ${fragnum})
 xdcFTp:=test/xdcFT
 xiaoPp:=test/xiaopeip
-xiaoPl:=99
-xiaoPseq:=$(shell seq 0 ${xiaoPl})
 lucy:=test/lucyddm
+mcmc:=test/mcmc
 
 .PHONY: all
-all: xdcFT xiaopeip lucyddm junoDataset
+all: xdcFT xiaopeip lucyddm mcmc junoDataset
+
+mcmc: $(jinpwaveseq:%=$(mcmc)/hist-%.pdf) $(mcmc)/record.csv
+$(mcmc)/record.csv: $(jinpwaveseq:%=$(mcmc)/record/record-%.csv)
+	cat $^ > $@
+$(mcmc)/record/record-%.csv: $(mcmc)/distrecord/distrecord-%.h5
+	mkdir -p $(dir $@)
+	python3 test/csv_dist.py $^ -o $@
+$(mcmc)/hist-%.pdf: $(mcmc)/distrecord/distrecord-%.h5
+	python3 test/draw_dist.py $^ --wthres 10 -o $@
+$(mcmc)/distrecord/distrecord-%.h5: $(jinpDir)/ztraining-%.h5 $(mcmc)/submission/submission-%.h5
+	mkdir -p $(dir $@)
+	python3 test/test_dist.py $(word 2,$^) --ref $< -o $@ > $@.log 2>&1
+define xpp_split
+$(mcmc)/submission/submission-$(1).h5: $(fragseq:%=$(mcmc)/unadjusted/unadjusted-$(1)-%.h5)
+	mkdir -p $$(dir $$@)
+	python3 test/integrate.py $$^ --num ${fragnum} -o $$@
+$(mcmc)/unadjusted/unadjusted-$(1)-%.h5: $(jinpDir)/ztraining-$(1).h5 $(mcmc)/averspe.h5
+	mkdir -p $$(dir $$@)
+	python3 $(mcmc)/mcmcfit.py $$< --ref $$(word 2,$$^) --num ${fragnum} -o $$@
+endef
+$(foreach i,$(jinpwaveseq),$(eval $(call xpp_split,$(i))))
+$(mcmc)/averspe.h5: $(jinpDir)/ztraining-0.h5
+	python3 test/spe_get.py $^ -o $@ --num 10000 --len 80
 
 lucyddm: $(jinpwaveseq:%=$(lucy)/hist-%.pdf) $(lucy)/record.csv
 $(lucy)/record.csv: $(jinpwaveseq:%=$(lucy)/record/record-%.csv)
@@ -44,12 +68,12 @@ define xpp_split
 $(xiaoPp)/submission/submission-$(1).h5: $(xiaoPp)/submission/total-$(1).h5
 	mkdir -p $$(dir $$@)
 	python3 $(xiaoPp)/adjust.py $$^ -o $$@
-$(xiaoPp)/submission/total-$(1).h5: $(xiaoPseq:%=$(xiaoPp)/unadjusted/unadjusted-$(1)-%.h5)
+$(xiaoPp)/submission/total-$(1).h5: $(fragseq:%=$(xiaoPp)/unadjusted/unadjusted-$(1)-%.h5)
 	mkdir -p $$(dir $$@)
-	python3 $(xiaoPp)/integrate.py $$^ --num ${xiaoPl} -o $$@
+	python3 test/integrate.py $$^ --num ${fragnum} -o $$@
 $(xiaoPp)/unadjusted/unadjusted-$(1)-%.h5: $(jinpDir)/ztraining-$(1).h5 $(xiaoPp)/averspe.h5
 	mkdir -p $$(dir $$@)
-	python3 $(xiaoPp)/finalfit.py $$< --ref $$(word 2,$$^) --num ${xiaoPl} -o $$@
+	python3 $(xiaoPp)/finalfit.py $$< --ref $$(word 2,$$^) --num ${fragnum} -o $$@
 endef
 $(foreach i,$(jinpwaveseq),$(eval $(call xpp_split,$(i))))
 $(xiaoPp)/averspe.h5: $(jinpDir)/ztraining-0.h5
