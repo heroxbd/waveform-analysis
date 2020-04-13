@@ -7,8 +7,8 @@ import argparse
 psr = argparse.ArgumentParser()
 psr.add_argument('-o', dest='opt', help='output file')
 psr.add_argument('ipt', help='input file')
-psr.add_argument('-a', type=int, help='begining of gragment')
-psr.add_argument('-b', type=int, help='ending of gragment')
+psr.add_argument('-a', type=int, help='begining of fragment')
+psr.add_argument('-b', type=int, help='ending of fragment')
 args = psr.parse_args()
 
 def main(fopt, fipt, a, b):
@@ -39,8 +39,8 @@ def main(fopt, fipt, a, b):
             wf = Wf[np.logical_and(Wf_num >= Na, Wf_num < Nb)]
             tr = Tr[np.logical_and(Tr_num >= Na, Tr_num < Nb)]
     with h5py.File(fopt, 'w') as opt:
-        dset = opt.create_dataset('GroundTruth', data=tr, compression='gzip')
-        dset = opt.create_dataset('Waveform', data=wf, compression='gzip')
+        opt.create_dataset('GroundTruth', data=tr, compression='gzip')
+        opt.create_dataset('Waveform', data=wf, compression='gzip')
 
 if __name__ == '__main__':
     main(args.opt, args.ipt, args.a, args.b)

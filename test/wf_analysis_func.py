@@ -77,7 +77,7 @@ def snip_baseline(waveform, itera=10):
 def pre_analysis(h5_path, epulse, spemean):
     peak_c = np.argmin(spemean)
     zero_l = np.where(spemean[peak_c:] == 0)[0][0] + peak_c
-    N = 100000
+    N = 10000
     t = 0
     with h5py.File(h5_path, 'r', libver='latest', swmr=True) as ztrfile:
         Wf = ztrfile['Waveform']['Waveform']

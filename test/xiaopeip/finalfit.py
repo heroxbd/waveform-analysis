@@ -103,7 +103,7 @@ def main(fopt, fipt, single_pe_path):
     dt = dt[dt['Weight'] > 0]
     dt = np.sort(dt, kind='stable', order=['EventID', 'ChannelID', 'PETime'])
     with h5py.File(fopt, 'w') as opt:
-        dset = opt.create_dataset('Answer', data=dt, compression='gzip')
+        opt.create_dataset('Answer', data=dt, compression='gzip')
         print('The output file path is {}'.format(fopt), end=' ', flush=True)
     return
 
