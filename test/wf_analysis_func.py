@@ -63,6 +63,15 @@ def speplot(dt):
     plt.xlabel('mV')
     # plt.savefig('specumu.png')
     plt.close()
+    return
+
+def snip_baseline(waveform, iterations=50):
+    v = np.log(np.log(np.sqrt(waveform+1)+1)+1)
+    N = len(waveform)
+    for i in range(iterations):
+        v[i:N-i-1] = np.min(v[i:N-i-1], (v[0:N-2*i-1] + v[2*i:N-1])/2)
+    w = np.power(np.exp(np.exp(v) - 1) - 1, 2) - 1
+    return w
 
 def pre_analysis(h5_path, epulse, spemean):
     peak_c = np.argmin(spemean)
