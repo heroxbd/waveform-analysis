@@ -37,9 +37,8 @@ def main():
     fipt = args.ipt
     fopt = args.opt
     spemean_r, epulse = wfaf.generate_model(single_pe_path)
-    spemean = -1 * epulse * spemean_r
-    print('spemean is {}'.format(spemean))
-    peak_c, _, m_l, mar_l, mar_r, thres = wfaf.pre_analysis(fipt, epulse, spemean)
+    spe_pre = wfaf.pre_analysis(fipt, epulse, -1*epulse*spemean_r)
+    print('spemean is {}'.format(spe_pre['spemean']))
     opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PETime', np.uint16), ('Weight', np.float16)])
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
         ent = ipt['Waveform']
@@ -49,14 +48,14 @@ def main():
         a1 = max(args.ent*Chnum-10000, 0)
         a2 = min(args.ent*Chnum+10000, len(ent))
         ent = ent[a1:a2]
-        assert Length_pe >= len(spemean), 'Single PE too long which is {}'.format(len(spemean))
+        assert Length_pe >= len(spe_pre['spemean']), 'Single PE too long which is {}'.format(len(spe_pre['spemean']))
         i = np.where(np.logical_and(ent['EventID'] == args.ent, ent['ChannelID'] == args.cha))[0][0]
-        spemean = np.concatenate([spemean, np.zeros(Length_pe - len(spemean))])
+        spe_pre['spemean'] = np.concatenate([spe_pre['spemean'], np.zeros(Length_pe - len(spe_pre['spemean']))])
 
         wf_input = ent[i]['Waveform']
-        wf_input = -1 * epulse * wf_input
-        wave = -1*epulse*wfaf.deduct_base(-1*epulse*wf_input, m_l, thres, 10, 'detail')
-        pf, nihep, possible = ff.xiaopeip_N(wave, spemean, peak_c, m_l, thres, mar_r, mar_l, l)
+        wf_input = -1 * spe_pre['epulse'] * wf_input
+        wave = -1*spe_pre['epulse']*wfaf.deduct_base(-1*spe_pre['epulse']*wf_input, spe_pre['m_l'], spe_pre['thres'], 10, 'detail')
+        pf = ff.xiaopeip_N(wave, spe_pre, Length_pe)
         pet, pwe = wfaf.pf_to_tw(pf, 0.1)
 
         print('PETime = {}, Weight = {}'.format(pet, pwe))

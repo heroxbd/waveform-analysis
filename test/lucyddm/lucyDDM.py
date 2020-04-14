@@ -51,9 +51,9 @@ def lucyDDM(waveform, spe, iterations=50):
     return wave_deconv
 
 def main(fopt, fipt, single_pe_path):
-    spemean, epulse = wfaf.generate_model(single_pe_path)
-    _, _, m_l, _, _, thres = wfaf.pre_analysis(fipt, epulse, -1 * epulse * spemean)
-    spemean = epulse * spemean
+    spemean_r, epulse = wfaf.generate_model(single_pe_path)
+    spe_pre = wfaf.pre_analysis(fipt, epulse, -1*epulse*spemean_r)
+    spemean = spe_pre['epulse'] * spe_pre['spemean']
     opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PETime', np.uint16), ('Weight', np.float16)])
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
         ent = ipt['Waveform']
@@ -67,7 +67,7 @@ def main(fopt, fipt, single_pe_path):
         end = 0
         for i in range(l):
             wf_input = ent[i]['Waveform']
-            wave = epulse * wfaf.deduct_base(-1*epulse*wf_input, m_l, thres, 10, 'detail')
+            wave = spe_pre['epulse'] * wfaf.deduct_base(-1*spe_pre['epulse']*wf_input, spe_pre['m_l'], spe_pre['thres'], 10, 'detail')
             wave = np.where(wave < 0, 0, wave)
             pf = lucyDDM(wave, spemean, 50)
 

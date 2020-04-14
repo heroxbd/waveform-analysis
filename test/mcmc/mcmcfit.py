@@ -30,7 +30,6 @@ N = 11000
 class Ind_Generator:
     def __init__(self, sigma):
         self.sigma = sigma
-        self.l = l
         np.random.seed(0)
         return
 
@@ -72,9 +71,9 @@ def mcmc_N(wave, spemean, gen):
     return pf
 
 def main(fopt, fipt, single_pe_path):
-    spemean, epulse = wfaf.generate_model(single_pe_path)
-    _, _, m_l, _, _, thres = wfaf.pre_analysis(fipt, epulse, -1 * epulse * spemean)
-    spemean = epulse * spemean
+    spemean_r, epulse = wfaf.generate_model(single_pe_path)
+    spe_pre = wfaf.pre_analysis(fipt, epulse, -1*epulse*spemean_r)
+    spemean = epulse * spe_pre['spemean']
     opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PETime', np.uint16), ('Weight', np.float16)])
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
         ent = ipt['Waveform']
@@ -97,7 +96,7 @@ def main(fopt, fipt, single_pe_path):
 
         for i in range(l):
             wf_input = ent[i]['Waveform']
-            wave = epulse * wfaf.deduct_base(-1*epulse*wf_input, m_l, thres, 10, 'detail')
+            wave = epulse * wfaf.deduct_base(-1*epulse*wf_input, spe_pre['m_l'], spe_pre['thres'], 10, 'detail')
             pf = mcmc_N(wave, spemean, gen)
             pet, pwe = wfaf.pf_to_tw(pf, 0.1)
 

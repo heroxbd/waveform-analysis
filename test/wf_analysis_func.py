@@ -69,7 +69,8 @@ def pre_analysis(h5_path, epulse, spemean):
     m_l = np.sum(spemean < thres)
     mar_l = np.sum(spemean[:peak_c] > thres) + 2
     mar_r = np.sum(spemean[peak_c:zero_l] > thres) + 2
-    return peak_c, zero_l, m_l, mar_l, mar_r, thres
+    spe_pre = {'spemean':spemean, 'epulse':epulse, 'peak_c':peak_c, 'zero_l':zero_l, 'm_l':m_l, 'mar_l':mar_l, 'mar_r':mar_r, 'thres':thres}
+    return spe_pre
 
 def vali_base(waveform, m_l, thres):
     m = np.median(waveform[waveform > np.median(waveform)])
@@ -123,7 +124,7 @@ def rm_frag(pos, m_l):
     return pos
 
 def pf_to_tw(pf, thres=0.1):
-    assert thres >= 1, 'thres is too large, which is {}'.format(thres)
+    assert thres < 1, 'thres is too large, which is {}'.format(thres)
     if np.max(pf) < thres:
         t = np.argmax(pf)
         pf = np.zeros_like(pf)
