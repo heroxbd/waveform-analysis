@@ -25,18 +25,19 @@ if args.print:
     sys.stdout = None
 
 R = 4
+N = 11000
 
 class Ind_Generator:
-    def __init__(self, sigma, l):
+    def __init__(self, sigma):
         self.sigma = sigma
         self.l = l
         np.random.seed(0)
         return
 
-    def next_ind(self, ind):
+    def next_ind(self, ind, l):
         while True:
             ind_n = self.sigma * np.random.randn() + (ind+0.5)
-            if ind_n >= 0 or ind_n < self.l:
+            if ind_n >= 0 or ind_n < l:
                 ind_n = np.int(ind_n).astype(np.uint16)
                 break
         return ind_n
@@ -44,11 +45,36 @@ class Ind_Generator:
     def uni_rand(self):
         return np.random.rand()
 
+def mcmc_N(wave, spemean, gen):
+    L = len(wave) - len(spemean) + 1
+    panel = np.zeros(L)
+    sampling = np.zeros(N).astype(np.uint16)
+    r_a = np.power(np.convolve(panel, spemean) - wave, 2)
+    for j in range(1, N):
+        u = gen.uni_rand()
+        ind = gen.next_ind(sampling[j - 1])
+        panel_a = panel
+        panel_a[ind] = 1
+        r_b = np.power(np.convolve(panel_a, spemean) - wave, 2)
+        v = np.min(1, r_a/r_b)
+        if u < v:
+            sampling[j] = ind
+        else:
+            sampling[j] = sampling[j-1]
+        r_a = r_b
+    sampling = sampling[1000:]
+    pwe_tot = np.sum(wave) / np.sum(spemean)
+    pet, pwe = np.unique(sampling, return_counts=True)
+    pwe = pwe / pwe_tot
+
+    pf = np.zeros_like(wave)
+    pf[pet] = pwe
+    return pf
+
 def main(fopt, fipt, single_pe_path):
-    epulse = wfaf.estipulse(fipt)
-    spemean = wfaf.generate_model(single_pe_path, epulse)
+    spemean, epulse = wfaf.generate_model(single_pe_path)
+    _, _, m_l, _, _, thres = wfaf.pre_analysis(fipt, epulse, -1 * epulse * spemean)
     spemean = epulse * spemean
-    _, _, m_l, _, _, thres = wfaf.pre_analysis(fipt, epulse, spemean)
     opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PETime', np.uint16), ('Weight', np.float16)])
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
         ent = ipt['Waveform']
@@ -66,43 +92,19 @@ def main(fopt, fipt, single_pe_path):
         dt = np.zeros(l * (Length_pe//5), dtype=opdt)
         start = 0
         end = 0
-        L = Length_pe - len(spemean) + 1
-        sigma = L / (2*R)
-        gen = Ind_Generator(sigma, L)
-        N = 11000
-        panel = np.zeros(L)
+        sigma = (Length_pe - len(spemean) + 1) / (2*R)
+        gen = Ind_Generator(sigma)
+
         for i in range(l):
             wf_input = ent[i]['Waveform']
             wave = epulse * wfaf.deduct_base(-1*epulse*wf_input, m_l, thres, 10, 'detail')
-            sampling = np.zeros(N).astype(np.uint16)
-            r_a = np.power(np.convolve(panel, spemean) - wave, 2)
-            for j in range(1, N):
-                u = gen.uni_rand()
-                ind = gen.next_ind(sampling[j - 1])
-                panel_a = panel
-                panel_a[ind] = 1
-                r_b = np.power(np.convolve(panel_a, spemean) - wave, 2)
-                v = np.min(1, r_a/r_b)
-                if u < v:
-                    sampling[j] = ind
-                else:
-                    sampling[j] = sampling[j-1]
-                r_a = r_b
-            sampling = sampling[1000:]
-            pwe_tot = np.sum(wave) / np.sum(spemean)
-            pet, pwe = np.unique(sampling, return_counts=True)
-            pwe = pwe / pwe_tot
+            pf = mcmc_N(wave, spemean, gen)
+            pet, pwe = wfaf.pf_to_tw(pf, 0.1)
 
-            if np.max(pwe) < 0.1:
-                t = np.where(wave == wave.min())[0][:1] - np.argmin(spemean)
-                pet = t if t[0] >= 0 else np.array([0])
-                pwe = np.array([1])
-            pet = pet[pwe > 0.1]
-            pwe = pwe[pwe > 0.1].astype(np.float16)
             lenpf = len(pwe)
             end = start + lenpf
-            dt['PETime'][start:end] = pet
-            dt['Weight'][start:end] = pwe
+            dt['PETime'][start:end] = pet.astype(np.uint16)
+            dt['Weight'][start:end] = pwe.astype(np.float16)
             dt['EventID'][start:end] = ent[i]['EventID']
             dt['ChannelID'][start:end] = ent[i]['ChannelID']
             start = end

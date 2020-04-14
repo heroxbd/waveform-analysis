@@ -33,8 +33,7 @@ if args.print:
     sys.stdout = None
 
 def generate_eff_ft(fopt, fipt, single_pe_path):
-    epulse = wfaf.estipulse(fipt)
-    model = wfaf.generate_model(single_pe_path, epulse)
+    model, epulse = wfaf.generate_model(single_pe_path)
     opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PETime', np.uint16), ('Weight', np.float16)])
     model = compr(model, EXP, AXE, epulse)
 

@@ -59,7 +59,7 @@ def main(fref, fipt, fopt):
         df_sub = ipt['Answer']
         dt = wpdistance(df_ans, df_sub)
     with h5py.File(fopt, 'w') as h5f:
-        dset = h5f.create_dataset('Record', data=dt, compression='gzip')
+        h5f.create_dataset('Record', data=dt, compression='gzip')
 
 if __name__ == '__main__':
     main(args.ref, args.ipt, args.opt)

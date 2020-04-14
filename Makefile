@@ -24,7 +24,7 @@ $(mcmc)/hist-%.pdf: $(mcmc)/distrecord/distrecord-%.h5
 $(mcmc)/distrecord/distrecord-%.h5: $(jinpDir)/ztraining-%.h5 $(mcmc)/submission/submission-%.h5
 	mkdir -p $(dir $@)
 	python3 test/test_dist.py $(word 2,$^) --ref $< -o $@ > $@.log 2>&1
-define xpp_split
+define mcmc_split
 $(mcmc)/submission/submission-$(1).h5: $(fragseq:%=$(mcmc)/unadjusted/unadjusted-$(1)-%.h5)
 	mkdir -p $$(dir $$@)
 	python3 test/integrate.py $$^ --num ${fragnum} -o $$@
@@ -32,7 +32,7 @@ $(mcmc)/unadjusted/unadjusted-$(1)-%.h5: $(jinpDir)/ztraining-$(1).h5 $(mcmc)/av
 	mkdir -p $$(dir $$@)
 	python3 $(mcmc)/mcmcfit.py $$< --ref $$(word 2,$$^) --num ${fragnum} -o $$@
 endef
-$(foreach i,$(jinpwaveseq),$(eval $(call xpp_split,$(i))))
+$(foreach i,$(jinpwaveseq),$(eval $(call mcmc_split,$(i))))
 $(mcmc)/averspe.h5: $(jinpDir)/ztraining-0.h5
 	python3 test/spe_get.py $^ -o $@ --num 10000 --len 80
 

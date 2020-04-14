@@ -12,7 +12,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import argparse
 import wf_analysis_func as wfaf
-import finalfit as ff
+import mcmcfit as mf
 
 plt.rcParams['savefig.dpi'] = 300
 plt.rcParams['figure.dpi'] = 300
@@ -30,16 +30,16 @@ args = psr.parse_args()
 
 single_pe_path = 'xtest/averspe.h5'
 
-def norm_fit(x, M, p):
-    return np.linalg.norm(p - np.matmul(M, x))
+R = mf.R
+N = mf.N
 
 def main():
     fipt = args.ipt
     fopt = args.opt
-    spemean_r, epulse = wfaf.generate_model(single_pe_path)
-    spemean = -1 * epulse * spemean_r
+    spemean, epulse = wfaf.generate_model(single_pe_path)
+    _, _, m_l, _, _, thres = wfaf.pre_analysis(fipt, epulse, -1 * epulse * spemean)
+    spemean = epulse * spemean
     print('spemean is {}'.format(spemean))
-    peak_c, _, m_l, mar_l, mar_r, thres = wfaf.pre_analysis(fipt, epulse, spemean)
     opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PETime', np.uint16), ('Weight', np.float16)])
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
         ent = ipt['Waveform']
@@ -51,12 +51,13 @@ def main():
         ent = ent[a1:a2]
         assert Length_pe >= len(spemean), 'Single PE too long which is {}'.format(len(spemean))
         i = np.where(np.logical_and(ent['EventID'] == args.ent, ent['ChannelID'] == args.cha))[0][0]
-        spemean = np.concatenate([spemean, np.zeros(Length_pe - len(spemean))])
+
+        sigma = (Length_pe - len(spemean) + 1) / (2*R)
+        gen = mf.Ind_Generator(sigma)
 
         wf_input = ent[i]['Waveform']
-        wf_input = -1 * epulse * wf_input
-        wave = -1*epulse*wfaf.deduct_base(-1*epulse*wf_input, m_l, thres, 10, 'detail')
-        pf, nihep, possible = ff.xiaopeip_N(wave, spemean, peak_c, m_l, thres, mar_r, mar_l, l)
+        wave = epulse * wfaf.deduct_base(-1*epulse*wf_input, m_l, thres, 10, 'detail')
+        pf = mf.mcmc_N(wave, spemean, gen)
         pet, pwe = wfaf.pf_to_tw(pf, 0.1)
 
         print('PETime = {}, Weight = {}'.format(pet, pwe))
@@ -107,8 +108,6 @@ def main():
                 opt.create_dataset('Answer_un', data=dt, compression='gzip')
                 opt.create_dataset('Answer', data=dt_a, compression='gzip')
             plt.plot(wave, c='b')
-            plt.scatter(nihep, wave[nihep], marker='x', c='g')
-            plt.scatter(possible, wave[possible], marker='+', c='r')
             plt.grid()
             plt.xlabel(r'Time/[ns]')
             plt.ylabel(r'ADC')
@@ -121,7 +120,7 @@ def main():
             plt.vlines(pet, -200*pwe+hh, hh, color='y')
             plt.savefig('demo.png')
             plt.close()
-            plt.plot(spemean_r, c='b')
+            plt.plot(spemean, c='b')
             plt.grid()
             plt.xlabel(r'Time/[ns]')
             plt.ylabel(r'ADC')

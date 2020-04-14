@@ -51,10 +51,9 @@ def lucyDDM(waveform, spe, iterations=50):
     return wave_deconv
 
 def main(fopt, fipt, single_pe_path):
-    epulse = wfaf.estipulse(fipt)
-    spemean = wfaf.generate_model(single_pe_path, epulse)
+    spemean, epulse = wfaf.generate_model(single_pe_path)
+    _, _, m_l, _, _, thres = wfaf.pre_analysis(fipt, epulse, -1 * epulse * spemean)
     spemean = epulse * spemean
-    _, _, m_l, _, _, thres = wfaf.pre_analysis(fipt, epulse, spemean)
     opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PETime', np.uint16), ('Weight', np.float16)])
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
         ent = ipt['Waveform']
@@ -72,17 +71,11 @@ def main(fopt, fipt, single_pe_path):
             wave = np.where(wave < 0, 0, wave)
             pf = lucyDDM(wave, spemean, 50)
 
-            if np.max(pf) < 0.1:
-                t = np.where(wave == wave.min())[0][:1] - np.argmin(spemean)
-                pf = np.zeros_like(wave)
-                pf[t if t[0] >= 0 else np.array([0])] = 1
-            pwe = pf[pf > 0.1]
-            pwe = pwe.astype(np.float16)
+            pet, pwe = wfaf.pf_to_tw(pf, 0.1)
             lenpf = len(pwe)
-            pet = np.argwhere(pf > 0.1).flatten().astype(np.uint16)
             end = start + lenpf
-            dt['PETime'][start:end] = pet
-            dt['Weight'][start:end] = pwe
+            dt['PETime'][start:end] = pet.astype(np.uint16)
+            dt['Weight'][start:end] = pwe.astype(np.float16)
             dt['EventID'][start:end] = ent[i]['EventID']
             dt['ChannelID'][start:end] = ent[i]['ChannelID']
             start = end
