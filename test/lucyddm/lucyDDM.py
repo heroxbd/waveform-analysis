@@ -9,6 +9,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import argparse
 import wf_analysis_func as wfaf
+from scipy.signal import convolve
 
 psr = argparse.ArgumentParser()
 psr.add_argument('-o', dest='opt', help='output file')
@@ -39,15 +40,17 @@ def lucyDDM(waveform, spe, iterations=50):
     .. [2] https://github.com/scikit-image/scikit-image/blob/master/skimage/restoration/deconvolution.py#L329
     '''
     waveform = waveform + 0.001
-    spe = spe + 0.001
     waveform = waveform / np.sum(spe)
+    l = len(spe)
     # use the deconvlution method
     wave_deconv = np.full(waveform.shape, 0.5)
     spe_mirror = spe[::-1]
     for _ in range(iterations):
         relative_blur = waveform / np.convolve(wave_deconv, spe, 'same')
         wave_deconv = wave_deconv * np.convolve(relative_blur, spe_mirror, 'same')
-        # there is no need to set the bound if the spe and the wave are all none negative 
+        # there is no need to set the bound if the spe and the wave are all none negative
+    wave_deconv = np.append(wave_deconv[(l-1)//2:], np.zeros((l-1)//2))
+    # np.convolve(wave_deconv, spe, 'full')[:len(waveform)] should be waveform
     return wave_deconv
 
 def main(fopt, fipt, single_pe_path):
@@ -59,7 +62,6 @@ def main(fopt, fipt, single_pe_path):
         ent = ipt['Waveform']
         Length_pe = len(ent[0]['Waveform'])
         assert Length_pe >= len(spemean), 'Single PE too long which is {}'.format(len(spemean))
-        spemean = np.concatenate([spemean, np.zeros(Length_pe - len(spemean))])
         l = len(ent)
         print('{} waveforms will be computed'.format(l))
         dt = np.zeros(l * (Length_pe//5), dtype=opdt)
