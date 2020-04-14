@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import argparse
 import wf_analysis_func as wfaf
 import finalfit as ff
+import adjust as ad
 
 plt.rcParams['savefig.dpi'] = 300
 plt.rcParams['figure.dpi'] = 300
@@ -55,7 +56,7 @@ def main():
         wf_input = ent[i]['Waveform']
         wf_input = -1 * spe_pre['epulse'] * wf_input
         wave = -1*spe_pre['epulse']*wfaf.deduct_base(-1*spe_pre['epulse']*wf_input, spe_pre['m_l'], spe_pre['thres'], 10, 'detail')
-        pf = ff.xiaopeip_N(wave, spe_pre, Length_pe)
+        pf, nihep, possible = ff.xiaopeip_N(wave, spe_pre, Length_pe)
         pet, pwe = wfaf.pf_to_tw(pf, 0.1)
 
         print('PETime = {}, Weight = {}'.format(pet, pwe))
@@ -79,25 +80,10 @@ def main():
         pdist = np.abs(Q - q) * scipy.stats.poisson.pmf(Q, Q)
         print('wdist is {}, pdist is {}'.format(wdist, pdist))
 
-        idt = np.dtype([('PETime', np.int16), ('Weight', np.float16), ('Wgt_b', np.uint8)])
-        seg = np.zeros(np.max(pet) + 3, dtype=idt)
-        seg['PETime'] = np.arange(-1, np.max(pet) + 2)
-        seg['Weight'][np.sort(pet) + 1] = pwe[np.argsort(pet)]
-        seg['Wgt_b'] = np.around(seg['Weight'])
-        resi = seg['Weight'][1:-1] - seg['Wgt_b'][1:-1]
-        t = np.convolve(resi, [0.9, 1.7, 0.9], 'full')
-        ta = np.diff(t, prepend=t[0])
-        tb = np.diff(t, append=t[-1])
-        seg['Wgt_b'][(ta > 0)*(tb < 0)*(t > 0.5)*(seg['Wgt_b'] == 0.0)*(seg['Weight'] > 0)] += 1
-        if np.sum(seg['Wgt_b'][1:-1] > 0) != 0:
-            wgt_a = seg['Wgt_b'][1:-1][seg['Wgt_b'][1:-1] > 0]
-            pet_a = seg['PETime'][1:-1][seg['Wgt_b'][1:-1] > 0]
-        else:
-            wgt_a = 1
-            pet_a = seg['PETime'][np.argmax(seg['Weight'])]
+        pet_a, pwe_a = ad.xpp_convol(pet, pwe)
         dt_a = np.zeros(len(pet_a), dtype=opdt)
         dt_a['PETime'] = pet_a
-        dt_a['Weight'] = wgt_a
+        dt_a['Weight'] = pwe_a
         dt_a['EventID'] = args.ent
         dt_a['ChannelID'] = args.cha
 
@@ -112,7 +98,7 @@ def main():
             plt.xlabel(r'Time/[ns]')
             plt.ylabel(r'ADC')
             plt.xlim(200, 500)
-            plt.hlines(thres, 200, 500, color='c')
+            plt.hlines(spe_pre['thres'], 200, 500, color='c')
             t, c = np.unique(tru_pet, return_counts=True)
             plt.vlines(t, 0, 200*c, color='k')
             plt.vlines(pet_a, -200*wgt_a, 0, color='m')

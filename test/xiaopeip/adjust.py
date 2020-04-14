@@ -14,9 +14,27 @@ args = psr.parse_args()
 if args.print:
     sys.stdout = None
 
+def xpp_convol(pet, wgt):
+    idt = np.dtype([('PETime', np.int16), ('Weight', np.float16), ('Wgt_b', np.uint8)])
+    seg = np.zeros(np.max(pet) + 3, dtype=idt)
+    seg['PETime'] = np.arange(-1, np.max(pet) + 2)
+    seg['Weight'][np.sort(pet) + 1] = wgt[np.argsort(pet)]
+    seg['Wgt_b'] = np.around(seg['Weight'])
+    resi = seg['Weight'][1:-1] - seg['Wgt_b'][1:-1]
+    t = np.convolve(resi, [0.9, 1.7, 0.9], 'full')
+    ta = np.diff(t, prepend=t[0])
+    tb = np.diff(t, append=t[-1])
+    seg['Wgt_b'][(ta > 0)*(tb < 0)*(t > 0.5)*(seg['Wgt_b'] == 0.0)*(seg['Weight'] > 0)] += 1
+    if np.sum(seg['Wgt_b'][1:-1] > 0) != 0:
+        pwe = seg['Wgt_b'][1:-1][seg['Wgt_b'][1:-1] > 0]
+        pet = seg['PETime'][1:-1][seg['Wgt_b'][1:-1] > 0]
+    else:
+        pwe = np.array([1])
+        pet = seg['PETime'][np.argmax(seg['Weight'])]
+    return pet, pwe
+
 def main(fopt, fipt):
     opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PETime', np.uint16), ('Weight', np.uint8)])
-    idt = np.dtype([('PETime', np.int16), ('Weight', np.float16), ('Wgt_b', np.uint8)])
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
         N = len(ipt['Answer'])
         dt = np.zeros(N, dtype=opdt)
@@ -32,26 +50,13 @@ def main(fopt, fipt):
         l = len(e_ans)
         for i in range(l):
             pet = Pet[i_ans[i]:i_ans[i]+c_ans[i]]
-            seg = np.zeros(np.max(pet) + 3, dtype=idt)
-            seg['PETime'] = np.arange(-1, np.max(pet) + 2)
-            seg['Weight'][np.sort(pet) + 1] = Wgt[i_ans[i]:i_ans[i]+c_ans[i]][np.argsort(pet)]
-            seg['Wgt_b'] = np.around(seg['Weight'])
-            resi = seg['Weight'][1:-1] - seg['Wgt_b'][1:-1]
-            t = np.convolve(resi, [0.9, 1.7, 0.9], 'full')
-            ta = np.diff(t, prepend=t[0])
-            tb = np.diff(t, append=t[-1])
-            seg['Wgt_b'][(ta > 0)*(tb < 0)*(t > 0.5)*(seg['Wgt_b'] == 0.0)*(seg['Weight'] > 0)] += 1
-            if np.sum(seg['Wgt_b'][1:-1] > 0) != 0:
-                wgt = seg['Wgt_b'][1:-1][seg['Wgt_b'][1:-1] > 0]
-                pet = seg['PETime'][1:-1][seg['Wgt_b'][1:-1] > 0]
-                lenpf = len(wgt)
-            else:
-                wgt = 1
-                pet = seg['PETime'][np.argmax(seg['Weight'])]
-                lenpf = 1
+            pwe = Wgt[i_ans[i]:i_ans[i]+c_ans[i]]
+            pet, pwe = xpp_convol(pet, pwe)
+
+            lenpf = len(pwe)
             end = start + lenpf
             dt['PETime'][start:end] = pet
-            dt['Weight'][start:end] = wgt
+            dt['Weight'][start:end] = pwe
             dt['EventID'][start:end] = e_ans[i]//Chnum
             dt['ChannelID'][start:end] = e_ans[i]%Chnum
             start = end
