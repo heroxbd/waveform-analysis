@@ -72,8 +72,8 @@ def main(fopt, fipt, single_pe_path):
         end = 0
         for i in range(l):
             wf_input = ent[i]['Waveform']
-            wave = -1*spe_pre['epulse'] * wfaf.deduct_base(-1*spe_pre['epulse']*wf_input, spe_pre['m_l'], spe_pre['thres'], len(spe_pre['spemean'])//2, 'detail')
-            wave = np.where(wave < 0, 0, wave)
+            wave = wfaf.deduct_base(-1*spe_pre['epulse']*wf_input, spe_pre['m_l'], spe_pre['thres'], len(spe_pre['spemean'])//2, 'detail')
+            wave = np.where(wave < 0, -wave, 0)
             pf = lucyDDM(wave, spemean, 100)
 
             pet, pwe = wfaf.pf_to_tw(pf, 0.1)
