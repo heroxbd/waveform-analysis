@@ -21,7 +21,7 @@ args = psr.parse_args()
 if args.print:
     sys.stdout = None
 
-def lucyDDM(waveform, spe, iterations=50):
+def lucyDDM(waveform, spe, iterations=100):
     '''Lucy deconvolution
     Parameters
     ----------
@@ -41,16 +41,19 @@ def lucyDDM(waveform, spe, iterations=50):
     '''
     waveform = waveform + 0.001
     waveform = waveform / np.sum(spe)
-    l = len(spe)
+    t = np.argwhere(spe > 0)[0][0]
+    spe_t = spe[spe > 0]
+    l = len(spe_t)
     # use the deconvlution method
     wave_deconv = np.full(waveform.shape, 0.5)
-    spe_mirror = spe[::-1]
+    spe_mirror = spe_t[::-1]
     for _ in range(iterations):
-        relative_blur = waveform / np.convolve(wave_deconv, spe, 'same')
+        relative_blur = waveform / np.convolve(wave_deconv, spe_t, 'same')
         wave_deconv = wave_deconv * np.convolve(relative_blur, spe_mirror, 'same')
         # there is no need to set the bound if the spe and the wave are all none negative
-    wave_deconv = np.append(wave_deconv[(l-1)//2:], np.zeros((l-1)//2))
+    wave_deconv = np.append(wave_deconv[(l-1)//2+t:], np.zeros((l-1)//2+t))
     # np.convolve(wave_deconv, spe, 'full')[:len(waveform)] should be waveform
+    wave_deconv = np.where(wave_deconv<50, wave_deconv, 0)
     return wave_deconv
 
 def main(fopt, fipt, single_pe_path):
@@ -69,9 +72,9 @@ def main(fopt, fipt, single_pe_path):
         end = 0
         for i in range(l):
             wf_input = ent[i]['Waveform']
-            wave = spe_pre['epulse'] * wfaf.deduct_base(-1*spe_pre['epulse']*wf_input, spe_pre['m_l'], spe_pre['thres'], 10, 'detail')
+            wave = -1*spe_pre['epulse'] * wfaf.deduct_base(-1*spe_pre['epulse']*wf_input, spe_pre['m_l'], spe_pre['thres'], len(spe_pre['spemean'])//2, 'detail')
             wave = np.where(wave < 0, 0, wave)
-            pf = lucyDDM(wave, spemean, 50)
+            pf = lucyDDM(wave, spemean, 100)
 
             pet, pwe = wfaf.pf_to_tw(pf, 0.1)
             lenpf = len(pwe)

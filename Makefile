@@ -1,9 +1,10 @@
 SHELL:=bash
-jinpDir:=dataset/jinp
-jinpwaveseq:=$(shell seq 0 0)
-junoDir:=dataset/juno
-junowaveseq:=2 4
-fragnum:=99
+set:=jinp
+waveseq:=$(shell seq 0 1)
+#set:=juno
+#waveseq:=2 4
+Dir:=dataset
+fragnum:=0
 fragseq:=$(shell seq 0 ${fragnum})
 xdcFTp:=test/xdcFT
 xiaoPp:=test/xiaopeip
@@ -13,87 +14,82 @@ mcmc:=test/mcmc
 .PHONY: all
 all: xdcFT xiaopeip lucyddm mcmc junoDataset
 
-mcmc: $(jinpwaveseq:%=$(mcmc)/hist-%.pdf) $(mcmc)/record.csv
-$(mcmc)/record.csv: $(jinpwaveseq:%=$(mcmc)/record/record-%.csv)
+mcmc: $(waveseq:%=$(mcmc)/dist-$(set)/hist-%.pdf) $(mcmc)/dist-$(set)/record.csv
+$(mcmc)/dist-$(set)/record.csv: $(waveseq:%=$(mcmc)/dist-$(set)/record-%.csv)
 	cat $^ > $@
-$(mcmc)/record/record-%.csv: $(mcmc)/distrecord/distrecord-%.h5
-	mkdir -p $(dir $@)
+$(mcmc)/dist-$(set)/record-%.csv: $(mcmc)/dist-$(set)/distrecord-%.h5
 	python3 test/csv_dist.py $^ -o $@
-$(mcmc)/hist-%.pdf: $(mcmc)/distrecord/distrecord-%.h5
-	python3 test/draw_dist.py $^ --wthres 10 -o $@
-$(mcmc)/distrecord/distrecord-%.h5: $(jinpDir)/ztraining-%.h5 $(mcmc)/submission/submission-%.h5
+$(mcmc)/dist-$(set)/hist-%.pdf: $(mcmc)/dist-$(set)/distrecord-%.h5
+	python3 test/draw_dist.py $^ -o $@
+$(mcmc)/dist-$(set)/distrecord-%.h5: $(Dir)/$(set)/*%.h5 $(mcmc)/sub-$(set)/submission-%.h5
 	mkdir -p $(dir $@)
 	python3 test/test_dist.py $(word 2,$^) --ref $< -o $@ > $@.log 2>&1
 define mcmc_split
-$(mcmc)/submission/submission-$(1).h5: $(fragseq:%=$(mcmc)/unadjusted/unadjusted-$(1)-%.h5)
+$(mcmc)/sub-$(set)/submission-$(1).h5: $(fragseq:%=$(mcmc)/unad-$(set)/unadjusted-$(1)-%.h5)
 	mkdir -p $$(dir $$@)
 	python3 test/integrate.py $$^ --num ${fragnum} -o $$@
-$(mcmc)/unadjusted/unadjusted-$(1)-%.h5: $(jinpDir)/ztraining-$(1).h5 $(mcmc)/averspe.h5
+$(mcmc)/unad-$(set)/unadjusted-$(1)-%.h5: $(Dir)/$(set)/*$(1).h5 $(mcmc)/spe-$(set).h5
 	mkdir -p $$(dir $$@)
 	python3 $(mcmc)/mcmcfit.py $$< --ref $$(word 2,$$^) --num ${fragnum} -o $$@
 endef
-$(foreach i,$(jinpwaveseq),$(eval $(call mcmc_split,$(i))))
-$(mcmc)/averspe.h5: $(jinpDir)/ztraining-0.h5
+$(foreach i,$(waveseq),$(eval $(call mcmc_split,$(i))))
+$(mcmc)/spe-$(set).h5: $(Dir)/$(set)/*$(word 1,$(waveseq)).h5
 	python3 test/spe_get.py $^ -o $@ --num 10000 --len 80
 
-lucyddm: $(jinpwaveseq:%=$(lucy)/hist-%.pdf) $(lucy)/record.csv
-$(lucy)/record.csv: $(jinpwaveseq:%=$(lucy)/record/record-%.csv)
+lucyddm: $(waveseq:%=$(lucy)/dist-$(set)/hist-%.pdf) $(lucy)/dist-$(set)/record.csv
+$(lucy)/dist-$(set)/record.csv: $(waveseq:%=$(lucy)/dist-$(set)/record-%.csv)
 	cat $^ > $@
-$(lucy)/record/record-%.csv: $(lucy)/distrecord/distrecord-%.h5
-	mkdir -p $(dir $@)
+$(lucy)/dist-$(set)/record-%.csv: $(lucy)/dist-$(set)/distrecord-%.h5
 	python3 test/csv_dist.py $^ -o $@
-$(lucy)/hist-%.pdf: $(lucy)/distrecord/distrecord-%.h5
-	python3 test/draw_dist.py $^ --wthres 10 -o $@
-$(lucy)/distrecord/distrecord-%.h5: $(jinpDir)/ztraining-%.h5 $(lucy)/submission/submission-%.h5
+$(lucy)/dist-$(set)/hist-%.pdf: $(lucy)/dist-$(set)/distrecord-%.h5
+	python3 test/draw_dist.py $^ -o $@
+$(lucy)/dist-$(set)/distrecord-%.h5: $(Dir)/$(set)/*%.h5 $(lucy)/sub-$(set)/submission-%.h5
 	mkdir -p $(dir $@)
 	python3 test/test_dist.py $(word 2,$^) --ref $< -o $@
-$(lucy)/submission/submission-%.h5 : $(jinpDir)/ztraining-%.h5 $(lucy)/spe.h5
+$(lucy)/sub-$(set)/submission-%.h5 : $(Dir)/$(set)/*%.h5 $(lucy)/spe-$(set).h5
 	mkdir -p $(dir $@)
 	python3 $(lucy)/lucyDDM.py $< --ref $(word 2,$^) -o $@
-$(lucy)/spe.h5: $(jinpDir)/ztraining-0.h5
+$(lucy)/spe-$(set).h5: $(Dir)/$(set)/*$(word 1,$(waveseq)).h5
 	python3 test/spe_get.py $^ -o $@ --num 10000 --len 80
 
-xiaopeip: $(jinpwaveseq:%=$(xiaoPp)/hist-%.pdf) $(xiaoPp)/record.csv
-$(xiaoPp)/record.csv: $(jinpwaveseq:%=$(xiaoPp)/record/record-%.csv)
+xiaopeip: $(waveseq:%=$(xiaoPp)/dist-$(set)/hist-%.pdf) $(xiaoPp)/dist-$(set)/record.csv
+$(xiaoPp)/dist-$(set)/record.csv: $(waveseq:%=$(xiaoPp)/dist-$(set)/record-%.csv)
 	cat $^ > $@
-$(xiaoPp)/record/record-%.csv: $(xiaoPp)/distrecord/distrecord-%.h5
-	mkdir -p $(dir $@)
+$(xiaoPp)/dist-$(set)/record-%.csv: $(xiaoPp)/dist-$(set)/distrecord-%.h5
 	python3 test/csv_dist.py $^ -o $@
-$(xiaoPp)/hist-%.pdf: $(xiaoPp)/distrecord/distrecord-%.h5
-	python3 test/draw_dist.py $^ --wthres 10 -o $@
-$(xiaoPp)/distrecord/distrecord-%.h5: $(jinpDir)/ztraining-%.h5 $(xiaoPp)/submission/submission-%.h5
+$(xiaoPp)/dist-$(set)/hist-%.pdf: $(xiaoPp)/dist-$(set)/distrecord-%.h5
+	python3 test/draw_dist.py $^ -o $@
+$(xiaoPp)/dist-$(set)/distrecord-%.h5: $(Dir)/$(set)/*%.h5 $(xiaoPp)/sub-$(set)/submission-%.h5
 	mkdir -p $(dir $@)
 	python3 test/test_dist.py $(word 2,$^) --ref $< -o $@ > $@.log 2>&1
 define xpp_split
-$(xiaoPp)/submission/submission-$(1).h5: $(xiaoPp)/submission/total-$(1).h5
-	mkdir -p $$(dir $$@)
+$(xiaoPp)/sub-$(set)/submission-$(1).h5: $(xiaoPp)/submission/total-$(1).h5
 	python3 $(xiaoPp)/adjust.py $$^ -o $$@
-$(xiaoPp)/submission/total-$(1).h5: $(fragseq:%=$(xiaoPp)/unadjusted/unadjusted-$(1)-%.h5)
+$(xiaoPp)/sub-$(set)/total-$(1).h5: $(fragseq:%=$(xiaoPp)/unad-$(set)/unadjusted-$(1)-%.h5)
 	mkdir -p $$(dir $$@)
 	python3 test/integrate.py $$^ --num ${fragnum} -o $$@
-$(xiaoPp)/unadjusted/unadjusted-$(1)-%.h5: $(jinpDir)/ztraining-$(1).h5 $(xiaoPp)/averspe.h5
+$(xiaoPp)/unad-$(set)/unadjusted-$(1)-%.h5: $(Dir)/$(set)/*$(1).h5 $(xiaoPp)/spe-$(set).h5
 	mkdir -p $$(dir $$@)
 	python3 $(xiaoPp)/finalfit.py $$< --ref $$(word 2,$$^) --num ${fragnum} -o $$@
 endef
-$(foreach i,$(jinpwaveseq),$(eval $(call xpp_split,$(i))))
-$(xiaoPp)/averspe.h5: $(jinpDir)/ztraining-0.h5
+$(foreach i,$(waveseq),$(eval $(call xpp_split,$(i))))
+$(xiaoPp)/spe-$(set).h5: $(Dir)/$(set)/*$(word 1,$(waveseq)).h5
 	python3 test/spe_get.py $^ -o $@ --num 10000 --len 80
 
-xdcFT: $(jinpwaveseq:%=$(xdcFTp)/hist-%.pdf) $(xdcFTp)/record.csv
-$(xdcFTp)/record.csv: $(jinpwaveseq:%=$(xdcFTp)/record/record-%.csv)
+xdcFT: $(waveseq:%=$(xdcFTp)/dist-$(set)/hist-%.pdf) $(xdcFTp)/dist-$(set)/record.csv
+$(xdcFTp)/dist-$(set)/record.csv: $(waveseq:%=$(xdcFTp)/dist-$(set)/record-%.csv)
 	cat $^ > $@
-$(xdcFTp)/record/record-%.csv: $(xdcFTp)/distrecord/distrecord-%.h5
-	mkdir -p $(dir $@)
+$(xdcFTp)/dist-$(set)/record-%.csv: $(xdcFTp)/dist-$(set)/distrecord-%.h5
 	python3 test/csv_dist.py $^ -o $@
-$(xdcFTp)/hist-%.pdf: $(xdcFTp)/distrecord/distrecord-%.h5
-	python3 test/draw_dist.py $^ --wthres 10 -o $@
-$(xdcFTp)/distrecord/distrecord-%.h5: $(jinpDir)/ztraining-%.h5 $(xdcFTp)/submission/submission-%.h5
+$(xdcFTp)/dist-$(set)/hist-%.pdf: $(xdcFTp)/dist-$(set)/distrecord-%.h5
+	python3 test/draw_dist.py $^ -o $@
+$(xdcFTp)/dist-$(set)/distrecord-%.h5: $(Dir)/$(set)/*%.h5 $(xdcFTp)/sub-$(set)/submission-%.h5
 	mkdir -p $(dir $@)
 	python3 test/test_dist.py $(word 2,$^) --ref $< -o $@
-$(xdcFTp)/submission/submission-%.h5 : $(jinpDir)/ztraining-%.h5 $(xdcFTp)/single_pe.h5
+$(xdcFTp)/sub-$(set)/submission-%.h5 : $(Dir)/$(set)/*%.h5 $(xdcFTp)/spe-$(set).h5
 	mkdir -p $(dir $@)
 	python3 $(xdcFTp)/FFT_decon.py $< --ref $(word 2,$^) -o $@ -k 0.05 -a 4 -e 4
-$(xdcFTp)/single_pe.h5: $(jinpDir)/ztraining-0.h5
+$(xdcFTp)/spe-$(set).h5: $(Dir)/$(set)/*$(word 1,$(waveseq)).h5
 	python3 test/spe_get.py $^ -o $@ --num 10000 --len 80
 
 JUNO-Kaon-50.h5:

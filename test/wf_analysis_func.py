@@ -15,17 +15,25 @@ def generate_model(spe_path):
         stdmodel = spemean[:-10] - base_vol
         if np.sum(stdmodel) > 0:
             epulse = 1
+            stdmodel = -1 * stdmodel
         else:
             epulse = -1
         # cut off all small values
-        if epulse == -1:
-            stdmodel = np.where(stdmodel < -0.01, stdmodel, 0)
-        elif epulse == 1:
-            stdmodel = np.where(stdmodel > 0.01, stdmodel, 0)
-        # stdmodel = np.where(stdmodel >= 0, stdmodel, 0) # cut off all negative values
-    return stdmodel, epulse
+        stdmodel = np.where(stdmodel < -0.01, stdmodel, 0)
+        peak_i = np.argmin(stdmodel)
+        a = 0
+        b = len(stdmodel)
+        for _ in range(len(stdmodel)):
+            if not np.all(stdmodel[a:peak_i] < 0):
+                a = a + 1
+            if not np.all(stdmodel[peak_i:b] < 0):
+                b = b - 1
+        spemean = np.zeros_like(stdmodel[:b])
+        spemean[a:b] = stdmodel[a:b]
+        spemean = -1*epulse*spemean
+    return spemean, epulse
 
-def snip_baseline(waveform, itera=10):
+def snip_baseline(waveform, itera=20):
     wm = np.min(waveform)
     waveform = waveform - wm
     v = np.log(np.log(np.sqrt(waveform+1)+1)+1)
@@ -37,14 +45,13 @@ def snip_baseline(waveform, itera=10):
 
 def pre_analysis(h5_path, epulse, spemean):
     peak_c = np.argmin(spemean)
-    zero_l = np.where(spemean[peak_c:] == 0)[0][0] + peak_c
     N = 10000
     t = 0
     with h5py.File(h5_path, 'r', libver='latest', swmr=True) as ztrfile:
         Wf = ztrfile['Waveform']['Waveform']
         n = 2*N//len(Wf[0])+1
-        sam = Wf[:n].flatten()
-        a_std = np.std(np.sort(sam)[len(sam)//10:])
+        sam = -1*epulse*Wf[:n].flatten()
+        a_std = np.std(np.sort(sam)[len(sam)//5:])
         r = 3
         i = 0
         while np.abs(t - a_std) > 0.01:
@@ -68,8 +75,8 @@ def pre_analysis(h5_path, epulse, spemean):
     thres = -r*a_std
     m_l = np.sum(spemean < thres)
     mar_l = np.sum(spemean[:peak_c] > thres) + 2
-    mar_r = np.sum(spemean[peak_c:zero_l] > thres) + 2
-    spe_pre = {'spemean':spemean, 'epulse':epulse, 'peak_c':peak_c, 'zero_l':zero_l, 'm_l':m_l, 'mar_l':mar_l, 'mar_r':mar_r, 'thres':thres}
+    mar_r = np.sum(spemean[peak_c:] > thres) + 2
+    spe_pre = {'spemean':-1*epulse*spemean, 'epulse':epulse, 'peak_c':peak_c, 'm_l':m_l, 'mar_l':mar_l, 'mar_r':mar_r, 'thres':thres}
     return spe_pre
 
 def vali_base(waveform, m_l, thres):
@@ -80,7 +87,8 @@ def vali_base(waveform, m_l, thres):
     vali = pos2omi(pos, len(waveform))
     return vali
 
-def deduct_base(waveform, m_l=None, thres=None, itera=10, mode='fast'):
+def deduct_base(waveform, m_l=None, thres=None, itera=20, mode='fast'):
+    waveform = waveform - np.max(waveform)
     wf_flip = -1*waveform
     baseline = snip_baseline(wf_flip, itera)
     wave = baseline - wf_flip

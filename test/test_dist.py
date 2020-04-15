@@ -44,7 +44,6 @@ def wpdistance(df_ans, df_sub):
 
         wl = df_sub[j0:j]['Weight']
         dt['wdist'][c] = scipy.stats.wasserstein_distance(df_ans[i0:i]['PETime'], df_sub[j0:j]['PETime'], v_weights=wl)
-        dt['wdist'][c] = scipy.stats.wasserstein_distance(df_ans[i0:i]['PETime'], df_sub[j0:j]['PETime'], v_weights=wl)
         Q = i-i0; q = np.sum(wl)
         dt['PEnum'][c] = Q
         dt['pdist'][c] = np.abs(Q - q) * scipy.stats.poisson.pmf(Q, Q)
