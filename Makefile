@@ -28,13 +28,11 @@ define mcmc_split
 $(mcmc)/sub-$(set)/submission-$(1).h5: $(fragseq:%=$(mcmc)/unad-$(set)/unadjusted-$(1)-%.h5)
 	mkdir -p $$(dir $$@)
 	python3 test/integrate.py $$^ --num ${fragnum} -o $$@
-$(mcmc)/unad-$(set)/unadjusted-$(1)-%.h5: $(Dir)/$(set)/*$(1).h5 $(mcmc)/spe-$(set).h5
+$(mcmc)/unad-$(set)/unadjusted-$(1)-%.h5: $(Dir)/$(set)/*$(1).h5 test/spe-$(set).h5
 	mkdir -p $$(dir $$@)
 	python3 $(mcmc)/mcmcfit.py $$< --ref $$(word 2,$$^) --num ${fragnum} -o $$@
 endef
 $(foreach i,$(waveseq),$(eval $(call mcmc_split,$(i))))
-$(mcmc)/spe-$(set).h5: $(Dir)/$(set)/*$(word 1,$(waveseq)).h5
-	python3 test/spe_get.py $^ -o $@ --num 10000 --len 80
 
 lucyddm: $(waveseq:%=$(lucy)/dist-$(set)/hist-%.pdf) $(lucy)/dist-$(set)/record.csv
 $(lucy)/dist-$(set)/record.csv: $(waveseq:%=$(lucy)/dist-$(set)/record-%.csv)
@@ -46,11 +44,9 @@ $(lucy)/dist-$(set)/hist-%.pdf: $(lucy)/dist-$(set)/distrecord-%.h5
 $(lucy)/dist-$(set)/distrecord-%.h5: $(Dir)/$(set)/*%.h5 $(lucy)/sub-$(set)/submission-%.h5
 	mkdir -p $(dir $@)
 	python3 test/test_dist.py $(word 2,$^) --ref $< -o $@
-$(lucy)/sub-$(set)/submission-%.h5 : $(Dir)/$(set)/*%.h5 $(lucy)/spe-$(set).h5
+$(lucy)/sub-$(set)/submission-%.h5 : $(Dir)/$(set)/*%.h5 test/spe-$(set).h5
 	mkdir -p $(dir $@)
 	python3 $(lucy)/lucyDDM.py $< --ref $(word 2,$^) -o $@
-$(lucy)/spe-$(set).h5: $(Dir)/$(set)/*$(word 1,$(waveseq)).h5
-	python3 test/spe_get.py $^ -o $@ --num 10000 --len 80
 
 xiaopeip: $(waveseq:%=$(xiaoPp)/dist-$(set)/hist-%.pdf) $(xiaoPp)/dist-$(set)/record.csv
 $(xiaoPp)/dist-$(set)/record.csv: $(waveseq:%=$(xiaoPp)/dist-$(set)/record-%.csv)
@@ -68,13 +64,11 @@ $(xiaoPp)/sub-$(set)/submission-$(1).h5: $(xiaoPp)/submission/total-$(1).h5
 $(xiaoPp)/sub-$(set)/total-$(1).h5: $(fragseq:%=$(xiaoPp)/unad-$(set)/unadjusted-$(1)-%.h5)
 	mkdir -p $$(dir $$@)
 	python3 test/integrate.py $$^ --num ${fragnum} -o $$@
-$(xiaoPp)/unad-$(set)/unadjusted-$(1)-%.h5: $(Dir)/$(set)/*$(1).h5 $(xiaoPp)/spe-$(set).h5
+$(xiaoPp)/unad-$(set)/unadjusted-$(1)-%.h5: $(Dir)/$(set)/*$(1).h5 test/spe-$(set).h5
 	mkdir -p $$(dir $$@)
 	python3 $(xiaoPp)/finalfit.py $$< --ref $$(word 2,$$^) --num ${fragnum} -o $$@
 endef
 $(foreach i,$(waveseq),$(eval $(call xpp_split,$(i))))
-$(xiaoPp)/spe-$(set).h5: $(Dir)/$(set)/*$(word 1,$(waveseq)).h5
-	python3 test/spe_get.py $^ -o $@ --num 10000 --len 80
 
 xdcFT: $(waveseq:%=$(xdcFTp)/dist-$(set)/hist-%.pdf) $(xdcFTp)/dist-$(set)/record.csv
 $(xdcFTp)/dist-$(set)/record.csv: $(waveseq:%=$(xdcFTp)/dist-$(set)/record-%.csv)
@@ -86,10 +80,11 @@ $(xdcFTp)/dist-$(set)/hist-%.pdf: $(xdcFTp)/dist-$(set)/distrecord-%.h5
 $(xdcFTp)/dist-$(set)/distrecord-%.h5: $(Dir)/$(set)/*%.h5 $(xdcFTp)/sub-$(set)/submission-%.h5
 	mkdir -p $(dir $@)
 	python3 test/test_dist.py $(word 2,$^) --ref $< -o $@
-$(xdcFTp)/sub-$(set)/submission-%.h5 : $(Dir)/$(set)/*%.h5 $(xdcFTp)/spe-$(set).h5
+$(xdcFTp)/sub-$(set)/submission-%.h5 : $(Dir)/$(set)/*%.h5 test/spe-$(set).h5
 	mkdir -p $(dir $@)
 	python3 $(xdcFTp)/FFT_decon.py $< --ref $(word 2,$^) -o $@ -k 0.05 -a 4 -e 4
-$(xdcFTp)/spe-$(set).h5: $(Dir)/$(set)/*$(word 1,$(waveseq)).h5
+
+test/spe-$(set).h5: $(Dir)/$(set)/*$(word 1,$(waveseq)).h5
 	python3 test/spe_get.py $^ -o $@ --num 10000 --len 80
 
 JUNO-Kaon-50.h5:

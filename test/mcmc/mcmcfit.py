@@ -24,8 +24,7 @@ args = psr.parse_args()
 if args.print:
     sys.stdout = None
 
-R = 4
-N = 11000
+N = 1100
 
 class Ind_Generator:
     def __init__(self, sigma):
@@ -33,12 +32,14 @@ class Ind_Generator:
         np.random.seed(0)
         return
 
-    def next_ind(self, ind, l):
-        while True:
-            ind_n = self.sigma * np.random.randn() + (ind+0.5)
-            if ind_n >= 0 or ind_n < l:
-                ind_n = np.int(ind_n).astype(np.uint16)
-                break
+    def next_ind(self, ind):
+        ind_n = np.zeros_like(ind)
+        for i in range(len(ind)):
+            n = self.sigma * np.random.randn() + ind[i]
+            if n > 0:
+                ind_n[i] = n
+            else:
+                ind_n[i] = 0
         return ind_n
 
     def uni_rand(self):
@@ -46,28 +47,22 @@ class Ind_Generator:
 
 def mcmc_N(wave, spemean, gen):
     L = len(wave) - len(spemean) + 1
-    panel = np.zeros(L)
-    sampling = np.zeros(N).astype(np.uint16)
-    r_a = np.power(np.convolve(panel, spemean) - wave, 2)
-    for j in range(1, N):
+    sampling = np.zeros((N, L))
+    sampling[0] = 0.1
+    r_a = np.sum(np.power(np.convolve(sampling[0], spemean) - wave, 2))
+    for j in range(N):
         u = gen.uni_rand()
         ind = gen.next_ind(sampling[j - 1])
-        panel_a = panel
-        panel_a[ind] = 1
-        r_b = np.power(np.convolve(panel_a, spemean) - wave, 2)
-        v = np.min(1, r_a/r_b)
+        r_b = np.sum(np.power(np.convolve(ind, spemean) - wave, 2))
+        v = np.min([1, r_a/r_b])
         if u < v:
             sampling[j] = ind
         else:
             sampling[j] = sampling[j-1]
         r_a = r_b
-    sampling = sampling[1000:]
-    pwe_tot = np.sum(wave) / np.sum(spemean)
-    pet, pwe = np.unique(sampling, return_counts=True)
-    pwe = pwe / pwe_tot
-
+    sampling = sampling[N//10:]
     pf = np.zeros_like(wave)
-    pf[pet] = pwe
+    pf[:L] = np.mean(sampling, axis=0)
     return pf
 
 def main(fopt, fipt, single_pe_path):
@@ -91,8 +86,7 @@ def main(fopt, fipt, single_pe_path):
         dt = np.zeros(l * (Length_pe//5), dtype=opdt)
         start = 0
         end = 0
-        sigma = (Length_pe - len(spemean) + 1) / (2*R)
-        gen = Ind_Generator(sigma)
+        gen = Ind_Generator(0.1)
 
         for i in range(l):
             wf_input = ent[i]['Waveform']
