@@ -24,10 +24,20 @@ args = psr.parse_args()
 if args.print:
     sys.stdout = None
 
-def norm_fit(x, M, p):
-    return np.linalg.norm(p - np.matmul(M, x))
+def xiaopeip_core(wave, fitp, possible):
+    norm_fit = lambda x, M, p: np.linalg.norm(p - np.matmul(M, x))
+    ans0 = np.zeros_like(possible).astype(np.float64)
+    b = np.zeros((len(possible), 2)).astype(np.float64)
+    b[:, 1] = np.inf
+    mne = spe_pre['spemean'][np.mod(fitp.reshape(fitp.shape[0], 1) - possible.reshape(1, possible.shape[0]), l)]
+    ans = opti.fmin_l_bfgs_b(norm_fit, ans0, args=(mne, wave[fitp]), approx_grad=True, bounds=b, maxfun=500000)
+    # ans = opti.fmin_slsqp(norm_fit, ans0, args=(mne, wave[fitp]), bounds=b, iprint=-1, iter=500000)
+    # ans = opti.fmin_tnc(norm_fit, ans0, args=(mne, wave[fitp]), approx_grad=True, bounds=b, messages=0, maxfun=500000)
+    pf_r = ans[0]
+    return pf_r
 
-def xiaopeip_N(wave, spe_pre, l):
+def xiaopeip_N(wave, spe_pre):
+    l = wave.shape[0]
     lowp = np.argwhere(wfaf.vali_base(wave, spe_pre['m_l'], spe_pre['thres']) == 1).flatten()
     lowp = lowp[np.logical_and(lowp > 1, lowp < l-1)]
     flag = 1
@@ -35,25 +45,16 @@ def xiaopeip_N(wave, spe_pre, l):
         panel = np.zeros(l)
         for j in lowp:
             head = j-spe_pre['mar_l'] if j-spe_pre['mar_l'] > 0 else 0
-            tail = j+spe_pre['mar_r']+1 if j+spe_pre['mar_r']+1 <= l else l
-            panel[head:tail] = 1
-        nihep = np.argwhere(panel == 1).flatten()
-        xuhao = np.argwhere(wave[lowp+1]-wave[lowp]-wave[lowp-1]+wave[lowp-2] > 1.5).flatten()
-        if len(xuhao) != 0:
-            possible = np.unique(np.concatenate((lowp[xuhao]-(spe_pre['peak_c']+2), lowp[xuhao]-(spe_pre['peak_c']+1), lowp[xuhao]-spe_pre['peak_c'], lowp[xuhao]-(spe_pre['peak_c']-1))))
+            tail = j+spe_pre['mar_r'] if j+spe_pre['mar_r'] <= l else l
+            panel[head : tail + 1] = 1
+        fitp = np.argwhere(panel == 1).flatten()
+        numb = np.argwhere(wave[lowp+1]-wave[lowp]-wave[lowp-1]+wave[lowp-2] > 1.5).flatten()
+        if len(numb) != 0:
+            ran = np.arange(spe_pre['peak_c'] - 1, spe_pre['peak_c'] + 3)
+            possible = np.unique(lowp[numb] - ran.reshape(ran.shape[0], 1))
             possible = possible[np.logical_and(possible>=0, possible<l)]
             if len(possible) != 0:
-                ans0 = np.zeros_like(possible).astype(np.float64)
-                b = np.zeros((len(possible), 2)).astype(np.float64)
-                b[:, 1] = np.inf
-                mne = spe_pre['spemean'][np.mod(nihep.reshape(len(nihep), 1) - possible.reshape(1, len(possible)), l)]
-                ans = opti.fmin_l_bfgs_b(norm_fit, ans0, args=(mne, wave[nihep]), approx_grad=True, bounds=b, maxfun=500000)
-                # ans = opti.fmin_slsqp(norm_fit, ans0, args=(mne, wave[nihep]), bounds=b, iprint=-1, iter=500000)
-                # ans = opti.fmin_tnc(norm_fit, ans0, args=(mne, wave[nihep]), approx_grad=True, bounds=b, messages=0, maxfun=500000)
-                pf_r = ans[0]
-                # print(ans[2]['warnflag'])
-                if np.sum(pf_r <= 0.1) == len(pf_r):
-                    flag = 0
+                pf_r = xiaopeip_core(wave, fitp, possible)
             else:
                 flag = 0
         else:
@@ -61,12 +62,12 @@ def xiaopeip_N(wave, spe_pre, l):
     else:
         flag = 0
     if flag == 0:
-        t = np.where(wave == wave.min())[0][:1] - np.argmin(spe_pre['spemean'])
+        t = np.where(wave == wave.min())[0][:1] - spe_pre['peak_c']
         possible = t if t[0] >= 0 else np.array([0])
         pf_r = np.array([1])
     pf = np.zeros_like(wave)
     pf[possible] = pf_r
-    return pf, nihep, possible
+    return pf, fitp, possible
 
 def main(fopt, fipt, single_pe_path):
     spemean, epulse = wfaf.generate_model(single_pe_path)
@@ -84,16 +85,16 @@ def main(fopt, fipt, single_pe_path):
         else:
             ent = ent[num*lenfr:(num+1)*lenfr]
 
-        Length_pe = len(ent[0]['Waveform'])
-        assert Length_pe >= len(spe_pre['spemean']), 'Single PE too long which is {}'.format(len(spe_pre['spemean']))
-        spe_pre['spemean'] = np.concatenate([spe_pre['spemean'], np.zeros(Length_pe - len(spe_pre['spemean']))])
-        dt = np.zeros(l * (Length_pe//5), dtype=opdt)
+        Length = len(ent[0]['Waveform'])
+        assert Length >= len(spe_pre['spemean']), 'Single PE too long which is {}'.format(len(spe_pre['spemean']))
+        spe_pre['spemean'] = np.concatenate([spe_pre['spemean'], np.zeros(Length - len(spe_pre['spemean']))])
+        dt = np.zeros(l * (Length//5), dtype=opdt)
         start = 0
         end = 0
         for i in range(l):
             wf_input = ent[i]['Waveform']
             wave = -1*spe_pre['epulse']*wfaf.deduct_base(-1*spe_pre['epulse']*wf_input, spe_pre['m_l'], spe_pre['thres'], 10, 'detail')
-            pf = xiaopeip_N(wave, spe_pre, Length_pe)
+            pf = xiaopeip_N(wave, spe_pre)
             pet, pwe = wfaf.pf_to_tw(pf, 0.1)
 
             lenpf = len(pwe)

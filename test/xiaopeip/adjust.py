@@ -15,13 +15,14 @@ if args.print:
     sys.stdout = None
 
 def xpp_convol(pet, wgt):
+    core = np.array([0.9, 1.7, 0.9])
     idt = np.dtype([('PETime', np.int16), ('Weight', np.float16), ('Wgt_b', np.uint8)])
     seg = np.zeros(np.max(pet) + 3, dtype=idt)
     seg['PETime'] = np.arange(-1, np.max(pet) + 2)
     seg['Weight'][np.sort(pet) + 1] = wgt[np.argsort(pet)]
     seg['Wgt_b'] = np.around(seg['Weight'])
     resi = seg['Weight'][1:-1] - seg['Wgt_b'][1:-1]
-    t = np.convolve(resi, [0.9, 1.7, 0.9], 'full')
+    t = np.convolve(resi, core, 'full')
     ta = np.diff(t, prepend=t[0])
     tb = np.diff(t, append=t[-1])
     seg['Wgt_b'][(ta > 0)*(tb < 0)*(t > 0.5)*(seg['Wgt_b'] == 0.0)*(seg['Weight'] > 0)] += 1

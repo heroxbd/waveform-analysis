@@ -74,8 +74,8 @@ def pre_analysis(h5_path, epulse, spemean):
             a_std = np.std(dt, ddof=1)
     thres = -r*a_std
     m_l = np.sum(spemean < thres)
-    mar_l = np.sum(spemean[:peak_c] > thres) + 2
-    mar_r = np.sum(spemean[peak_c:] > thres) + 2
+    mar_l = np.sum(spemean[:peak_c] > thres)
+    mar_r = np.sum(spemean[peak_c:] > thres)
     spe_pre = {'spemean':-1*epulse*spemean, 'epulse':epulse, 'peak_c':peak_c, 'm_l':m_l, 'mar_l':mar_l, 'mar_r':mar_r, 'thres':thres}
     return spe_pre
 
