@@ -12,8 +12,9 @@ NetDir = /srv/work_wuyy/Network_Models_ztraining-all
 PreDir = $(NetDir)/PreProcess
 NetStore_prefix = $(NetDir)/$(data_prefix)Channel
 TrainData = $(wildcard $(TrainDataDir)/$(data_prefix)*.h5)
-PreData = $(shell seq -f "$(NetDir)/PreProcess/Pre_Channel%g.h5" 0 1)
-Nets = $(patsubst $(NetDir)/PreProcess/Pre_Channel%.h5, $(NetStore_prefix)%/.Training_finished, $(PreData))
+PreData = $(shell seq -f "$(NetDir)/PreProcess/Pre_Channel%g.h5" 0 29)
+Training = $(patsubst $(NetDir)/PreProcess/Pre_Channel%.h5, $(NetStore_prefix)%/.Training_finished, $(PreData))
+Nets = $(patsubst $(NetDir)/PreProcess/Pre_Channel%.h5, $(NetDir)/Nets/Channel%.torch_net, $(PreData))
 
 FileNo = *
 ResultDir = ./
@@ -37,8 +38,8 @@ model : $(Nets)
 
 $(Result_prefix)%/.Analyzing_finished : $(word 1,$(NetStore)) $(testfile_prefix)%.h5 | .Bulletin
 	@mkdir -p $(dir $@)
-#python3 -u Prediction_Processing_Total.py $(dir $<) $(word 2,$^) $(dir $@) $* > $(dir $@)Analysis.log 2>&1
-	python3 -u WaveformAnalysis.py $(dir $<) $(word 2,$^) $(dir $@) $* > $(dir $@)Analysis.log 2>&1
+	python3 -u Prediction_Processing_Total.py $(dir $<) $(word 2,$^) $(dir $@) $* > $(dir $@)Analysis.log 2>&1
+#python3 -u WaveformAnalysis.py $(dir $<) $(word 2,$^) $(dir $@) $* > $(dir $@)Analysis.log 2>&1
 	touch $@
 
 $(Result_prefix)%/DistanceDistribution.csv : $(Result_prefix)%/Record.h5
@@ -60,6 +61,10 @@ $(NetStore_prefix)%/.Training_finished : $(NetDir)/PreProcess/Pre_Channel%.h5 | 
 	@mkdir -p $(dir $@)
 	python3 -u Data_Processing.py $^ -n $* -B 64 -o $(dir $@) > $(dir $@)Train.log  2>&1 
 	@touch $@
+
+$(NetDir)/Nets/Channel%.torch_net : $(NetStore_prefix)%/.Training_finished
+	@mkdir -p $(dir $@)
+	python3 -u Choose_Nets.py $(dir $<) $@
 
 clean :
 
