@@ -7,7 +7,6 @@ import argparse
 psr = argparse.ArgumentParser()
 psr.add_argument('-o', dest='opt', help='output file')
 psr.add_argument('ipt', help='input file')
-psr.add_argument('--wthres', dest='wth', type=int, help='threshold of w-dist')
 psr.add_argument('-p', dest='print', action='store_false', help='print bool', default=True)
 args = psr.parse_args()
 
@@ -28,7 +27,6 @@ plt.rcParams['font.size'] = 16
 plt.rcParams['lines.markersize'] = 2
 plt.rcParams['lines.linewidth'] = 1.0
 
-N = args.wth
 if args.print:
     sys.stdout = None
 
@@ -45,6 +43,7 @@ if __name__ == '__main__':
     with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as distfile:
         dt = distfile['Record']
         pdf = PdfPages(args.opt)
+        N = int(np.percentile(dt['wdist'], 90)+1)
 
         penum = np.unique(dt['PEnum'])
         penum = np.sort(penum)

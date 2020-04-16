@@ -12,8 +12,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import argparse
 import wf_analysis_func as wfaf
-import finalfit as ff
-import adjust as ad
+import mcmcfit as mf
 
 plt.rcParams['savefig.dpi'] = 300
 plt.rcParams['figure.dpi'] = 300
@@ -31,15 +30,16 @@ args = psr.parse_args()
 
 single_pe_path = 'xtest/averspe.h5'
 
-def norm_fit(x, M, p):
-    return np.linalg.norm(p - np.matmul(M, x))
+R = mf.R
+N = mf.N
 
 def main():
     fipt = args.ipt
     fopt = args.opt
     spemean_r, epulse = wfaf.generate_model(single_pe_path)
     spe_pre = wfaf.pre_analysis(fipt, epulse, -1*epulse*spemean_r)
-    print('spemean is {}'.format(spe_pre['spemean']))
+    spemean = epulse * spe_pre['spemean']
+    print('spemean is {}'.format(spemean))
     opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PETime', np.uint16), ('Weight', np.float16)])
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
         ent = ipt['Waveform']
@@ -49,14 +49,15 @@ def main():
         a1 = max(args.ent*Chnum-10000, 0)
         a2 = min(args.ent*Chnum+10000, len(ent))
         ent = ent[a1:a2]
-        assert Length_pe >= len(spe_pre['spemean']), 'Single PE too long which is {}'.format(len(spe_pre['spemean']))
+        assert Length_pe >= len(spemean), 'Single PE too long which is {}'.format(len(spemean))
         i = np.where(np.logical_and(ent['EventID'] == args.ent, ent['ChannelID'] == args.cha))[0][0]
-        spe_pre['spemean'] = np.concatenate([spe_pre['spemean'], np.zeros(Length_pe - len(spe_pre['spemean']))])
+
+        sigma = (Length_pe - len(spemean) + 1) / (2*R)
+        gen = mf.Ind_Generator(sigma)
 
         wf_input = ent[i]['Waveform']
-        wf_input = -1 * spe_pre['epulse'] * wf_input
-        wave = -1*spe_pre['epulse']*wfaf.deduct_base(-1*spe_pre['epulse']*wf_input, spe_pre['m_l'], spe_pre['thres'], 10, 'detail')
-        pf, nihep, possible = ff.xiaopeip_N(wave, spe_pre, Length_pe)
+        wave = epulse * wfaf.deduct_base(-1*epulse*wf_input, spe_pre['m_l'], spe_pre['thres'], 10, 'detail')
+        pf = mf.mcmc_N(wave, spemean, gen)
         pet, pwe = wfaf.pf_to_tw(pf, 0.1)
 
         print('PETime = {}, Weight = {}'.format(pet, pwe))
@@ -80,10 +81,25 @@ def main():
         pdist = np.abs(Q - q) * scipy.stats.poisson.pmf(Q, Q)
         print('wdist is {}, pdist is {}'.format(wdist, pdist))
 
-        pet_a, pwe_a = ad.xpp_convol(pet, pwe)
+        idt = np.dtype([('PETime', np.int16), ('Weight', np.float16), ('Wgt_b', np.uint8)])
+        seg = np.zeros(np.max(pet) + 3, dtype=idt)
+        seg['PETime'] = np.arange(-1, np.max(pet) + 2)
+        seg['Weight'][np.sort(pet) + 1] = pwe[np.argsort(pet)]
+        seg['Wgt_b'] = np.around(seg['Weight'])
+        resi = seg['Weight'][1:-1] - seg['Wgt_b'][1:-1]
+        t = np.convolve(resi, [0.9, 1.7, 0.9], 'full')
+        ta = np.diff(t, prepend=t[0])
+        tb = np.diff(t, append=t[-1])
+        seg['Wgt_b'][(ta > 0)*(tb < 0)*(t > 0.5)*(seg['Wgt_b'] == 0.0)*(seg['Weight'] > 0)] += 1
+        if np.sum(seg['Wgt_b'][1:-1] > 0) != 0:
+            wgt_a = seg['Wgt_b'][1:-1][seg['Wgt_b'][1:-1] > 0]
+            pet_a = seg['PETime'][1:-1][seg['Wgt_b'][1:-1] > 0]
+        else:
+            wgt_a = 1
+            pet_a = seg['PETime'][np.argmax(seg['Weight'])]
         dt_a = np.zeros(len(pet_a), dtype=opdt)
         dt_a['PETime'] = pet_a
-        dt_a['Weight'] = pwe_a
+        dt_a['Weight'] = wgt_a
         dt_a['EventID'] = args.ent
         dt_a['ChannelID'] = args.cha
 
@@ -92,21 +108,19 @@ def main():
                 opt.create_dataset('Answer_un', data=dt, compression='gzip')
                 opt.create_dataset('Answer', data=dt_a, compression='gzip')
             plt.plot(wave, c='b')
-            plt.scatter(nihep, wave[nihep], marker='x', c='g')
-            plt.scatter(possible, wave[possible], marker='+', c='r')
             plt.grid()
             plt.xlabel(r'Time/[ns]')
             plt.ylabel(r'ADC')
             plt.xlim(200, 500)
-            plt.hlines(spe_pre['thres'], 200, 500, color='c')
+            plt.hlines(thres, 200, 500, color='c')
             t, c = np.unique(tru_pet, return_counts=True)
             plt.vlines(t, 0, 200*c, color='k')
-            plt.vlines(pet_a, -200*pwe_a, 0, color='m')
-            hh = -200*(np.max(pwe_a)+1)
+            plt.vlines(pet_a, -200*wgt_a, 0, color='m')
+            hh = -200*(np.max(wgt_a)+1)
             plt.vlines(pet, -200*pwe+hh, hh, color='y')
             plt.savefig('demo.png')
             plt.close()
-            plt.plot(spemean_r, c='b')
+            plt.plot(spemean, c='b')
             plt.grid()
             plt.xlabel(r'Time/[ns]')
             plt.ylabel(r'ADC')

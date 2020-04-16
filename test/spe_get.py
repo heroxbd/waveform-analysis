@@ -35,7 +35,6 @@ def generate_standard(h5_path, single_pe_path):
             wfev = ztrfile['Waveform']['EventID']
             wfch = ztrfile['Waveform']['ChannelID']
             Wf = ztrfile['Waveform']['Waveform']
-            ni = 0
             Length_pe = len(Wf[0])
             for j in range(len(Wf)):
                 wf = Wf[j]

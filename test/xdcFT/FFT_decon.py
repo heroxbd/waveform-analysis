@@ -33,8 +33,7 @@ if args.print:
     sys.stdout = None
 
 def generate_eff_ft(fopt, fipt, single_pe_path):
-    epulse = wfaf.estipulse(fipt)
-    model = wfaf.generate_model(single_pe_path, epulse)
+    model, epulse = wfaf.generate_model(single_pe_path)
     opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PETime', np.uint16), ('Weight', np.float16)])
     model = compr(model, EXP, AXE, epulse)
 
@@ -79,7 +78,7 @@ def generate_eff_ft(fopt, fipt, single_pe_path):
         dt = dt[np.where(dt['Weight'] > 0)] # cut empty dt part
         dt = np.sort(dt, kind='stable', order=['EventID', 'ChannelID', 'PETime'])
     with h5py.File(fopt, 'w') as opt:
-        dset = opt.create_dataset('Answer', data = dt, compression='gzip')
+        opt.create_dataset('Answer', data = dt, compression='gzip')
         print('The output file path is {}'.format(fopt), end = ' ', flush=True)
 
 def compr(model, exp, axe, epulse):
