@@ -11,76 +11,53 @@ outputs = args.opt
 filename = args.ipt
 BATCHSIZE = args.BAT
 
+import time
 from IPython import embed  # ipython breakpoint inserting
 import numpy as np
-import numba
+import tables
+import pandas as pd
+# import numba
 
 import torch
 from torch.nn import functional as F
 
-from JPwaptool_Lite import JPwaptool_Lite
 from multiprocessing import Pool, Process, Pipe, Lock
-
-import os
-import sys
-import time
-
-import tables
-
-
-def seperate_channels(Waveforms_and_info, WindowSize) :
-    channel_statics = np.bincount(Waveforms_and_info["ChannelID"])
-    Waveform = dict([])
-    index = dict([])
-    for ch, nWaves in enumerate(channel_statics) :
-        if nWaves > 0 :
-            Waveform[ch] = {"Wave": np.empty((nWaves, WindowSize), dtype=np.int16), "Index": np.empty(nWaves, dtype=np.int64)}
-            index[ch] = 0
-    for i, wave in enumerate(Waveforms_and_info) :
-        ch = wave["ChannelID"]
-        Waveform[ch]["Wave"][index[ch]] = wave["Waveform"]
-        Waveform[ch]["Index"][index[ch]] = i
-        index[ch] = index[ch] + 1
-    return Waveform
-
+from JPwaptool_Lite import JPwaptool_Lite
 
 # Loading Data
 RawDataFile = tables.open_file(filename, "r")
 WaveformTable = RawDataFile.root.Waveform
-WindowSize = len(WaveformTable[0]['Waveform'])
 Total_entries = len(WaveformTable)
 print(Total_entries)
 
 
 def Read_Data(startentry, endentry) :
-    return seperate_channels(WaveformTable[startentry:endentry], WindowSize)
+    return WaveformTable[startentry:endentry]
 
 
-tic = time.time()
 N = 6
+tic = time.time()
 if N == 1 :
-    Waveform_set = seperate_channels(WaveformTable[:], WindowSize)
+    Waveforms_and_info = WaveformTable[:]
 else :
     slices = np.append(np.arange(0, Total_entries, int(np.ceil(Total_entries / N))), Total_entries)
     ranges = list(zip(slices[0:-1], slices[1:]))
     with Pool(N) as pool :
-        Waveform_sets = pool.starmap(Read_Data, ranges)
-    Waveform_set = Waveform_sets[0]
-    for i, WSet in enumerate(Waveform_sets[1:], 1) :
-        for ch in WSet :
-            Waveform_set[ch]["Wave"] = np.vstack((Waveform_set[ch]["Wave"], WSet[ch]["Wave"]))
-            Waveform_set[ch]["Index"] = np.hstack((Waveform_set[ch]["Index"], WSet[ch]["Index"] + slices[i]))
+        Waveforms_and_info = np.hstack(pool.starmap(Read_Data, ranges))
+Waveforms_and_info = pd.DataFrame({name: list(Waveforms_and_info[name]) for name in Waveforms_and_info.dtype.names})
 print(N, end=': ')
 print(time.time() - tic)
 
-
-embed()
+WindowSize = len(Waveforms_and_info['Waveform'][0])
+channelid_set = set(Waveforms_and_info['ChannelID'])
+Channel_Grouped_Waveform = Waveforms_and_info.groupby(by="ChannelID")
 
 
 def Prepare(lock, channelid, downstream) :
     lock.acquire()
-    print("lock1 acquired")
-    Waves = Waveform_sets[channelid]['Wave']
+    Data_of_this_channel = Channel_Grouped_Waveform.get_group(channelid)
+    Waves = np.vstack(Data_of_this_channel['Waveform'])
+    EventIDs = np.array(Data_of_this_channel['Waveform'])
     Shifted_Wave = np.empty(Waves.shape, dtype=np.float32)
     if WindowSize >= 1000 :
         stream = JPwaptool_Lite(WindowSize, 100, 600)
@@ -92,56 +69,77 @@ def Prepare(lock, channelid, downstream) :
         stream.Calculate(w)
         Shifted_Wave[i] = stream.ChannelInfo.Ped - w
     print("channel {} Prepared".format(ch))
-    downstream.send(Shifted_Wave)
+    downstream.send({"Shifted_Wave": Shifted_Wave, "EventIDs": EventIDs})
     downstream.close()
     lock.release()
-    print("lock1 released")
+
+
+device = torch.device(1)
+filter_limit = 0.9 / WindowSize
+Timeline = torch.arange(WindowSize, device=device)
 
 
 def Forward(upstream, channelid) :
-    Shifted_Wave = upstream.recv()
-    Hit_Vectors = np.empty(Shifted_Wave.shape, dtype=Shifted_Wave.dtype)
-    device = torch.device(1)
-    start = time.time()
     net = torch.load(NetDir + "/Channel{}.torch_net".format(channelid), map_location=device)  # Pre-trained Model Parameters
+    upstream = upstream.recv()
+    Shifted_Wave = upstream["Shifted_Wave"]
+    EventIDs = upstream["EventIDs"]
+    PETimes = np.empty(0, dtype=np.int16)
+    Weights = np.empty(0, dtype=np.float32)
+    EventData = np.empty(0, dtype=np.int64)
     slices = np.append(np.arange(0, len(Shifted_Wave), BATCHSIZE,), len(Shifted_Wave))
-    print(slices)
     for i in range(len(slices) - 1) :
-        tensor = torch.from_numpy(Shifted_Wave[slices[i]:slices[i + 1]]).to(device=device)
-        Hit_Vectors[slices[i]:slices[i + 1]] = net.forward(tensor).data.cpu().numpy()
-    print("consuming {:.4f}s".format(time.time() - start))
-    # del tensor
-    return Hit_Vectors
+        inputs = torch.from_numpy(Shifted_Wave[slices[i]:slices[i + 1]])
+        Prediction = net.forward(inputs.to(device=device)).data
+        PETime = Prediction > filter_limit
+        pe_numbers = PETime.sum(1)
+        no_pe_found = (pe_numbers == 0)
+        if no_pe_found.any() :
+            print("I cannot find any pe in Event {0}, Channel {1}".format(EventIDs[slices[i]:slices[i + 1]][no_pe_found.cpu().numpy()], channelid))
+            guessed_petime = F.relu(inputs[no_pe_found].max(1)[1] - 7)
+            PETime[no_pe_found, guessed_petime] = True
+            Prediction[no_pe_found, guessed_petime] = 1
+            pe_numbers[no_pe_found] = 1
+        Weights = np.append(Weights, Prediction[PETime].cpu().numpy())
+        TimeMatrix = Timeline.repeat([len(PETime), 1])[PETime]
+        PETimes = np.append(PETimes, TimeMatrix.cpu().numpy())
+        pe_numbers = pe_numbers.cpu().numpy()
+        EventData = np.append(EventData, np.repeat(EventIDs[slices[i]:slices[i + 1]], pe_numbers))
+    return {"PETime": PETimes, "Weight": Weights, "EventID": EventData}
 
 
 process_list = []
 result_conn_dict = dict([])
 lock = Lock()
-for ch in Waveform_sets.keys() :
+for ch in channelid_set :
     parent_conn1, child_conn1 = Pipe()
     p1 = Process(target=Prepare, args=(lock, ch, child_conn1))
     p1.start()
     process_list.append(p1)
     result_conn_dict[ch] = parent_conn1
 
+Result = dict([])
 for ch in result_conn_dict :
-    print(Forward(result_conn_dict[ch], ch))
+    Result[ch] = (Forward(result_conn_dict[ch], ch))
 for process in process_list :
     process.join()
-    #parent_conn1, child_conn1 = Pipe()
-    #parent_conn2, child_conn2 = Pipe()
-    #p1 = Process(target=Prepare, args=(child_conn1, 0))
-    # p1.start()
-    #p2 = Process(target=Forward, args=(child_conn2, parent_conn1.recv(), 0))
-    # p2.start()
-    #print("p2 start")
-    # p1.join()
-    #print("p1 finished")
-    # p2.join()
-    #print("p2 finished")
-    # print(parent_conn2.recv())
-    # with Pool(2) as pool :
-    #    Results = pool.map(Forward,range(30))
+
+embed()
+
+#parent_conn1, child_conn1 = Pipe()
+#parent_conn2, child_conn2 = Pipe()
+#p1 = Process(target=Prepare, args=(child_conn1, 0))
+# p1.start()
+#p2 = Process(target=Forward, args=(child_conn2, parent_conn1.recv(), 0))
+# p2.start()
+#print("p2 start")
+# p1.join()
+#print("p1 finished")
+# p2.join()
+#print("p2 finished")
+# print(parent_conn2.recv())
+# with Pool(2) as pool :
+#    Results = pool.map(Forward,range(30))
 #
 #
 # Data Settings
@@ -167,8 +165,6 @@ for process in process_list :
 #
 #
 # Prepare for data and generating answer from prediction
-#filter_limit = 0.9 / WindowSize
-#Timeline = torch.arange(WindowSize, device=device).repeat([LoadingPeriod, 1])
 #entryList = np.arange(0, Total_entries, LoadingPeriod)
 #entryList = np.append(entryList, Total_entries)
 #start_time = time.time()
@@ -198,22 +194,8 @@ for process in process_list :
 #    # calculating
 #    Prediction = net(inputs).data
 #    # checking for no pe event
-#    PETimes = Prediction > filter_limit
-#    pe_numbers = PETimes.sum(1)
-#    no_pe_found = pe_numbers == 0
-#    if no_pe_found.any() :
-#        print("I cannot find any pe in Event {0}, Channel {1} (entry {2})".format(EventData[no_pe_found.cpu().numpy()], ChanData[no_pe_found.cpu().numpy()], k * LoadingPeriod + np.arange(LoadingPeriod)[no_pe_found.cpu().numpy()]))
-#        guessed_petime = F.relu(inputs[no_pe_found].max(1)[1] - 7)
-#        PETimes[no_pe_found, guessed_petime] = True
-#        Prediction[no_pe_found, guessed_petime] = 1
-#        pe_numbers[no_pe_found] = 1
 #
 #    # Makeing Output and write submission file
-#    Weights = Prediction[PETimes].cpu().numpy()
-#    PETimes = Timeline[PETimes].cpu().numpy()
-#    pe_numbers = pe_numbers.cpu().numpy()
-#    EventData = np.repeat(EventData, pe_numbers)
-#    ChanData = np.repeat(ChanData, pe_numbers)
 #    for i in range(len(PETimes)) :
 #        answer['PETime'] = PETimes[i]
 #        answer['Weight'] = Weights[i]
