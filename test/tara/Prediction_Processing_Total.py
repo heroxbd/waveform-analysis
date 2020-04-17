@@ -4,7 +4,7 @@ psr = argparse.ArgumentParser()
 psr.add_argument('ipt', help='input file')
 psr.add_argument('opt', help='output file')
 psr.add_argument('NetDir', help='Network directory')
-psr.add_argument('-B', '--batchsize', dest='BAT', type=int, default=10000)
+psr.add_argument('-B', '--batchsize', dest='BAT', type=int, default=15000)
 args = psr.parse_args()
 NetDir = args.NetDir
 outputs = args.opt
@@ -27,49 +27,56 @@ from JPwaptool_Lite import JPwaptool_Lite
 # Loading Data
 RawDataFile = tables.open_file(filename, "r")
 WaveformTable = RawDataFile.root.Waveform
+origin_dtype = WaveformTable.dtype
+WindowSize = origin_dtype["Waveform"].shape[0]
+gpufloat_dtype = np.dtype([(name, np.dtype('float32') if name == "Waveform" else origin_dtype[name].base, origin_dtype[name].shape) for name in origin_dtype.names])
 Total_entries = len(WaveformTable)
 print(Total_entries)
 
 
 def Read_Data(startentry, endentry) :
-    return WaveformTable[startentry:endentry]
-
-
-N = 6
-tic = time.time()
-if N == 1 :
-    Waveforms_and_info = WaveformTable[:]
-else :
-    slices = np.append(np.arange(0, Total_entries, int(np.ceil(Total_entries / N))), Total_entries)
-    ranges = list(zip(slices[0:-1], slices[1:]))
-    with Pool(N) as pool :
-        Waveforms_and_info = np.hstack(pool.starmap(Read_Data, ranges))
-Waveforms_and_info = pd.DataFrame({name: list(Waveforms_and_info[name]) for name in Waveforms_and_info.dtype.names})
-print(N, end=': ')
-print(time.time() - tic)
-
-WindowSize = len(Waveforms_and_info['Waveform'][0])
-channelid_set = set(Waveforms_and_info['ChannelID'])
-Channel_Grouped_Waveform = Waveforms_and_info.groupby(by="ChannelID")
-
-
-def Prepare(lock, channelid, downstream) :
-    lock.acquire()
-    Data_of_this_channel = Channel_Grouped_Waveform.get_group(channelid)
-    Waves = np.vstack(Data_of_this_channel['Waveform'])
-    EventIDs = np.array(Data_of_this_channel['Waveform'])
-    Shifted_Wave = np.empty(Waves.shape, dtype=np.float32)
+    Waveforms_and_info = WaveformTable[startentry:endentry]
+    Shifted_Waves_and_info = np.empty(Waveforms_and_info.shape, dtype=gpufloat_dtype)
+    for name in origin_dtype.names :
+        if name != "Waveform" :
+            Shifted_Waves_and_info[name] = Waveforms_and_info[name]
     if WindowSize >= 1000 :
         stream = JPwaptool_Lite(WindowSize, 100, 600)
     elif WindowSize == 600 :
         stream = JPwaptool_Lite(WindowSize, 50, 400)
     else:
         raise ValueError("Unknown WindowSize, I don't know how to choose the parameters for pedestal calculatation")
-    for i, w in enumerate(Waves) :
+    for i, w in enumerate(Waveforms_and_info["Waveform"]) :
         stream.Calculate(w)
-        Shifted_Wave[i] = stream.ChannelInfo.Ped - w
-    print("channel {} Prepared".format(ch))
-    downstream.send({"Shifted_Wave": Shifted_Wave, "EventIDs": EventIDs})
+        Shifted_Waves_and_info[i]["Waveform"] = stream.ChannelInfo.Ped - w
+    return pd.DataFrame({name: list(Shifted_Waves_and_info[name]) for name in gpufloat_dtype.names})
+
+
+N = 10
+tic = time.time()
+if N == 1 :
+    Waveforms_and_info = Read_Data(0, Total_entries)
+else :
+    slices = np.append(np.arange(0, Total_entries, int(np.ceil(Total_entries / N))), Total_entries)
+    ranges = list(zip(slices[0:-1], slices[1:]))
+    with Pool(N) as pool :
+        Waveforms_and_info = pd.concat(pool.starmap(Read_Data, ranges))
+print(N, end=': ')
+print(time.time() - tic)
+
+
+channelid_set = set(Waveforms_and_info['ChannelID'])
+Channel_Grouped_Waveform = Waveforms_and_info.groupby(by="ChannelID")
+
+
+def Prepare(lock, channelid, downstream) :
+    lock.acquire()
+    start = time.time()
+    Data_of_this_channel = Channel_Grouped_Waveform.get_group(channelid)
+    Waves = np.vstack(Data_of_this_channel['Waveform'])
+    EventIDs = np.array(Data_of_this_channel['EventID'])
+    print("channel {0} Prepared, consuming {1:.4f}".format(ch, time.time() - start))
+    downstream.send({"Shifted_Wave": Waves, "EventIDs": EventIDs})
     downstream.close()
     lock.release()
 
@@ -81,9 +88,11 @@ Timeline = torch.arange(WindowSize, device=device)
 
 def Forward(upstream, channelid) :
     net = torch.load(NetDir + "/Channel{}.torch_net".format(channelid), map_location=device)  # Pre-trained Model Parameters
+    start = time.time()
     upstream = upstream.recv()
     Shifted_Wave = upstream["Shifted_Wave"]
     EventIDs = upstream["EventIDs"]
+    print("channel {0} Received, consuming {1:.4f}".format(ch, time.time() - start))
     PETimes = np.empty(0, dtype=np.int16)
     Weights = np.empty(0, dtype=np.float32)
     EventData = np.empty(0, dtype=np.int64)
@@ -94,6 +103,7 @@ def Forward(upstream, channelid) :
         PETime = Prediction > filter_limit
         pe_numbers = PETime.sum(1)
         no_pe_found = (pe_numbers == 0)
+        print(no_pe_found)
         if no_pe_found.any() :
             print("I cannot find any pe in Event {0}, Channel {1}".format(EventIDs[slices[i]:slices[i + 1]][no_pe_found.cpu().numpy()], channelid))
             guessed_petime = F.relu(inputs[no_pe_found].max(1)[1] - 7)
@@ -124,7 +134,6 @@ for ch in result_conn_dict :
 for process in process_list :
     process.join()
 
-embed()
 
 #parent_conn1, child_conn1 = Pipe()
 #parent_conn2, child_conn2 = Pipe()
