@@ -19,7 +19,7 @@ import torch
 from torch.nn import functional as F
 
 from JPwaptool_Lite import JPwaptool_Lite
-from multiprocessing import Process, Pipe, Lock
+from multiprocessing import Pool, Process, Pipe, Lock
 
 import os
 import sys
@@ -46,14 +46,35 @@ def seperate_channels(Waveforms_and_info, WindowSize) :
 
 # Loading Data
 RawDataFile = tables.open_file(filename, "r")
-Waveforms_and_info = RawDataFile.root.Waveform[:]
-# Waveforms_and_info = RawDataFile.root.Waveform[0:10000]
-WindowSize = len(Waveforms_and_info[0]['Waveform'])
-Total_entries = len(Waveforms_and_info)
+WaveformTable = RawDataFile.root.Waveform
+WindowSize = len(WaveformTable[0]['Waveform'])
+Total_entries = len(WaveformTable)
 print(Total_entries)
 
-Waveform_sets = seperate_channels(Waveforms_and_info, WindowSize)
-#Waveform_sets = {0: Waveform_sets[0], 1: Waveform_sets[1], 2: Waveform_sets[2]}
+
+def Read_Data(startentry, endentry) :
+    return seperate_channels(WaveformTable[startentry:endentry], WindowSize)
+
+
+tic = time.time()
+N = 6
+if N == 1 :
+    Waveform_set = seperate_channels(WaveformTable[:], WindowSize)
+else :
+    slices = np.append(np.arange(0, Total_entries, int(np.ceil(Total_entries / N))), Total_entries)
+    ranges = list(zip(slices[0:-1], slices[1:]))
+    with Pool(N) as pool :
+        Waveform_sets = pool.starmap(Read_Data, ranges)
+    Waveform_set = Waveform_sets[0]
+    for i, WSet in enumerate(Waveform_sets[1:], 1) :
+        for ch in WSet :
+            Waveform_set[ch]["Wave"] = np.vstack((Waveform_set[ch]["Wave"], WSet[ch]["Wave"]))
+            Waveform_set[ch]["Index"] = np.hstack((Waveform_set[ch]["Index"], WSet[ch]["Index"] + slices[i]))
+print(N, end=': ')
+print(time.time() - tic)
+
+
+embed()
 
 
 def Prepare(lock, channelid, downstream) :
