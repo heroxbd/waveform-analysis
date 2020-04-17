@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import argparse
 psr = argparse.ArgumentParser()
 psr.add_argument('ipt', help='input file')
@@ -10,7 +11,7 @@ outputs = args.opt
 filename = args.ipt
 BATCHSIZE = args.BAT
 
-# from IPython import embed  # ipython breakpoint inserting
+from IPython import embed  # ipython breakpoint inserting
 import numpy as np
 import numba
 
@@ -18,14 +19,13 @@ import torch
 from torch.nn import functional as F
 
 from JPwaptool_Lite import JPwaptool_Lite
-from multiprocessing import Pool
+from multiprocessing import Process, Pipe, Lock
 
 import os
 import sys
 import time
 
 import tables
-#device = torch.device('cpu')
 
 
 def seperate_channels(Waveforms_and_info, WindowSize) :
@@ -33,8 +33,9 @@ def seperate_channels(Waveforms_and_info, WindowSize) :
     Waveform = dict([])
     index = dict([])
     for ch, nWaves in enumerate(channel_statics) :
-        Waveform[ch] = {"Wave": np.empty((nWaves, WindowSize), dtype=np.int16), "Index": np.empty(nWaves, dtype=np.int64)}
-        index[ch] = 0
+        if nWaves > 0 :
+            Waveform[ch] = {"Wave": np.empty((nWaves, WindowSize), dtype=np.int16), "Index": np.empty(nWaves, dtype=np.int64)}
+            index[ch] = 0
     for i, wave in enumerate(Waveforms_and_info) :
         ch = wave["ChannelID"]
         Waveform[ch]["Wave"][index[ch]] = wave["Waveform"]
@@ -46,66 +47,112 @@ def seperate_channels(Waveforms_and_info, WindowSize) :
 # Loading Data
 RawDataFile = tables.open_file(filename, "r")
 # Waveforms_and_info = RawDataFile.root.Waveform[:]
-Waveforms_and_info = RawDataFile.root.Waveform[0:100000]
+Waveforms_and_info = RawDataFile.root.Waveform[0:10000]
 WindowSize = len(Waveforms_and_info[0]['Waveform'])
 Total_entries = len(Waveforms_and_info)
 print(Total_entries)
 
 Waveform_sets = seperate_channels(Waveforms_and_info, WindowSize)
+Waveform_sets = {0: Waveform_sets[0], 1: Waveform_sets[1], 2: Waveform_sets[2]}
 
 
-def Forward(channelid) :
-    #device = torch.device(channelid%2)
-    device = torch.device("cpu")
+def Prepare(lock, channelid, downstream) :
+    lock.acquire()
+    print("lock1 acquired")
     Waves = Waveform_sets[channelid]['Wave']
-    net = torch.load(NetDir + "/Channel{}.torch_net".format(channelid), map_location=device)  # Pre-trained Model Parameters
-    print("net{} loaded".format(channelid))
+    Shifted_Wave = np.empty(Waves.shape, dtype=np.float32)
     if WindowSize >= 1000 :
         stream = JPwaptool_Lite(WindowSize, 100, 600)
     elif WindowSize == 600 :
         stream = JPwaptool_Lite(WindowSize, 50, 400)
     else:
         raise ValueError("Unknown WindowSize, I don't know how to choose the parameters for pedestal calculatation")
-    Shifted_Wave = np.empty(Waves.shape, dtype=np.float32)
     for i, w in enumerate(Waves) :
         stream.Calculate(w)
         Shifted_Wave[i] = stream.ChannelInfo.Ped - w
+    print("channel {} Prepared".format(ch))
+    downstream.send(Shifted_Wave)
+    downstream.close()
+    lock.release()
+    print("lock1 released")
+
+
+def Forward(lock, upstream, downstream, channelid) :
+    print("Task for channel {} assigned".format(channelid))
+    lock.acquire()
+    print("lock2 acquired")
+    Shifted_Wave = upstream.recv()
+    #device = torch.device(channelid % 2)
+    start = time.time()
+    device = torch.device(1)
+    net = torch.load(NetDir + "/Channel{}.torch_net".format(channelid), map_location=device)  # Pre-trained Model Parameters
     tensor = torch.from_numpy(Shifted_Wave).to(device=device)
-    Shifted_Wave = net.forward(tensor).data.cpu().numpy()
-    del tensor
-    return Shifted_Wave
+    Hit_Vectors = net.forward(tensor).data.cpu().numpy()
+    print("consuming {:.4f}s".format(time.time() - start))
+    # del tensor
+    downstream.send(1)
+    downstream.close()
+    lock.release()
+    print("lock2 released")
 
 
-#Result = Forward(1)
+process_list = []
+result_conn_dict = dict([])
+lock1, lock2, = Lock(), Lock()
+for ch in Waveform_sets.keys() :
+    parent_conn1, child_conn1 = Pipe()
+    parent_conn2, child_conn2 = Pipe()
+    p1 = Process(target=Prepare, args=(lock1, ch, child_conn1))
+    p1.start()
+    p2 = Process(target=Forward, args=(lock2, parent_conn1, child_conn2, ch))
+    p2.start()
+    process_list.append(p2)
+    result_conn_dict[ch] = parent_conn2
 
-with Pool(2) as pool :
-    Results = pool.map(Forward,range(30))
-
+for process in process_list :
+    process.join()
+for ch in result_conn_dict :
+    print(ch, end=': ')
+    print(result_conn_dict[ch].recv())
+    #parent_conn1, child_conn1 = Pipe()
+    #parent_conn2, child_conn2 = Pipe()
+    #p1 = Process(target=Prepare, args=(child_conn1, 0))
+    # p1.start()
+    #p2 = Process(target=Forward, args=(child_conn2, parent_conn1.recv(), 0))
+    # p2.start()
+    #print("p2 start")
+    # p1.join()
+    #print("p1 finished")
+    # p2.join()
+    #print("p2 finished")
+    # print(parent_conn2.recv())
+    # with Pool(2) as pool :
+    #    Results = pool.map(Forward,range(30))
 #
 #
-## Data Settings
+# Data Settings
 #LoadingPeriod = 20000
-## h5 file handling
-## Define the database columns
+# h5 file handling
+# Define the database columns
 #
 #
-#class AnswerData(tables.IsDescription):
+# class AnswerData(tables.IsDescription):
 #    EventID = tables.Int64Col(pos=0)
 #    ChannelID = tables.Int16Col(pos=1)
 #    PETime = tables.Int16Col(pos=2)
 #    Weight = tables.Float32Col(pos=3)
 #
 #
-## Create the output file and the group
+# Create the output file and the group
 ## h5file = tables.open_file("./Prediction_Results/Prediction_Mod_ztraining.h5", mode="w", title="OneTonDetector")
 #h5file = tables.open_file(outputs, mode="w", title="OneTonDetector", filters=tables.Filters(complevel=9))
 #
-## Create tables
+# Create tables
 #AnswerTable = h5file.create_table("/", "Answer", AnswerData, "Answer")
 #answer = AnswerTable.row
 #
 #
-## Prepare for data and generating answer from prediction
+# Prepare for data and generating answer from prediction
 #filter_limit = 0.9 / WindowSize
 #Timeline = torch.arange(WindowSize, device=device).repeat([LoadingPeriod, 1])
 #entryList = np.arange(0, Total_entries, LoadingPeriod)
@@ -113,8 +160,8 @@ with Pool(2) as pool :
 #start_time = time.time()
 #
 #
-## Loop for batched data
-#for k in range(len(entryList) - 1) :
+# Loop for batched data
+# for k in range(len(entryList) - 1) :
 #    # Making Dataset
 #    EventData = Data_set[entryList[k]:entryList[k + 1]]['EventID']
 #    ChanData = Data_set[entryList[k]:entryList[k + 1]]['ChannelID']
@@ -164,10 +211,10 @@ with Pool(2) as pool :
 #    AnswerTable.flush()
 #
 #
-#h5file.close()
+# h5file.close()
 RawDataFile.close()
 #end_time = time.time()
-#print("Prediction_Generated")
+# print("Prediction_Generated")
 #
-#toc = end_time - start_time  # ~1200s 20min
+# toc = end_time - start_time  # ~1200s 20min
 #print("Time of Computing", toc)
