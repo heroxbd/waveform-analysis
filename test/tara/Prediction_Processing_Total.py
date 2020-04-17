@@ -4,7 +4,7 @@ psr = argparse.ArgumentParser()
 psr.add_argument('ipt', help='input file')
 psr.add_argument('opt', help='output file')
 psr.add_argument('NetDir', help='Network directory')
-psr.add_argument('-B', '--batchsize', dest='BAT', type=int, default=20000)
+psr.add_argument('-B', '--batchsize', dest='BAT', type=int, default=10000)
 args = psr.parse_args()
 NetDir = args.NetDir
 outputs = args.opt
@@ -46,14 +46,14 @@ def seperate_channels(Waveforms_and_info, WindowSize) :
 
 # Loading Data
 RawDataFile = tables.open_file(filename, "r")
-# Waveforms_and_info = RawDataFile.root.Waveform[:]
-Waveforms_and_info = RawDataFile.root.Waveform[0:10000]
+Waveforms_and_info = RawDataFile.root.Waveform[:]
+# Waveforms_and_info = RawDataFile.root.Waveform[0:10000]
 WindowSize = len(Waveforms_and_info[0]['Waveform'])
 Total_entries = len(Waveforms_and_info)
 print(Total_entries)
 
 Waveform_sets = seperate_channels(Waveforms_and_info, WindowSize)
-Waveform_sets = {0: Waveform_sets[0], 1: Waveform_sets[1], 2: Waveform_sets[2]}
+#Waveform_sets = {0: Waveform_sets[0], 1: Waveform_sets[1], 2: Waveform_sets[2]}
 
 
 def Prepare(lock, channelid, downstream) :
@@ -77,43 +77,36 @@ def Prepare(lock, channelid, downstream) :
     print("lock1 released")
 
 
-def Forward(lock, upstream, downstream, channelid) :
-    print("Task for channel {} assigned".format(channelid))
-    lock.acquire()
-    print("lock2 acquired")
+def Forward(upstream, channelid) :
     Shifted_Wave = upstream.recv()
-    #device = torch.device(channelid % 2)
-    start = time.time()
+    Hit_Vectors = np.empty(Shifted_Wave.shape, dtype=Shifted_Wave.dtype)
     device = torch.device(1)
+    start = time.time()
     net = torch.load(NetDir + "/Channel{}.torch_net".format(channelid), map_location=device)  # Pre-trained Model Parameters
-    tensor = torch.from_numpy(Shifted_Wave).to(device=device)
-    Hit_Vectors = net.forward(tensor).data.cpu().numpy()
+    slices = np.append(np.arange(0, len(Shifted_Wave), BATCHSIZE,), len(Shifted_Wave))
+    print(slices)
+    for i in range(len(slices) - 1) :
+        tensor = torch.from_numpy(Shifted_Wave[slices[i]:slices[i + 1]]).to(device=device)
+        Hit_Vectors[slices[i]:slices[i + 1]] = net.forward(tensor).data.cpu().numpy()
     print("consuming {:.4f}s".format(time.time() - start))
     # del tensor
-    downstream.send(1)
-    downstream.close()
-    lock.release()
-    print("lock2 released")
+    return Hit_Vectors
 
 
 process_list = []
 result_conn_dict = dict([])
-lock1, lock2, = Lock(), Lock()
+lock = Lock()
 for ch in Waveform_sets.keys() :
     parent_conn1, child_conn1 = Pipe()
-    parent_conn2, child_conn2 = Pipe()
-    p1 = Process(target=Prepare, args=(lock1, ch, child_conn1))
+    p1 = Process(target=Prepare, args=(lock, ch, child_conn1))
     p1.start()
-    p2 = Process(target=Forward, args=(lock2, parent_conn1, child_conn2, ch))
-    p2.start()
-    process_list.append(p2)
-    result_conn_dict[ch] = parent_conn2
+    process_list.append(p1)
+    result_conn_dict[ch] = parent_conn1
 
+for ch in result_conn_dict :
+    print(Forward(result_conn_dict[ch], ch))
 for process in process_list :
     process.join()
-for ch in result_conn_dict :
-    print(ch, end=': ')
-    print(result_conn_dict[ch].recv())
     #parent_conn1, child_conn1 = Pipe()
     #parent_conn2, child_conn2 = Pipe()
     #p1 = Process(target=Prepare, args=(child_conn1, 0))
