@@ -69,29 +69,17 @@ channelid_set = set(Waveforms_and_info['ChannelID'])
 Channel_Grouped_Waveform = Waveforms_and_info.groupby(by="ChannelID")
 
 
-def Prepare(lock, channelid, downstream) :
-    lock.acquire()
-    start = time.time()
-    Data_of_this_channel = Channel_Grouped_Waveform.get_group(channelid)
-    Waves = np.vstack(Data_of_this_channel['Waveform'])
-    EventIDs = np.array(Data_of_this_channel['EventID'])
-    print("channel {0} Prepared, consuming {1:.4f}".format(ch, time.time() - start))
-    downstream.send({"Shifted_Wave": Waves, "EventIDs": EventIDs})
-    downstream.close()
-    lock.release()
-
-
 device = torch.device(1)
 filter_limit = 0.9 / WindowSize
 Timeline = torch.arange(WindowSize, device=device)
 
 
-def Forward(upstream, channelid) :
+def Forward(channelid) :
     net = torch.load(NetDir + "/Channel{}.torch_net".format(channelid), map_location=device)  # Pre-trained Model Parameters
     start = time.time()
-    upstream = upstream.recv()
-    Shifted_Wave = upstream["Shifted_Wave"]
-    EventIDs = upstream["EventIDs"]
+    Data_of_this_channel = Channel_Grouped_Waveform.get_group(channelid)
+    Shifted_Wave = np.vstack(Data_of_this_channel['Waveform'])
+    EventIDs = np.array(Data_of_this_channel['EventID'])
     print("channel {0} Received, consuming {1:.4f}".format(ch, time.time() - start))
     PETimes = np.empty(0, dtype=np.int16)
     Weights = np.empty(0, dtype=np.float32)
@@ -103,7 +91,6 @@ def Forward(upstream, channelid) :
         PETime = Prediction > filter_limit
         pe_numbers = PETime.sum(1)
         no_pe_found = (pe_numbers == 0)
-        print(no_pe_found)
         if no_pe_found.any() :
             print("I cannot find any pe in Event {0}, Channel {1}".format(EventIDs[slices[i]:slices[i + 1]][no_pe_found.cpu().numpy()], channelid))
             guessed_petime = F.relu(inputs[no_pe_found].max(1)[1] - 7)
@@ -115,25 +102,16 @@ def Forward(upstream, channelid) :
         PETimes = np.append(PETimes, TimeMatrix.cpu().numpy())
         pe_numbers = pe_numbers.cpu().numpy()
         EventData = np.append(EventData, np.repeat(EventIDs[slices[i]:slices[i + 1]], pe_numbers))
-    return {"PETime": PETimes, "Weight": Weights, "EventID": EventData}
+        ChannelData = np.empty(EventData.shape, dtype=np.int16)
+        ChannelData.fill(channelid)
+    return pd.DataFrame({"PETime": PETimes, "Weight": Weights, "EventID": EventData, "ChannelID": ChannelData})
 
 
-process_list = []
-result_conn_dict = dict([])
-lock = Lock()
+Result = []
 for ch in channelid_set :
-    parent_conn1, child_conn1 = Pipe()
-    p1 = Process(target=Prepare, args=(lock, ch, child_conn1))
-    p1.start()
-    process_list.append(p1)
-    result_conn_dict[ch] = parent_conn1
-
-Result = dict([])
-for ch in result_conn_dict :
-    Result[ch] = (Forward(result_conn_dict[ch], ch))
-for process in process_list :
-    process.join()
-
+    Result.append(Forward(ch))
+Result = pd.concat(Result)
+embed()
 
 #parent_conn1, child_conn1 = Pipe()
 #parent_conn2, child_conn2 = Pipe()
