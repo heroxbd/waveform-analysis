@@ -2,7 +2,6 @@
 
 import re
 import numpy as np
-from scipy import optimize as opti
 import scipy.stats
 import h5py
 import sys
@@ -11,9 +10,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import argparse
-import wf_analysis_func as wfaf
-import finalfit as ff
-import adjust as ad
+import wf_func as wff
 
 plt.rcParams['savefig.dpi'] = 300
 plt.rcParams['figure.dpi'] = 300
@@ -22,51 +19,46 @@ plt.rcParams['lines.markersize'] = 4.0
 plt.rcParams['lines.linewidth'] = 1.0
 
 psr = argparse.ArgumentParser()
-psr.add_argument('ipt', help='input file')
-psr.add_argument('-o', dest='opt', help='output file')
+psr.add_argument('-o', dest='opt', type=str, help='output file')
+psr.add_argument('ipt', type=str, help='input file')
+psr.add_argument('--met', type=str, help='fitting method')
+psr.add_argument('--ref', type=str, help='reference file')
 psr.add_argument('--event', '-e', type=int, dest='ent')
 psr.add_argument('--channel', '-c', type=int, dest='cha')
 psr.add_argument('--save', dest='save', action='store_true', help='save result to h5 file, must include -o argument', default=False)
 args = psr.parse_args()
 
-single_pe_path = 'xtest/averspe.h5'
-
-def norm_fit(x, M, p):
-    return np.linalg.norm(p - np.matmul(M, x))
-
-def main():
-    fipt = args.ipt
-    fopt = args.opt
-    spemean_r, epulse = wfaf.generate_model(single_pe_path)
-    spe_pre = wfaf.pre_analysis(fipt, epulse, -1*epulse*spemean_r)
-    print('spemean is {}'.format(spe_pre['spemean']))
+def main(fopt, fipt, single_pe_path, method):
+    spe_pre = wff.read_model(single_pe_path)
+    print('spe is {}'.format(spe_pre['spe']))
     opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PETime', np.uint16), ('Weight', np.float16)])
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
         ent = ipt['Waveform']
-        Length_pe = len(ent[0]['Waveform'])
-        dt = np.zeros(Length_pe, dtype=opdt)
+        leng = len(ent[0]['Waveform'])
         Chnum = len(np.unique(ent['ChannelID']))
         a1 = max(args.ent*Chnum-10000, 0)
         a2 = min(args.ent*Chnum+10000, len(ent))
         ent = ent[a1:a2]
-        assert Length_pe >= len(spe_pre['spemean']), 'Single PE too long which is {}'.format(len(spe_pre['spemean']))
+        assert leng >= len(spe_pre['spe']), 'Single PE too long which is {}'.format(len(spe_pre['spe']))
         i = np.where(np.logical_and(ent['EventID'] == args.ent, ent['ChannelID'] == args.cha))[0][0]
-        spe_pre['spemean'] = np.concatenate([spe_pre['spemean'], np.zeros(Length_pe - len(spe_pre['spemean']))])
 
-        wf_input = ent[i]['Waveform']
-        wf_input = -1 * spe_pre['epulse'] * wf_input
-        wave = -1*spe_pre['epulse']*wfaf.deduct_base(-1*spe_pre['epulse']*wf_input, spe_pre['m_l'], spe_pre['thres'], 10, 'detail')
-        pf, nihep, possible = ff.xiaopeip_N(wave, spe_pre, Length_pe)
-        pet, pwe = wfaf.pf_to_tw(pf, 0.1)
+        wave = wff.deduct_base(ent[i]['Waveform'], spe_pre['epulse'], spe_pre['m_l'], spe_pre['thres'], 20, 'detail')
+
+        if method == 'xiaopeip':
+                pf = wff.fit_N(wave, spe_pre, 'xiaopeip')
+        elif method == 'lucyddm':
+                pf = wff.lucyddm_core(wave, spe_pre['spe'])
+        elif method == 'mcmc':
+                pf = wff.fit_N(wave, spe_pre, 'mcmc', gen)
+        pet, pwe = wff.pf_to_tw(pf, 0.01)
 
         print('PETime = {}, Weight = {}'.format(pet, pwe))
         lenpf = len(pwe)
-        dt['PETime'][:lenpf] = pet.astype(np.uint16)
-        dt['Weight'][:lenpf] = pwe.astype(np.float16)
-        dt['EventID'][:lenpf] = args.ent
-        dt['ChannelID'][:lenpf] = args.cha
-        dt = dt[dt['Weight'] > 0]
-        dt = np.sort(dt, kind='stable', order=['EventID', 'ChannelID', 'PETime'])
+        dt = np.zeros(lenpf, dtype=opdt)
+        dt['PETime'] = pet.astype(np.uint16)
+        dt['Weight'] = pwe.astype(np.float16)
+        dt['EventID'] = args.ent
+        dt['ChannelID'] = args.cha
         print('dt is {}'.format(dt))
         tth = ipt['GroundTruth']
         b = min((args.ent+1)*30*Chnum, len(tth))
@@ -92,8 +84,6 @@ def main():
                 opt.create_dataset('Answer_un', data=dt, compression='gzip')
                 opt.create_dataset('Answer', data=dt_a, compression='gzip')
             plt.plot(wave, c='b')
-            plt.scatter(nihep, wave[nihep], marker='x', c='g')
-            plt.scatter(possible, wave[possible], marker='+', c='r')
             plt.grid()
             plt.xlabel(r'Time/[ns]')
             plt.ylabel(r'ADC')
@@ -106,12 +96,12 @@ def main():
             plt.vlines(pet, -200*pwe+hh, hh, color='y')
             plt.savefig('demo.png')
             plt.close()
-            plt.plot(spemean_r, c='b')
+            plt.plot(spe_r, c='b')
             plt.grid()
             plt.xlabel(r'Time/[ns]')
             plt.ylabel(r'ADC')
-            plt.savefig('spemean.png')
+            plt.savefig('spe.png')
             plt.close()
 
 if __name__ == '__main__':
-    main()
+    main(args.opt, args.ipt, args.ref, args.met)
