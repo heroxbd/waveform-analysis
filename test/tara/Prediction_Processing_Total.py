@@ -31,7 +31,7 @@ origin_dtype = WaveformTable.dtype
 WindowSize = origin_dtype["Waveform"].shape[0]
 gpufloat_dtype = np.dtype([(name, np.dtype('float32') if name == "Waveform" else origin_dtype[name].base, origin_dtype[name].shape) for name in origin_dtype.names])
 Total_entries = len(WaveformTable)
-print(Total_entries)
+print("Processing {} entries".format(Total_entries))
 
 
 def Read_Data(startentry, endentry) :
@@ -110,7 +110,7 @@ Result = []
 for ch in channelid_set :
     Result.append(Forward(ch))
 Result = pd.concat(Result)
-Result.sort_values(by=["EventID", "ChannelID"])
+Result = Result.sort_values(by=["EventID", "ChannelID"])
 
 
 class AnswerData(tables.IsDescription):
