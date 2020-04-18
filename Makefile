@@ -1,49 +1,62 @@
 SHELL:=bash
 jinpseq:=$(shell seq 0 0)
+jinppre:=ztraining-
 junoseq:=2 4
-seq:=$($(set)seq)
-dir:=dataset
+junopre:=junoWave
+datfold:=dataset
 fragnum:=0
 fragseq:=$(shell seq 0 ${fragnum})
-folder:=test/$(method)
+tfold:=test/$(method)
+ifdef chunk
+    seq:=x
+else
+    seq:=$($(set)seq)
+endif
+prefix:=$($(set)pre)
 
 .PHONY: all
 
-all: $(seq:%=$(folder)/dist-$(set)/hist-%.pdf) $(folder)/dist-$(set)/record.csv
-$(folder)/dist-$(set)/record.csv: $(seq:%=$(folder)/dist-$(set)/record-%.csv)
+all: $(seq:%=$(tfold)/dist-$(set)/hist-%.pdf) $(tfold)/dist-$(set)/record.csv
+$(tfold)/dist-$(set)/record.csv: $(seq:%=$(tfold)/dist-$(set)/record-%.csv)
 	cat $^ > $@
-$(folder)/dist-$(set)/record-%.csv: $(folder)/dist-$(set)/distrecord-%.h5
+$(tfold)/dist-$(set)/record-%.csv: $(tfold)/dist-$(set)/distrecord-%.h5
 	python3 test/csv_dist.py $^ -o $@
-$(folder)/dist-$(set)/hist-%.pdf: $(folder)/dist-$(set)/distrecord-%.h5
+$(tfold)/dist-$(set)/hist-%.pdf: $(tfold)/dist-$(set)/distrecord-%.h5
 	python3 test/draw_dist.py $^ -o $@
-$(folder)/dist-$(set)/distrecord-%.h5: $(dir)/$(set)/*%.h5 $(folder)/sub-$(set)/submission-%.h5
+$(tfold)/dist-$(set)/distrecord-%.h5: $(datfold)/$(set)/$(prefix)%.h5 $(tfold)/sub-$(set)/submission-%.h5
 	mkdir -p $(dir $@)
 	python3 test/test_dist.py $(word 2,$^) --ref $< -o $@ > $@.log 2>&1
 define split
-$(folder)/sub-$(set)/submission-$(1).h5: $(folder)/sub-$(set)/total-$(1).h5
+$(tfold)/sub-$(set)/submission-$(1).h5: $(tfold)/sub-$(set)/total-$(1).h5
 	python3 test/adjust.py $$^ -o $$@
-$(folder)/sub-$(set)/total-$(1).h5: $(fragseq:%=$(folder)/unad-$(set)/unadjusted-$(1)-%.h5)
+$(tfold)/sub-$(set)/total-$(1).h5: $(fragseq:%=$(tfold)/unad-$(set)/unadjusted-$(1)-%.h5)
 	mkdir -p $$(dir $$@)
 	python3 test/integrate.py $$^ --num ${fragnum} -o $$@
-$(folder)/unad-$(set)/unadjusted-$(1)-%.h5: $(dir)/$(set)/*$(1).h5 test/spe-$(set).h5
+$(tfold)/unad-$(set)/unadjusted-$(1)-%.h5: $(datfold)/$(set)/$(prefix)$(1).h5 test/spe-$(set).h5
 	mkdir -p $$(dir $$@)
 	python3 test/fit.py $$< --met $(method) --ref $$(word 2,$$^) --num ${fragnum} -o $$@
 endef
 $(foreach i,$(seq),$(eval $(call split,$(i))))
 
-test/spe-$(set).h5: $(dir)/$(set)/*$(word 1,$(seq)).h5
-	python3 test/spe_get.py $^ -o $@ --num 10 --len 80
+$(datfold)/$(set)/$(prefix)x.h5: $(datfold)/$(set)/$(prefix)$(chunk).h5
+	python3 test/cut_data.py $^ -o $@ -a -1 -b 10000
+
+test/spe-$(set).h5: $(datfold)/$(set)/$(prefix)$(word 1,$($(set)seq)).h5
+	python3 test/spe_get.py $^ -o $@ --num 10000 --len 80
 
 JUNO-Kaon-50.h5:
 	wget http://hep.tsinghua.edu.cn/~orv/distfiles/JUNO-Kaon-50.h5
 
-junoDataset: $(seq:%=$(junodir)/junoWave%.h5)
-$(junodir)/junoWave2.h5:
+$(datfold)/$(set)/junoWave2.h5:
 	mkdir -p $(dir $@)
 	wget https://cloud.tsinghua.edu.cn/f/f6e4cf503be542d3892f/?dl=1 -O $@
-$(junodir)/junoWave4.h5:
+$(datfold)/$(set)/junoWave4.h5:
 	mkdir -p $(dir $@)
 	wget https://cloud.tsinghua.edu.cn/f/846ecb6335564714902b/?dl=1 -O $@
+
+$(datfold)/$(set)/ztraining-0.h5:
+$(datfold)/$(set)/ztraining-1.h5:
+$(datfold)/$(set)/ztraining-2.h5:
 
 .DELETE_ON_ERROR:
 .SECONDARY:
