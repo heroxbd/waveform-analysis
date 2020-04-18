@@ -8,6 +8,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import h5py
 import argparse
+import itertools as it
 import wf_func as wff
 
 psr = argparse.ArgumentParser()
@@ -81,37 +82,45 @@ def generate_standard(h5_path, single_pe_path):
     num = 0
 
     with h5py.File(h5_path[0], 'r', libver='latest', swmr=True) as ztrfile:
-        ptev = ztrfile['GroundTruth']['EventID']
-        ptch = ztrfile['GroundTruth']['ChannelID']
-        Pt = ztrfile['GroundTruth']['PETime']
-        wfev = ztrfile['Waveform']['EventID']
-        wfch = ztrfile['Waveform']['ChannelID']
-        Wf = ztrfile['Waveform']['Waveform']
-        Length_pe = len(Wf[0])
-        for j in range(len(Wf)):
-            wf = Wf[j]
-            pt = np.sort(Pt[np.logical_and(ptev == wfev[j], ptch == wfch[j])]).astype(np.int)
+        Gt = ztrfile['GroundTruth']
+        Wf = ztrfile['Waveform']
+        Chnum = len(np.unique(Gt['ChannelID']))
+        e_gt = Gt['EventID']*Chnum + Gt['ChannelID']
+        e_gt, i_gt = np.unique(e_gt, return_index=True)
+        e_wf = Wf['EventID']*Chnum + Wf['ChannelID']
+        e_wf, i_wf = np.unique(e_wf, return_index=True)
+        leng = len(Wf[0]['Waveform'])
+        p = 0
+        for e_gt_i, a, b in zip(e_gt, np.nditer(i_gt), it.chain(np.nditer(i_gt[1:]), [len(Wf)])):
+            while e_wf[p] < e_gt_i:
+                p = p + 1
+            pt = np.sort(Gt[a:b]['PETime']).astype(np.int)
             pt = pt[pt >= 0]
-            if len(pt) == 1 and pt[0] < Length_pe - L:
+            if pt.shape[0] == 0:
+                continue
+            if len(pt) == 1 and pt[0] < leng - L:
                 ps = pt
             else:
                 dpta = np.diff(pt, prepend=pt[0])
                 dptb = np.diff(pt, append=pt[-1])
                 ps = pt[np.logical_and(dpta > L, dptb > L)]#long distance to other spe in both forepart & backpart
+            if ps.shape[0] == 0:
+                continue
+
             for k in range(len(ps)):
-                dt[num]['EventID'] = wfev[j]
-                dt[num]['ChannelID'] = wfch[j]
-                dt[num]['speWf'] = wf[ps[k]:ps[k]+L]
-                print('\rSingle PE Generating:|{}>{}|{:6.2f}%'.format(((20*num)//N)*'-', (19 - (20*num)//N)*' ', 100 * ((num+1) / N)), end=''if num != N-1 else '\n')
+                dt[num]['EventID'] = Wf[i_wf[p]]['EventID']
+                dt[num]['ChannelID'] = Wf[i_wf[p]]['ChannelID']
+                dt[num]['speWf'] = Wf[i_wf[p]]['Waveform'][ps[k]:ps[k]+L]
                 num += 1
                 if num >= N:
                     break
+            print('\rSingle PE Generating:|{}>{}|{:6.2f}%'.format(((20*(num-1))//N)*'-', (19 - (20*(num-1))//N)*' ', 100 * (num / N)), end=''if num != N else '\n')
             if num >= N:
+                dt = dt[:num] # cut empty dt part
+                print('{} speWf generated'.format(len(dt)))
+                spemean, epulse = mean(dt)
+                spe_pre = pre_analysis(epulse * spemean, epulse * Wf[:1000]['Waveform'])
                 break
-    dt = dt[:num] # cut empty dt part
-    print('{} speWf generated'.format(len(dt)))
-    spemean, epulse = mean(dt)
-    spe_pre = pre_analysis(epulse * spemean, epulse * Wf[:1000])
     with h5py.File(single_pe_path, 'w') as spp:
         dset = spp.create_dataset('SinglePE', data=dt)
         dset.attrs['SpePositive'] = spe_pre['spe']

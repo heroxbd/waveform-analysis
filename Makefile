@@ -24,16 +24,16 @@ $(tfold)/dist-$(set)/record-%.csv: $(tfold)/dist-$(set)/distrecord-%.h5
 $(tfold)/dist-$(set)/hist-%.pdf: $(tfold)/dist-$(set)/distrecord-%.h5
 	python3 test/draw_dist.py $^ -o $@
 $(tfold)/dist-$(set)/distrecord-%.h5: $(datfold)/$(set)/$(prefix)%.h5 $(tfold)/sub-$(set)/submission-%.h5
-	mkdir -p $(dir $@)
+	@mkdir -p $(dir $@)
 	python3 test/test_dist.py $(word 2,$^) --ref $< -o $@ > $@.log 2>&1
 define split
 $(tfold)/sub-$(set)/submission-$(1).h5: $(tfold)/sub-$(set)/total-$(1).h5
 	python3 test/adjust.py $$^ -o $$@
 $(tfold)/sub-$(set)/total-$(1).h5: $(fragseq:%=$(tfold)/unad-$(set)/unadjusted-$(1)-%.h5)
-	mkdir -p $$(dir $$@)
+	@mkdir -p $$(dir $$@)
 	python3 test/integrate.py $$^ --num ${fragnum} -o $$@
 $(tfold)/unad-$(set)/unadjusted-$(1)-%.h5: $(datfold)/$(set)/$(prefix)$(1).h5 test/spe-$(set).h5
-	mkdir -p $$(dir $$@)
+	@mkdir -p $$(dir $$@)
 	python3 test/fit.py $$< --met $(method) --ref $$(word 2,$$^) --num ${fragnum} -o $$@
 endef
 $(foreach i,$(seq),$(eval $(call split,$(i))))
@@ -48,10 +48,10 @@ JUNO-Kaon-50.h5:
 	wget http://hep.tsinghua.edu.cn/~orv/distfiles/JUNO-Kaon-50.h5
 
 $(datfold)/$(set)/junoWave2.h5:
-	mkdir -p $(dir $@)
+	@mkdir -p $(dir $@)
 	wget https://cloud.tsinghua.edu.cn/f/f6e4cf503be542d3892f/?dl=1 -O $@
 $(datfold)/$(set)/junoWave4.h5:
-	mkdir -p $(dir $@)
+	@mkdir -p $(dir $@)
 	wget https://cloud.tsinghua.edu.cn/f/846ecb6335564714902b/?dl=1 -O $@
 
 $(datfold)/$(set)/ztraining-0.h5:
