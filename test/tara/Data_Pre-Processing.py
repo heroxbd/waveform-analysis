@@ -126,8 +126,8 @@ Grouped_Truth = GroundTruth.groupby(by="ChannelID")
 
 
 class PreProcessedData(tables.IsDescription):
-    HitSpectrum = tables.Col.from_type('float32', shape=WindowSize, pos=0)
-    Waveform = tables.Col.from_type('uint8', shape=WindowSize, pos=1)
+    HitSpectrum = tables.Col.from_type('uint8', shape=WindowSize, pos=0)
+    Waveform = tables.Col.from_type('float32', shape=WindowSize, pos=1)
 
 
 def PreProcess(channelid) :

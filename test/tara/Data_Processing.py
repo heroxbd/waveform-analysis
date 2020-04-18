@@ -5,12 +5,14 @@ psr.add_argument('-o', '--outputdir', dest='opt', help='output_dir')
 psr.add_argument('-n', '--channelid', dest='cid', type=int)
 psr.add_argument('-m', '--maxsetnumber', dest='msn', type=int, default=0)
 psr.add_argument('-B', '--batchsize', dest='BAT', type=int, default=64)
+psr.add_argument('-P', '--pretrained', dest='pretained_model', type=str, default="")
 args = psr.parse_args()
 SavePath = args.opt
 filename = args.ipt
 ChannelID = args.cid
 max_set_number = args.msn
 BATCHSIZE = args.BAT
+Model = args.pretained_model
 
 import numpy as np
 # import numpy.random as random
@@ -19,21 +21,16 @@ from sklearn.model_selection import train_test_split
 
 import torch
 import torch.utils.data as Data
-
 from torch import optim
 from torch.autograd import Variable
 
 import os
-
 import time
 import tables
-
 import pytorch_stats_loss as stats_loss
 
-lr = 1e-5
-
 # detecting cuda device and wait in line
-if ChannelID % 3 == 1 :
+if ChannelID % 2 == 1 :
     device = torch.device(0)
 else :
     device = torch.device(1)
@@ -72,15 +69,15 @@ print("training_set ", len(Wave_train), ", testing_set", len(Wave_test))
 # Making Dataset
 # train_data = Data.TensorDataset(data_tensor=torch.from_numpy(Wave_train).float(),\
 #                              target_tensor=torch.from_numpy(PET_train).float())
-train_data = Data.TensorDataset(torch.from_numpy(Wave_train).cuda(device=device),
-                                torch.from_numpy(PET_train).cuda(device=device))
+train_data = Data.TensorDataset(torch.from_numpy(Wave_train).cuda(device=device).float(),
+                                torch.from_numpy(PET_train).cuda(device=device).float())
 
 train_loader = Data.DataLoader(dataset=train_data, batch_size=BATCHSIZE, shuffle=True, pin_memory=False)
 
 # test_data = Data.TensorDataset(data_tensor=torch.from_numpy(Wave_test).float(),\
 #                              target_tensor=torch.from_numpy(PET_test).float())
-test_data = Data.TensorDataset(torch.from_numpy(Wave_test).float().cuda(device=device),
-                               torch.from_numpy(PET_test).cuda(device=device))
+test_data = Data.TensorDataset(torch.from_numpy(Wave_test).float().cuda(device=device).float(),
+                               torch.from_numpy(PET_test).cuda(device=device).float())
 
 test_loader = Data.DataLoader(dataset=test_data, batch_size=BATCHSIZE, shuffle=False, pin_memory=False)
 
@@ -111,18 +108,26 @@ def testing(test_loader) :
 # Neural Networks
 from CNN_Module import Net_1
 
-net = torch.load("./Network_Models_ztraining-0/_epoch24_loss0.8157", map_location=device)
-
-trial_data = Data.TensorDataset(torch.from_numpy(Wave_test[0:1000]).float().cuda(device=device),
-                                torch.from_numpy(PET_test[0:1000]).cuda(device=device))
+trial_data = Data.TensorDataset(torch.from_numpy(Wave_test[0:1000]).cuda(device=device).float(),
+                                torch.from_numpy(PET_test[0:1000]).cuda(device=device).float())
 trial_loader = Data.DataLoader(dataset=trial_data, batch_size=BATCHSIZE, shuffle=False, pin_memory=False)
 
-loss = testing(trial_loader)
+if os.path.exists(Model) :
+    net = torch.load(Model, map_location=device)
+    loss = testing(trial_loader)
+    lr = 1e-5
+    # BATCHSIZE = BATCHSIZE / 4
+else :
+    loss = 10000
+    while(loss > 100) :
+        net = Net_1().to(device)
+        loss = testing(trial_loader)
+        print("Trying initial parameters with loss={:.2f}".format(loss))
+    lr = 1e-2
 print("Initial loss={}".format(loss))
-
-print(sum(parm.numel() for parm in net.parameters()))
+print("Sum of parameters: {:.4f}".format(sum(parm.numel() for parm in net.parameters())))
 # optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9) #0.001
-optimizer = optim.Adam(net.parameters(), lr=1e-3)
+optimizer = optim.Adam(net.parameters(), lr=lr)
 checking_period = np.int(0.25 * (len(Wave_train) / BATCHSIZE))
 
 # make loop
