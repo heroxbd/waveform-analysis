@@ -57,8 +57,8 @@ else :
     max_set_number = None
 
 print("Reading Data...")
-WaveData = (Data_set[0:max_set_number]['Wave'])
-PETData = Data_set[0:max_set_number]['PET']
+WaveData = (Data_set[0:max_set_number]['Waveform'])
+PETData = Data_set[0:max_set_number]['HitSpectrum']
 WindowSize = len(WaveData[0])
 # Make Shift For +5 ns
 PETData = np.concatenate((np.zeros((len(PETData), 5)), PETData[:, 5:]), axis=-1)

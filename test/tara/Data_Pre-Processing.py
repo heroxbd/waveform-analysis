@@ -29,12 +29,16 @@ from IPython import embed
 
 
 @numba.jit
-def Make_Time_Vector(GroundTruth, Waveforms) :
+def Make_Time_Vector(GroundTruth, Waveforms_and_info) :
     i = 0
-    Time_Series = np.zeros(Waveforms["Waveform"].shape, dtype=np.float32)
-    for j in range(len(Waveforms)) :
-        while(Waveforms["EventID"][j] == GroundTruth["EventID"][i] and (Waveforms["ChannelID"][j] == GroundTruth["ChannelID"][i])) :
-            Time_Series[j][GroundTruth["PETime"][i]] = Time_Series[j][GroundTruth["PETime"][i]] + 1
+    Time_Series = np.zeros((len(Waveforms_and_info), WindowSize), dtype=np.float32)
+    Wave_EventID = Waveforms_and_info["EventID"].to_numpy()
+    Truth_EventID = GroundTruth["EventID"].to_numpy()
+    PETime = GroundTruth["PETime"].to_numpy()
+    print("Begin Make HitSpectrum")
+    for j in range(len(Waveforms_and_info)) :
+        while(Wave_EventID[j] == Truth_EventID[i]) :
+            Time_Series[j][PETime[i]] = Time_Series[j][PETime[i]] + 1
             i = i + 1
     return Time_Series
 
@@ -68,10 +72,6 @@ def Read_Data(sliceNo, filename, Wave_startentry, Wave_endentry, Truth_startentr
     print("Reading File " + filename)
     Waveforms_and_info = WaveformTable[Wave_startentry:Wave_endentry]
     GroundTruth = GroundTruthTable[Truth_startentry:Truth_endentry]
-    Shifted_Waves_and_info = np.empty(Waveforms_and_info.shape, dtype=gpufloat_dtype)
-    for name in origin_dtype.names :
-        if name != "Waveform" :
-            Shifted_Waves_and_info[name] = Waveforms_and_info[name]
     h5file.close()
 
     example_wave = Waveforms_and_info[0:100]["Waveform"]
@@ -83,12 +83,7 @@ def Read_Data(sliceNo, filename, Wave_startentry, Wave_endentry, Truth_startentr
     else :
         is_positive_pulse = False
     if(is_positive_pulse) : Waveforms_and_info["Waveform"] = Waveforms_and_info["Waveform"].max() - Waveforms_and_info["Waveform"]
-
-    stream = AssignStream(WindowSize)
-    for i, w in enumerate(Waveforms_and_info["Waveform"]) :
-        stream.Calculate(w)
-        Shifted_Waves_and_info[i]["Waveform"] = stream.ChannelInfo.Ped - w
-    return (sliceNo, {"Waveform": TableToDataFrame(Shifted_Waves_and_info), "GroundTruth": TableToDataFrame(GroundTruth)})
+    return (sliceNo, {"Waveform": TableToDataFrame(Waveforms_and_info), "GroundTruth": TableToDataFrame(GroundTruth)})
 
 
 FileNo = 0
@@ -111,6 +106,9 @@ while(Nwav != 0) :
     if Waveform_Len > Nwav :
         Waveform_Len = Nwav
         GroundTruth_Len = min(round(GroundTruth_Len / len(h5file.root.Waveform) * Waveform_Len * 2), GroundTruth_Len)
+    elif Waveform_Len == Nwav :  # in case that the end of the last file is read, resulting in Index out of range when calling Make_Time_Vector
+        Nwav = Nwav - 1
+        Waveform_Len = Nwav
     Nwav = Nwav - Waveform_Len
     slices = np.append(np.arange(0, Waveform_Len, 150000), Waveform_Len)
     Truth_slices = (GroundTruth_Len / Waveform_Len * slices).astype(np.int)
@@ -122,21 +120,55 @@ while(Nwav != 0) :
     FileNo = FileNo + 1
     h5file.close()
 # print(list(trainfile_set.items()))
-with Pool(int(np.ceil(len(trainfile_list) / 2))) as pool :
-    Reading_Result = pool.starmap(Read_Data, trainfile_list)
+with Pool(len(trainfile_list)) as pool :
+    Reading_Result = dict(pool.starmap(Read_Data, trainfile_list))
+Waveforms_and_info = pd.concat([Reading_Result[i]["Waveform"] for i in range(len(trainfile_list))])
+GroundTruth = pd.concat([Reading_Result[i]["GroundTruth"] for i in range(len(trainfile_list))])
 print("Data Loaded, consuming {:.5f}s".format(time() - start))
 
+
+Grouped_Waves = Waveforms_and_info.groupby(by="ChannelID")
+Grouped_Truth = GroundTruth.groupby(by="ChannelID")
+
+
+class PreProcessedData(tables.IsDescription):
+    HitSpectrum = tables.Col.from_type('float32', shape=WindowSize, pos=0)
+    Waveform = tables.Col.from_type('float32', shape=WindowSize, pos=1)
+
+
+def PreProcess(channelid) :
+    Waves_of_this_channel = Grouped_Waves.get_group(channelid)
+    Truth_of_this_channel = Grouped_Truth.get_group(channelid)
+    Origin_Waves = Waves_of_this_channel["Waveform"].to_numpy()
+    Shifted_Waves = np.empty((len(Origin_Waves), WindowSize), dtype=np.float32)
+    HitSpectrum = np.empty((len(Origin_Waves), WindowSize), dtype=np.float32)
+
+    stream = AssignStream(WindowSize)
+    for i, w in enumerate(Waves_of_this_channel["Waveform"]) :
+        stream.Calculate(w)
+        Shifted_Waves[i] = stream.ChannelInfo.Ped - w
+
+    HitSpectrum = Make_Time_Vector(Truth_of_this_channel, Waves_of_this_channel)
+
+    # create Pre-Processed output file
+    Prefile = tables.open_file(SavePath + "/Pre_Channel{}.h5".format(channelid), mode="w", title="Pre-Processed-Training-Data")
+    # Create group and tables
+    TrainDataTable = Prefile.create_table("/", "TrainDataTable", PreProcessedData, "Wave and HitSpectrum")
+    TrainDataTable.append([list(HitSpectrum), list(Shifted_Waves)])
+    TrainDataTable.flush()
+    Prefile.close()
+
+
+channelid_list = np.unique(Waveforms_and_info["ChannelID"].to_numpy())
+
+with Pool(len(channelid_list)) as pool :
+    pool.map(PreProcess, channelid_list)
 
 #ChannelIDs = set(Waveforms_and_info["ChannelID"])
 #Prefile = dict([])
 #TrainDataTable = dict([])
 #traindata = dict([])
-#for ChannelID in ChannelIDs :
-#    # create Pre-Processed output file
-#    Prefile[ChannelID] = tables.open_file(SavePath + "/Pre_Channel{}.h5".format(ChannelID), mode="w", title="Pre-Processed-Training-Data")
-#    # Create group and tables
-#    TrainDataTable[ChannelID] = Prefile[ChannelID].create_table("/", "TrainDataTable", PreProcessedData, "Wave and PET")
-#    traindata[ChannelID] = TrainDataTable[ChannelID].row
+# for ChannelID in ChannelIDs :
 #
 #
 #print("Parameter Configures, consuming {:.5f}s".format(time() - start))
@@ -146,7 +178,7 @@ print("Data Loaded, consuming {:.5f}s".format(time() - start))
 #print("TimeSeries Made, consuming {:.5f}s".format(time() - start))
 #
 #start = time()
-#for i, w in enumerate(Waveforms_and_info) :  # loop all events in this file
+# for i, w in enumerate(Waveforms_and_info) :  # loop all events in this file
 #    # check point
 #    if (entry) % 100000 == 0:
 #        print("processed {0} entries, progress {1:.2f}%".format(entry, entry / args.Nwav * 100))
@@ -157,18 +189,15 @@ print("Data Loaded, consuming {:.5f}s".format(time() - start))
 #    entry = entry + 1
 #
 #
-#class PreProcessedData(tables.IsDescription):
-#    HitSpectrum = tables.Col.from_type('float32', shape=WindowSize, pos=0)
-#    Waveform = tables.Col.from_type('float32', shape=WindowSize, pos=1)
 #
 #
 #print("Process Done, consuming {:.5f}s".format(time() - start))
 #start = time()
 #
-#for TD in list(TrainDataTable.values()) :
+# for TD in list(TrainDataTable.values()) :
 #    TD.flush()
 #
-#for Pf in list(Prefile.values()) :
+# for Pf in list(Prefile.values()) :
 #    Pf.close()
 #print("Data Saved, consuming {:.5f}s".format(time() - start))
 #print('consuming time: {}s'.format(time() - time_start))
