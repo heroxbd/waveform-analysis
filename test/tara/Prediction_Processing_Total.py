@@ -1,173 +1,142 @@
+#!/usr/bin/env python3
 import argparse
 psr = argparse.ArgumentParser()
 psr.add_argument('ipt', help='input file')
 psr.add_argument('opt', help='output file')
 psr.add_argument('NetDir', help='Network directory')
-psr.add_argument('-B', '--batchsize', dest='BAT', type=int, default=20000)
+psr.add_argument('-B', '--batchsize', dest='BAT', type=int, default=15000)
+psr.add_argument('-D', '--device', dest='Device', type=str, default='cpu')
 args = psr.parse_args()
 NetDir = args.NetDir
-outputs = args.opt
+output = args.opt
 filename = args.ipt
 BATCHSIZE = args.BAT
+Device = args.Device
 
-# from IPython import embed  # ipython breakpoint inserting
+import time
+global_start = time.time()
+cpu_global_start = time.clock()
 import numpy as np
-import numba
+import tables
+import pandas as pd
+from tqdm import tqdm
 
 import torch
 from torch.nn import functional as F
 
-from JPwaptool_Lite import JPwaptool_Lite
 from multiprocessing import Pool
-
-import os
-import sys
-import time
-
-import tables
-#device = torch.device('cpu')
-
-
-def seperate_channels(Waveforms_and_info, WindowSize) :
-    channel_statics = np.bincount(Waveforms_and_info["ChannelID"])
-    Waveform = dict([])
-    index = dict([])
-    for ch, nWaves in enumerate(channel_statics) :
-        Waveform[ch] = {"Wave": np.empty((nWaves, WindowSize), dtype=np.int16), "Index": np.empty(nWaves, dtype=np.int64)}
-        index[ch] = 0
-    for i, wave in enumerate(Waveforms_and_info) :
-        ch = wave["ChannelID"]
-        Waveform[ch]["Wave"][index[ch]] = wave["Waveform"]
-        Waveform[ch]["Index"][index[ch]] = i
-        index[ch] = index[ch] + 1
-    return Waveform
-
+from JPwaptool_Lite import JPwaptool_Lite
 
 # Loading Data
 RawDataFile = tables.open_file(filename, "r")
-# Waveforms_and_info = RawDataFile.root.Waveform[:]
-Waveforms_and_info = RawDataFile.root.Waveform[0:100000]
-WindowSize = len(Waveforms_and_info[0]['Waveform'])
-Total_entries = len(Waveforms_and_info)
-print(Total_entries)
+WaveformTable = RawDataFile.root.Waveform
+origin_dtype = WaveformTable.dtype
+WindowSize = origin_dtype["Waveform"].shape[0]
+gpufloat_dtype = np.dtype([(name, np.dtype('float32') if name == "Waveform" else origin_dtype[name].base, origin_dtype[name].shape) for name in origin_dtype.names])
+Total_entries = len(WaveformTable)
+print("Initialization finished, real time {0:.4f}s, cpu time {1:.4f}s".format(time.time() - global_start, time.clock() - cpu_global_start))
+print("Processing {} entries".format(Total_entries))
 
-Waveform_sets = seperate_channels(Waveforms_and_info, WindowSize)
 
-
-def Forward(channelid) :
-    #device = torch.device(channelid%2)
-    device = torch.device("cpu")
-    Waves = Waveform_sets[channelid]['Wave']
-    net = torch.load(NetDir + "/Channel{}.torch_net".format(channelid), map_location=device)  # Pre-trained Model Parameters
-    print("net{} loaded".format(channelid))
+def Read_Data(startentry, endentry) :
+    Waveforms_and_info = WaveformTable[startentry:endentry]
+    Shifted_Waves_and_info = np.empty(Waveforms_and_info.shape, dtype=gpufloat_dtype)
+    for name in origin_dtype.names :
+        if name != "Waveform" :
+            Shifted_Waves_and_info[name] = Waveforms_and_info[name]
     if WindowSize >= 1000 :
         stream = JPwaptool_Lite(WindowSize, 100, 600)
     elif WindowSize == 600 :
         stream = JPwaptool_Lite(WindowSize, 50, 400)
     else:
         raise ValueError("Unknown WindowSize, I don't know how to choose the parameters for pedestal calculatation")
-    Shifted_Wave = np.empty(Waves.shape, dtype=np.float32)
-    for i, w in enumerate(Waves) :
+    for i, w in enumerate(Waveforms_and_info["Waveform"]) :
         stream.Calculate(w)
-        Shifted_Wave[i] = stream.ChannelInfo.Ped - w
-    tensor = torch.from_numpy(Shifted_Wave).to(device=device)
-    Shifted_Wave = net.forward(tensor).data.cpu().numpy()
-    del tensor
-    return Shifted_Wave
+        Shifted_Waves_and_info[i]["Waveform"] = stream.ChannelInfo.Ped - w
+    return pd.DataFrame({name: list(Shifted_Waves_and_info[name]) for name in gpufloat_dtype.names})
 
 
-#Result = Forward(1)
+N = 10
+tic = time.time()
+cpu_tic = time.clock()
+if N == 1 :
+    Waveforms_and_info = Read_Data(0, Total_entries)
+else :
+    slices = np.append(np.arange(0, Total_entries, int(np.ceil(Total_entries / N))), Total_entries)
+    ranges = list(zip(slices[0:-1], slices[1:]))
+    with Pool(N) as pool :
+        Waveforms_and_info = pd.concat(pool.starmap(Read_Data, ranges))
+print("Data Loaded, consuming {0:.4f}s using {1} threads, cpu time {2:.4f}s".format(time.time() - tic, N, time.clock() - cpu_tic))
 
-with Pool(2) as pool :
-    Results = pool.map(Forward,range(30))
+channelid_set = set(Waveforms_and_info['ChannelID'])
+Channel_Grouped_Waveform = Waveforms_and_info.groupby(by="ChannelID")
 
-#
-#
-## Data Settings
-#LoadingPeriod = 20000
-## h5 file handling
-## Define the database columns
-#
-#
-#class AnswerData(tables.IsDescription):
-#    EventID = tables.Int64Col(pos=0)
-#    ChannelID = tables.Int16Col(pos=1)
-#    PETime = tables.Int16Col(pos=2)
-#    Weight = tables.Float32Col(pos=3)
-#
-#
-## Create the output file and the group
-## h5file = tables.open_file("./Prediction_Results/Prediction_Mod_ztraining.h5", mode="w", title="OneTonDetector")
-#h5file = tables.open_file(outputs, mode="w", title="OneTonDetector", filters=tables.Filters(complevel=9))
-#
-## Create tables
-#AnswerTable = h5file.create_table("/", "Answer", AnswerData, "Answer")
-#answer = AnswerTable.row
-#
-#
-## Prepare for data and generating answer from prediction
-#filter_limit = 0.9 / WindowSize
-#Timeline = torch.arange(WindowSize, device=device).repeat([LoadingPeriod, 1])
-#entryList = np.arange(0, Total_entries, LoadingPeriod)
-#entryList = np.append(entryList, Total_entries)
-#start_time = time.time()
-#
-#
-## Loop for batched data
-#for k in range(len(entryList) - 1) :
-#    # Making Dataset
-#    EventData = Data_set[entryList[k]:entryList[k + 1]]['EventID']
-#    ChanData = Data_set[entryList[k]:entryList[k + 1]]['ChannelID']
-#    WaveData = Data_set[entryList[k]:entryList[k + 1]]['Waveform']
-#    inputs = torch.empty((len(WaveData), WindowSize), device=device)
-#    for i in range(len(WaveData)) :
-#        stream.Calculate(WaveData[i])
-#        inputs[i] = torch.from_numpy(stream.ChannelInfo.Ped - WaveData[i])
-#    # Make mark
-#    print("Processing entry {0}, Progress {1}%".format(k * LoadingPeriod, k * LoadingPeriod / Total_entries * 100))
-#
-#    if len(EventData) != len(Timeline) :
-#        Timeline = torch.arange(WindowSize, device=device).repeat([len(EventData), 1])
-#
-#    if k == 0 :
-#        if device != 'cpu' :
-#            # finish loading to GPU, give tag on .bulletin.swp
-#            os.system("echo {} {} >> .bulletin.swp".format(fileno, 0))
-#
-#    # calculating
-#    Prediction = net(inputs).data
-#    # checking for no pe event
-#    PETimes = Prediction > filter_limit
-#    pe_numbers = PETimes.sum(1)
-#    no_pe_found = pe_numbers == 0
-#    if no_pe_found.any() :
-#        print("I cannot find any pe in Event {0}, Channel {1} (entry {2})".format(EventData[no_pe_found.cpu().numpy()], ChanData[no_pe_found.cpu().numpy()], k * LoadingPeriod + np.arange(LoadingPeriod)[no_pe_found.cpu().numpy()]))
-#        guessed_petime = F.relu(inputs[no_pe_found].max(1)[1] - 7)
-#        PETimes[no_pe_found, guessed_petime] = True
-#        Prediction[no_pe_found, guessed_petime] = 1
-#        pe_numbers[no_pe_found] = 1
-#
-#    # Makeing Output and write submission file
-#    Weights = Prediction[PETimes].cpu().numpy()
-#    PETimes = Timeline[PETimes].cpu().numpy()
-#    pe_numbers = pe_numbers.cpu().numpy()
-#    EventData = np.repeat(EventData, pe_numbers)
-#    ChanData = np.repeat(ChanData, pe_numbers)
-#    for i in range(len(PETimes)) :
-#        answer['PETime'] = PETimes[i]
-#        answer['Weight'] = Weights[i]
-#        answer['EventID'] = EventData[i]
-#        answer['ChannelID'] = ChanData[i]
-#        answer.append()
-#
-#    # Flush into the output file
-#    AnswerTable.flush()
-#
-#
-#h5file.close()
+# Loading CNN Net
+tic = time.time()
+if Device.isdigit() :
+    Device = int(Device)
+device = torch.device(Device)
+nets = dict([])
+for channelid in tqdm(channelid_set, desc="Loading Nets of each channel") :
+    nets[channelid] = torch.load(NetDir + "/Channel{}.torch_net".format(channelid), map_location=device)
+print("Net Loaded, consuming {0:.4f}s".format(time.time() - tic))
+
+
+filter_limit = 0.9 / WindowSize
+Timeline = torch.arange(WindowSize, device=device)
+
+
+def Forward(channelid) :
+    Data_of_this_channel = Channel_Grouped_Waveform.get_group(channelid)
+    Shifted_Wave = np.vstack(Data_of_this_channel['Waveform'])
+    EventIDs = np.array(Data_of_this_channel['EventID'])
+    PETimes = np.empty(0, dtype=np.int16)
+    Weights = np.empty(0, dtype=np.float32)
+    EventData = np.empty(0, dtype=np.int64)
+    slices = np.append(np.arange(0, len(Shifted_Wave), BATCHSIZE,), len(Shifted_Wave))
+    for i in range(len(slices) - 1) :
+        inputs = torch.from_numpy(Shifted_Wave[slices[i]:slices[i + 1]])
+        Prediction = nets[channelid].forward(inputs.to(device=device)).data
+        PETime = Prediction > filter_limit
+        pe_numbers = PETime.sum(1)
+        no_pe_found = (pe_numbers == 0)
+        if no_pe_found.any() :
+            print("I cannot find any pe in Event {0}, Channel {1}".format(EventIDs[slices[i]:slices[i + 1]][no_pe_found.cpu().numpy()], channelid))
+            guessed_petime = F.relu(inputs[no_pe_found].max(1)[1] - 7)
+            PETime[no_pe_found, guessed_petime] = True
+            Prediction[no_pe_found, guessed_petime] = 1
+            pe_numbers[no_pe_found] = 1
+        Weights = np.append(Weights, Prediction[PETime].cpu().numpy())
+        TimeMatrix = Timeline.repeat([len(PETime), 1])[PETime]
+        PETimes = np.append(PETimes, TimeMatrix.cpu().numpy())
+        pe_numbers = pe_numbers.cpu().numpy()
+        EventData = np.append(EventData, np.repeat(EventIDs[slices[i]:slices[i + 1]], pe_numbers))
+        ChannelData = np.empty(EventData.shape, dtype=np.int16)
+        ChannelData.fill(channelid)
+    return pd.DataFrame({"PETime": PETimes, "Weight": Weights, "EventID": EventData, "ChannelID": ChannelData})
+
+
+tic = time.time()
+cpu_tic = time.clock()
+Result = []
+for ch in tqdm(channelid_set, desc="Predict for each channel") :
+    Result.append(Forward(ch))
+Result = pd.concat(Result)
+Result = Result.sort_values(by=["EventID", "ChannelID"])
+print("Prediction generated, real time {0:.4f}s, cpu time {1:.4f}s".format(time.time() - tic, time.clock() - cpu_tic))
+
+
+class AnswerData(tables.IsDescription):
+    EventID = tables.Int64Col(pos=0)
+    ChannelID = tables.Int16Col(pos=1)
+    PETime = tables.Int16Col(pos=2)
+    Weight = tables.Float32Col(pos=3)
+
+
+AnswerFile = tables.open_file(output, mode="w", title="OneTonDetector", filters=tables.Filters(complevel=4))
+AnswerTable = AnswerFile.create_table("/", "Answer", AnswerData, "Answer")
+AnswerTable.append([Result[name].to_numpy() for name in AnswerTable.colnames])
+AnswerTable.flush()
+AnswerFile.close()
 RawDataFile.close()
-#end_time = time.time()
-#print("Prediction_Generated")
-#
-#toc = end_time - start_time  # ~1200s 20min
-#print("Time of Computing", toc)
+print("Finished! Consuming {0:.2f}s in total, cpu time {1:.2f}s.".format(time.time() - global_start, time.clock() - cpu_global_start))
