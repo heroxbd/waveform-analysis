@@ -5,18 +5,21 @@ psr.add_argument('ipt', help='input file')
 psr.add_argument('opt', help='output file')
 psr.add_argument('NetDir', help='Network directory')
 psr.add_argument('-B', '--batchsize', dest='BAT', type=int, default=15000)
+psr.add_argument('-D', '--device', dest='Device', type=str, default='cpu')
 args = psr.parse_args()
 NetDir = args.NetDir
 output = args.opt
 filename = args.ipt
 BATCHSIZE = args.BAT
+Device = args.Device
 
 import time
 global_start = time.time()
+cpu_global_start = time.clock()
 import numpy as np
 import tables
 import pandas as pd
-# import numba
+from tqdm import tqdm
 
 import torch
 from torch.nn import functional as F
@@ -31,6 +34,7 @@ origin_dtype = WaveformTable.dtype
 WindowSize = origin_dtype["Waveform"].shape[0]
 gpufloat_dtype = np.dtype([(name, np.dtype('float32') if name == "Waveform" else origin_dtype[name].base, origin_dtype[name].shape) for name in origin_dtype.names])
 Total_entries = len(WaveformTable)
+print("Initialization finished, real time {0:.4f}s, cpu time {1:.4f}s".format(time.time() - global_start, time.clock() - cpu_global_start))
 print("Processing {} entries".format(Total_entries))
 
 
@@ -54,6 +58,7 @@ def Read_Data(startentry, endentry) :
 
 N = 10
 tic = time.time()
+cpu_tic = time.clock()
 if N == 1 :
     Waveforms_and_info = Read_Data(0, Total_entries)
 else :
@@ -61,16 +66,21 @@ else :
     ranges = list(zip(slices[0:-1], slices[1:]))
     with Pool(N) as pool :
         Waveforms_and_info = pd.concat(pool.starmap(Read_Data, ranges))
-print("Data Loaded, consuming {0:.4f} using {1} threads".format(time.time() - tic, N))
+print("Data Loaded, consuming {0:.4f}s using {1} threads, cpu time {2:.4f}s".format(time.time() - tic, N, time.clock() - cpu_tic))
 
 channelid_set = set(Waveforms_and_info['ChannelID'])
 Channel_Grouped_Waveform = Waveforms_and_info.groupby(by="ChannelID")
 
 # Loading CNN Net
-device = torch.device(1)
+tic = time.time()
+if Device.isdigit() :
+    Device = int(Device)
+device = torch.device(Device)
 nets = dict([])
-for channelid in channelid_set :
+for channelid in tqdm(channelid_set, desc="Loading Nets of each channel") :
     nets[channelid] = torch.load(NetDir + "/Channel{}.torch_net".format(channelid), map_location=device)
+print("Net Loaded, consuming {0:.4f}s".format(time.time() - tic))
+
 
 filter_limit = 0.9 / WindowSize
 Timeline = torch.arange(WindowSize, device=device)
@@ -106,11 +116,14 @@ def Forward(channelid) :
     return pd.DataFrame({"PETime": PETimes, "Weight": Weights, "EventID": EventData, "ChannelID": ChannelData})
 
 
+tic = time.time()
+cpu_tic = time.clock()
 Result = []
-for ch in channelid_set :
+for ch in tqdm(channelid_set, desc="Predict for each channel") :
     Result.append(Forward(ch))
 Result = pd.concat(Result)
 Result = Result.sort_values(by=["EventID", "ChannelID"])
+print("Prediction generated, real time {0:.4f}s, cpu time {1:.4f}s".format(time.time() - tic, time.clock() - cpu_tic))
 
 
 class AnswerData(tables.IsDescription):
@@ -126,4 +139,4 @@ AnswerTable.append([Result[name].to_numpy() for name in AnswerTable.colnames])
 AnswerTable.flush()
 AnswerFile.close()
 RawDataFile.close()
-print("Finished! Consuming {:.2f}s in total.".format(time.time() - global_start))
+print("Finished! Consuming {0:.2f}s in total, cpu time {1:.2f}s.".format(time.time() - global_start, time.clock() - cpu_global_start))

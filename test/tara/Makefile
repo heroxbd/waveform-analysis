@@ -38,13 +38,13 @@ model : $(Nets)
 
 $(Result_prefix)%/Prediction.h5 : $(testfile_prefix)%.h5 $(Nets) | .Bulletin
 	@mkdir -p $(dir $@)
-	python3 -u Prediction_Processing_Total.py $< $@ $(NetDir)/Nets > $(dir $@)Analysis.log 2>&1
+	python3 -u Prediction_Processing_Total.py $< $@ $(NetDir)/Nets -D cpu > $(dir $@)Analysis.log 2>&1
 
 $(Result_prefix)%/DistanceDistribution.csv : $(Result_prefix)%/Record.h5
 	python3 -u ../csv_dist.py $^ -o $@
 
 $(Result_prefix)%/DistanceDistribution.pdf : $(Result_prefix)%/Record.h5
-	python3 -u ../draw_dist.py $^ -o $@ --wth $(W_dist_upper_limit)
+	python3 -u ../draw_dist.py $^ -o $@
 
 $(Result_prefix)%/Record.h5 : $(Result_prefix)%/Prediction.h5 $(testfile_prefix)%.h5
 	python3 -u ../test_dist.py $< --ref $(word 2,$^) -o $@
