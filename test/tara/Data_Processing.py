@@ -115,7 +115,7 @@ trial_loader = Data.DataLoader(dataset=trial_data, batch_size=BATCHSIZE, shuffle
 if os.path.exists(Model) :
     net = torch.load(Model, map_location=device)
     loss = testing(trial_loader)
-    lr = 1e-5
+    lr = 5e-4
     # BATCHSIZE = BATCHSIZE / 4
 else :
     loss = 10000

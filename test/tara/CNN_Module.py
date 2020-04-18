@@ -7,10 +7,10 @@ class Net_1(nn.Module):
     def __init__(self):
         super(Net_1, self).__init__()
 
-        self.conv1 = nn.Conv1d(1, 25, 17, padding=10)
-        self.conv2 = nn.Conv1d(25, 20, 13, padding=5)
-        self.conv3 = nn.Conv1d(20, 15, 9, padding=3)
-        self.conv4 = nn.Conv1d(15, 10, 5, padding=2)
+        self.conv1 = nn.Conv1d(1, 25, 21, padding=10)
+        self.conv2 = nn.Conv1d(25, 20, 17, padding=8)
+        self.conv3 = nn.Conv1d(20, 15, 13, padding=6)
+        self.conv4 = nn.Conv1d(15, 10, 9, padding=4)
         self.conv5 = nn.Conv1d(10, 1, 1)
 
     def forward(self, x):
