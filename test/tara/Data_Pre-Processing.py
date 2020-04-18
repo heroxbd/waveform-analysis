@@ -24,13 +24,12 @@ import numba
 from multiprocessing import Pool
 from JPwaptool_Lite import JPwaptool_Lite
 import pandas as pd
-from tqdm import tqdm
 
 
 @numba.jit
 def Make_Time_Vector(GroundTruth, Waveforms_and_info) :
     i = 0
-    Time_Series = np.zeros((len(Waveforms_and_info), WindowSize), dtype=np.float32)
+    Time_Series = np.zeros((len(Waveforms_and_info), WindowSize), dtype=np.uint8)
     Wave_EventID = Waveforms_and_info["EventID"].to_numpy()
     Truth_EventID = GroundTruth["EventID"].to_numpy()
     PETime = GroundTruth["PETime"].to_numpy()
@@ -128,14 +127,15 @@ Grouped_Truth = GroundTruth.groupby(by="ChannelID")
 
 class PreProcessedData(tables.IsDescription):
     HitSpectrum = tables.Col.from_type('float32', shape=WindowSize, pos=0)
-    Waveform = tables.Col.from_type('float32', shape=WindowSize, pos=1)
+    Waveform = tables.Col.from_type('uint8', shape=WindowSize, pos=1)
 
 
-def PreProcess(channelid, Waves_of_this_channel, Truth_of_this_channel) :
+def PreProcess(channelid) :
     print("PreProcessing channel {}".format(channelid))
+    Waves_of_this_channel = Grouped_Waves.get_group(channelid)
+    Truth_of_this_channel = Grouped_Truth.get_group(channelid)
     Origin_Waves = Waves_of_this_channel["Waveform"].to_numpy()
     Shifted_Waves = np.empty((len(Origin_Waves), WindowSize), dtype=np.float32)
-    HitSpectrum = np.empty((len(Origin_Waves), WindowSize), dtype=np.float32)
 
     stream = AssignStream(WindowSize)
     for i, w in enumerate(Waves_of_this_channel["Waveform"]) :
@@ -148,7 +148,11 @@ def PreProcess(channelid, Waves_of_this_channel, Truth_of_this_channel) :
     Prefile = tables.open_file(SavePath + "/Pre_Channel{}.h5".format(channelid), mode="w", title="Pre-Processed-Training-Data")
     # Create group and tables
     TrainDataTable = Prefile.create_table("/", "TrainDataTable", PreProcessedData, "Wave and HitSpectrum")
-    TrainDataTable.append([list(HitSpectrum), list(Shifted_Waves)])
+    tablerow = TrainDataTable.row
+    for i in range(len(HitSpectrum)) :
+        tablerow["Waveform"] = Shifted_Waves[i]
+        tablerow["HitSpectrum"] = HitSpectrum[i]
+        tablerow.append()
     TrainDataTable.flush()
     Prefile.close()
 
@@ -156,12 +160,7 @@ def PreProcess(channelid, Waves_of_this_channel, Truth_of_this_channel) :
 channelid_list = np.unique(Waveforms_and_info["ChannelID"].to_numpy())
 
 start = time()
-PreProcess_Parameters = []
-for channelid in tqdm(channelid_list, desc="Grouping channels") :
-    Waves_of_this_channel = Grouped_Waves.get_group(channelid).reset_index(drop=True, inplace=False)
-    Truth_of_this_channel = Grouped_Truth.get_group(channelid).reset_index(drop=True, inplace=False)
-    PreProcess_Parameters.append((channelid, Waves_of_this_channel , Truth_of_this_channel))
 with Pool(len(channelid_list)) as pool :
-    pool.starmap(PreProcess, PreProcess_Parameters)
+    pool.map(PreProcess, channelid_list)
 print("Data Saved, consuming {:.5f}s".format(time() - start))
 print("Finished, consuming {:.4f}s in total.".format(time() - global_start))
