@@ -33,7 +33,7 @@ import pytorch_stats_loss as stats_loss
 lr = 1e-5
 
 # detecting cuda device and wait in line
-if ChannelID % 2 == 1 :
+if ChannelID % 3 == 1 :
     device = torch.device(0)
 else :
     device = torch.device(1)
