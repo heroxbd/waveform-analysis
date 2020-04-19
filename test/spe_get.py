@@ -91,31 +91,28 @@ def generate_standard(h5_path, single_pe_path):
         e_wf, i_wf = np.unique(e_wf, return_index=True)
         leng = len(Wf[0]['Waveform'])
         p = 0
-        for e_gt_i, a, b in zip(e_gt, np.nditer(i_gt), it.chain(np.nditer(i_gt[1:]), [len(Wf)])):
+        for e_gt_i, a, b in zip(e_gt, np.nditer(i_gt), it.chain(np.nditer(i_gt[1:]), [len(Gt)])):
             while e_wf[p] < e_gt_i:
                 p = p + 1
             pt = np.sort(Gt[a:b]['PETime']).astype(np.int)
             pt = pt[pt >= 0]
-            if pt.shape[0] == 0:
-                continue
-            if len(pt) == 1 and pt[0] < leng - L:
-                ps = pt
-            else:
-                dpta = np.diff(pt, prepend=pt[0])
-                dptb = np.diff(pt, append=pt[-1])
-                ps = pt[np.logical_and(dpta > L, dptb > L)]#long distance to other spe in both forepart & backpart
-            if ps.shape[0] == 0:
-                continue
-
-            for k in range(len(ps)):
-                dt[num]['EventID'] = Wf[i_wf[p]]['EventID']
-                dt[num]['ChannelID'] = Wf[i_wf[p]]['ChannelID']
-                dt[num]['speWf'] = Wf[i_wf[p]]['Waveform'][ps[k]:ps[k]+L]
-                num += 1
-                if num >= N:
-                    break
+            if pt.shape[0] != 0:
+                if len(pt) == 1 and pt[0] < leng - L:
+                    ps = pt
+                else:
+                    dpta = np.diff(pt, prepend=pt[0])
+                    dptb = np.diff(pt, append=pt[-1])
+                    ps = pt[np.logical_and(dpta > L, dptb > L)]#long distance to other spe in both forepart & backpart
+                if ps.shape[0] != 0:
+                    for k in range(len(ps)):
+                        dt[num]['EventID'] = Wf[i_wf[p]]['EventID']
+                        dt[num]['ChannelID'] = Wf[i_wf[p]]['ChannelID']
+                        dt[num]['speWf'] = Wf[i_wf[p]]['Waveform'][ps[k]:ps[k]+L]
+                        num += 1
+                        if num >= N:
+                            break
             print('\rSingle PE Generating:|{}>{}|{:6.2f}%'.format(((20*(num-1))//N)*'-', (19 - (20*(num-1))//N)*' ', 100 * (num / N)), end=''if num != N else '\n')
-            if num >= N:
+            if num >= N or b == len(Gt):
                 dt = dt[:num] # cut empty dt part
                 print('{} speWf generated'.format(len(dt)))
                 spemean, epulse = mean(dt)

@@ -5,7 +5,6 @@ import numpy as np
 import scipy.stats
 import h5py
 import sys
-sys.path.append('test')
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -19,37 +18,41 @@ plt.rcParams['lines.markersize'] = 4.0
 plt.rcParams['lines.linewidth'] = 1.0
 
 psr = argparse.ArgumentParser()
-psr.add_argument('-o', dest='opt', type=str, help='output file')
 psr.add_argument('ipt', type=str, help='input file')
 psr.add_argument('--met', type=str, help='fitting method')
 psr.add_argument('--ref', type=str, help='reference file')
 psr.add_argument('--event', '-e', type=int, dest='ent')
 psr.add_argument('--channel', '-c', type=int, dest='cha')
-psr.add_argument('--save', dest='save', action='store_true', help='save result to h5 file, must include -o argument', default=False)
+psr.add_argument('--save', dest='save', action='store_true', help='save demo to png', default=False)
 args = psr.parse_args()
 
-def main(fopt, fipt, single_pe_path, method):
+def main(fipt, single_pe_path, method):
     spe_pre = wff.read_model(single_pe_path)
     print('spe is {}'.format(spe_pre['spe']))
     opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PETime', np.uint16), ('Weight', np.float16)])
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
         ent = ipt['Waveform']
         leng = len(ent[0]['Waveform'])
-        Chnum = len(np.unique(ent['ChannelID']))
+        Chnum = np.max(ent[max(-10000,-len(ent)):]['ChannelID'])
         a1 = max(args.ent*Chnum-10000, 0)
         a2 = min(args.ent*Chnum+10000, len(ent))
         ent = ent[a1:a2]
         assert leng >= len(spe_pre['spe']), 'Single PE too long which is {}'.format(len(spe_pre['spe']))
-        i = np.where(np.logical_and(ent['EventID'] == args.ent, ent['ChannelID'] == args.cha))[0][0]
+        v = np.logical_and(ent['EventID'] == args.ent, ent['ChannelID'] == args.cha)
+        assert np.sum(v) > 0, 'Can not find in EventID & ChannelID'
+        i = np.where(v)[0][0]
+        generator = wff.Ind_Generator()
 
-        wave = wff.deduct_base(ent[i]['Waveform'], spe_pre['epulse'], spe_pre['m_l'], spe_pre['thres'], 20, 'detail')
+        wave = wff.deduct_base(spe_pre['epulse'] * ent[i]['Waveform'], spe_pre['m_l'], spe_pre['thres'], 20, 'detail')
 
         if method == 'xiaopeip':
-                pf = wff.fit_N(wave, spe_pre, 'xiaopeip')
+                pf, fitp, possible = wff.fit_N(wave, spe_pre, 'xiaopeip', return_position=True)
         elif method == 'lucyddm':
                 pf = wff.lucyddm_core(wave, spe_pre['spe'])
+                fitp = []
+                possible = []
         elif method == 'mcmc':
-                pf = wff.fit_N(wave, spe_pre, 'mcmc', gen)
+                pf, fitp, possible = wff.fit_N(wave, spe_pre, 'mcmc', gen=generator, return_position=True)
         pet, pwe = wff.pf_to_tw(pf, 0.01)
 
         print('PETime = {}, Weight = {}'.format(pet, pwe))
@@ -72,31 +75,34 @@ def main(fopt, fipt, single_pe_path, method):
         pdist = np.abs(Q - q) * scipy.stats.poisson.pmf(Q, Q)
         print('wdist is {}, pdist is {}'.format(wdist, pdist))
 
-        pet_a, pwe_a = ad.xpp_convol(pet, pwe)
+        pet_a, pwe_a = wff.xpp_convol(pet, pwe)
         dt_a = np.zeros(len(pet_a), dtype=opdt)
         dt_a['PETime'] = pet_a
         dt_a['Weight'] = pwe_a
         dt_a['EventID'] = args.ent
         dt_a['ChannelID'] = args.cha
+        wdist_a = scipy.stats.wasserstein_distance(tru_pet, pet_a, v_weights=pwe_a)
+        q_a = np.sum(pwe_a)
+        pdist_a = np.abs(Q - q_a) * scipy.stats.poisson.pmf(Q, Q)
+        print('wdist is {}, pdist is {}'.format(wdist_a, pdist_a))
 
         if args.save:
-            with h5py.File(fopt, 'w') as opt:
-                opt.create_dataset('Answer_un', data=dt, compression='gzip')
-                opt.create_dataset('Answer', data=dt_a, compression='gzip')
             plt.plot(wave, c='b')
+            plt.scatter(fitp, wave[fitp], marker='x', c='g')
+            plt.scatter(possible, wave[possible], marker='+', c='r')
             plt.grid()
             plt.xlabel(r'Time/[ns]')
             plt.ylabel(r'ADC')
-            plt.xlim(200, 500)
+            plt.xlim(200, 400)
             plt.hlines(spe_pre['thres'], 200, 500, color='c')
             t, c = np.unique(tru_pet, return_counts=True)
-            plt.vlines(t, 0, 200*c, color='k')
-            plt.vlines(pet_a, -200*pwe_a, 0, color='m')
-            hh = -200*(np.max(pwe_a)+1)
-            plt.vlines(pet, -200*pwe+hh, hh, color='y')
+            plt.vlines(t, 0, 50*c, color='k')
+            plt.vlines(pet_a, -50*pwe_a, 0, color='m')
+            hh = -50*(np.max(pwe_a)+1)
+            plt.vlines(pet, -50*pwe+hh, hh, color='y')
             plt.savefig('demo.png')
             plt.close()
-            plt.plot(spe_r, c='b')
+            plt.plot(spe_pre['spe'], c='b')
             plt.grid()
             plt.xlabel(r'Time/[ns]')
             plt.ylabel(r'ADC')
@@ -104,4 +110,4 @@ def main(fopt, fipt, single_pe_path, method):
             plt.close()
 
 if __name__ == '__main__':
-    main(args.opt, args.ipt, args.ref, args.met)
+    main(args.ipt, args.ref, args.met)

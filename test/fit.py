@@ -25,12 +25,12 @@ def main(fopt, fipt, single_pe_path, method):
     opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PETime', np.uint16), ('Weight', np.float16)])
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
         ent = ipt['Waveform']
-        lenfr = math.floor(len(ent)/(args.num+1))
+        lenfr = math.ceil(len(ent)/(args.num+1))
         num = int(re.findall(r'-\d+\.h5', fopt, flags=0)[0][1:-3])
-        if (num+2)*lenfr > len(ent):
+        if (num+1)*lenfr > len(ent):
             l = len(ent) - num*lenfr
         else:
-            l = num*lenfr
+            l = lenfr
         print('{} waveforms will be computed'.format(l))
 
         leng = len(ent[0]['Waveform'])
@@ -38,17 +38,17 @@ def main(fopt, fipt, single_pe_path, method):
         dt = np.zeros(l * (leng//5), dtype=opdt)
         start = 0
         end = 0
-        gen = wff.Ind_Generator()
+        generator = wff.Ind_Generator()
         
-        for i in range(l):
-            wave = wff.deduct_base(spe_pre['epulse'] * ent[num*lenfr+i]['Waveform'], spe_pre['m_l'], spe_pre['thres'], 20, 'detail')
+        for i in range(num*lenfr, num*lenfr+l):
+            wave = wff.deduct_base(spe_pre['epulse'] * ent[i]['Waveform'], spe_pre['m_l'], spe_pre['thres'], 20, 'detail')
 
             if method == 'xiaopeip':
                 pf = wff.fit_N(wave, spe_pre, 'xiaopeip')
             elif method == 'lucyddm':
                 pf = wff.lucyddm_core(wave, spe_pre['spe'])
             elif method == 'mcmc':
-                pf = wff.fit_N(wave, spe_pre, 'mcmc', gen)
+                pf = wff.fit_N(wave, spe_pre, 'mcmc', gen=generator)
             pet, pwe = wff.pf_to_tw(pf, 0.01)
 
             lenpf = pwe.shape[0]

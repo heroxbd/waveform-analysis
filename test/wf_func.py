@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import math
 import numpy as np
 from scipy import optimize as opti
 import matplotlib
@@ -27,8 +28,11 @@ class Ind_Generator:
     def uni_rand(self):
         return np.random.rand()
 
-def fit_N(wave, spe_pre, method, *args):
+def fit_N(wave, spe_pre, method, gen=None, return_position=False):
     l = wave.shape[0]
+    spe_l = spe_pre['spe'].shape[0] 
+    n = math.ceil(spe_l//10)
+    difth = np.sort(spe_pre['spe'][np.arange(2,spe_l-1)+1]-spe_pre['spe'][np.arange(2,spe_l-1)]-spe_pre['spe'][np.arange(2,spe_l-1)-1]+spe_pre['spe'][np.arange(2,spe_l-1)-2])[n]
     lowp = np.argwhere(vali_base(wave, spe_pre['m_l'], spe_pre['thres']) == 1).flatten()
     lowp = lowp[np.logical_and(lowp > 1, lowp < l-1)]
     flag = 1
@@ -39,16 +43,16 @@ def fit_N(wave, spe_pre, method, *args):
             tail = j+spe_pre['mar_r'] if j+spe_pre['mar_r'] <= l else l
             panel[head : tail + 1] = 1
         fitp = np.argwhere(panel == 1).flatten()
-        numb = np.argwhere(wave[lowp+1]-wave[lowp]-wave[lowp-1]+wave[lowp-2] > 1.5).flatten()
+        numb = np.argwhere(wave[lowp+1]-wave[lowp]-wave[lowp-1]+wave[lowp-2] < difth).flatten()
         if len(numb) != 0:
-            ran = np.arange(spe_pre['peak_c'] - 1, spe_pre['peak_c'] + 1)
+            ran = np.arange(spe_pre['peak_c'] - 1, spe_pre['peak_c'] + 2)
             possible = np.unique(lowp[numb] - ran.reshape(ran.shape[0], 1))
             possible = possible[np.logical_and(possible>=0, possible<l)]
             if len(possible) != 0:
                 if method == 'xiaopeip':
                     pf_r = xiaopeip_core(wave, spe_pre['spe'], fitp, possible)
                 elif method == 'mcmc':
-                    pf_r = mcmc_core(wave, spe_pre['spe'], fitp, possible, *args)
+                    pf_r = mcmc_core(wave, spe_pre['spe'], fitp, possible, gen)
             else:
                 flag = 0
         else:
@@ -61,7 +65,10 @@ def fit_N(wave, spe_pre, method, *args):
         pf_r = np.array([1])
     pf = np.zeros_like(wave)
     pf[possible] = pf_r
-    return pf, fitp, possible
+    if return_position:
+        return pf, fitp, possible
+    else:
+        return pf
 
 def xiaopeip_core(wave, spe, fitp, possible):
     l = wave.shape[0]
@@ -225,7 +232,7 @@ def rm_frag(pos, m_l):
     n = pos.shape[0]
     pos_t = []
     for i in range(n):
-        if pos[i][1] - pos[i][0] > m_l:
+        if pos[i][1] - pos[i][0] > m_l//3:
             pos_t.append(pos[i])
     pos = np.array(pos_t)
     return pos
