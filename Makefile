@@ -13,28 +13,31 @@ else
     seq:=$($(set)seq)
 endif
 prefix:=$($(set)pre)
+mod:=tot sub
 
 .PHONY: all
 
-all: $(seq:%=$(tfold)/dist-$(set)/hist-%.pdf) $(tfold)/dist-$(set)/record.csv
-$(tfold)/dist-$(set)/record.csv: $(seq:%=$(tfold)/dist-$(set)/record-%.csv)
-	cat $^ > $@
-$(tfold)/dist-$(set)/record-%.csv: $(tfold)/dist-$(set)/distrecord-%.h5
-	python3 test/csv_dist.py $^ -o $@
-$(tfold)/dist-$(set)/hist-%.pdf: $(tfold)/dist-$(set)/distrecord-%.h5
-	python3 test/draw_dist.py $^ -o $@
-$(tfold)/dist-$(set)/distrecord-%.h5: $(datfold)/$(set)/$(prefix)%.h5 $(tfold)/sub-$(set)/submission-%.h5
-	@mkdir -p $(dir $@)
-	python3 test/test_dist.py $(word 2,$^) --ref $< -o $@ > $@.log 2>&1
+all: $(seq:%=$(tfold)/dist-$(set)/hist-sub-%.pdf) $(seq:%=$(tfold)/dist-$(set)/record-sub-%.csv) $(seq:%=$(tfold)/dist-$(set)/hist-tot-%.pdf) $(seq:%=$(tfold)/dist-$(set)/record-tot-%.csv)
+define measure
+$(tfold)/dist-$(set)/record-$(1)-%.csv: $(tfold)/dist-$(set)/distr-$(1)-%.h5
+	python3 test/csv_dist.py $$^ -o $$@
+$(tfold)/dist-$(set)/hist-$(1)-%.pdf: $(tfold)/dist-$(set)/distr-$(1)-%.h5
+	python3 test/draw_dist.py $$^ -o $$@
+$(tfold)/dist-$(set)/distr-$(1)-%.h5: $(datfold)/$(set)/$(prefix)%.h5 $(tfold)/resu-$(set)/$(1)-%.h5
+	@mkdir -p $$(dir $$@)
+	python3 test/test_dist.py $$(word 2,$$^) --ref $$< -o $$@ > $$@.log 2>&1
+endef
+$(foreach i,$(mod),$(eval $(call measure,$(i))))
 define split
-$(tfold)/sub-$(set)/submission-$(1).h5: $(tfold)/sub-$(set)/total-$(1).h5
+$(tfold)/resu-$(set)/sub-$(1).h5: $(tfold)/resu-$(set)/tot-$(1).h5
+	@mkdir -p $$(dir $$@)
 	python3 test/adjust.py $$^ -o $$@
-$(tfold)/sub-$(set)/total-$(1).h5: $(fragseq:%=$(tfold)/unad-$(set)/unadjusted-$(1)-%.h5)
+$(tfold)/resu-$(set)/tot-$(1).h5: $(fragseq:%=$(tfold)/unad-$(set)/unad-$(1)-%.h5)
 	@mkdir -p $$(dir $$@)
 	python3 test/integrate.py $$^ --num ${fragnum} -o $$@
-$(tfold)/unad-$(set)/unadjusted-$(1)-%.h5: $(datfold)/$(set)/$(prefix)$(1).h5 test/spe-$(set).h5
+$(tfold)/unad-$(set)/unad-$(1)-%.h5: $(datfold)/$(set)/$(prefix)$(1).h5 test/spe-$(set).h5
 	@mkdir -p $$(dir $$@)
-	python3 test/fit.py $$< --met $(method) --ref $$(word 2,$$^) --num ${fragnum} -o $$@
+	export OMP_NUM_THREADS=2 && python3 test/fit.py $$< --met $(method) --ref $$(word 2,$$^) --num ${fragnum} -o $$@
 endef
 $(foreach i,$(seq),$(eval $(call split,$(i))))
 
