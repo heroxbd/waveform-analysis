@@ -18,7 +18,7 @@ psr.add_argument('-p', dest='print', action='store_false', help='print bool', de
 args = psr.parse_args()
 
 if args.print:
-    sys.stdout = None
+    sys.stdout = open('test/log.log','w+')
 
 def main(fopt, fipt, single_pe_path, method):
     spe_pre = wff.read_model(single_pe_path)
@@ -38,7 +38,6 @@ def main(fopt, fipt, single_pe_path, method):
         dt = np.zeros(l * (leng//5), dtype=opdt)
         start = 0
         end = 0
-        generator = wff.Ind_Generator()
         
         for i in range(num*lenfr, num*lenfr+l):
             wave = wff.deduct_base(spe_pre['epulse'] * ent[i]['Waveform'], spe_pre['m_l'], spe_pre['thres'], 20, 'detail')
@@ -48,7 +47,7 @@ def main(fopt, fipt, single_pe_path, method):
             elif method == 'lucyddm':
                 pf = wff.lucyddm_core(wave, spe_pre['spe'])
             elif method == 'mcmc':
-                pf = wff.fit_N(wave, spe_pre, 'mcmc', gen=generator)
+                pf = wff.fit_N(wave, spe_pre, 'mcmc')
             pet, pwe = wff.pf_to_tw(pf, 0.01)
 
             lenpf = pwe.shape[0]

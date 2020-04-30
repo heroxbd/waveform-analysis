@@ -41,7 +41,6 @@ def main(fipt, single_pe_path, method):
         v = np.logical_and(ent['EventID'] == args.ent, ent['ChannelID'] == args.cha)
         assert np.sum(v) > 0, 'Can not find in EventID & ChannelID'
         i = np.where(v)[0][0]
-        generator = wff.Ind_Generator()
 
         wave = wff.deduct_base(spe_pre['epulse'] * ent[i]['Waveform'], spe_pre['m_l'], spe_pre['thres'], 20, 'detail')
 
@@ -52,7 +51,7 @@ def main(fipt, single_pe_path, method):
                 fitp = []
                 possible = []
         elif method == 'mcmc':
-                pf, fitp, possible = wff.fit_N(wave, spe_pre, 'mcmc', gen=generator, return_position=True)
+                pf, fitp, possible = wff.fit_N(wave, spe_pre, 'mcmc', return_position=True)
         pet, pwe = wff.pf_to_tw(pf, 0.01)
 
         print('PETime = {}, Weight = {}'.format(pet, pwe))
@@ -96,10 +95,10 @@ def main(fipt, single_pe_path, method):
             plt.xlim(200, 400)
             plt.hlines(spe_pre['thres'], 200, 500, color='c')
             t, c = np.unique(tru_pet, return_counts=True)
-            plt.vlines(t, 0, 50*c, color='k')
-            plt.vlines(pet_a, -50*pwe_a, 0, color='m')
-            hh = -50*(np.max(pwe_a)+1)
-            plt.vlines(pet, -50*pwe+hh, hh, color='y')
+            plt.vlines(t, 0, 10*c, color='k')
+            plt.vlines(pet_a, -10*pwe_a, 0, color='m')
+            hh = -10*(np.max(pwe_a)+1)
+            plt.vlines(pet, -10*pwe+hh, hh, color='y')
             plt.savefig('demo.png')
             plt.close()
             plt.plot(spe_pre['spe'], c='b')
