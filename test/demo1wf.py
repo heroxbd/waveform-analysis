@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import re
+import pickle
 import numpy as np
 import scipy.stats
 import h5py
@@ -20,14 +21,16 @@ plt.rcParams['lines.linewidth'] = 1.0
 psr = argparse.ArgumentParser()
 psr.add_argument('ipt', type=str, help='input file')
 psr.add_argument('--met', type=str, help='fitting method')
-psr.add_argument('--ref', type=str, help='reference file')
+psr.add_argument('--ref', type=str, nargs='+', help='reference file')
 psr.add_argument('--event', '-e', type=int, dest='ent')
 psr.add_argument('--channel', '-c', type=int, dest='cha')
 psr.add_argument('--save', dest='save', action='store_true', help='save demo to png', default=False)
 args = psr.parse_args()
 
-def main(fipt, single_pe_path, method):
-    spe_pre = wff.read_model(single_pe_path)
+def main(fipt, reference, method):
+    if method == 'mcmc':
+        sm = pickle.load(open(reference[1], 'rb'))
+    spe_pre = wff.read_model(reference[0])
     print('spe is {}'.format(spe_pre['spe']))
     opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PETime', np.uint16), ('Weight', np.float16)])
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
@@ -51,7 +54,7 @@ def main(fipt, single_pe_path, method):
                 fitp = []
                 possible = []
         elif method == 'mcmc':
-                pf, fitp, possible = wff.fit_N(wave, spe_pre, 'mcmc', return_position=True)
+                pf, fitp, possible = wff.fit_N(wave, spe_pre, 'mcmc', model=sm, return_position=True)
         pet, pwe = wff.pf_to_tw(pf, 0.01)
 
         print('PETime = {}, Weight = {}'.format(pet, pwe))
