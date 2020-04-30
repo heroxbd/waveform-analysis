@@ -2,7 +2,6 @@
 
 import os
 import math
-import pickle
 import numpy as np
 from scipy import optimize as opti
 import matplotlib
@@ -11,9 +10,7 @@ import matplotlib.pyplot as plt
 import h5py
 import pystan
 
-Model_pkl = 'test/model.pkl'
-
-def fit_N(wave, spe_pre, method, return_position=False):
+def fit_N(wave, spe_pre, method, model=None, return_position=False):
     l = wave.shape[0]
     spe_l = spe_pre['spe'].shape[0] 
     n = math.ceil(spe_l//10)
@@ -37,8 +34,7 @@ def fit_N(wave, spe_pre, method, return_position=False):
                 if method == 'xiaopeip':
                     pf_r = xiaopeip_core(wave, spe_pre['spe'], fitp, possible)
                 elif method == 'mcmc':
-                    gen_model()
-                    pf_r = mcmc_core(wave, spe_pre['spe'], fitp, possible)
+                    pf_r = mcmc_core(wave, spe_pre['spe'], fitp, possible, model)
             else:
                 flag = 0
         else:
@@ -106,38 +102,15 @@ def lucyddm_core(waveform, spe, iterations=100):
     wave_deconv = np.where(wave_deconv<50, wave_deconv, 0)
     return wave_deconv
 
-def mcmc_core(wave, spe, fitp, possible, *args):
+def mcmc_core(wave, spe, fitp, possible, model):
     l = wave.shape[0]
     spe = np.concatenate([spe, np.zeros(l - spe.shape[0])])
     mne = spe[np.mod(fitp.reshape(fitp.shape[0], 1) - possible.reshape(1, possible.shape[0]), l)]
-    sm = pickle.load(open(Model_pkl, 'rb'))
-    #op = sm.optimizing(data=dict(m=mne, y=wave[fitp], Nf=fitp.shape[0], Np=possible.shape[0]))
-    #pf = op['x']
-    op = sm.sampling(data=dict(m=mne, y=wave[fitp], Nf=fitp.shape[0], Np=possible.shape[0]), iter=200)
+    # op = model.optimizing(data=dict(m=mne, y=wave[fitp], Nf=fitp.shape[0], Np=possible.shape[0]), seed=0)
+    # pf = op['x']
+    op = model.sampling(data=dict(m=mne, y=wave[fitp], Nf=fitp.shape[0], Np=possible.shape[0]), iter=200, seed=0)
     pf = np.mean(op['x'], axis=0)
     return pf
-
-def gen_model():
-    if not os.path.exists(Model_pkl):
-        ocode = """
-        data {
-            int<lower=0> Nf;
-            int<lower=0> Np;
-            matrix[Nf, Np] m;
-            vector[Nf] y;
-        }
-        parameters {
-            vector<lower=0>[Np] x;
-            real<lower=0> sigma;
-        }
-        model {
-            y ~ normal(m * x, sigma);
-        }
-        """
-        sm = pystan.StanModel(model_code=ocode)
-        with open(Model_pkl, 'wb') as f:
-            pickle.dump(sm, f)
-    return
 
 def xpp_convol(pet, wgt):
     core = np.array([0.9, 1.7, 0.9])

@@ -8,12 +8,17 @@ fragnum:=99
 fragseq:=$(shell seq 0 ${fragnum})
 tfold:=test/$(method)
 ifdef chunk
-    seq:=x
+	seq:=x
 else
-    seq:=$($(set)seq)
+	seq:=$($(set)seq)
 endif
 prefix:=$($(set)pre)
 mod:=tot sub
+ifeq ($(method), mcmc)
+    depend:=test/spe-$(set).h5 $(tfold)/model.pkl
+else
+    depend:=test/spe-$(set).h5
+endif
 
 .PHONY: all
 
@@ -35,11 +40,15 @@ $(tfold)/resu-$(set)/sub-$(1).h5: $(tfold)/resu-$(set)/tot-$(1).h5
 $(tfold)/resu-$(set)/tot-$(1).h5: $(fragseq:%=$(tfold)/unad-$(set)/unad-$(1)-%.h5)
 	@mkdir -p $$(dir $$@)
 	python3 test/integrate.py $$^ --num ${fragnum} -o $$@
-$(tfold)/unad-$(set)/unad-$(1)-%.h5: $(datfold)/$(set)/$(prefix)$(1).h5 test/spe-$(set).h5
+$(tfold)/unad-$(set)/unad-$(1)-%.h5: $(datfold)/$(set)/$(prefix)$(1).h5 $(depend)
 	@mkdir -p $$(dir $$@)
-	export OMP_NUM_THREADS=2 && python3 test/fit.py $$< --met $(method) --ref $$(word 2,$$^) --num ${fragnum} -o $$@
+	export OMP_NUM_THREADS=2 && python3 test/fit.py $$< --met $(method) --ref $$(word 2,$$^) $$(word 3,$$^) --num ${fragnum} -o $$@ > $$@.log 2>&1
 endef
 $(foreach i,$(seq),$(eval $(call split,$(i))))
+
+$(tfold)/model.pkl:
+	@mkdir -p $(dir $@)
+	python3 test/mcmc_model.py $@
 
 $(datfold)/$(set)/$(prefix)x.h5: $(datfold)/$(set)/$(prefix)$(chunk).h5
 	python3 test/cut_data.py $^ -o $@ -a -1 -b 10000

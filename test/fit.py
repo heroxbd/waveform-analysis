@@ -2,6 +2,7 @@
 
 import sys
 import re
+import pickle
 import numpy as np
 import h5py
 import math
@@ -12,16 +13,14 @@ psr = argparse.ArgumentParser()
 psr.add_argument('-o', dest='opt', type=str, help='output file')
 psr.add_argument('ipt', type=str, help='input file')
 psr.add_argument('--met', type=str, help='fitting method')
-psr.add_argument('--ref', type=str, help='reference file')
+psr.add_argument('--ref', type=str, nargs='+', help='reference file')
 psr.add_argument('--num', type=int, help='fragment number')
-psr.add_argument('-p', dest='print', action='store_false', help='print bool', default=True)
 args = psr.parse_args()
 
-if args.print:
-    sys.stdout = open('test/log.log','w+')
-
-def main(fopt, fipt, single_pe_path, method):
-    spe_pre = wff.read_model(single_pe_path)
+def main(fopt, fipt, reference, method):
+    if method == 'mcmc':
+        sm = pickle.load(open(reference[1], 'rb'))
+    spe_pre = wff.read_model(reference[0])
     opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PETime', np.uint16), ('Weight', np.float16)])
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
         ent = ipt['Waveform']
@@ -47,7 +46,7 @@ def main(fopt, fipt, single_pe_path, method):
             elif method == 'lucyddm':
                 pf = wff.lucyddm_core(wave, spe_pre['spe'])
             elif method == 'mcmc':
-                pf = wff.fit_N(wave, spe_pre, 'mcmc')
+                pf = wff.fit_N(wave, spe_pre, 'mcmc', model=sm)
             pet, pwe = wff.pf_to_tw(pf, 0.01)
 
             lenpf = pwe.shape[0]
@@ -57,7 +56,7 @@ def main(fopt, fipt, single_pe_path, method):
             dt['EventID'][start:end] = ent[i]['EventID']
             dt['ChannelID'][start:end] = ent[i]['ChannelID']
             start = end
-            print('\rAnsw Generating:|{}>{}|{:6.2f}%'.format(((20*i)//l)*'-', (19-(20*i)//l)*' ', 100 * ((i+1) / l)), end='' if i != l-1 else '\n')
+            # print('\rAnsw Generating:|{}>{}|{:6.2f}%'.format(((20*i)//l)*'-', (19-(20*i)//l)*' ', 100 * ((i+1) / l)), end='' if i != l-1 else '\n')
     dt = dt[dt['Weight'] > 0]
     dt = np.sort(dt, kind='stable', order=['EventID', 'ChannelID', 'PETime'])
     with h5py.File(fopt, 'w') as opt:
