@@ -1,0 +1,39 @@
+\documentclass{article}
+\usepackage{titletoc}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{indentfirst}
+\usepackage{tikz}
+\usepackage{float}
+\usepackage{subfigure}
+\usepackage{cite}
+\usepackage{hyperref} 
+\usepackage[fleqn]{amsmath}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{mathrsfs}
+\usepackage{pdfpages}
+\usepackage[justification=centering]{caption}
+\usepackage{listings}
+
+\hypersetup{citecolor=pureblue}%文献引用颜色
+\bibliographystyle{ieeetr}
+\setlength{\parindent}{2em}
+\titlecontents{section}[0mm]
+                       {\vspace{.2\baselineskip}\bfseries}
+                       {\thecontentslabel~\hspace{.5em}}
+                       {}
+                       {\dotfill\contentspage[{\makebox[0pt][r]{\thecontentspage}}]}
+                       [\vspace{.1\baselineskip}]
+
+\title{Notes on PMT Waveform Analysis and Ghost Hunter 1}
+\author{Somebody}
+\date{today}
+
+\begin{document}
+\maketitle
+
+\tableofcontents
+\input{Introduction}
+\end{document}

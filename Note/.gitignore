@@ -1,0 +1,4 @@
+Note.*
+!*.tex
+!*.bib
+!figures/*
