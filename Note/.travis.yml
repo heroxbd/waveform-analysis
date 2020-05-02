@@ -1,0 +1,28 @@
+os: linux
+
+# we use the R VM because it contains LaTeX and pandoc
+language: r
+
+# we need super user privileges, so we depend on the old travis-ci infrastructure
+sudo: required
+
+script:
+# in the next step we use pdflatex to convert .tex to .pdf
+  - pdflatex -interaction=nonstopmode Note.tex
+  - pdflatex -interaction=nonstopmode Note.tex
+
+deploy:
+
+# provider releases means GitHub Releases
+  provider: releases
+  api_key:
+
+# Travis CI public key encrypted GitHub oauth key for pushing to GitHub Releases
+    secure: $GITHUB_TOKEN
+
+# the list of files to upload
+  file: 
+    - "Note.pdf"
+  skip_cleanup: true
+  on:
+    repo: heroxbd/waveform-analysis
