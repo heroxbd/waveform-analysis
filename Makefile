@@ -3,14 +3,16 @@ jinpseq:=$(shell seq 0 0)
 jinppre:=ztraining-
 junoseq:=2 4
 junopre:=junoWave
-datfold:=dataset
+datfold:=/srv/waveform-analysis/dataset
 fragnum:=99
 fragseq:=$(shell seq 0 ${fragnum})
 tfold:=test/$(method)
 ifdef chunk
 	seq:=x
+    datfoldi:=dataset
 else
 	seq:=$($(set)seq)
+    datfoldi:=$(datfold)
 endif
 prefix:=$($(set)pre)
 mod:=tot sub
@@ -28,7 +30,7 @@ $(tfold)/dist-$(set)/record-$(1)-%.csv: $(tfold)/dist-$(set)/distr-$(1)-%.h5
 	python3 test/csv_dist.py $$^ -o $$@
 $(tfold)/dist-$(set)/hist-$(1)-%.pdf: $(tfold)/dist-$(set)/distr-$(1)-%.h5
 	python3 test/draw_dist.py $$^ -o $$@
-$(tfold)/dist-$(set)/distr-$(1)-%.h5: $(datfold)/$(set)/$(prefix)%.h5 $(tfold)/resu-$(set)/$(1)-%.h5
+$(tfold)/dist-$(set)/distr-$(1)-%.h5: $(datfoldi)/$(set)/$(prefix)%.h5 $(tfold)/resu-$(set)/$(1)-%.h5
 	@mkdir -p $$(dir $$@)
 	python3 test/test_dist.py $$(word 2,$$^) --ref $$< -o $$@ > $$@.log 2>&1
 endef
@@ -40,7 +42,7 @@ $(tfold)/resu-$(set)/sub-$(1).h5: $(tfold)/resu-$(set)/tot-$(1).h5
 $(tfold)/resu-$(set)/tot-$(1).h5: $(fragseq:%=$(tfold)/unad-$(set)/unad-$(1)-%.h5)
 	@mkdir -p $$(dir $$@)
 	python3 test/integrate.py $$^ --num ${fragnum} -o $$@
-$(tfold)/unad-$(set)/unad-$(1)-%.h5: $(datfold)/$(set)/$(prefix)$(1).h5 $(depend)
+$(tfold)/unad-$(set)/unad-$(1)-%.h5: $(datfoldi)/$(set)/$(prefix)$(1).h5 $(depend)
 	@mkdir -p $$(dir $$@)
 	export OMP_NUM_THREADS=2 && python3 test/fit.py $$< --met $(method) --ref $$(word 2,$$^) $$(word 3,$$^) --num ${fragnum} -o $$@ > $$@.log 2>&1
 endef
@@ -50,7 +52,8 @@ $(tfold)/model.pkl:
 	@mkdir -p $(dir $@)
 	python3 test/mcmc_model.py $@
 
-$(datfold)/$(set)/$(prefix)x.h5: $(datfold)/$(set)/$(prefix)$(chunk).h5
+$(datfoldi)/$(set)/$(prefix)x.h5: $(datfold)/$(set)/$(prefix)$(chunk).h5
+	@mkdir -p $(dir $@)
 	python3 test/cut_data.py $^ -o $@ -a -1 -b 10000
 
 test/spe-$(set).h5: $(datfold)/$(set)/$(prefix)$(word 1,$($(set)seq)).h5

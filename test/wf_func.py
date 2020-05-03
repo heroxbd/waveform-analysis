@@ -108,7 +108,7 @@ def mcmc_core(wave, spe, fitp, possible, model):
     mne = spe[np.mod(fitp.reshape(fitp.shape[0], 1) - possible.reshape(1, possible.shape[0]), l)]
     # op = model.optimizing(data=dict(m=mne, y=wave[fitp], Nf=fitp.shape[0], Np=possible.shape[0]), seed=0)
     # pf = op['x']
-    op = model.sampling(data=dict(m=mne, y=wave[fitp], Nf=fitp.shape[0], Np=possible.shape[0]), iter=200, seed=0)
+    op = model.sampling(data=dict(m=mne, y=wave[fitp], Nf=fitp.shape[0], Np=possible.shape[0]), iter=2000, seed=0)
     pf = np.mean(op['x'], axis=0)
     return pf
 
