@@ -55,7 +55,6 @@ def fit_N(wave, spe_pre, method, model=None, return_position=False):
 def xiaopeip_core(wave, spe, fitp, possible):
     l = wave.shape[0]
     spe = np.concatenate([spe, np.zeros(l - spe.shape[0])])
-    norm_fit = lambda x, M, p: np.linalg.norm(p - np.matmul(M, x))
     ans0 = np.zeros_like(possible).astype(np.float64)
     b = np.zeros((possible.shape[0], 2)).astype(np.float64)
     b[:, 1] = np.inf
@@ -109,7 +108,8 @@ def mcmc_core(wave, spe, fitp, possible, model):
     # op = model.optimizing(data=dict(m=mne, y=wave[fitp], Nf=fitp.shape[0], Np=possible.shape[0]), seed=0)
     # pf = op['x']
     op = model.sampling(data=dict(m=mne, y=wave[fitp], Nf=fitp.shape[0], Np=possible.shape[0]), iter=2000, seed=0)
-    pf = np.mean(op['x'], axis=0)
+    pf = op['x'][np.argmin([norm_fit(op['x'][i], mne, wave[fitp]) for i in range(len(possible))])]
+    # pf = np.mean(op['x'], axis=0)
     return pf
 
 def xpp_convol(pet, wgt):
@@ -131,6 +131,9 @@ def xpp_convol(pet, wgt):
         pwe = np.array([1])
         pet = seg['PETime'][np.argmax(seg['Weight'])]
     return pet, pwe
+
+def norm_fit(x, M, p):
+    return np.linalg.norm(p - np.matmul(M, x))
 
 def read_model(spe_path):
     with h5py.File(spe_path, 'r', libver='latest', swmr=True) as speFile:
