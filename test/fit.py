@@ -46,7 +46,7 @@ def main(fopt, fipt, reference, method):
             elif method == 'lucyddm':
                 pf = wff.lucyddm_core(wave, spe_pre['spe'])
             elif method == 'mcmc':
-                pf = wff.fit_N(wave, spe_pre, 'mcmc', model=sm)
+                pf = wff.mcmc_core(wave, spe_pre, model=sm)
             pet, pwe = wff.pf_to_tw(pf, 0.01)
 
             lenpf = pwe.shape[0]

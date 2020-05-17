@@ -33,8 +33,6 @@ def fit_N(wave, spe_pre, method, model=None, return_position=False):
             if len(possible) != 0:
                 if method == 'xiaopeip':
                     pf_r = xiaopeip_core(wave, spe_pre['spe'], fitp, possible)
-                elif method == 'mcmc':
-                    pf_r = mcmc_core(wave, spe_pre['spe'], fitp, possible, model)
             else:
                 flag = 0
         else:
@@ -101,16 +99,35 @@ def lucyddm_core(waveform, spe, iterations=100):
     wave_deconv = np.where(wave_deconv<50, wave_deconv, 0)
     return wave_deconv
 
-def mcmc_core(wave, spe, fitp, possible, model):
+def mcmc_core(wave, spe_pre, model, return_position=False):
+    it_list = [100, 1000]
     l = wave.shape[0]
-    spe = np.concatenate([spe, np.zeros(l - spe.shape[0])])
-    mne = spe[np.mod(fitp.reshape(fitp.shape[0], 1) - possible.reshape(1, possible.shape[0]), l)]
-    # op = model.optimizing(data=dict(m=mne, y=wave[fitp], Nf=fitp.shape[0], Np=possible.shape[0]), seed=0)
-    # pf = op['x']
-    op = model.sampling(data=dict(m=mne, y=wave[fitp], Nf=fitp.shape[0], Np=possible.shape[0]), iter=2000, seed=0)
-    pf = op['x'][np.argmin([norm_fit(op['x'][i], mne, wave[fitp]) for i in range(len(possible))])]
-    # pf = np.mean(op['x'], axis=0)
-    return pf
+    spe = np.concatenate([spe_pre['spe'], np.zeros(l - len(spe_pre['spe']))])
+    pos = np.argwhere(wave > spe_pre['thres']).flatten() - (spe_pre['peak_c'] + 2)
+    pos = pos[np.logical_and(pos >= 0, pos < l)]
+    flag = 1
+    if len(pos) == 0:
+        flag = 0
+    else:
+        for it in it_list:
+            mne = spe[np.mod(np.arange(l).reshape(l, 1) - pos.reshape(1, len(pos)), l)]
+            op = model.sampling(data=dict(m=mne, y=wave, Nf=l, Np=pos.shape[0]), iter=it, seed=0)
+            pf_r = op['x'][np.argmin([norm_fit(op['x'][i], mne, wave, eta=spe.sum()/2) for i in range(it)])]
+            pos_r = pos
+            pos = pos[np.argwhere(pf_r > 0.1).flatten()]
+            if len(pos) == 0:
+                flag = 0
+                break
+    if flag == 0:
+        t = np.where(wave == wave.min())[0][:1] - spe_pre['peak_c']
+        pos_r = t if t[0] >= 0 else np.array([0])
+        pf_r = np.array([1])
+    pf = np.zeros_like(wave)
+    pf[pos_r] = pf_r
+    if return_position:
+        return pf, pos_r
+    else:
+        return pf
 
 def xpp_convol(pet, wgt):
     core = np.array([0.9, 1.7, 0.9])
@@ -132,8 +149,8 @@ def xpp_convol(pet, wgt):
         pet = seg['PETime'][np.argmax(seg['Weight'])]
     return pet, pwe
 
-def norm_fit(x, M, p):
-    return np.linalg.norm(p - np.matmul(M, x))
+def norm_fit(x, M, p, eta=0):
+    return np.power(p - np.matmul(M, x), 2).sum() + eta * x.sum()
 
 def read_model(spe_path):
     with h5py.File(spe_path, 'r', libver='latest', swmr=True) as speFile:

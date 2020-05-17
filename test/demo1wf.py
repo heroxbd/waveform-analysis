@@ -54,9 +54,11 @@ def main(fipt, reference, method):
                 fitp = []
                 possible = []
         elif method == 'mcmc':
-                pf, fitp, possible = wff.fit_N(wave, spe_pre, 'mcmc', model=sm, return_position=True)
+                pf, possible = wff.mcmc_core(wave, spe_pre, model=sm, return_position=True)
+                fitp = []
         pet, pwe = wff.pf_to_tw(pf, 0.01)
 
+        print('fitp = {}, possible = {}'.format(fitp, possible))
         print('PETime = {}, Weight = {}'.format(pet, pwe))
         lenpf = len(pwe)
         dt = np.zeros(lenpf, dtype=opdt)
