@@ -77,7 +77,7 @@ def main(fipt, reference, method):
         pdist = np.abs(Q - q) * scipy.stats.poisson.pmf(Q, Q)
         print('wdist is {}, pdist is {}'.format(wdist, pdist))
         pf1 = np.zeros(leng); pf1[pet] = pwe
-        wave1 = np.convolve(spe_pre['spe'], pf1, 'full')[:leng-len(spe_pre['spe'])+1]
+        wave1 = np.convolve(spe_pre['spe'], pf1, 'full')[:leng]
         print('Resi-norm = {}'.format(np.linalg.norm(wave-wave1)))
 
         pet_a, pwe_a = wff.xpp_convol(pet, pwe)
@@ -90,8 +90,8 @@ def main(fipt, reference, method):
         q_a = np.sum(pwe_a)
         pdist_a = np.abs(Q - q_a) * scipy.stats.poisson.pmf(Q, Q)
         print('wdist is {}, pdist is {}'.format(wdist_a, pdist_a))
-        pf_a = np.zeros(leng); pf_a[pet] = pwe_a
-        wave_a = np.convolve(spe_pre['spe'], pf_a, 'full')[:leng-len(spe_pre['spe'])+1]
+        pf_a = np.zeros(leng); pf_a[pet_a] = pwe_a
+        wave_a = np.convolve(spe_pre['spe'], pf_a, 'full')[:leng]
         print('Resi-norm = {}'.format(np.linalg.norm(wave-wave_a)))
 
         if args.save:

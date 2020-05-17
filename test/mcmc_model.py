@@ -23,7 +23,7 @@ def main(Model_pkl):
             real<lower=0> sigma;
         }
         model {
-            y ~ normal_id_glm(m , 0, x, sigma);
+            y ~ normal_id_glm(m, 0, x, sigma);
         }
         """
         sm = pystan.StanModel(model_code=ocode)

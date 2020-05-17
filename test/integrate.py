@@ -26,6 +26,7 @@ def main(unad_path, fopt, upnum):
             dt[num:num+len(up['Answer'])] = up['Answer']
             num += len(up['Answer'])
     dt = dt[:num]
+    dt = np.sort(dt, kind='stable', order=['EventID', 'ChannelID', 'PETime'])
     with h5py.File(fopt, 'w') as adj:
         adj.create_dataset('Answer', data=dt, compression='gzip')
         print('The output file path is {}'.format(fopt), end=' ', flush=True)
