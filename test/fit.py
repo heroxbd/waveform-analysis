@@ -2,7 +2,6 @@
 
 import sys
 import re
-import pickle
 import numpy as np
 import h5py
 import math
@@ -46,7 +45,7 @@ def main(fopt, fipt, reference, method):
             elif method == 'lucyddm':
                 pf = wff.lucyddm_core(wave, spe_pre['spe'])
             elif method == 'mcmc':
-                pf = wff.mcmc_core(wave, spe_pre, model=sm)
+                pf = wff.mcmc_core(wave, spe_pre)
             pet, pwe = wff.pf_to_tw(pf, 0.01)
 
             lenpf = pwe.shape[0]

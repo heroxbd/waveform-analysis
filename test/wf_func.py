@@ -105,42 +105,44 @@ def lucyddm_core(waveform, spe, iterations=100):
     wave_deconv = np.where(wave_deconv<50, wave_deconv, 0)
     return wave_deconv
 
-def mcmc_core(wave, spe_pre, model, return_position=False):
-    l = len(wave); spe = torch.tensor(spe_pre['spe']).float(); wave = torch.tensor(wave).float()
-    spe = torch.cat((spe, torch.zeros(l - len(spe))))
+def mcmc_core(wave, spe_pre, return_position=False):
+    num_list = [100, 500]; warm_list = [50, 100]
+    l = len(wave); spe = torch.tensor(spe_pre['spe']).float().cuda(device=device)
+    wave = torch.tensor(wave).float().cuda(device=device)
+    spe = torch.cat((spe, torch.zeros(l - len(spe)).cuda(device=device)))
     pos = (wave > spe_pre['thres']).nonzero().flatten() - (spe_pre['peak_c'] + 2)
     pos = pos[torch.logical_and(pos >= 0, pos < l)]
     def model(n, mne, sigma):
-        pf = pyro.sample('weight', dist.HalfNormal(torch.ones(n)))
-        y = pyro.sample('y', dist.Normal(0, sigma), obs=wave - torch.matmul(mne, pf))
+        pf = pyro.sample('weight', dist.HalfNormal(torch.ones(n).cuda(device=device)))
+        y = pyro.sample('y', dist.Normal(0, sigma), obs=wave-torch.matmul(mne, pf))
         return y
     flag = 1
     if len(pos) == 0:
         flag = 0
     else:
-        nuts_kernel = NUTS(model, step_size=0.01, adapt_step_size=True)
-        mne = spe[torch.remainder(torch.arange(l).reshape(l, 1) - pos.reshape(1, len(pos)), l)]
-        mcmc = MCMC(nuts_kernel, num_samples=50, warmup_steps=100)
+        nuts_kernel = NUTS(model, step_size=0.01, adapt_step_size=True, jit_compile=True)
+        mne = spe[torch.remainder(torch.arange(l).reshape(l, 1).cuda(device=device) - pos.reshape(1, len(pos)), l)]
+        mcmc = MCMC(nuts_kernel, num_samples=num_list[0], warmup_steps=warm_list[0])
         mcmc.run(len(pos), mne, 0.5)
         pf_r = mcmc.get_samples()['weight']
-        pf_r = pf_r[torch.tensor([norm_fit_tensor(pf_r[i], mne, wave, eta=spe.sum()/2) for i in range(100)]).argmin()]
+        pf_r = pf_r[torch.tensor([norm_fit_tensor(pf_r[i], mne, wave, eta=spe.sum()/2) for i in range(num_list[0])]).argmin()]
         pos = pos[(pf_r > 0.05).nonzero().flatten()]
         if len(pos) == 0:
             flag = 0
         else:
-            init_param = {'weight' : torch.where(pf_r > 0.05)}
-            mne = spe[torch.remainder(torch.arange(l).reshape(l, 1) - pos.reshape(1, len(pos)), l)]
-            mcmc = MCMC(nuts_kernel, num_samples=100, warmup_steps=500, initial_params=init_param)
+            init_param = {'weight' : pf_r[pf_r > 0.05]}
+            mne = spe[torch.remainder(torch.arange(l).reshape(l, 1).cuda(device=device) - pos.reshape(1, len(pos)), l)]
+            mcmc = MCMC(nuts_kernel, num_samples=num_list[1], warmup_steps=warm_list[1], initial_params=init_param)
             mcmc.run(len(pos), mne, 0.1)
             pf_r = mcmc.get_samples()['weight']
-            pf_r = pf_r[torch.tensor([norm_fit_tensor(pf_r[i], mne, wave, eta=spe.sum()/2) for i in range(500)]).argmin()]
-            pos_r = pos.numpy()
-            pf_r = pf_r.numpy()
+            pf_r = pf_r[torch.tensor([norm_fit_tensor(pf_r[i], mne, wave, eta=spe.sum()/2) for i in range(num_list[1])]).argmin()]
+            pos_r = pos.cpu().numpy()
+            pf_r = pf_r.cpu().numpy()
     if flag == 0:
         t = (wave == wave.min()).nonzero()[0] - spe_pre['peak_c']
         pos_r = t if t[0] >= 0 else np.array([0])
         pf_r = np.array([1])
-    pf = np.zeros_like(wave)
+    pf = np.zeros(len(wave))
     pf[pos_r] = pf_r
     if return_position:
         return pf, pos_r

@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import re
-import pickle
 import numpy as np
 import scipy.stats
 import h5py
@@ -28,8 +27,6 @@ psr.add_argument('--save', dest='save', action='store_true', help='save demo to 
 args = psr.parse_args()
 
 def main(fipt, reference, method):
-    if method == 'mcmc':
-        sm = pickle.load(open(reference[1], 'rb'))
     spe_pre = wff.read_model(reference[0])
     print('spe is {}'.format(spe_pre['spe']))
     opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PETime', np.uint16), ('Weight', np.float16)])
@@ -54,7 +51,7 @@ def main(fipt, reference, method):
                 fitp = []
                 possible = []
         elif method == 'mcmc':
-                pf, possible = wff.mcmc_core(wave, spe_pre, model=sm, return_position=True)
+                pf, possible = wff.mcmc_core(wave, spe_pre, return_position=True)
                 fitp = []
         pet, pwe = wff.pf_to_tw(pf, 0.01)
 
