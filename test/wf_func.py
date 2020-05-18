@@ -8,7 +8,13 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import h5py
-import pystan
+import torch
+import pyro
+import pyro.distributions as dist
+from pyro.infer.mcmc import MCMC, NUTS
+from pyro.infer.mcmc.util import initialize_model
+
+device = torch.device(0)
 
 def fit_N(wave, spe_pre, method, model=None, return_position=False):
     l = wave.shape[0]
@@ -100,26 +106,38 @@ def lucyddm_core(waveform, spe, iterations=100):
     return wave_deconv
 
 def mcmc_core(wave, spe_pre, model, return_position=False):
-    it_list = [100, 1000]
-    l = wave.shape[0]
-    spe = np.concatenate([spe_pre['spe'], np.zeros(l - len(spe_pre['spe']))])
-    pos = np.argwhere(wave > spe_pre['thres']).flatten() - (spe_pre['peak_c'] + 2)
-    pos = pos[np.logical_and(pos >= 0, pos < l)]
+    l = len(wave); spe = torch.tensor(spe_pre['spe']).float(); wave = torch.tensor(wave).float()
+    spe = torch.cat((spe, torch.zeros(l - len(spe))))
+    pos = (wave > spe_pre['thres']).nonzero().flatten() - (spe_pre['peak_c'] + 2)
+    pos = pos[torch.logical_and(pos >= 0, pos < l)]
+    def model(n, mne, sigma):
+        pf = pyro.sample('weight', dist.HalfNormal(torch.ones(n)))
+        y = pyro.sample('y', dist.Normal(0, sigma), obs=wave - torch.matmul(mne, pf))
+        return y
     flag = 1
     if len(pos) == 0:
         flag = 0
     else:
-        for it in it_list:
-            mne = spe[np.mod(np.arange(l).reshape(l, 1) - pos.reshape(1, len(pos)), l)]
-            op = model.sampling(data=dict(m=mne, y=wave, Nf=l, Np=pos.shape[0]), iter=it, seed=0)
-            pf_r = op['x'][np.argmin([norm_fit(op['x'][i], mne, wave, eta=spe.sum()/2) for i in range(it)])]
-            pos_r = pos
-            pos = pos[np.argwhere(pf_r > 0.1).flatten()]
-            if len(pos) == 0:
-                flag = 0
-                break
+        nuts_kernel = NUTS(model, step_size=0.01, adapt_step_size=True)
+        mne = spe[torch.remainder(torch.arange(l).reshape(l, 1) - pos.reshape(1, len(pos)), l)]
+        mcmc = MCMC(nuts_kernel, num_samples=50, warmup_steps=100)
+        mcmc.run(len(pos), mne, 0.5)
+        pf_r = mcmc.get_samples()['weight']
+        pf_r = pf_r[torch.tensor([norm_fit_tensor(pf_r[i], mne, wave, eta=spe.sum()/2) for i in range(100)]).argmin()]
+        pos = pos[(pf_r > 0.05).nonzero().flatten()]
+        if len(pos) == 0:
+            flag = 0
+        else:
+            init_param = {'weight' : torch.where(pf_r > 0.05)}
+            mne = spe[torch.remainder(torch.arange(l).reshape(l, 1) - pos.reshape(1, len(pos)), l)]
+            mcmc = MCMC(nuts_kernel, num_samples=100, warmup_steps=500, initial_params=init_param)
+            mcmc.run(len(pos), mne, 0.1)
+            pf_r = mcmc.get_samples()['weight']
+            pf_r = pf_r[torch.tensor([norm_fit_tensor(pf_r[i], mne, wave, eta=spe.sum()/2) for i in range(500)]).argmin()]
+            pos_r = pos.numpy()
+            pf_r = pf_r.numpy()
     if flag == 0:
-        t = np.where(wave == wave.min())[0][:1] - spe_pre['peak_c']
+        t = (wave == wave.min()).nonzero()[0] - spe_pre['peak_c']
         pos_r = t if t[0] >= 0 else np.array([0])
         pf_r = np.array([1])
     pf = np.zeros_like(wave)
@@ -128,6 +146,9 @@ def mcmc_core(wave, spe_pre, model, return_position=False):
         return pf, pos_r
     else:
         return pf
+        # mne = spe[np.mod(np.arange(l).reshape(l, 1) - pos.reshape(1, len(pos)), l)]
+        # op = model.sampling(data=dict(m=mne, y=wave, Nf=l, Np=pos.shape[0]), iter=it, seed=0)
+        # pf_r = op['x'][np.argmin([norm_fit(op['x'][i], mne, wave, eta=spe.sum()/2) for i in range(it)])]
 
 def xpp_convol(pet, wgt):
     core = np.array([0.9, 1.7, 0.9])
@@ -149,8 +170,11 @@ def xpp_convol(pet, wgt):
         pet = seg['PETime'][np.argmax(seg['Weight'])]
     return pet, pwe
 
-def norm_fit(x, M, p, eta=0):
-    return np.power(p - np.matmul(M, x), 2).sum() + eta * x.sum()
+def norm_fit_tensor(x, M, y, eta=0):
+    return torch.pow(y - torch.matmul(M, x), 2).sum() + eta * x.sum()
+
+def norm_fit(x, M, y, eta=0):
+    return np.power(y - np.matmul(M, x), 2).sum() + eta * x.sum()
 
 def read_model(spe_path):
     with h5py.File(spe_path, 'r', libver='latest', swmr=True) as speFile:
