@@ -3,17 +3,11 @@
 import os
 import math
 import numpy as np
-import jax.numpy as jnp
-from jax import random
 from scipy import optimize as opti
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import h5py
-import numpyro
-import numpyro.distributions as dist
-from numpyro.infer import MCMC, NUTS
-from numpyro.infer.util import initialize_model
 
 def fit_N(wave, spe_pre, method, model=None, return_position=False):
     l = wave.shape[0]
@@ -104,55 +98,6 @@ def lucyddm_core(waveform, spe, iterations=100):
     wave_deconv = np.where(wave_deconv<50, wave_deconv, 0)
     return wave_deconv
 
-def mcmc_core(wave, spe_pre, return_position=False):
-    samp_list = [100, 500]; warm_list = [50, 100]
-    rng_key = random.PRNGKey(0)
-    rng_key, rng_key_ = random.split(rng_key)
-    l = len(wave); spe = jnp.array(spe_pre['spe'])
-    spe = jnp.concatenate((spe, jnp.zeros(l - len(spe))))
-    pos = np.argwhere(wave > spe_pre['thres']).flatten() - (spe_pre['peak_c'] + 2)
-    pos = jnp.array(pos[np.logical_and(pos >= 0, pos < l)])
-    wave = jnp.array(wave)
-    def model(n, mne, sigma):
-        pf = numpyro.sample('weight', dist.HalfNormal(jnp.ones(n)))
-        y = numpyro.sample('y', dist.Normal(0, sigma), obs=wave-jnp.matmul(mne, pf))
-        return y
-    flag = 1
-    if len(pos) == 0:
-        flag = 0
-    else:
-        nuts_kernel = NUTS(model, step_size=0.01, adapt_step_size=True)
-        mne = spe[jnp.mod(jnp.arange(l).reshape(l, 1) - pos.reshape(1, len(pos)), l)]
-        mcmc = MCMC(nuts_kernel, num_warmup=warm_list[0], num_samples=samp_list[0])
-        mcmc.run(rng_key, n=len(pos), mne=mne, sigma=0.5)
-        pf_r = mcmc.get_samples()['weight']
-        pf_r = pf_r[jnp.array([norm_fit_jnp(pf_r[i], mne, wave, eta=0) for i in range(samp_list[0])]).argmin()]
-        pos = pos[pf_r > 0.05]
-        if len(pos) == 0:
-            flag = 0
-        else:
-            init_param = {'weight' : pf_r[pf_r > 0.05]}
-            mne = spe[jnp.mod(jnp.arange(l).reshape(l, 1) - pos.reshape(1, len(pos)), l)]
-            mcmc = MCMC(nuts_kernel, num_warmup=warm_list[1], num_samples=samp_list[1])
-            mcmc.run(rng_key, n=len(pos), mne=mne, sigma=0.1)
-            pf_r = mcmc.get_samples()['weight']
-            pf_r = pf_r[jnp.array([norm_fit_jnp(pf_r[i], mne, wave, eta=0) for i in range(samp_list[1])]).argmin()]
-            pf_r = np.array(pf_r[pf_r > 0])
-            pos_r = np.array(pos[pf_r > 0])
-    if flag == 0:
-        t = (wave == wave.min()).nonzero()[0] - spe_pre['peak_c']
-        pos_r = t if t[0] >= 0 else np.array([0])
-        pf_r = np.array([1])
-    pf = np.zeros(len(wave))
-    pf[pos_r] = pf_r
-    if return_position:
-        return pf, pos_r
-    else:
-        return pf
-        # mne = spe[np.mod(np.arange(l).reshape(l, 1) - pos.reshape(1, len(pos)), l)]
-        # op = model.sampling(data=dict(m=mne, y=wave, Nf=l, Np=pos.shape[0]), iter=it, seed=0)
-        # pf_r = op['x'][np.argmin([norm_fit(op['x'][i], mne, wave, eta=spe.sum()/2) for i in range(it)])]
-
 def xpp_convol(pet, wgt):
     core = np.array([0.9, 1.7, 0.9])
     idt = np.dtype([('PETime', np.int16), ('Weight', np.float16), ('Wgt_b', np.uint8)])
@@ -172,9 +117,6 @@ def xpp_convol(pet, wgt):
         pwe = np.array([1])
         pet = seg['PETime'][np.argmax(seg['Weight'])]
     return pet, pwe
-
-def norm_fit_jnp(x, M, y, eta=0):
-    return jnp.power(y - jnp.matmul(M, x), 2).sum() + eta * x.sum()
 
 def norm_fit(x, M, y, eta=0):
     return np.power(y - np.matmul(M, x), 2).sum() + eta * x.sum()

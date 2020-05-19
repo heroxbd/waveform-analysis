@@ -12,14 +12,12 @@ psr = argparse.ArgumentParser()
 psr.add_argument('-o', dest='opt', type=str, help='output file')
 psr.add_argument('ipt', type=str, help='input file')
 psr.add_argument('--met', type=str, help='fitting method')
-psr.add_argument('--ref', type=str, nargs='+', help='reference file')
+psr.add_argument('--ref', type=str, help='reference file')
 psr.add_argument('--num', type=int, help='fragment number')
 args = psr.parse_args()
 
 def main(fopt, fipt, reference, method):
-    if method == 'mcmc':
-        sm = pickle.load(open(reference[1], 'rb'))
-    spe_pre = wff.read_model(reference[0])
+    spe_pre = wff.read_model(reference)
     opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PETime', np.uint16), ('Weight', np.float16)])
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
         ent = ipt['Waveform']

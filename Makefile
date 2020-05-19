@@ -4,7 +4,7 @@ jinppre:=ztraining-
 junoseq:=2 4
 junopre:=junoWave
 datfold:=/srv/waveform-analysis/dataset
-fragnum:=99
+fragnum:=0
 fragseq:=$(shell seq 0 ${fragnum})
 tfold:=test/$(method)
 ifdef chunk
@@ -17,9 +17,9 @@ endif
 prefix:=$($(set)pre)
 mod:=tot sub
 ifeq ($(method), mcmc)
-    depend:=test/spe-$(set).h5 $(tfold)/model.pkl
+    core:=inference.py
 else
-    depend:=test/spe-$(set).h5
+    core:=fit.py
 endif
 
 .PHONY: all
@@ -42,15 +42,11 @@ $(tfold)/resu-$(set)/sub-$(1).h5: $(tfold)/resu-$(set)/tot-$(1).h5
 $(tfold)/resu-$(set)/tot-$(1).h5: $(fragseq:%=$(tfold)/unad-$(set)/unad-$(1)-%.h5)
 	@mkdir -p $$(dir $$@)
 	python3 test/integrate.py $$^ --num ${fragnum} -o $$@
-$(tfold)/unad-$(set)/unad-$(1)-%.h5: $(datfoldi)/$(set)/$(prefix)$(1).h5 $(depend)
+$(tfold)/unad-$(set)/unad-$(1)-%.h5: $(datfoldi)/$(set)/$(prefix)$(1).h5 test/spe-$(set).h5
 	@mkdir -p $$(dir $$@)
-	export OMP_NUM_THREADS=2 && python3 test/fit.py $$< --met $(method) --ref $$(word 2,$$^) $$(word 3,$$^) --num ${fragnum} -o $$@ > $$@.log 2>&1
+	export OMP_NUM_THREADS=2 && python3 test/$(core) $$< --met $(method) --ref $$(word 2,$$^) --num $(fragnum) -o $$@ > $$@.log 2>&1
 endef
 $(foreach i,$(seq),$(eval $(call split,$(i))))
-
-$(tfold)/model.pkl:
-	@mkdir -p $(dir $@)
-	python3 test/mcmc_model.py $@
 
 $(datfoldi)/$(set)/$(prefix)x.h5: $(datfold)/$(set)/$(prefix)$(chunk).h5
 	@mkdir -p $(dir $@)
