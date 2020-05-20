@@ -25,54 +25,52 @@ if args.print:
     sys.stdout = None
 
 def mean(dt):
-    spemean = np.mean(dt['speWf'], axis=0)
-    base_vol = np.mean(spemean[-10:])
-    # stdmodel[0] is the single pe's incoming time
-    stdmodel = spemean[:-10] - base_vol
-    if np.sum(stdmodel) > 0:
-        epulse = 1
-        stdmodel = -1 * stdmodel
-    else:
-        epulse = -1
-    # cut off all small values
-    stdmodel = np.where(stdmodel < -0.01, stdmodel, 0)
-    peak_i = np.argmin(stdmodel)
-    a = 0
-    b = stdmodel.shape[0]
-    for _ in range(b):
-        if not np.all(stdmodel[a:peak_i] < 0):
-            a = a + 1
-        if not np.all(stdmodel[peak_i:b] < 0):
-            b = b - 1
-    spemean = np.zeros_like(stdmodel[:b])
-    spemean[a:b] = stdmodel[a:b]
-    spemean = -1 * epulse * spemean
-    return spemean, epulse
+    Chnum = np.unique(dt['ChannelID'])
+    N = 10
+    cid = np.zeros(len(Chnum))
+    spemean = np.zeros((len(Chnum), len(dt[0]['speWf'])-N))
+    for i in range(len(Chnum)):
+        dt_cid = dt[dt['ChannelID']==Chnum[i]]
+        spemean_i = np.mean(dt_cid['speWf'], axis=0)
+        base_vol = np.mean(spemean_i[-N:])
+        spemean_i = spemean_i[:-N] - base_vol
+        if np.sum(spemean_i) > 0:
+            epulse = 1
+        else:
+            epulse = -1
+            spemean_i = epulse * spemean_i
+        spemean_i = np.where(spemean_i > 0.001, spemean_i, 0)
+        spemean[i] = spemean_i
+    return spemean, epulse, Chnum
 
-def pre_analysis(spemean, Wf):
-    sam = Wf.flatten()
-    a_std = np.std(np.sort(sam)[:-sam.shape[0]//3])
-    t = 0
-    r = 3
-    i = 0
-    while np.abs(t - a_std) > 0.01:
-        a = 0
-        b = 0
-        t = a_std
-        dt = np.zeros(N).astype(np.float128)
-        while True:
-            wave = wff.deduct_base(Wf[i], mode='fast')
-            i = (i + 1)%Wf.shape[0]
-            vali = wff.vali_base(wave, np.sum(spemean > r*a_std), r*a_std)
-            a = b
-            b = a + np.sum(vali == 0)
-            if b >= N:
-                dt[a:] = wave[vali==0][:N-a]-np.mean(wave[vali==0])
-                break
-            else:
-                dt[a:b] = wave[vali==0]-np.mean(wave[vali==0])
-        a_std = np.std(dt, ddof=1).astype(np.float64)
-    thres = r*a_std
+def pre_analysis(spemean, epulse, Wf):
+    Chnum = np.unique(Wf['ChannelID'])
+    thres = np.zeros(len(Chnum))
+    for i in range(len(Chnum)):
+        Wf_cid = Wf[Wf['ChannelID']==Chnum[i]]
+        sam = wff.deduct_base(epulse * Wf_cid['Waveform'], mode='fast').flatten()
+        a_std = np.std(np.sort(sam)[:-sam.shape[0]//3])
+        t = 0
+        r = 3
+        j = 0
+        while np.abs(t - a_std) > 0.01:
+            a = 0
+            b = 0
+            t = a_std
+            dt = np.zeros(N).astype(np.float128)
+            while True:
+                wave = wff.deduct_base(Wf_cid[j]['Waveform'], mode='fast')
+                j = (j + 1)%len(Wf_cid)
+                vali = wff.vali_base(wave, np.sum(spemean[i] > r*a_std), r*a_std)
+                a = b
+                b = a + np.sum(vali == 0)
+                if b >= N:
+                    dt[a:] = wave[vali==0][:N-a]-np.mean(wave[vali==0])
+                    break
+                else:
+                    dt[a:b] = wave[vali==0]-np.mean(wave[vali==0])
+            a_std = np.std(dt, ddof=1).astype(np.float64)
+        thres[i] = r*a_std
     spe_pre = {'spe':spemean, 'thres':thres}
     return spe_pre
 
@@ -114,15 +112,21 @@ def generate_standard(h5_path, single_pe_path):
             print('\rSingle PE Generating:|{}>{}|{:6.2f}%'.format(((20*(num-1))//N)*'-', (19 - (20*(num-1))//N)*' ', 100 * (num / N)), end=''if num != N else '\n')
             if num >= N or b == len(Gt):
                 dt = dt[:num] # cut empty dt part
+                dt = np.sort(dt, kind='stable', order=['EventID', 'ChannelID'])
+                if Chnum < 100:
+                    assert Chnum == len(np.unique(dt['ChannelID']))
+                else:
+                    dt['ChannelID'] = 0
                 print('{} speWf generated'.format(len(dt)))
-                spemean, epulse = mean(dt)
-                spe_pre = pre_analysis(epulse * spemean, epulse * Wf[:1000]['Waveform'])
+                spemean, epulse, cid = mean(dt)
+                spe_pre = pre_analysis(spemean, epulse, Wf[:10000])
                 break
     with h5py.File(single_pe_path, 'w') as spp:
         dset = spp.create_dataset('SinglePE', data=dt)
         dset.attrs['SpePositive'] = spe_pre['spe']
         dset.attrs['Epulse'] = epulse
         dset.attrs['Thres'] = spe_pre['thres']
+        dset.attrs['ChannelID'] = cid
 
 def main(h5_path, single_pe_path):
     if not os.path.exists(single_pe_path):

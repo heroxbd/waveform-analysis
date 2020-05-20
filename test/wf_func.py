@@ -3,13 +3,21 @@
 import os
 import math
 import numpy as np
+import scipy
+import scipy.stats
 from scipy import optimize as opti
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import h5py
 
-def fit_N(wave, spe_pre, method, model=None, return_position=False):
+plt.rcParams['savefig.dpi'] = 300
+plt.rcParams['figure.dpi'] = 300
+plt.rcParams['font.size'] = 8
+plt.rcParams['lines.markersize'] = 4.0
+plt.rcParams['lines.linewidth'] = 1.0
+
+def fit_N(wave, spe_pre, method):
     l = wave.shape[0]
     spe_l = spe_pre['spe'].shape[0] 
     n = math.ceil(spe_l//10)
@@ -44,10 +52,7 @@ def fit_N(wave, spe_pre, method, model=None, return_position=False):
         pf_r = np.array([1])
     pf = np.zeros_like(wave)
     pf[possible] = pf_r
-    if return_position:
-        return pf, fitp, possible
-    else:
-        return pf
+    return pf, possible
 
 def xiaopeip_core(wave, spe, fitp, possible):
     l = wave.shape[0]
@@ -123,14 +128,18 @@ def norm_fit(x, M, y, eta=0):
 
 def read_model(spe_path):
     with h5py.File(spe_path, 'r', libver='latest', swmr=True) as speFile:
-        spe = speFile['SinglePE'].attrs['SpePositive']
+        cid = speFile['SinglePE'].attrs['ChannelID']
         epulse = speFile['SinglePE'].attrs['Epulse']
+        spe = speFile['SinglePE'].attrs['SpePositive']
         thres = speFile['SinglePE'].attrs['Thres']
-        m_l = np.sum(spe > thres)
-        peak_c = np.argmax(spe)
-        mar_l = np.sum(spe[:peak_c] < thres)
-        mar_r = np.sum(spe[peak_c:] < thres)
-    spe_pre = {'spe':spe, 'epulse':epulse, 'peak_c':peak_c, 'm_l':m_l, 'mar_l':mar_l, 'mar_r':mar_r, 'thres':thres}
+        spe_pre = {}
+        for i in range(len(spe)):
+            m_l = np.sum(spe[i] > thres[i])
+            peak_c = np.argmax(spe[i])
+            mar_l = np.sum(spe[i][:peak_c] < thres[i])
+            mar_r = np.sum(spe[i][peak_c:] < thres[i])
+            spe_pre_i = {'spe':spe[i], 'epulse':epulse, 'peak_c':peak_c, 'm_l':m_l, 'mar_l':mar_l, 'mar_r':mar_r, 'thres':thres[i]}
+            spe_pre.update({cid[i]:spe_pre_i})
     return spe_pre
 
 def snip_baseline(waveform, itera=20):
@@ -152,14 +161,19 @@ def vali_base(waveform, m_l, thres):
     return vali
 
 def deduct_base(waveform, m_l=None, thres=None, itera=20, mode='fast'):
-    wave = waveform - np.min(waveform)
-    baseline = snip_baseline(wave, itera)
-    wave = wave - baseline
-    if mode == 'detail':
-        wave = wave - find_base(wave, m_l, thres)
-    elif mode == 'fast':
-        wave = wave - find_base_fast(wave)
-    return wave
+    def deduct(wave):
+        wave = wave - np.min(wave)
+        baseline = snip_baseline(wave, itera)
+        wave = wave - baseline
+        if mode == 'detail':
+            wave = wave - find_base(wave, m_l, thres)
+        elif mode == 'fast':
+            wave = wave - find_base_fast(wave)
+        return wave
+    if waveform.ndim == 2:
+        return np.array([deduct(waveform[i]) for i in range(len(waveform))])
+    else:
+        return deduct(waveform)
 
 def find_base(waveform, m_l, thres):
     vali = vali_base(waveform, m_l, thres)
@@ -204,3 +218,52 @@ def pf_to_tw(pf, thres=0.1):
     pwe = pwe
     pet = np.argwhere(pf > thres).flatten()
     return pet, pwe
+
+def demo(pet, pwe, tth, spe_pre, leng, possible, wave):
+    print('possible = {}'.format(possible))
+    penum = len(tth)
+    print('PEnum is {}'.format(penum))
+    tru_pet = tth['PETime']
+    print('The truth is {}'.format(np.sort(tru_pet)))
+    print('PETime = {}, Weight = {}'.format(pet, pwe))
+    wdist = scipy.stats.wasserstein_distance(tru_pet, pet, v_weights=pwe)
+    Q = penum; q = np.sum(pwe)
+    pdist = np.abs(Q - q) * scipy.stats.poisson.pmf(Q, Q)
+    print('wdist is {}, pdist is {}'.format(wdist, pdist))
+    pf1 = np.zeros(leng); pf1[pet] = pwe
+    wave1 = np.convolve(spe_pre['spe'], pf1, 'full')[:leng]
+    print('Resi-norm = {}'.format(np.linalg.norm(wave-wave1)))
+    pet_a, pwe_a = xpp_convol(pet, pwe)
+    print('PETime = {}, Weight = {}'.format(pet_a, pwe_a))
+    wdist_a = scipy.stats.wasserstein_distance(tru_pet, pet_a, v_weights=pwe_a)
+    q_a = np.sum(pwe_a)
+    pdist_a = np.abs(Q - q_a) * scipy.stats.poisson.pmf(Q, Q)
+    print('wdist is {}, pdist is {}'.format(wdist_a, pdist_a))
+    pf_a = np.zeros(leng); pf_a[pet_a] = pwe_a
+    wave_a = np.convolve(spe_pre['spe'], pf_a, 'full')[:leng]
+    print('Resi-norm = {}'.format(np.linalg.norm(wave-wave_a)))
+    plt.plot(wave, c='b', label='original WF')
+    plt.plot(wave1, c='y', label='before xpp_convol WF')
+    plt.plot(wave_a, c='m', label='after xpp_convol WF')
+    plt.scatter(possible, wave[possible], marker='+', c='r')
+    plt.grid()
+    plt.xlabel(r'Time/[ns]')
+    plt.ylabel(r'ADC')
+    plt.xlim(200, 400)
+    plt.hlines(spe_pre['thres'], 200, 500, color='c')
+    t, c = np.unique(tru_pet, return_counts=True)
+    plt.vlines(t, 0, 10*c, color='k')
+    hh = -10*(np.max(pwe_a)+1)
+    plt.vlines(pet, -10*pwe+hh, hh, color='y', label='before xpp_convol weight')
+    plt.vlines(pet_a, -10*pwe_a, 0, color='m', label='after xpp_convol weight')
+    plt.legend()
+    plt.savefig('demo.png')
+    plt.close()
+    plt.plot(spe_pre['spe'], c='b')
+    plt.grid()
+    plt.xlabel(r'Time/[ns]')
+    plt.ylabel(r'ADC')
+    plt.savefig('spe.png')
+    plt.close()
+    return
+
