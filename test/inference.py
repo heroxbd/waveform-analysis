@@ -26,9 +26,7 @@ psr.add_argument('--num', type=int, help='fragment number')
 psr.add_argument('--demo', dest='demo', action='store_true', help='demo bool', default=False)
 args = psr.parse_args()
 
-if args.demo:
-    Demo = True
-
+Demo = args.demo
 set_platform(platform='cpu')
 N = 50
 
@@ -67,7 +65,7 @@ def main(fopt, fipt, reference):
     rng_key, rng_key_ = random.split(rng_key)
     nuts_kernel = NUTS(model, step_size=0.01, adapt_step_size=True)
     mcmc = MCMC(nuts_kernel, num_warmup=100, num_samples=500, num_chains=1, progress_bar=Demo, jit_model_args=True)
-    for i in tqdm(range(num*lenfr, num*lenfr+l)):
+    for i in tqdm(range(num*lenfr, num*lenfr+l), disable=not Demo):
         wave = wff.deduct_base(spe_pre[ent[i]['ChannelID']]['epulse'] * ent[i]['Waveform'], spe_pre[ent[i]['ChannelID']]['m_l'], spe_pre[ent[i]['ChannelID']]['thres'], 20, 'detail')
         possible = np.argpartition(wave[50:-50], -N)[-N:] + 50 - (spe_pre[ent[i]['ChannelID']]['peak_c'] + 2)
         flag = 1
@@ -77,9 +75,9 @@ def main(fopt, fipt, reference):
             mne = spe[ent[i]['ChannelID']][np.mod(np.arange(leng).reshape(leng, 1) - possible.reshape(1, len(possible)), leng)]
             mcmc.run(rng_key, wave=jnp.array(wave), mne=jnp.array(mne))
             pf = lasso_select(np.array(mcmc.get_samples()['weight']), mne, wave)
-            pf = np.where(pf > 0, np.around(pf), 0)
-            pos = possible[pf > 0]
-            pf = pf[pf > 0]
+            # pf = np.where(pf > 0, np.around(pf), 0)
+            pos = possible[pf > 0.01]
+            pf = pf[pf > 0.01]
             if len(possible) == 0:
                 flag = 0
         if flag == 0:
