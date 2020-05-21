@@ -4,7 +4,7 @@ jinppre:=ztraining-
 junoseq:=2 4
 junopre:=junoWave
 datfold:=/srv/waveform-analysis/dataset
-fragnum:=0
+fragnum:=99
 fragseq:=$(shell seq 0 ${fragnum})
 tfold:=test/$(method)
 ifdef chunk
