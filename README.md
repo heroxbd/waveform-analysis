@@ -9,7 +9,7 @@
 + xiaopeip
 + xdcFT
 + lucyddm
-+ hmc-pystan-pyro-numpyro
++ hmc
 + hybird
 
 ## Frame:
