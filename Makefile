@@ -4,7 +4,7 @@ jinppre:=ztraining-
 junoseq:=2 4
 junopre:=junoWave
 datfold:=/srv/waveform-analysis/dataset
-fragnum:=99
+fragnum:=49
 fragseq:=$(shell seq 0 ${fragnum})
 tfold:=test/$(method)
 ifdef chunk
@@ -17,7 +17,7 @@ endif
 prefix:=$($(set)pre)
 mod:=tot sub
 ifeq ($(method), hybird)
-    core:=inference.py
+    core:=iinference.py
 else
     core:=fit.py
 endif

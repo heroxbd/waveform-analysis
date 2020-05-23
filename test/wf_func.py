@@ -224,25 +224,30 @@ def demo(pet, pwe, tth, spe_pre, leng, possible, wave):
     penum = len(tth)
     print('PEnum is {}'.format(penum))
     tru_pet = tth['PETime']
-    print('The truth is {}'.format(np.sort(tru_pet)))
-    print('PETime = {}, Weight = {}'.format(pet, pwe))
+    pet0, pwe0 = np.unique(tru_pet, return_counts=True)
+    print('truth PETime = {}, Weight = {}'.format(pet0, pwe0))
+    pf0 = np.zeros(leng); pf0[pet0] = pwe0
+    wave0 = np.convolve(spe_pre['spe'], pf0, 'full')[:leng]
+    print('truth Resi-norm = {}'.format(np.linalg.norm(wave-wave0)))
+    print('before PETime = {}, Weight = {}'.format(pet, pwe))
     wdist = scipy.stats.wasserstein_distance(tru_pet, pet, v_weights=pwe)
     Q = penum; q = np.sum(pwe)
     pdist = np.abs(Q - q) * scipy.stats.poisson.pmf(Q, Q)
-    print('wdist is {}, pdist is {}'.format(wdist, pdist))
+    print('before wdist is {}, pdist is {}'.format(wdist, pdist))
     pf1 = np.zeros(leng); pf1[pet] = pwe
     wave1 = np.convolve(spe_pre['spe'], pf1, 'full')[:leng]
-    print('Resi-norm = {}'.format(np.linalg.norm(wave-wave1)))
+    print('before Resi-norm = {}'.format(np.linalg.norm(wave-wave1)))
     pet_a, pwe_a = xpp_convol(pet, pwe)
-    print('PETime = {}, Weight = {}'.format(pet_a, pwe_a))
+    print('after PETime = {}, Weight = {}'.format(pet_a, pwe_a))
     wdist_a = scipy.stats.wasserstein_distance(tru_pet, pet_a, v_weights=pwe_a)
     q_a = np.sum(pwe_a)
     pdist_a = np.abs(Q - q_a) * scipy.stats.poisson.pmf(Q, Q)
-    print('wdist is {}, pdist is {}'.format(wdist_a, pdist_a))
+    print('after wdist is {}, pdist is {}'.format(wdist_a, pdist_a))
     pf_a = np.zeros(leng); pf_a[pet_a] = pwe_a
     wave_a = np.convolve(spe_pre['spe'], pf_a, 'full')[:leng]
-    print('Resi-norm = {}'.format(np.linalg.norm(wave-wave_a)))
+    print('after Resi-norm = {}'.format(np.linalg.norm(wave-wave_a)))
     plt.plot(wave, c='b', label='original WF')
+    plt.plot(wave0, c='k', label='truth WF')
     plt.plot(wave1, c='y', label='before xpp_convol WF')
     plt.plot(wave_a, c='m', label='after xpp_convol WF')
     plt.scatter(possible, wave[possible], marker='+', c='r')
@@ -254,8 +259,8 @@ def demo(pet, pwe, tth, spe_pre, leng, possible, wave):
     t, c = np.unique(tru_pet, return_counts=True)
     plt.vlines(t, 0, 10*c, color='k')
     hh = -10*(np.max(pwe_a)+1)
-    plt.vlines(pet, -10*pwe+hh, hh, color='y', label='before xpp_convol weight')
-    plt.vlines(pet_a, -10*pwe_a, 0, color='m', label='after xpp_convol weight')
+    plt.vlines(pet, -10*pwe+hh, hh, color='y')
+    plt.vlines(pet_a, -10*pwe_a, 0, color='m')
     plt.legend()
     plt.savefig('demo.png')
     plt.close()
