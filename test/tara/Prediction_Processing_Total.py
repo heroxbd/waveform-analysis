@@ -25,7 +25,9 @@ import torch
 from torch.nn import functional as F
 
 from multiprocessing import Pool
-from JPwaptool_Lite import JPwaptool_Lite
+from JPwaptool import JPwaptool
+
+from IPython import embed
 
 # Loading Data
 RawDataFile = tables.open_file(filename, "r")
@@ -45,13 +47,13 @@ def Read_Data(startentry, endentry) :
         if name != "Waveform" :
             Shifted_Waves_and_info[name] = Waveforms_and_info[name]
     if WindowSize >= 1000 :
-        stream = JPwaptool_Lite(WindowSize, 100, 600)
+        stream = JPwaptool(WindowSize, 100, 600)
     elif WindowSize == 600 :
-        stream = JPwaptool_Lite(WindowSize, 50, 400)
+        stream = JPwaptool(WindowSize, 50, 400)
     else:
         raise ValueError("Unknown WindowSize, I don't know how to choose the parameters for pedestal calculatation")
     for i, w in enumerate(Waveforms_and_info["Waveform"]) :
-        stream.Calculate(w)
+        stream.FastCalculate(w)
         Shifted_Waves_and_info[i]["Waveform"] = stream.ChannelInfo.Ped - w
     return pd.DataFrame({name: list(Shifted_Waves_and_info[name]) for name in gpufloat_dtype.names})
 
@@ -119,12 +121,14 @@ def Forward(channelid) :
 tic = time.time()
 cpu_tic = time.clock()
 Result = []
+embed()
 for ch in tqdm(channelid_set, desc="Predict for each channel") :
     Result.append(Forward(ch))
 Result = pd.concat(Result)
 Result = Result.sort_values(by=["EventID", "ChannelID"])
 print("Prediction generated, real time {0:.4f}s, cpu time {1:.4f}s".format(time.time() - tic, time.clock() - cpu_tic))
 
+embed()
 
 class AnswerData(tables.IsDescription):
     EventID = tables.Int64Col(pos=0)
