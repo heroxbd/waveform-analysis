@@ -21,10 +21,13 @@ import os
 import numpy as np
 import tables
 import numba
-from multiprocessing import Pool
-from JPwaptool_Lite import JPwaptool_Lite
+from multiprocessing import Pool, cpu_count
+from JPwaptool import JPwaptool
 import pandas as pd
+import warnings
+warnings.filterwarnings('ignore')
 
+from IPython import embed
 
 @numba.jit
 def Make_Time_Vector(GroundTruth, Waveforms_and_info) :
@@ -42,9 +45,9 @@ def Make_Time_Vector(GroundTruth, Waveforms_and_info) :
 
 def AssignStream(WindowSize) :
     if WindowSize >= 1000 :
-        stream = JPwaptool_Lite(WindowSize, 100, 600)
+        stream = JPwaptool(WindowSize, 100, 600)
     elif WindowSize == 600 :
-        stream = JPwaptool_Lite(WindowSize, 50, 400)
+        stream = JPwaptool(WindowSize, 50, 400)
     else:
         raise ValueError("Unknown WindowSize, I don't know how to choose the parameters for pedestal calculatation")
     return stream
@@ -114,7 +117,7 @@ while(Nwav != 0) :
         sliceNo = sliceNo + 1
     FileNo = FileNo + 1
     h5file.close()
-with Pool(len(trainfile_list)) as pool :
+with Pool(min(len(trainfile_list), cpu_count())) as pool :
     Reading_Result = dict(pool.starmap(Read_Data, trainfile_list))
 Waveforms_and_info = pd.concat([Reading_Result[i]["Waveform"] for i in range(len(trainfile_list))])
 GroundTruth = pd.concat([Reading_Result[i]["GroundTruth"] for i in range(len(trainfile_list))])
@@ -130,18 +133,25 @@ class PreProcessedData(tables.IsDescription):
     Waveform = tables.Col.from_type('float32', shape=WindowSize, pos=1)
 
 
+def Calculate_Ped(w, stream) :
+    stream.FastCalculate(w)
+    return stream.ChannelInfo.Ped
+
+
+CAL_PED = np.vectorize(Calculate_Ped, signature="(n)->()", excluded={"stream"})
+
+
 def PreProcess(channelid) :
     print("PreProcessing channel {}".format(channelid))
     Waves_of_this_channel = Grouped_Waves.get_group(channelid)
     Truth_of_this_channel = Grouped_Truth.get_group(channelid)
-    Origin_Waves = Waves_of_this_channel["Waveform"].to_numpy()
+    Origin_Waves = np.vstack(Waves_of_this_channel["Waveform"].to_numpy())
     Shifted_Waves = np.empty((len(Origin_Waves), WindowSize), dtype=np.float32)
 
     stream = AssignStream(WindowSize)
-    for i, w in enumerate(Waves_of_this_channel["Waveform"]) :
-        stream.Calculate(w)
-        Shifted_Waves[i] = stream.ChannelInfo.Ped - w
-
+    Peds = CAL_PED(Origin_Waves, stream=stream)
+    Shifted_Waves =  Peds.reshape(len(Peds), 1) - Origin_Waves
+    # embed()
     HitSpectrum = Make_Time_Vector(Truth_of_this_channel, Waves_of_this_channel)
 
     # create Pre-Processed output file
@@ -160,7 +170,8 @@ def PreProcess(channelid) :
 channelid_list = np.unique(Waveforms_and_info["ChannelID"].to_numpy())
 
 start = time()
-with Pool(len(channelid_list)) as pool :
+with Pool(min(len(channelid_list), cpu_count())) as pool :
     pool.map(PreProcess, channelid_list)
+# embed()
 print("Data Saved, consuming {:.5f}s".format(time() - start))
 print("Finished, consuming {:.4f}s in total.".format(time() - global_start))
