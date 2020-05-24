@@ -140,6 +140,12 @@ def read_model(spe_path):
             mar_r = np.sum(spe[i][peak_c:] < thres[i])
             spe_pre_i = {'spe':spe[i], 'epulse':epulse, 'peak_c':peak_c, 'm_l':m_l, 'mar_l':mar_l, 'mar_r':mar_r, 'thres':thres[i]}
             spe_pre.update({cid[i]:spe_pre_i})
+            plt.plot(spe_pre[cid[i]]['spe'])
+        plt.grid()
+        plt.xlabel(r'Time/[ns]')
+        plt.ylabel(r'ADC')
+        plt.savefig('spe.png')
+        plt.close()
     return spe_pre
 
 def snip_baseline(waveform, itera=20):
@@ -219,7 +225,7 @@ def pf_to_tw(pf, thres=0.1):
     pet = np.argwhere(pf > thres).flatten()
     return pet, pwe
 
-def demo(pet, pwe, tth, spe_pre, leng, possible, wave):
+def demo(pet, pwe, tth, spe_pre, leng, possible, wave, cid):
     print('possible = {}'.format(possible))
     penum = len(tth)
     print('PEnum is {}'.format(penum))
@@ -251,7 +257,6 @@ def demo(pet, pwe, tth, spe_pre, leng, possible, wave):
     plt.plot(wave1, c='y', label='before xpp_convol WF')
     plt.plot(wave_a, c='m', label='after xpp_convol WF')
     plt.scatter(possible, wave[possible], marker='+', c='r')
-    plt.grid()
     plt.xlabel(r'Time/[ns]')
     plt.ylabel(r'ADC')
     plt.xlim(200, 400)
@@ -262,13 +267,15 @@ def demo(pet, pwe, tth, spe_pre, leng, possible, wave):
     plt.vlines(pet, -10*pwe+hh, hh, color='y')
     plt.vlines(pet_a, -10*pwe_a, 0, color='m')
     plt.legend()
-    plt.savefig('demo.png')
+    plt.grid()
+    plt.title('eid={}, cid={}, wp-dist=({:.2f},{:.2f})->({:.2f},{:.2f})'.format(tth['EventID'][0], tth['ChannelID'][0], wdist, pdist, wdist_a, pdist_a))
+    plt.savefig('demoe{}c{}.png'.format(tth['EventID'][0], tth['ChannelID'][0]))
     plt.close()
     plt.plot(spe_pre['spe'], c='b')
     plt.grid()
     plt.xlabel(r'Time/[ns]')
     plt.ylabel(r'ADC')
-    plt.savefig('spe.png')
+    plt.savefig('spe{}.png'.format(cid))
     plt.close()
     return
 

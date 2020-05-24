@@ -16,8 +16,8 @@ else
 endif
 prefix:=$($(set)pre)
 mod:=tot sub
-ifeq ($(method), hybird)
-    core:=iinference.py
+ifeq ($(method), mcmc)
+    core:=inference.py
 else
     core:=fit.py
 endif

@@ -7,6 +7,7 @@ import math
 import numpy as np
 from tqdm import tqdm
 from scipy import optimize as opti
+from functools import partial
 import argparse
 import jax
 import jax.numpy as jnp
@@ -30,40 +31,22 @@ psr.add_argument('--demo', dest='demo', action='store_true', help='demo bool', d
 args = psr.parse_args()
 
 Demo = args.demo
-thres = 0.1
-N = [50, 100]
-warmup = [50, 100]
-samples = [50, 200]
-M = [14, 50]
-E = 2000
+thres = 0.05
+warmup = 200
+samples = 1000
+E = 0
 
-def lasso_select(pf_r, wave, mne):
-    pf_r = pf_r[np.argmin([norm_fit(pf_r[j], mne, wave, eta=0) for j in range(len(pf_r))])]
+def lasso_select(pf_r, wave, mne, eta=0):
+    pf_r = pf_r[np.argmin([loss(pf_r[j], mne, wave, eta) for j in range(len(pf_r))])]
     return pf_r
 
-def norm_fit(x, M, y, eta=0):
+def loss(x, M, y, eta=0):
     return np.power(y - np.matmul(M, x), 2).sum() + eta * x.sum()
 
-def model_light(wave, mne):
-    pf = numpyro.sample('weight', dist.HalfNormal(jnp.ones(N[0])))
-    y = numpyro.sample('y', dist.Normal(0, 1), obs=wave-jnp.matmul(mne, pf))
+def model(wave, mne, n, eta):
+    pf = numpyro.sample('weight', dist.HalfNormal(jnp.ones(n)))
+    y = numpyro.sample('y', dist.Normal(0, 1), obs=jnp.power(wave-jnp.matmul(mne, pf), 2) + eta*jnp.sum(pf))
     return y
-
-def model_heavy(wave, mne):
-    pf = numpyro.sample('weight', dist.HalfNormal(jnp.ones(N[1])))
-    y = numpyro.sample('y', dist.Normal(0, 1), obs=wave-jnp.matmul(mne, pf))
-    return y
-
-def polyopti(wave, mne, n, it=50000):
-    ans = np.ones(n).astype(np.float64) * 0.3
-    b = np.zeros((n, 2)).astype(np.float64); b[:, 1] = np.inf
-    ans = opti.fmin_l_bfgs_b(norm_fit, ans, args=(mne, wave, E), approx_grad=True, bounds=b, maxfun=it)
-    return ans[0]
-
-def ergodic(wave, mne, base, n):
-    omega = 2**n
-    b = np.argmin([norm_fit(np.array(list(['{:0'+str(n)+'b}'][0].format(i))).astype(np.float16) + base, mne, wave, eta=0) for i in range(omega)])
-    return np.array(list(['{:0'+str(n)+'b}'][0].format(b))).astype(np.float16) + base
 
 def main(fopt, fipt, reference):
     spe_pre = wff.read_model(reference)
@@ -77,10 +60,9 @@ def main(fopt, fipt, reference):
 
     rng_key = random.PRNGKey(0)
     rng_key, rng_key_ = random.split(rng_key)
-    nuts_kernel_light = NUTS(model_light, step_size=0.01, adapt_step_size=True)
-    nuts_kernel_heavy = NUTS(model_heavy, step_size=0.01, adapt_step_size=True)
-    mcmc_light = MCMC(nuts_kernel_light, num_warmup=warmup[0], num_samples=samples[0], num_chains=1, progress_bar=Demo, jit_model_args=True)
-    mcmc_heavy = MCMC(nuts_kernel_heavy, num_warmup=warmup[1], num_samples=samples[1], num_chains=1, progress_bar=Demo, jit_model_args=True)
+    model_collect = {}
+    nuts_kernel_collect = {}
+    mcmc_collect = {}
 
     lenfr = math.ceil(len(ent)/(args.num+1))
     num = int(re.findall(r'-\d+\.h5', fopt, flags=0)[0][1:-3])
@@ -95,62 +77,32 @@ def main(fopt, fipt, reference):
     for i in tqdm(range(num*lenfr, num*lenfr+l), disable=not Demo):
         cid = ent[i]['ChannelID']
         wave = wff.deduct_base(spe_pre[cid]['epulse'] * ent[i]['Waveform'], spe_pre[cid]['m_l'], spe_pre[cid]['thres'], 20, 'detail')
-        pos = np.argwhere(wave[spe_pre[cid]['peak_c']:] > spe_pre[cid]['thres']).flatten() - 2
+        pos = np.argwhere(wave[spe_pre[cid]['peak_c'] + 2:] > spe_pre[cid]['thres']).flatten()
+        pf = wave[pos]/(spe_pre[cid]['spe'].sum())
         flag = 1
         if len(pos) == 0:
             flag = 0
-        elif len(pos) > 0 and len(pos) <= M[1]:
-            mne = spe[cid][np.mod(np.arange(leng).reshape(leng, 1) - pos.reshape(1, len(pos)), leng)]
-            pf = polyopti(wave, mne, len(pos))
         else:
-            pos = np.sort(np.argpartition(wave[spe_pre[cid]['peak_c']:], -N[1])[-N[1]:]) - 2
+            if not len(pos) in mcmc_collect:
+                model_collect.update({len(pos) : partial(model, n=len(pos), eta=E)})
+                nuts_kernel_collect.update({len(pos) : NUTS(model_collect[len(pos)], step_size=0.01, adapt_step_size=True)})
+                mcmc_collect.update({len(pos) : MCMC(nuts_kernel_collect[len(pos)], num_warmup=warmup, num_samples=samples, num_chains=1, progress_bar=Demo, jit_model_args=True)})
+
             mne = spe[cid][np.mod(np.arange(leng).reshape(leng, 1) - pos.reshape(1, len(pos)), leng)]
-            mcmc_heavy.run(rng_key, wave=jnp.array(wave), mne=jnp.array(mne))
-            pf = lasso_select(np.array(mcmc_heavy.get_samples()['weight']), wave, mne)
-        pos = pos[pf > thres]
-        pf = pf[pf > thres]
-        if len(pos) == 0:
-            flag = 0
-        elif len(pos) > M[0]:
-            if len(pos) <= M[1]:
-                mne = spe[cid][np.mod(np.arange(leng).reshape(leng, 1) - pos.reshape(1, len(pos)), leng)]
-                pf = polyopti(wave, mne, len(pos))
-            else: 
-                pos = np.sort(pos[np.argpartition(pf, -N[0])[-N[0]:]])
-                mne = spe[cid][np.mod(np.arange(leng).reshape(leng, 1) - pos.reshape(1, len(pos)), leng)]
-                mcmc_light.run(rng_key, wave=jnp.array(wave), mne=jnp.array(mne))
-                pf = lasso_select(np.array(mcmc_light.get_samples()['weight']), wave, mne)
-            pos = pos[pf > thres]
-            pf = pf[pf > thres]
+            mcmc_collect[len(pos)].run(rng_key, wave=jnp.array(wave), mne=jnp.array(mne))
+            # pf = np.mean(np.array(mcmc_collect[len(pos)].get_samples()['weight']), axis=0)
+            pf = lasso_select(np.array(mcmc_collect[len(pos)].get_samples()['weight']), wave, mne)
             if len(pos) == 0:
                 flag = 0
-            elif len(pos) > M[0]:
-                if len(pos) <= M[1]:
-                    mne = spe[cid][np.mod(np.arange(leng).reshape(leng, 1) - pos.reshape(1, len(pos)), leng)]
-                    pf = polyopti(wave, mne, len(pos), it=500000)
-                else: 
-                    pos = np.sort(pos[np.argpartition(pf, -N[0])[-N[0]:]])
-                    mne = spe[cid][np.mod(np.arange(leng).reshape(leng, 1) - pos.reshape(1, len(pos)), leng)]
-                    mcmc_light.run(rng_key, wave=jnp.array(wave), mne=jnp.array(mne))
-                    pf = lasso_select(np.array(mcmc_light.get_samples()['weight']), wave, mne)
-            else:
-                mne = spe[cid][np.mod(np.arange(leng).reshape(leng, 1) - pos.reshape(1, len(pos)), leng)]
-                base = np.floor(pf)
-                pf = ergodic(wave, mne, base, len(pos))
-        else:
-            mne = spe[cid][np.mod(np.arange(leng).reshape(leng, 1) - pos.reshape(1, len(pos)), leng)]
-            base = np.floor(pf)
-            pf = ergodic(wave, mne, base, len(pos))
-        pf = np.around(pf)
-        pos = pos[pf > thres]
-        pf = pf[pf > thres]
         if flag == 0:
-            t = np.argwhere(wave == wave.min()).flatten()[:1] - spe_pre[cid]['peak_c']
+            t = np.array([np.argmax(wave)]) - spe_pre[cid]['peak_c']
             pf = np.array([1])
             pos = t if t[0] >= 0 else np.array([0])
+        pos_r = pos[pf > thres]
+        pf = pf[pf > thres]
         lenpf = len(pf)
         end = start + lenpf
-        dt['PETime'][start:end] = pos.astype(np.uint16)
+        dt['PETime'][start:end] = pos_r.astype(np.uint16)
         dt['Weight'][start:end] = pf.astype(np.float16)
         dt['EventID'][start:end] = ent[i]['EventID']
         dt['ChannelID'][start:end] = ent[i]['ChannelID']
@@ -160,7 +112,9 @@ def main(fopt, fipt, reference):
             b = min(ent[i]['EventID']*30*len(Chnum), len(tth))
             tth = tth[0:b]
             j = np.where(np.logical_and(tth['EventID'] == ent[i]['EventID'], tth['ChannelID'] == cid))
-            wff.demo(pos, pf, tth[j], spe_pre[cid], leng, pos, wave)
+            if len(tth[j]['PETime']) == 1:
+                print('here')
+            wff.demo(pos_r, pf, tth[j], spe_pre[cid], leng, pos, wave, cid)
     ipt.close()
     dt = dt[dt['Weight'] > 0]
     dt = np.sort(dt, kind='stable', order=['EventID', 'ChannelID', 'PETime'])
