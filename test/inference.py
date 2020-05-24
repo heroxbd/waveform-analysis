@@ -34,16 +34,16 @@ Demo = args.demo
 thres = 0.05
 warmup = 200
 samples = 1000
-E = 0
+E = 100
 
-def lasso_select(pf_r, wave, mne, eta=0):
-    pf_r = pf_r[np.argmin([loss(pf_r[j], mne, wave, eta) for j in range(len(pf_r))])]
+def lasso_select(pf_r, wave, mne):
+    pf_r = pf_r[np.argmin([loss(pf_r[j], mne, wave) for j in range(len(pf_r))])]
     return pf_r
 
-def loss(x, M, y, eta=0):
+def loss(x, M, y, eta=E):
     return np.power(y - np.matmul(M, x), 2).sum() + eta * x.sum()
 
-def model(wave, mne, n, eta):
+def model(wave, mne, n, eta=E):
     pf = numpyro.sample('weight', dist.HalfNormal(jnp.ones(n)))
     y = numpyro.sample('y', dist.Normal(0, 1), obs=jnp.power(wave-jnp.matmul(mne, pf), 2) + eta*jnp.sum(pf))
     return y
