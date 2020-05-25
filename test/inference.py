@@ -34,7 +34,7 @@ Demo = args.demo
 thres = 0.05
 warmup = 200
 samples = 1000
-E = 100
+E = 0
 
 def lasso_select(pf_r, wave, mne):
     pf_r = pf_r[np.argmin([loss(pf_r[j], mne, wave) for j in range(len(pf_r))])]
@@ -92,14 +92,14 @@ def main(fopt, fipt, reference):
             mcmc_collect[len(pos)].run(rng_key, wave=jnp.array(wave), mne=jnp.array(mne))
             # pf = np.mean(np.array(mcmc_collect[len(pos)].get_samples()['weight']), axis=0)
             pf = lasso_select(np.array(mcmc_collect[len(pos)].get_samples()['weight']), wave, mne)
-            if len(pos) == 0:
+            pos_r = pos[pf > thres]
+            pf = pf[pf > thres]
+            if len(pos_r) == 0:
                 flag = 0
         if flag == 0:
             t = np.array([np.argmax(wave)]) - spe_pre[cid]['peak_c']
             pf = np.array([1])
-            pos = t if t[0] >= 0 else np.array([0])
-        pos_r = pos[pf > thres]
-        pf = pf[pf > thres]
+            pos_r = t if t[0] >= 0 else np.array([0])
         lenpf = len(pf)
         end = start + lenpf
         dt['PETime'][start:end] = pos_r.astype(np.uint16)
