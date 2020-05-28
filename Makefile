@@ -30,9 +30,9 @@ $(tfold)/dist-$(set)/record-$(1)-%.csv: $(tfold)/dist-$(set)/distr-$(1)-%.h5
 	python3 test/csv_dist.py $$^ -o $$@
 $(tfold)/dist-$(set)/hist-$(1)-%.pdf: $(tfold)/dist-$(set)/distr-$(1)-%.h5
 	python3 test/draw_dist.py $$^ -o $$@
-$(tfold)/dist-$(set)/distr-$(1)-%.h5: $(datfoldi)/$(set)/$(prefix)%.h5 $(tfold)/resu-$(set)/$(1)-%.h5
+$(tfold)/dist-$(set)/distr-$(1)-%.h5: $(datfoldi)/$(set)/$(prefix)%.h5 $(tfold)/resu-$(set)/$(1)-%.h5 test/spe-$(set).h5
 	@mkdir -p $$(dir $$@)
-	python3 test/test_dist.py $$(word 2,$$^) --ref $$< -o $$@ > $$@.log 2>&1
+	python3 test/test_dist.py $$(word 2,$$^) --ref $$< $$(word 3,$$^) -o $$@ > $$@.log 2>&1
 endef
 $(foreach i,$(mod),$(eval $(call measure,$(i))))
 define split
@@ -41,7 +41,7 @@ $(tfold)/resu-$(set)/sub-$(1).h5: $(tfold)/resu-$(set)/tot-$(1).h5
 	python3 test/adjust.py $$^ -o $$@
 $(tfold)/resu-$(set)/tot-$(1).h5: $(fragseq:%=$(tfold)/unad-$(set)/unad-$(1)-%.h5)
 	@mkdir -p $$(dir $$@)
-	python3 test/integrate.py $$^ --num ${fragnum} -o $$@
+	python3 test/integrate.py $$^ --num ${fragnum} --met $(method) -o $$@
 $(tfold)/unad-$(set)/unad-$(1)-%.h5: $(datfoldi)/$(set)/$(prefix)$(1).h5 test/spe-$(set).h5
 	@mkdir -p $$(dir $$@)
 	export OMP_NUM_THREADS=2 && python3 test/$(core) $$< --met $(method) --ref $$(word 2,$$^) --num $(fragnum) -o $$@ > $$@.log 2>&1

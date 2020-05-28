@@ -10,6 +10,7 @@ psr = argparse.ArgumentParser()
 psr.add_argument('-o', dest='opt', help='output file')
 psr.add_argument('ipt', nargs='+', help='input file')
 psr.add_argument('--num', type=int, help='fragment number')
+psr.add_argument('--met', type=str, help='fitting method')
 psr.add_argument('-p', dest='print', action='store_false', help='print bool', default=True)
 args = psr.parse_args()
 
@@ -28,7 +29,8 @@ def main(unad_path, fopt, upnum):
     dt = dt[:num]
     dt = np.sort(dt, kind='stable', order=['EventID', 'ChannelID', 'PETime'])
     with h5py.File(fopt, 'w') as adj:
-        adj.create_dataset('Answer', data=dt, compression='gzip')
+        dset = adj.create_dataset('Answer', data=dt, compression='gzip')
+        dset.attrs['Method'] = args.met
         print('The output file path is {}'.format(fopt), end=' ', flush=True)
 
 def totlen(unad_path, num):

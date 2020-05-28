@@ -7,7 +7,7 @@ import argparse
 psr = argparse.ArgumentParser()
 psr.add_argument('-o', dest='opt', help='output file')
 psr.add_argument('ipt', help='input file')
-psr.add_argument('-p', dest='print', action='store_false', help='print bool', default=True)
+psr.add_argument('-p', dest='pri', action='store_false', help='print bool', default=True)
 args = psr.parse_args()
 
 import csv
@@ -23,11 +23,11 @@ import matplotlib.gridspec as gridspec
 
 plt.rcParams['savefig.dpi'] = 300
 plt.rcParams['figure.dpi'] = 300
-plt.rcParams['font.size'] = 16
+plt.rcParams['font.size'] = 10
 plt.rcParams['lines.markersize'] = 2
 plt.rcParams['lines.linewidth'] = 1.0
 
-if args.print:
+if args.pri:
     sys.stdout = None
 
 def my_cmap():
@@ -42,15 +42,15 @@ if __name__ == '__main__':
     mycmp = my_cmap()
     with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as distfile:
         dt = distfile['Record']
+        method = dt.attrs['Method']
         pdf = PdfPages(args.opt)
         N = int(np.percentile(dt['wdist'], 90)+1)
 
         penum = np.unique(dt['PEnum'])
-        penum = np.sort(penum)
-        l = min(100, penum.max())
+        l = min(50, penum.max())
         wdist_stats = np.zeros((l, 4))
         pdist_stats = np.zeros((l, 4))
-        for i in np.arange(min(100, penum.max())):
+        for i in np.arange(l):
             if i+1 in penum:
                 dtwpi = dt['wdist'][dt['PEnum'] == i+1]
                 dtppi = dt['pdist'][dt['PEnum'] == i+1]
@@ -62,18 +62,28 @@ if __name__ == '__main__':
                 pdist_stats[i, 1] = np.median(np.absolute(dtppi - np.median(dtppi)))
                 pdist_stats[i, 2] = np.mean(dtppi)
                 pdist_stats[i, 3] = np.std(dtppi)
+                pediff = dt['PEdiff'][dt['PEnum'] == i+1]
+                rss_recon = dt['RSS_recon'][dt['PEnum'] == i+1]
+                rss_truth = dt['RSS_truth'][dt['PEnum'] == i+1]
                 plt.rcParams['figure.figsize'] = (12, 6)
                 fig = plt.figure()
-                ax1 = fig.add_subplot(121)
-                ax1.hist(dtwpi[dtwpi < N], bins=50)
+                gs = gridspec.GridSpec(2, 2, figure=fig, left=0.05, right=0.95, top=0.9, bottom=0.1, wspace=0.1, hspace=0.2)
+                ax1 = fig.add_subplot(gs[0, 0])
+                ax1.hist(dtwpi[dtwpi < N], bins=100)
                 a = (dtwpi < N).sum()
                 b = len(dtwpi)
-                ax1.set_title('count {}(<{})/{}={:.2f}'.format(a, N, b, a/b), fontsize=12)
+                ax1.set_title('count {}(<{})/{}={:.2f}'.format(a, N, b, a/b))
                 ax1.set_xlabel(r'W-dist/ns')
-                ax2 = fig.add_subplot(122)
-                ax2.hist(dtppi, bins=20)
+                ax2 = fig.add_subplot(gs[0, 1])
+                ax2.hist(dtppi, bins=100)
                 ax2.set_xlabel(r'P-dist')
-                ax2.set_title('count={}'.format(len(dtppi)), fontsize=12)
+                ax3 = fig.add_subplot(gs[1, 0])
+                ax3.hist(pediff, bins=100)
+                ax3.set_xlabel(r'xpp_convolution PE diff')
+                ax4 = fig.add_subplot(gs[1, 1])
+                bins = np.linspace(-50, 50, 100)
+                ax4.hist(rss_recon - rss_truth, bins=bins, density=1)
+                ax4.set_xlabel(r'$\mathrm{RSS}_{recon} - \mathrm{RSS}_{truth}/\mathrm{mV}^{2}$, within (-100, 100)')
                 fig.suptitle(args.ipt.split('/')[-1] + ' PEnum={:.0f}'.format(i+1))
                 pdf.savefig(fig)
                 plt.close()
@@ -84,12 +94,12 @@ if __name__ == '__main__':
 
         plt.rcParams['figure.figsize'] = (12, 6)
         fig = plt.figure()
-        gs = gridspec.GridSpec(2, 2, figure=fig)
+        gs = gridspec.GridSpec(2, 2, figure=fig, left=0.1, right=0.9, top=0.9, bottom=0.1, wspace=0.2, hspace=0.2)
         ax1 = fig.add_subplot(gs[0, 0])
         ax1.hist(dt['wdist'][dt['wdist']<N], bins=100, density=1)
         a = (dt['wdist'] < N).sum()
         b = len(dt['wdist'])
-        ax1.set_title('count {}(Wd<{})/{}={:.2f}'.format(a, N, b, a/b), fontsize=12)
+        ax1.set_title('count {}(Wd<{})/{}={:.2f}'.format(a, N, b, a/b))
         ax2 = fig.add_subplot(gs[1, 0])
         ax2.hist(dt['pdist'], bins=100, density=1)
         ax3 = fig.add_subplot(gs[:, 1])
@@ -98,14 +108,15 @@ if __name__ == '__main__':
         fig.colorbar(h2[3], ax=ax3, aspect=50)
         ax3.set_xlabel(r'W-dist/ns')
         ax3.set_ylabel(r'P-dist')
-        ax3.set_title('W&P-dist histogram, Wd<{}, flawed'.format(N), fontsize=12)
-        fig.suptitle(args.ipt.split('/')[-1] + ' Dist stats')
+        ax3.set_title('W&P-dist histogram, Wd<{}, flawed'.format(N))
+        fig.suptitle(args.ipt.split('/')[-1] + ' Dist stats, method = ' + str(method))
         plt.close()
         pdf.savefig(fig)
 
         plt.rcParams['figure.figsize'] = (12, 6)
         fig = plt.figure()
-        ax1 = fig.add_subplot(121)
+        gs = gridspec.GridSpec(1, 2, figure=fig, left=0.1, right=0.9, top=0.9, bottom=0.1, wspace=0.2, hspace=0.2)
+        ax1 = fig.add_subplot(gs[0, 0])
         ax1.plot(wdist_stats[:, 0], c='C0', label='W median')
         ax1.plot(wdist_stats[:, 0] + wdist_stats[:, 1], c='C1', label='W median + mad')
         ax1.plot(wdist_stats[:, 0] - wdist_stats[:, 1], c='C1', label='W median - mad')
@@ -116,7 +127,7 @@ if __name__ == '__main__':
         ax1.set_ylabel(r'W-dist')
         ax1.set_title(r'W-dist vs PEnum stats')
         ax1.legend()
-        ax2 = fig.add_subplot(122)
+        ax2 = fig.add_subplot(gs[0, 1])
         ax2.plot(pdist_stats[:, 0], c='C0', label='P median')
         ax2.plot(pdist_stats[:, 0] + pdist_stats[:, 1], c='C1', label='P median + mad')
         ax2.plot(pdist_stats[:, 0] - pdist_stats[:, 1], c='C1', label='P median - mad')
@@ -127,7 +138,7 @@ if __name__ == '__main__':
         ax2.set_ylabel(r'P-dist')
         ax2.set_title(r'P-dist vs PEnum stats')
         ax2.legend()
-        fig.suptitle(args.ipt.split('/')[-1] + ' Dist stats')
+        fig.suptitle(args.ipt.split('/')[-1] + ' Dist stats, method = ' + str(method))
         plt.close()
         pdf.savefig(fig)
 
