@@ -1,18 +1,21 @@
+import os
+import re
 import argparse
 psr = argparse.ArgumentParser()
 psr.add_argument('ipt', help='input file prefix')
-psr.add_argument('-o', '--outputdir', dest='opt', help='output_dir')
+psr.add_argument('-o', '--output', dest='opt', help='output')
 psr.add_argument('-n', '--channelid', dest='cid', type=int)
 psr.add_argument('-m', '--maxsetnumber', dest='msn', type=int, default=0)
 psr.add_argument('-B', '--batchsize', dest='BAT', type=int, default=64)
-psr.add_argument('-P', '--pretrained', dest='pretained_model', type=str, default="")
 args = psr.parse_args()
+
+SavePath = os.path.dirname(args.opt) + '/'
+Model = args.opt
 SavePath = args.opt
 filename = args.ipt
 ChannelID = args.cid
 max_set_number = args.msn
 BATCHSIZE = args.BAT
-Model = args.pretained_model
 
 import numpy as np
 # import numpy.random as random
@@ -168,7 +171,7 @@ for epoch in range(25):  # loop over the dataset multiple times
         testing_record.write("%4f " % (test_performance))
         testing_result.append(test_performance)
         # saving network
-        save_name = SavePath + "_epoch" + str(epoch) + "_loss" + "%.4f" % (test_performance)
+        save_name = SavePath + "_epoch" + '{:02d}'.format(epoch) + "_loss" + "%.4f" % (test_performance)
         torch.save(net, save_name)
 
 print('Training Finished')
@@ -180,3 +183,14 @@ np.savez(testing_record_name, testing_result)
 training_record.close()
 testing_record.close()
 PreFile.close()
+
+fileSet = os.listdir(SavePath)
+matchrule = re.compile(r'(\d+)_epoch(\d+)_loss(\d+(\.\d*)?|\.\d+)')
+NetLoss_reciprocal = []
+for filename in fileSet :
+    if '_epoch' in filename : NetLoss_reciprocal.append(1 / float(matchrule.match(filename)[3]))
+    else : NetLoss_reciprocal.append(0)
+net_name = fileSet[NetLoss_reciprocal.index(max(NetLoss_reciprocal))]
+modelpath = SavePath + net_name
+
+os.system('ln -snf ' + modelpath + ' ' + args.opt)

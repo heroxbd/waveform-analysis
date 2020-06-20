@@ -1,17 +1,20 @@
 SHELL:=bash
 jinpseq:=$(shell seq 0 9)
 jinppre:=ztraining-
+jinpchannelN:=$(shell seq -f '%02g' 0 29)
 junoseq:=2 4
 junopre:=junoWave
+junochannelN:=$(shell seq 0 2)
 datfold:=/srv/waveform-analysis/dataset
 fragnum:=49
 fragseq:=$(shell seq 0 ${fragnum})
-tfold:=test/$(method)
+tfold:=$(method)
 ifdef chunk
 	seq:=x
     datfoldi:=dataset
 else
 	seq:=$($(set)seq)
+	channelN:=$($(set)channelN)
     datfoldi:=$(datfold)
 endif
 prefix:=$($(set)pre)
@@ -22,9 +25,13 @@ else
     core:=fit.py
 endif
 
-.PHONY: all
+NetDir:=/srv/waveform-analysis/$(set)/Network_Models_ztraining-all
+PreDir:=$(NetDir)/PreProcess
+NetStore_prefix:=$(NetDir)/$(prefix)Channel
+TrainData:=$(seq:%=$(datfold)/$(set)/$(prefix)%.h5)
+Nets:=$(channelN:%=$(NetDir)/Nets/Channel%.torch_net)
 
-all: $(seq:%=$(tfold)/dist-$(set)/hist-sub-%.pdf) $(seq:%=$(tfold)/dist-$(set)/record-sub-%.csv) $(seq:%=$(tfold)/dist-$(set)/hist-tot-%.pdf) $(seq:%=$(tfold)/dist-$(set)/record-tot-%.csv)
+all: $(resultseq:%=$(tfold)/dist-$(set)/hist-sub-%.pdf) $(resultseq:%=$(tfold)/dist-$(set)/record-sub-%.csv) $(resultseq:%=$(tfold)/dist-$(set)/hist-tot-%.pdf) $(resultseq:%=$(tfold)/dist-$(set)/record-tot-%.csv)
 define measure
 $(tfold)/dist-$(set)/record-$(1)-%.csv: $(tfold)/dist-$(set)/distr-$(1)-%.h5
 	python3 csv_dist.py $$^ -o $$@
@@ -35,10 +42,10 @@ $(tfold)/dist-$(set)/distr-$(1)-%.h5: $(datfoldi)/$(set)/$(prefix)%.h5 $(tfold)/
 	python3 test_dist.py $$(word 2,$$^) --ref $$< $$(word 3,$$^) -o $$@ > $$@.log 2>&1
 endef
 $(foreach i,$(mod),$(eval $(call measure,$(i))))
+$(tfold)/resu-$(set)/sub-%.h5: $(tfold)/resu-$(set)/tot-%.h5
+	@mkdir -p $(dir $@)
+	python3 adjust.py $^ -o $@
 define split
-$(tfold)/resu-$(set)/sub-$(1).h5: $(tfold)/resu-$(set)/tot-$(1).h5
-	@mkdir -p $$(dir $$@)
-	python3 adjust.py $$^ -o $$@
 $(tfold)/resu-$(set)/tot-$(1).h5: $(fragseq:%=$(tfold)/unad-$(set)/unad-$(1)-%.h5)
 	@mkdir -p $$(dir $$@)
 	python3 integrate.py $$^ --num ${fragnum} --met $(method) -o $$@
@@ -46,7 +53,32 @@ $(tfold)/unad-$(set)/unad-$(1)-%.h5: $(datfoldi)/$(set)/$(prefix)$(1).h5 spe-$(s
 	@mkdir -p $$(dir $$@)
 	export OMP_NUM_THREADS=2 && python3 $(core) $$< --met $(method) --ref $$(word 2,$$^) --num $(fragnum) -o $$@ > $$@.log 2>&1
 endef
-$(foreach i,$(seq),$(eval $(call split,$(i))))
+define predict
+$(tfold)/resu-$(set)/tot-$(1).h5 : $(datfold)/$(set)/$(prefix)$(1).h5 $(Nets) | .Bulletin
+	@mkdir -p $(dir $$@)
+	python3 -u Prediction_Processing_Total.py $$< $$@ $(NetDir)/Nets -D 1 > $(dir $$@)Analysis.log 2>&1
+endef
+ifneq ($(method), takara)
+	$(foreach i,$(resultseq),$(eval $(call split,$(i))))
+else
+	$(foreach i,$(resultseq),$(eval $(call predict,$(i))))
+endif
+
+.Bulletin:
+	rm -f ./.bulletin.swp
+
+model : $(Nets)
+
+$(Net) : $(channelN:%=$(NetStore_prefix)%/.Training_finished)
+
+$(NetStore_prefix)%/.Training_finished : $(NetDir)/PreProcess/Pre_Channel%.h5 | .Bulletin
+	@mkdir -p $(dir $@)
+	python3 -u Data_Processing.py $^ -n $* -B 64 -o $(NetDir)/Nets/Channel$*.torch_net > $(dir $@)Train.log 2>&1 
+	@touch $@
+
+PreProcess : $(TrainData)
+	@mkdir -p $(PreDir)
+	python3 -u Data_Pre-Processing.py $(datfold)/$(set)/$(prefix) -o $(PreDir) -N $(seq) > $(PreDir)/PreProcess.log 2>&1
 
 $(datfoldi)/$(set)/$(prefix)x.h5: $(datfold)/$(set)/$(prefix)$(chunk).h5
 	@mkdir -p $(dir $@)
@@ -65,88 +97,6 @@ $(datfold)/$(set)/junoWave4.h5:
 	@mkdir -p $(dir $@)
 	wget https://cloud.tsinghua.edu.cn/f/846ecb6335564714902b/?dl=1 -O $@
 
-$(datfold)/$(set)/ztraining-0.h5:
-$(datfold)/$(set)/ztraining-1.h5:
-$(datfold)/$(set)/ztraining-2.h5:
-
-.DELETE_ON_ERROR:
-.SECONDARY:
-all : help
-
-help:
-	@cat ./mannual.txt
-
-jinppre:=ztraining-
-junopre:=junoWave
-jinpchannelN:=$(shell seq 0 29)
-junochannelN:=$(shell seq 0 2)
-jinpseq:=$(shell seq 0 9)
-data_prefix:=$($(set)pre)
-DataDir = /srv/waveform-analysis/dataset/$(set)
-datfold:=/srv/waveform-analysis/dataset
-
-TrainDataDir = $(DataDir)
-NetDir = /srv/waveform-analysis/Network_Models_ztraining-all
-PreDir = $(NetDir)/PreProcess
-NetStore_prefix = $(NetDir)/$(data_prefix)Channel
-TrainData = $(wildcard $(TrainDataDir)/$(data_prefix)*.h5)
-PreData = $(shell seq -f "$(NetDir)/PreProcess/Pre_Channel%g.h5" 0 29)
-Training = $(patsubst $(NetDir)/PreProcess/Pre_Channel%.h5, $(NetStore_prefix)%/.Training_finished, $(PreData))
-Nets = $(patsubst $(NetDir)/PreProcess/Pre_Channel%.h5, $(NetDir)/Nets/Channel%.torch_net, $(PreData))
-PreTrained_Model = 
-
-ResultDir = ./
-#test filename
-testfile_prefix = $(DataDir)/$(data_prefix)
-testfile = $(wildcard $(testfile_prefix)$(TestFileNo).h5)
-# Result storage name
-Result_prefix = $(ResultDir)Analyzing_Results_$(data_prefix)
-Result = $(patsubst $(testfile_prefix)%.h5,$(Result_prefix)%/Prediction.h5, $(testfile))
-
-test : $(patsubst $(testfile_prefix)%.h5,$(Result_prefix)%/DistanceDistribution.pdf,$(testfile)) $(patsubst $(testfile_prefix)%.h5,$(Result_prefix)%/DistanceDistribution.csv,$(testfile))
-
-Analysis : $(Result)
-
-model : $(Nets)
-
-.Bulletin:
-	rm -f ./.bulletin.swp
-
-$(Result_prefix)%/Prediction.h5 : $(testfile_prefix)%.h5 $(Nets) | .Bulletin
-	@mkdir -p $(dir $@)
-	python3 -u Prediction_Processing_Total.py $< $@ $(NetDir)/Nets -D 1 > $(dir $@)Analysis.log 2>&1
-
-$(Result_prefix)%/DistanceDistribution.csv : $(Result_prefix)%/Record.h5
-	python3 -u ../csv_dist.py $^ -o $@
-
-$(Result_prefix)%/DistanceDistribution.pdf : $(Result_prefix)%/Record.h5
-	python3 -u ../draw_dist.py $^ -o $@
-
-$(Result_prefix)%/Record.h5 : $(Result_prefix)%/Prediction.h5 $(testfile_prefix)%.h5
-	python3 -u ../test_dist.py $< --ref $(word 2,$^) -o $@
-
-$(PreData) : PreProcess
-
-PreProcess : $(TrainData)
-	@mkdir -p $(PreDir)
-	python3 -u Data_Pre-Processing.py $(TrainDataDir)/$(data_prefix) -o $(PreDir) -N $(jinpseq) > $(PreDir)/PreProcess.log 2>&1
-
-$(NetStore_prefix)%/.Training_finished : $(NetDir)/PreProcess/Pre_Channel%.h5 | .Bulletin
-	@mkdir -p $(dir $@)
-	python3 -u Data_Processing.py $^ -n $* -B 64 -o $(dir $@) -P $(PreTrained_Model) > $(dir $@)Train.log  2>&1 
-	@touch $@
-
-$(NetDir)/Nets/Channel%.torch_net : $(NetStore_prefix)%/.Training_finished
-	@mkdir -p $(dir $@)
-	python3 -u Choose_Nets.py $(dir $<) $@
-
-clean :
-
 .DELETE_ON_ERROR: 
 
 .SECONDARY:
-
-.PHONY : all test clean
-
-.PHONY : Analysis model .Bulletin
-
