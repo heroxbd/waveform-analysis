@@ -3,12 +3,17 @@ all : help
 help:
 	@cat ./mannual.txt
 
-data_prefix = ztraining-
-DataDir = ../../dataset/jinp
+jinppre:=ztraining-
+junopre:=junoWave
+jinpchannelN:=$(shell seq 0 29)
+junochannelN:=$(shell seq 0 2)
+jinpseq:=$(shell seq 0 9)
+data_prefix:=$($(set)pre)
+DataDir = /srv/waveform-analysis/dataset/$(set)
+datfold:=/srv/waveform-analysis/dataset
 
 TrainDataDir = $(DataDir)
-MaxSet = 10000000
-NetDir = /srv/work_wuyy/Network_Models_ztraining-all
+NetDir = /srv/waveform-analysis/Network_Models_ztraining-all
 PreDir = $(NetDir)/PreProcess
 NetStore_prefix = $(NetDir)/$(data_prefix)Channel
 TrainData = $(wildcard $(TrainDataDir)/$(data_prefix)*.h5)
@@ -17,7 +22,6 @@ Training = $(patsubst $(NetDir)/PreProcess/Pre_Channel%.h5, $(NetStore_prefix)%/
 Nets = $(patsubst $(NetDir)/PreProcess/Pre_Channel%.h5, $(NetDir)/Nets/Channel%.torch_net, $(PreData))
 PreTrained_Model = 
 
-FileNo = *
 ResultDir = ./
 #test filename
 testfile_prefix = $(DataDir)/$(data_prefix)
@@ -25,8 +29,6 @@ testfile = $(wildcard $(testfile_prefix)$(TestFileNo).h5)
 # Result storage name
 Result_prefix = $(ResultDir)Analyzing_Results_$(data_prefix)
 Result = $(patsubst $(testfile_prefix)%.h5,$(Result_prefix)%/Prediction.h5, $(testfile))
-W_dist_upper_limit=20
-
 
 test : $(patsubst $(testfile_prefix)%.h5,$(Result_prefix)%/DistanceDistribution.pdf,$(testfile)) $(patsubst $(testfile_prefix)%.h5,$(Result_prefix)%/DistanceDistribution.csv,$(testfile))
 
@@ -54,7 +56,7 @@ $(PreData) : PreProcess
 
 PreProcess : $(TrainData)
 	@mkdir -p $(PreDir)
-	python3 -u Data_Pre-Processing.py $(TrainDataDir)/$(data_prefix) -o $(PreDir) -N $(MaxSet) > $(PreDir)/PreProcess.log 2>&1
+	python3 -u Data_Pre-Processing.py $(TrainDataDir)/$(data_prefix) -o $(PreDir) -N $(jinpseq) > $(PreDir)/PreProcess.log 2>&1
 
 $(NetStore_prefix)%/.Training_finished : $(NetDir)/PreProcess/Pre_Channel%.h5 | .Bulletin
 	@mkdir -p $(dir $@)
