@@ -4,7 +4,7 @@ jinppre:=ztraining-
 jinpchannelN:=$(shell seq -f '%02g' 0 29)
 junoseq:=2 4
 junopre:=junoWave
-junochannelN:=$(shell seq 0 2)
+junochannelN:=$(shell seq 0 3)
 datfold:=/srv/waveform-analysis/dataset
 fragnum:=49
 fragseq:=$(shell seq 0 ${fragnum})
@@ -73,7 +73,8 @@ $(datfold)/$(set)/Nets/Channel%.torch_net : $(datfold)/$(set)/$(prefix)Channel%/
 
 $(datfold)/$(set)/$(prefix)Channel%/.Training_finished : $(datfold)/$(set)/PreProcess/Pre_Channel%.h5 | .Bulletin
 	@mkdir -p $(dir $@)
-	python3 -u Data_Processing.py $^ -n $* -B 64 -o $(datfold)/$(set)/Nets/Channel$*.torch_net > $(dir $@)Train.log 2>&1 
+	@mkdir -p $(datfold)/$(set)/Nets
+	python3 -u Data_Processing.py $^ -n $* -B 64 -o $(datfold)/$(set)/Nets/Channel$*.torch_net $(dir $@) > $(dir $@)Train.log 2>&1
 	@touch $@
 
 $(PreData) : PreProcess
