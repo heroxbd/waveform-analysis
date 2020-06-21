@@ -11,9 +11,8 @@ args = psr.parse_args()
 
 SavePath = os.path.dirname(args.opt) + '/'
 Model = args.opt
-SavePath = args.opt
-filename = args.ipt
 ChannelID = args.cid
+filename = args.ipt
 max_set_number = args.msn
 BATCHSIZE = args.BAT
 

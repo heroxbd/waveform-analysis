@@ -52,7 +52,7 @@ def AssignStream(WindowSize) :
     return stream
 
 
-print("training data pre-processing savepath is {}".format(SavePath))
+print("training data pre-processing savepath is {}".format(os.path.dirname(SavePath)))
 print("Initialization Finished, consuming {:.5f}s.".format(time() - start))
 
 
@@ -141,7 +141,7 @@ def PreProcess(channelid) :
     HitSpectrum = Make_Time_Vector(Truth_of_this_channel, Waves_of_this_channel)
 
     # create Pre-Processed output file
-    Prefile = tables.open_file(SavePath + "/Pre_Channel{:02d}.h5".format(channelid), mode="w", title="Pre-Processed-Training-Data")
+    Prefile = tables.open_file(SavePath + "{:02d}.h5".format(channelid), mode="w", title="Pre-Processed-Training-Data")
     # Create group and tables
     TrainDataTable = Prefile.create_table("/", "TrainDataTable", PreProcessedData, "Wave and HitSpectrum")
     tablerow = TrainDataTable.row

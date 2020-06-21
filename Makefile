@@ -24,14 +24,18 @@ ifeq ($(method), mcmc)
 else
     core:=fit.py
 endif
+ifeq ($(method), takara)
+    predict:=nn
+else
+    predict:=fit
+endif
 
-NetDir:=/srv/waveform-analysis/$(set)/Network_Models_ztraining-all
-PreDir:=$(NetDir)/PreProcess
-NetStore_prefix:=$(NetDir)/$(prefix)Channel
-TrainData:=$(seq:%=$(datfold)/$(set)/$(prefix)%.h5)
-Nets:=$(channelN:%=$(NetDir)/Nets/Channel%.torch_net)
+PreData:=$(channelN:%=$(datfold)/$(set)/PreProcess/Pre_Channel%.h5)
+Nets:=$(channelN:%=$(datfold)/$(set)/Nets/Channel%.torch_net)
 
-all: $(resultseq:%=$(tfold)/dist-$(set)/hist-sub-%.pdf) $(resultseq:%=$(tfold)/dist-$(set)/record-sub-%.csv) $(resultseq:%=$(tfold)/dist-$(set)/hist-tot-%.pdf) $(resultseq:%=$(tfold)/dist-$(set)/record-tot-%.csv)
+.PHONY : all
+
+all: $(rseq:%=$(tfold)/dist-$(set)/hist-sub-%.pdf) $(rseq:%=$(tfold)/dist-$(set)/record-sub-%.csv) $(rseq:%=$(tfold)/dist-$(set)/hist-tot-%.pdf) $(rseq:%=$(tfold)/dist-$(set)/record-tot-%.csv)
 define measure
 $(tfold)/dist-$(set)/record-$(1)-%.csv: $(tfold)/dist-$(set)/distr-$(1)-%.h5
 	python3 csv_dist.py $$^ -o $$@
@@ -45,7 +49,7 @@ $(foreach i,$(mod),$(eval $(call measure,$(i))))
 $(tfold)/resu-$(set)/sub-%.h5: $(tfold)/resu-$(set)/tot-%.h5
 	@mkdir -p $(dir $@)
 	python3 adjust.py $^ -o $@
-define split
+define fit
 $(tfold)/resu-$(set)/tot-$(1).h5: $(fragseq:%=$(tfold)/unad-$(set)/unad-$(1)-%.h5)
 	@mkdir -p $$(dir $$@)
 	python3 integrate.py $$^ --num ${fragnum} --met $(method) -o $$@
@@ -53,32 +57,30 @@ $(tfold)/unad-$(set)/unad-$(1)-%.h5: $(datfoldi)/$(set)/$(prefix)$(1).h5 spe-$(s
 	@mkdir -p $$(dir $$@)
 	export OMP_NUM_THREADS=2 && python3 $(core) $$< --met $(method) --ref $$(word 2,$$^) --num $(fragnum) -o $$@ > $$@.log 2>&1
 endef
-define predict
+define nn
 $(tfold)/resu-$(set)/tot-$(1).h5 : $(datfold)/$(set)/$(prefix)$(1).h5 $(Nets) | .Bulletin
 	@mkdir -p $(dir $$@)
-	python3 -u Prediction_Processing_Total.py $$< $$@ $(NetDir)/Nets -D 1 > $(dir $$@)Analysis.log 2>&1
+	python3 -u Prediction_Processing_Total.py $$< $$@ $(datfold)/$(set)/Nets -D 1 > $(dir $$@)Analysis.log 2>&1
 endef
-ifneq ($(method), takara)
-	$(foreach i,$(resultseq),$(eval $(call split,$(i))))
-else
-	$(foreach i,$(resultseq),$(eval $(call predict,$(i))))
-endif
+$(foreach i,$(rseq),$(eval $(call $(predict),$(i))))
 
 .Bulletin:
 	rm -f ./.bulletin.swp
 
 model : $(Nets)
 
-$(Net) : $(channelN:%=$(NetStore_prefix)%/.Training_finished)
+$(datfold)/$(set)/Nets/Channel%.torch_net : $(datfold)/$(set)/$(prefix)Channel%/.Training_finished ;
 
-$(NetStore_prefix)%/.Training_finished : $(NetDir)/PreProcess/Pre_Channel%.h5 | .Bulletin
+$(datfold)/$(set)/$(prefix)Channel%/.Training_finished : $(datfold)/$(set)/PreProcess/Pre_Channel%.h5 | .Bulletin
 	@mkdir -p $(dir $@)
-	python3 -u Data_Processing.py $^ -n $* -B 64 -o $(NetDir)/Nets/Channel$*.torch_net > $(dir $@)Train.log 2>&1 
+	python3 -u Data_Processing.py $^ -n $* -B 64 -o $(datfold)/$(set)/Nets/Channel$*.torch_net > $(dir $@)Train.log 2>&1 
 	@touch $@
 
-PreProcess : $(TrainData)
-	@mkdir -p $(PreDir)
-	python3 -u Data_Pre-Processing.py $(datfold)/$(set)/$(prefix) -o $(PreDir) -N $(seq) > $(PreDir)/PreProcess.log 2>&1
+$(PreData) : PreProcess
+
+PreProcess : $(seq:%=$(datfold)/$(set)/$(prefix)%.h5)
+	@mkdir -p $(datfold)/$(set)/PreProcess
+	python3 -u Data_Pre-Processing.py $(datfold)/$(set)/$(prefix) -o $(datfold)/$(set)/PreProcess/Pre_Channel -N $(seq) > $(datfold)/$(set)/PreProcess/PreProcess.log 2>&1
 
 $(datfoldi)/$(set)/$(prefix)x.h5: $(datfold)/$(set)/$(prefix)$(chunk).h5
 	@mkdir -p $(dir $@)
