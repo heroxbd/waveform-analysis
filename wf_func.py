@@ -123,6 +123,33 @@ def xpp_convol(pet, wgt):
         pet = seg['PETime'][np.argmax(seg['Weight'])]
     return pet, pwe
 
+def phi_select(pet, wgt):
+    pwe = np.floor(wgt)
+    resi = wgt - pwe
+    pen = np.round(np.sum(resi))
+    phi = np.zeros_like(wgt)
+    for i in range(len(pet)):
+        le = np.power(np.abs(pet[i] + 0.5 - pet), 1)
+        phi[i] += np.sum(resi * np.exp(-le) / le)
+        ld = np.power(np.abs(pet[i] + 0.5 - (pet + 1)), 1)
+        phi[i] += np.sum(resi * np.exp(-ld) / ld)
+    plt.figure()
+    plt.vlines(pet, -wgt, 0, color='b')
+    plt.vlines(pet, 0, phi, color='k')
+    plt.savefig('demo.png')
+    plt.close()
+    panel = np.zeros(np.max(pet) + 3)
+    panel[pet + 1] = phi
+    peak_pet = np.argwhere(np.diff(np.diff(panel)) < 0).flatten()
+    pen = int(min(len(peak_pet), pen))
+    pet_a = peak_pet[np.argsort(panel[peak_pet])[-pen:]]
+    for i in range(len(pet)):
+        if pet[i] in pet_a:
+            pwe[i] += 1
+    pet = pet[pwe > 0]
+    pwe = pwe[pwe > 0]
+    return pet, pwe
+
 def norm_fit(x, M, y, eta=0):
     return np.power(y - np.matmul(M, x), 2).sum() + eta * x.sum()
 
@@ -243,7 +270,8 @@ def demo(pet, pwe, tth, spe_pre, leng, possible, wave, cid):
     pf1 = np.zeros(leng); pf1[pet] = pwe
     wave1 = np.convolve(spe_pre['spe'], pf1, 'full')[:leng]
     print('before Resi-norm = {}'.format(np.linalg.norm(wave-wave1)))
-    pet_a, pwe_a = xpp_convol(pet, pwe)
+#     pet_a, pwe_a = xpp_convol(pet, pwe)
+    pet_a, pwe_a = phi_select(pet, pwe)
     print('after PETime = {}, Weight = {}'.format(pet_a, pwe_a))
     wdist_a = scipy.stats.wasserstein_distance(tru_pet, pet_a, v_weights=pwe_a)
     q_a = np.sum(pwe_a)
@@ -254,8 +282,8 @@ def demo(pet, pwe, tth, spe_pre, leng, possible, wave, cid):
     print('after Resi-norm = {}'.format(np.linalg.norm(wave-wave_a)))
     plt.plot(wave, c='b', label='original WF')
     plt.plot(wave0, c='k', label='truth WF')
-    plt.plot(wave1, c='y', label='before xpp_convol WF')
-    plt.plot(wave_a, c='m', label='after xpp_convol WF')
+    plt.plot(wave1, c='y', label='before adjust WF')
+    plt.plot(wave_a, c='m', label='after adjust WF')
     plt.scatter(possible, wave[possible], marker='+', c='r')
     plt.xlabel(r'Time/[ns]')
     plt.ylabel(r'ADC')
