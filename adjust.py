@@ -16,7 +16,7 @@ if args.pri:
     sys.stdout = None
 
 def main(fopt, fipt):
-    opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PETime', np.uint16), ('Weight', np.uint8), ('PEdiff', np.float32)])
+    opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PETime', np.float32), ('Weight', np.uint8), ('PEdiff', np.float32)])
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
         method = ipt['Answer'].attrs['Method']
         N = len(ipt['Answer'])
@@ -32,9 +32,12 @@ def main(fopt, fipt):
         end = 0
         l = len(e_ans)
         for i in range(l):
+            if i == 135:
+                print('here')
             pet = Pet[i_ans[i]:i_ans[i]+c_ans[i]]
             pwe = Wgt[i_ans[i]:i_ans[i]+c_ans[i]]
-            pet_a, pwe_a = wff.xpp_convol(pet, pwe)
+#             pet_a, pwe_a = wff.xpp_convol(pet, pwe)
+            pet_a, pwe_a = wff.phi_select(pet, pwe)
             pe_var = np.sum(pwe_a) - np.sum(pwe)
 
             lenpf = len(pwe_a)

@@ -22,6 +22,8 @@ args = psr.parse_args()
 if args.demo:
     Demo = True
 
+Thres = 0.01
+    
 def main(fopt, fipt, reference, method):
     spe_pre = wff.read_model(reference)
     opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PETime', np.uint16), ('Weight', np.float16)])
@@ -46,11 +48,11 @@ def main(fopt, fipt, reference, method):
             wave = wff.deduct_base(spe_pre[ent[i]['ChannelID']]['epulse'] * ent[i]['Waveform'], spe_pre[ent[i]['ChannelID']]['m_l'], spe_pre[ent[i]['ChannelID']]['thres'], 20, 'detail')
 
             if method == 'xiaopeip':
-                pf, possible = wff.fit_N(wave, spe_pre[ent[i]['ChannelID']], 'xiaopeip')
+                pf, possible = wff.fit_N(wave, spe_pre[ent[i]['ChannelID']], 'xiaopeip', Thres)
             elif method == 'lucyddm':
                 pf = wff.lucyddm_core(wave, spe_pre[ent[i]['ChannelID']]['spe'])
                 possible = []
-            pet, pwe = wff.pf_to_tw(pf, 0.01)
+            pet, pwe = wff.pf_to_tw(pf, Thres)
 
             lenpf = len(pwe)
             end = start + lenpf

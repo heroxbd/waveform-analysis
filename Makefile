@@ -11,6 +11,7 @@ fragseq:=$(shell seq 0 ${fragnum})
 tfold:=$(method)
 ifdef chunk
 	seq:=x
+    rseq:=x
     datfoldi:=dataset
 else
 	seq:=$($(set)seq)
@@ -48,7 +49,7 @@ endef
 $(foreach i,$(mod),$(eval $(call measure,$(i))))
 $(tfold)/resu-$(set)/sub-%.h5: $(tfold)/resu-$(set)/tot-%.h5
 	@mkdir -p $(dir $@)
-	python3 adjust.py $^ -o $@
+	python3 adjust.py $^ -o $@ > $@.log 2>&1
 define fit
 $(tfold)/resu-$(set)/tot-$(1).h5: $(fragseq:%=$(tfold)/unad-$(set)/unad-$(1)-%.h5)
 	@mkdir -p $$(dir $$@)

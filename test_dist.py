@@ -59,8 +59,7 @@ def wpdistance(df_ans, df_sub, df_wav):
 
         wl = df_sub[j0:j]['Weight']
         pet_ans = df_sub[j0:j]['PETime']
-        pf1 = np.zeros(leng); pf1[pet_ans] = wl
-        wave1 = np.convolve(spe_pre[cid]['spe'], pf1, 'full')[:leng]
+        wave1 = wff.showwave(pet_ans, wl, spe_pre[cid]['spe'], leng)
 
         dt['wdist'][c] = scipy.stats.wasserstein_distance(pet_tru, pet_ans, v_weights=wl)
         Q = i-i0; q = np.sum(wl)

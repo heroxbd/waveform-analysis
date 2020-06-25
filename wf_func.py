@@ -10,6 +10,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import h5py
+from scipy.interpolate import interp1d
 
 plt.rcParams['savefig.dpi'] = 300
 plt.rcParams['figure.dpi'] = 300
@@ -65,7 +66,9 @@ def xiaopeip_core(wave, spe, fitp, possible):
     # ans = opti.fmin_slsqp(norm_fit, ans0, args=(mne, wave[fitp]), bounds=b, iprint=-1, iter=500000)
     # ans = opti.fmin_tnc(norm_fit, ans0, args=(mne, wave[fitp]), approx_grad=True, bounds=b, messages=0, maxfun=500000)
     pf_r = ans[0]
-    return pf_r
+    if len(possible) <= 13:
+        pf_r = wff.ergodic(wave, mne, np.floor(pf_r))
+    return pf_r, mne
 
 def lucyddm_core(waveform, spe, iterations=100):
     '''Lucy deconvolution
@@ -103,6 +106,11 @@ def lucyddm_core(waveform, spe, iterations=100):
     wave_deconv = np.where(wave_deconv<50, wave_deconv, 0)
     return wave_deconv
 
+def ergodic(wave, mne, base):
+    n = mne.shape[1]; omega = 2**n
+    b = np.argmin([norm_fit(np.array(list(['{:0'+str(n)+'b}'][0].format(i))).astype(np.float16) + base, mne, wave, eta=0) for i in range(omega)])
+    return np.array(list(['{:0'+str(n)+'b}'][0].format(b))).astype(np.float16) + base
+
 def xpp_convol(pet, wgt):
     core = np.array([0.9, 1.7, 0.9])
     idt = np.dtype([('PETime', np.int16), ('Weight', np.float16), ('Wgt_b', np.uint8)])
@@ -123,32 +131,48 @@ def xpp_convol(pet, wgt):
         pet = seg['PETime'][np.argmax(seg['Weight'])]
     return pet, pwe
 
-def phi_select(pet, wgt):
-    pwe = np.floor(wgt)
-    resi = wgt - pwe
-    pen = np.round(np.sum(resi))
-    phi = np.zeros_like(wgt)
-    for i in range(len(pet)):
-        le = np.power(np.abs(pet[i] + 0.5 - pet), 1)
-        phi[i] += np.sum(resi * np.exp(-le) / le)
-        ld = np.power(np.abs(pet[i] + 0.5 - (pet + 1)), 1)
-        phi[i] += np.sum(resi * np.exp(-ld) / ld)
-    plt.figure()
-    plt.vlines(pet, -wgt, 0, color='b')
-    plt.vlines(pet, 0, phi, color='k')
-    plt.savefig('demo.png')
-    plt.close()
-    panel = np.zeros(np.max(pet) + 3)
-    panel[pet + 1] = phi
-    peak_pet = np.argwhere(np.diff(np.diff(panel)) < 0).flatten()
-    pen = int(min(len(peak_pet), pen))
-    pet_a = peak_pet[np.argsort(panel[peak_pet])[-pen:]]
-    for i in range(len(pet)):
-        if pet[i] in pet_a:
-            pwe[i] += 1
-    pet = pet[pwe > 0]
-    pwe = pwe[pwe > 0]
-    return pet, pwe
+def phi_select(pet, pwe):
+    eta = 1
+    er = 0.01
+    def potential(t, pet, resi):
+        r0 = np.abs(t.reshape(len(t), 1) - pet.reshape(1, len(pet))) + er
+        p0 = np.exp(eta * -r0) / r0 * resi
+        r1 = np.abs(t.reshape(len(t), 1) - t.reshape(1, len(t))) + er; np.fill_diagonal(r1, 1)
+        p1 = np.exp(eta * -r1) / r1
+        return np.sum(p1) - np.sum(p0)
+    pwe_b = np.floor(pwe)
+    resi = pwe - pwe_b
+    pen = int(np.round(np.sum(resi)))
+    if pen > 0:
+        b = np.zeros((pen, 2)).astype(np.float64); b[:, 1] = np.inf
+        ans = opti.fmin_l_bfgs_b(potential, pet[np.argsort(resi)[-pen:]] + 0.3, args=(pet, resi), approx_grad=True, bounds=b)
+        t = ans[0]
+        pet_a = np.append(pet, t)
+    else:
+        pet_a = pet
+#     pen0 = int(np.floor(np.sum(resi)))
+#     b0 = np.zeros((pen0, 2)).astype(np.float64); b0[:, 1] = np.inf
+#     ans0 = opti.fmin_l_bfgs_b(potential, pet[np.argsort(resi)[-pen0:]] + 0.3, args=(pet, resi), approx_grad=True, bounds=b0)
+#     t0 = ans0[0]
+#     pet0 = np.append(pet, t0)
+#     pwe0 = np.append(pwe_b, np.ones(pen0))
+#     w0 = scipy.stats.wasserstein_distance(pet0, pet, u_weights=pwe0, v_weights=pwe)
+#     pen1 = int(np.ceil(np.sum(resi)))
+#     b1 = np.zeros((pen1, 2)).astype(np.float64); b1[:, 1] = np.inf
+#     ans1 = opti.fmin_l_bfgs_b(potential, pet[np.argsort(resi)[-pen1:]] + 0.3, args=(pet, resi), approx_grad=True, bounds=b1)
+#     t1 = ans1[0]
+#     pet1 = np.append(pet, t1)
+#     pwe1 = np.append(pwe_b, np.ones(pen1))
+#     w1 = scipy.stats.wasserstein_distance(pet1, pet, u_weights=pwe1, v_weights=pwe)
+#     if w0 < w1:
+#         pet_a = pet0[pet0 > 0]; pwe_a = pwe0[pet0 > 0]
+#     else:
+#         pet_a = pet1[pet1 > 0]; pwe_a = pwe1[pet1 > 0]
+    pwe_a = np.append(pwe_b, np.ones(pen))
+    pet_a = pet_a[pwe_a > 0]; pwe_a = pwe_a[pwe_a > 0]; pwe_a = pwe_a[np.argsort(pet_a)]; pet_a = np.sort(pet_a)
+    if not len(pet_a) > 0:
+        pet_a = pet[np.argmax(pwe)]; pwe_a = np.array([1])
+    return pet_a, pwe_a
 
 def norm_fit(x, M, y, eta=0):
     return np.power(y - np.matmul(M, x), 2).sum() + eta * x.sum()
@@ -241,7 +265,7 @@ def rm_frag(pos, m_l):
     pos = np.array(pos_t)
     return pos
 
-def pf_to_tw(pf, thres=0.1):
+def pf_to_tw(pf, thres = 0.05):
     assert thres < 1, 'thres is too large, which is {}'.format(thres)
     if np.max(pf) < thres:
         t = np.argmax(pf)
@@ -251,6 +275,17 @@ def pf_to_tw(pf, thres=0.1):
     pwe = pwe
     pet = np.argwhere(pf > thres).flatten()
     return pet, pwe
+
+def showwave(pet, pwe, spe, leng):
+    print(spe.shape)
+    spe = np.concatenate((np.zeros(leng), spe)); spe = np.concatenate((spe, np.zeros(leng)))
+    time = np.arange(-leng, -leng + len(spe))
+    f = interp1d(time, spe)
+    wave = np.zeros(leng)
+    tp = np.arange(leng)
+    for i in range(len(pet)):
+        wave += f(tp - pet[i]) * pwe[i]
+    return wave
 
 def demo(pet, pwe, tth, spe_pre, leng, possible, wave, cid):
     print('possible = {}'.format(possible))
@@ -277,8 +312,7 @@ def demo(pet, pwe, tth, spe_pre, leng, possible, wave, cid):
     q_a = np.sum(pwe_a)
     pdist_a = np.abs(Q - q_a) * scipy.stats.poisson.pmf(Q, Q)
     print('after wdist is {}, pdist is {}'.format(wdist_a, pdist_a))
-    pf_a = np.zeros(leng); pf_a[pet_a] = pwe_a
-    wave_a = np.convolve(spe_pre['spe'], pf_a, 'full')[:leng]
+    wave_a = showwave(pet_a, pwe_a, spe_pre['spe'], leng)
     print('after Resi-norm = {}'.format(np.linalg.norm(wave-wave_a)))
     plt.plot(wave, c='b', label='original WF')
     plt.plot(wave0, c='k', label='truth WF')
