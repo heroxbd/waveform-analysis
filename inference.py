@@ -31,7 +31,7 @@ psr.add_argument('--demo', dest='demo', action='store_true', help='demo bool', d
 args = psr.parse_args()
 
 Demo = args.demo
-thres = 0.05
+Thres = 0.05
 warmup = 200
 samples = 1000
 E = 0
@@ -92,8 +92,8 @@ def main(fopt, fipt, reference):
             mcmc_collect[len(pos)].run(rng_key, wave=jnp.array(wave), mne=jnp.array(mne))
             # pf = np.mean(np.array(mcmc_collect[len(pos)].get_samples()['weight']), axis=0)
             pf = lasso_select(np.array(mcmc_collect[len(pos)].get_samples()['weight']), wave, mne)
-            pos_r = pos[pf > thres]
-            pf = pf[pf > thres]
+            pos_r = pos[pf > Thres]
+            pf = pf[pf > Thres]
             if len(pos_r) == 0:
                 flag = 0
         if flag == 0:

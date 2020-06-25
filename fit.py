@@ -22,7 +22,7 @@ args = psr.parse_args()
 if args.demo:
     Demo = True
 
-Thres = 0.01
+Thres = 0
     
 def main(fopt, fipt, reference, method):
     spe_pre = wff.read_model(reference)
@@ -45,13 +45,13 @@ def main(fopt, fipt, reference, method):
         end = 0
         
         for i in range(num*lenfr, num*lenfr+l):
+            i = 331
             wave = wff.deduct_base(spe_pre[ent[i]['ChannelID']]['epulse'] * ent[i]['Waveform'], spe_pre[ent[i]['ChannelID']]['m_l'], spe_pre[ent[i]['ChannelID']]['thres'], 20, 'detail')
 
             if method == 'xiaopeip':
-                pf, possible = wff.fit_N(wave, spe_pre[ent[i]['ChannelID']], 'xiaopeip', Thres)
+                pf = wff.fit_N(wave, spe_pre[ent[i]['ChannelID']], 'xiaopeip')
             elif method == 'lucyddm':
                 pf = wff.lucyddm_core(wave, spe_pre[ent[i]['ChannelID']]['spe'])
-                possible = []
             pet, pwe = wff.pf_to_tw(pf, Thres)
 
             lenpf = len(pwe)

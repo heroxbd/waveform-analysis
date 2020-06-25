@@ -18,13 +18,12 @@ plt.rcParams['font.size'] = 8
 plt.rcParams['lines.markersize'] = 4.0
 plt.rcParams['lines.linewidth'] = 1.0
 
+Eta = 1
+Er = 0.01
+
 def fit_N(wave, spe_pre, method):
     l = wave.shape[0]
-    spe_l = spe_pre['spe'].shape[0] 
-    n = math.ceil(spe_l//10)
-    difth = np.sort(spe_pre['spe'][np.arange(2,spe_l-1)+1]-spe_pre['spe'][np.arange(2,spe_l-1)]-spe_pre['spe'][np.arange(2,spe_l-1)-1]+spe_pre['spe'][np.arange(2,spe_l-1)-2])[n]
     lowp = np.argwhere(vali_base(wave, spe_pre['m_l'], spe_pre['thres']) == 1).flatten()
-    lowp = lowp[np.logical_and(lowp > 1, lowp < l-1)]
     flag = 1
     if len(lowp) != 0:
         panel = np.zeros(l)
@@ -33,11 +32,8 @@ def fit_N(wave, spe_pre, method):
             tail = j+spe_pre['mar_r'] if j+spe_pre['mar_r'] <= l else l
             panel[head : tail + 1] = 1
         fitp = np.argwhere(panel == 1).flatten()
-        numb = np.argwhere(wave[lowp+1]-wave[lowp]-wave[lowp-1]+wave[lowp-2] < difth).flatten()
-        if len(numb) != 0:
-            ran = np.arange(spe_pre['peak_c'] - 1, spe_pre['peak_c'] + 2)
-            possible = np.unique(lowp[numb] - ran.reshape(ran.shape[0], 1))
-            possible = possible[np.logical_and(possible>=0, possible<l)]
+        if len(fitp) != 0:
+            possible = np.argwhere(wave[spe_pre['peak_c'] + 2:] > spe_pre['thres']).flatten()
             if len(possible) != 0:
                 if method == 'xiaopeip':
                     pf_r = xiaopeip_core(wave, spe_pre['spe'], fitp, possible)
@@ -49,16 +45,14 @@ def fit_N(wave, spe_pre, method):
         flag = 0
     if flag == 0:
         t = np.where(wave == wave.min())[0][:1] - spe_pre['peak_c']
-        possible = t if t[0] >= 0 else np.array([0])
-        pf_r = np.array([1])
-    pf = np.zeros_like(wave)
-    pf[possible] = pf_r
-    return pf, possible
+        possible = t if t[0] >= 0 else np.array([0]); pf_r = np.array([1])
+    pf = np.zeros_like(wave); pf[possible] = pf_r
+    return pf
 
 def xiaopeip_core(wave, spe, fitp, possible):
     l = wave.shape[0]
     spe = np.concatenate([spe, np.zeros(l - spe.shape[0])])
-    ans0 = np.zeros_like(possible).astype(np.float64)
+    ans0 = np.ones_like(possible).astype(np.float64) * 0.3
     b = np.zeros((possible.shape[0], 2)).astype(np.float64)
     b[:, 1] = np.inf
     mne = spe[np.mod(fitp.reshape(fitp.shape[0], 1) - possible.reshape(1, possible.shape[0]), l)]
@@ -66,9 +60,7 @@ def xiaopeip_core(wave, spe, fitp, possible):
     # ans = opti.fmin_slsqp(norm_fit, ans0, args=(mne, wave[fitp]), bounds=b, iprint=-1, iter=500000)
     # ans = opti.fmin_tnc(norm_fit, ans0, args=(mne, wave[fitp]), approx_grad=True, bounds=b, messages=0, maxfun=500000)
     pf_r = ans[0]
-    if len(possible) <= 13:
-        pf_r = wff.ergodic(wave, mne, np.floor(pf_r))
-    return pf_r, mne
+    return pf_r
 
 def lucyddm_core(waveform, spe, iterations=100):
     '''Lucy deconvolution
@@ -131,44 +123,36 @@ def xpp_convol(pet, wgt):
         pet = seg['PETime'][np.argmax(seg['Weight'])]
     return pet, pwe
 
-def phi_select(pet, pwe):
-    eta = 1
-    er = 0.01
-    def potential(t, pet, resi):
-        r0 = np.abs(t.reshape(len(t), 1) - pet.reshape(1, len(pet))) + er
-        p0 = np.exp(eta * -r0) / r0 * resi
-        r1 = np.abs(t.reshape(len(t), 1) - t.reshape(1, len(t))) + er; np.fill_diagonal(r1, 1)
-        p1 = np.exp(eta * -r1) / r1
-        return np.sum(p1) - np.sum(p0)
-    pwe_b = np.floor(pwe)
-    resi = pwe - pwe_b
-    pen = int(np.round(np.sum(resi)))
-    if pen > 0:
-        b = np.zeros((pen, 2)).astype(np.float64); b[:, 1] = np.inf
-        ans = opti.fmin_l_bfgs_b(potential, pet[np.argsort(resi)[-pen:]] + 0.3, args=(pet, resi), approx_grad=True, bounds=b)
-        t = ans[0]
-        pet_a = np.append(pet, t)
+def potential(t, pet, resi):
+    r0 = np.abs(t.reshape(len(t), 1) - pet.reshape(1, len(pet))) + Er
+    p0 = np.exp(Eta * -r0) / r0 * resi
+    r1 = np.abs(t.reshape(len(t), 1) - t.reshape(1, len(t))) + Er; np.fill_diagonal(r1, 1)
+    p1 = np.exp(Eta * -r1) / r1
+    return np.sum(p1) - np.sum(p0)
+
+def hybird_select(pet, pwe, wave, spe, Thres):
+    n = np.sum(pwe > Thres)
+    if n == 1:
+        pet_a = pet[pwe > Thres]
+        pwe_a = np.array([1])
+    elif n <= 13:
+        pet_a = pet[pwe > Thres]
+        l = len(wave); panel = np.arange(l)
+        spe = np.append(spe, np.zeros(l - len(spe)))
+        mne = spe[np.mod(panel.reshape(panel.shape[0], 1) - pet_a.reshape(1, pet_a.shape[0]), l)]
+        pwe_a = ergodic(wave, mne, np.floor(pwe[pwe > Thres]))
     else:
-        pet_a = pet
-#     pen0 = int(np.floor(np.sum(resi)))
-#     b0 = np.zeros((pen0, 2)).astype(np.float64); b0[:, 1] = np.inf
-#     ans0 = opti.fmin_l_bfgs_b(potential, pet[np.argsort(resi)[-pen0:]] + 0.3, args=(pet, resi), approx_grad=True, bounds=b0)
-#     t0 = ans0[0]
-#     pet0 = np.append(pet, t0)
-#     pwe0 = np.append(pwe_b, np.ones(pen0))
-#     w0 = scipy.stats.wasserstein_distance(pet0, pet, u_weights=pwe0, v_weights=pwe)
-#     pen1 = int(np.ceil(np.sum(resi)))
-#     b1 = np.zeros((pen1, 2)).astype(np.float64); b1[:, 1] = np.inf
-#     ans1 = opti.fmin_l_bfgs_b(potential, pet[np.argsort(resi)[-pen1:]] + 0.3, args=(pet, resi), approx_grad=True, bounds=b1)
-#     t1 = ans1[0]
-#     pet1 = np.append(pet, t1)
-#     pwe1 = np.append(pwe_b, np.ones(pen1))
-#     w1 = scipy.stats.wasserstein_distance(pet1, pet, u_weights=pwe1, v_weights=pwe)
-#     if w0 < w1:
-#         pet_a = pet0[pet0 > 0]; pwe_a = pwe0[pet0 > 0]
-#     else:
-#         pet_a = pet1[pet1 > 0]; pwe_a = pwe1[pet1 > 0]
-    pwe_a = np.append(pwe_b, np.ones(pen))
+        pwe_b = np.floor(pwe)
+        resi = pwe - pwe_b
+        pen = int(np.round(np.sum(resi)))
+        if pen > 0:
+            b = np.zeros((pen, 2)).astype(np.float64); b[:, 1] = np.inf
+            ans = opti.fmin_l_bfgs_b(potential, pet[np.argsort(resi)[-pen:]] + 0.3, args=(pet, resi), approx_grad=True, bounds=b)
+            t = ans[0]
+            pet_a = np.append(pet, t)
+        else:
+            pet_a = pet
+        pwe_a = np.append(pwe_b, np.ones(pen))
     pet_a = pet_a[pwe_a > 0]; pwe_a = pwe_a[pwe_a > 0]; pwe_a = pwe_a[np.argsort(pet_a)]; pet_a = np.sort(pet_a)
     if not len(pet_a) > 0:
         pet_a = pet[np.argmax(pwe)]; pwe_a = np.array([1])
@@ -265,17 +249,16 @@ def rm_frag(pos, m_l):
     pos = np.array(pos_t)
     return pos
 
-def pf_to_tw(pf, thres = 0.05):
-    assert thres < 1, 'thres is too large, which is {}'.format(thres)
+def pf_to_tw(pf, thres = 0):
+    assert thres < 0.5, 'thres is too large, which is {}'.format(thres)
     if np.max(pf) < thres:
         t = np.argmax(pf)
         pf = np.zeros_like(pf)
         pf[t] = 1
     pwe = pf[pf > thres]
-    pwe = pwe
     pet = np.argwhere(pf > thres).flatten()
     return pet, pwe
-
+1
 def showwave(pet, pwe, spe, leng):
     print(spe.shape)
     spe = np.concatenate((np.zeros(leng), spe)); spe = np.concatenate((spe, np.zeros(leng)))
@@ -305,8 +288,7 @@ def demo(pet, pwe, tth, spe_pre, leng, possible, wave, cid):
     pf1 = np.zeros(leng); pf1[pet] = pwe
     wave1 = np.convolve(spe_pre['spe'], pf1, 'full')[:leng]
     print('before Resi-norm = {}'.format(np.linalg.norm(wave-wave1)))
-#     pet_a, pwe_a = xpp_convol(pet, pwe)
-    pet_a, pwe_a = phi_select(pet, pwe)
+    pet_a, pwe_a = hybird_select(pet, pwe, wave, spe_pre['spe'], 0.2)
     print('after PETime = {}, Weight = {}'.format(pet_a, pwe_a))
     wdist_a = scipy.stats.wasserstein_distance(tru_pet, pet_a, v_weights=pwe_a)
     q_a = np.sum(pwe_a)

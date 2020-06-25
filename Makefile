@@ -7,7 +7,7 @@ junopre:=junoWave
 junochannelN:=$(shell seq 0 3)
 datfold:=/srv/waveform-analysis/dataset
 fragnum:=49
-fragseq:=$(shell seq 0 ${fragnum})
+fragseq:=$(shell seq -f '%02g' 0 ${fragnum})
 tfold:=$(method)
 ifdef chunk
 	seq:=x
@@ -47,9 +47,9 @@ $(tfold)/dist-$(set)/distr-$(1)-%.h5: $(datfoldi)/$(set)/$(prefix)%.h5 $(tfold)/
 	python3 test_dist.py $$(word 2,$$^) --ref $$< $$(word 3,$$^) -o $$@ > $$@.log 2>&1
 endef
 $(foreach i,$(mod),$(eval $(call measure,$(i))))
-$(tfold)/resu-$(set)/sub-%.h5: $(tfold)/resu-$(set)/tot-%.h5
+$(tfold)/resu-$(set)/sub-%.h5: $(tfold)/resu-$(set)/tot-%.h5 $(datfoldi)/$(set)/$(prefix)%.h5 spe-$(set).h5
 	@mkdir -p $(dir $@)
-	python3 adjust.py $^ -o $@ > $@.log 2>&1
+	export OMP_NUM_THREADS=2 && python3 adjust.py $< $(word 2,$^) --ref $(word 3,$^) -o $@ > $@.log 2>&1
 define fit
 $(tfold)/resu-$(set)/tot-$(1).h5: $(fragseq:%=$(tfold)/unad-$(set)/unad-$(1)-%.h5)
 	@mkdir -p $$(dir $$@)

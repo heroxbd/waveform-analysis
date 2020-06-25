@@ -79,7 +79,7 @@ if __name__ == '__main__':
                 ax2.set_xlabel(r'P-dist')
                 ax3 = fig.add_subplot(gs[1, 0])
                 ax3.hist(pediff, bins=100)
-                ax3.set_xlabel(r'xpp_convolution PE diff')
+                ax3.set_xlabel(r'Adjust PE diff')
                 ax4 = fig.add_subplot(gs[1, 1])
                 bins = np.linspace(-50, 50, 100)
                 ax4.hist(rss_recon - rss_truth, bins=bins, density=1)
