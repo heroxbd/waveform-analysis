@@ -82,7 +82,7 @@ with h5py.File(fref, 'r', libver='latest', swmr=True) as ref, h5py.File(fipt, 'r
     df_ans = ref['GroundTruth']
     df_wav = ref['Waveform']
     df_sub = ipt['Answer']
-    method = ipt.attrs['Method']
+    method = df_sub.attrs['Method']
     dt = wpdistance(df_ans, df_sub, df_wav)
 with h5py.File(fopt, 'w') as h5f:
     dset = h5f.create_dataset('Record', data=dt, compression='gzip')

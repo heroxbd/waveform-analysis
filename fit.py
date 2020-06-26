@@ -139,6 +139,6 @@ with Pool(Ncpu) as pool:
         select_result = pool.starmap(fitting, slices)
 result = np.hstack(select_result)
 with h5py.File(fopt, 'w') as opt:
-    opt.create_dataset('Answer', data=result, compression='gzip')
-    opt.attrs['Method'] = method
+    dset = opt.create_dataset('Answer', data=result, compression='gzip')
+    dset.attrs['Method'] = method
     print('The output file path is {}'.format(fopt))

@@ -62,7 +62,7 @@ def select(a, b):
 
 opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PETime', np.float32), ('Weight', np.uint8), ('PEdiff', np.float32)])
 with h5py.File(fipt[0], 'r', libver='latest', swmr=True) as fi:
-    method = fi.attrs['Method']
+    method = fi['Answer'].attrs['Method']
 with h5py.File(fipt[1], 'r', libver='latest', swmr=True) as fi:
     l = len(fi['Waveform'])
 chunk = l // Ncpu + 1

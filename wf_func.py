@@ -144,26 +144,27 @@ def hybird_select(pet, pwe, wave, spe, Thres):
     if n == 1:
         pet_a = pet[pwe > Thres]
         pwe_a = np.array([1])
-    elif n <= 20:
+    elif n <= 1:
         pet_a = pet[pwe > Thres]
         l = len(wave); panel = np.arange(l)
         spe = np.append(spe, np.zeros(l - len(spe)))
         mne = spe[np.mod(panel.reshape(panel.shape[0], 1) - pet_a.reshape(1, pet_a.shape[0]), l)]
         pwe_a = ergodic(wave, mne, np.floor(pwe[pwe > Thres]))
     else:
-        pwe_b = np.floor(pwe)
-        resi = pwe - pwe_b
-        pen = int(np.round(np.sum(resi)))
-        if pen > 0:
-            b = np.zeros((pen, 2)).astype(np.float64); b[:, 1] = np.inf
-            ans = opti.fmin_l_bfgs_b(potential, pet[np.argsort(resi)[-pen:]] + 0.3, args=(pet, resi), approx_grad=True, bounds=b)
-            t = ans[0]
-            pet_a = np.append(pet, t)
-        else:
-            pet_a = pet
-        pwe_a = np.append(pwe_b, np.ones(pen))
-#         pwe_a = np.around(pwe); pet_a = pet
-    pet_a = pet_a[pwe_a > 0]; pwe_a = pwe_a[pwe_a > 0]; pwe_a = pwe_a[np.argsort(pet_a)]; pet_a = np.sort(pet_a)
+        pet_a, pwe_a = xpp_convol(pet, pwe)
+#         pwe_b = np.floor(pwe)
+#         resi = pwe - pwe_b
+#         pen = int(np.round(np.sum(resi)))
+#         if pen > 0:
+#             b = np.zeros((pen, 2)).astype(np.float64); b[:, 1] = np.inf
+#             ans = opti.fmin_l_bfgs_b(potential, pet[np.argsort(resi)[-pen:]] + 0.3, args=(pet, resi), approx_grad=True, bounds=b)
+#             t = ans[0]
+#             pet_a = np.append(pet, t)
+#         else:
+#             pet_a = pet
+#         pwe_a = np.append(pwe_b, np.ones(pen))
+#         pwe_a = pwe_a[np.argsort(pet_a)]; pet_a = np.sort(pet_a)
+    pet_a = pet_a[pwe_a > 0]; pwe_a = pwe_a[pwe_a > 0]
     if not len(pet_a) > 0:
         pet_a = pet[np.argmax(pwe)]; pwe_a = np.array([1])
     return pet_a, pwe_a
