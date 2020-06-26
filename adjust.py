@@ -4,13 +4,14 @@ import sys
 import h5py
 import numpy as np
 import argparse
-import wf_func as wff
 from multiprocessing import Pool
+import wf_func as wff
 
 psr = argparse.ArgumentParser()
 psr.add_argument('-o', dest='opt', help='output file')
 psr.add_argument('ipt', help='input file', nargs='+')
 psr.add_argument('--ref', type=str, help='reference file')
+psr.add_argument('-N', dest='Ncpu', type=int, help='cpu number', default=50)
 psr.add_argument('-p', dest='pri', action='store_false', help='print bool', default=True)
 args = psr.parse_args()
 
@@ -18,7 +19,7 @@ fopt = args.opt
 fipt = args.ipt
 reference = args.ref
 
-Ncpu = 50
+Ncpu = args.Ncpu
 Thres = 0.2
 
 if args.pri:
@@ -60,12 +61,10 @@ def select(a, b):
     return dt
 
 opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PETime', np.float32), ('Weight', np.uint8), ('PEdiff', np.float32)])
-fi = h5py.File(fipt[0], 'r', libver='latest', swmr=True)
-method = fi['Answer'].attrs['Method']
-fi.close()
-fi = h5py.File(fipt[1], 'r', libver='latest', swmr=True)
-l = len(fi['Waveform'])
-fi.close()
+with h5py.File(fipt[0], 'r', libver='latest', swmr=True) as fi:
+    method = fi.attrs['Method']
+with h5py.File(fipt[1], 'r', libver='latest', swmr=True) as fi:
+    l = len(fi['Waveform'])
 chunk = l // Ncpu + 1
 slices = np.vstack((np.arange(0, l, chunk), np.append(np.arange(chunk, l, chunk), l))).T.astype(np.int).tolist()
 with Pool(Ncpu) as pool:
@@ -74,4 +73,4 @@ result = np.hstack(select_result)
 with h5py.File(fopt, 'w') as final:
     dset = final.create_dataset('Answer', data=result, compression='gzip')
     dset.attrs['Method'] = method
-    print('The output file path is {}'.format(fopt), end=' ', flush=True)
+    print('The output file path is {}'.format(fopt))

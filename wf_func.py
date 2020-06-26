@@ -23,7 +23,11 @@ Er = 0.01
 
 def fit_N(wave, spe_pre, method):
     l = wave.shape[0]
+    spe_l = spe_pre['spe'].shape[0] 
+    n = math.ceil(spe_l/10)
+    difth = np.sort(spe_pre['spe'][np.arange(2,spe_l-1)+1]-spe_pre['spe'][np.arange(2,spe_l-1)]-spe_pre['spe'][np.arange(2,spe_l-1)-1]+spe_pre['spe'][np.arange(2,spe_l-1)-2])[n]
     lowp = np.argwhere(vali_base(wave, spe_pre['m_l'], spe_pre['thres']) == 1).flatten()
+    lowp = lowp[np.logical_and(lowp > 1, lowp < l-1)]
     flag = 1
     if len(lowp) != 0:
         panel = np.zeros(l)
@@ -32,8 +36,11 @@ def fit_N(wave, spe_pre, method):
             tail = j+spe_pre['mar_r'] if j+spe_pre['mar_r'] <= l else l
             panel[head : tail + 1] = 1
         fitp = np.argwhere(panel == 1).flatten()
-        if len(fitp) != 0:
-            possible = np.argwhere(wave[spe_pre['peak_c'] + 2:] > spe_pre['thres']).flatten()
+        numb = np.argwhere(wave[lowp+1]-wave[lowp]-wave[lowp-1]+wave[lowp-2] < difth).flatten()
+        if len(numb) != 0:
+            ran = np.arange(spe_pre['peak_c'] - 1, spe_pre['peak_c'] + 2)
+            possible = np.unique(lowp[numb] - ran.reshape(ran.shape[0], 1))
+            possible = possible[np.logical_and(possible>=0, possible<l)]
             if len(possible) != 0:
                 if method == 'xiaopeip':
                     pf_r = xiaopeip_core(wave, spe_pre['spe'], fitp, possible)
@@ -45,14 +52,16 @@ def fit_N(wave, spe_pre, method):
         flag = 0
     if flag == 0:
         t = np.where(wave == wave.min())[0][:1] - spe_pre['peak_c']
-        possible = t if t[0] >= 0 else np.array([0]); pf_r = np.array([1])
-    pf = np.zeros_like(wave); pf[possible] = pf_r
+        possible = t if t[0] >= 0 else np.array([0])
+        pf_r = np.array([1])
+    pf = np.zeros_like(wave)
+    pf[possible] = pf_r
     return pf
 
 def xiaopeip_core(wave, spe, fitp, possible):
     l = wave.shape[0]
     spe = np.concatenate([spe, np.zeros(l - spe.shape[0])])
-    ans0 = np.ones_like(possible).astype(np.float64) * 0.3
+    ans0 = np.zeros_like(possible).astype(np.float64)
     b = np.zeros((possible.shape[0], 2)).astype(np.float64)
     b[:, 1] = np.inf
     mne = spe[np.mod(fitp.reshape(fitp.shape[0], 1) - possible.reshape(1, possible.shape[0]), l)]
@@ -135,7 +144,7 @@ def hybird_select(pet, pwe, wave, spe, Thres):
     if n == 1:
         pet_a = pet[pwe > Thres]
         pwe_a = np.array([1])
-    elif n <= 13:
+    elif n <= 20:
         pet_a = pet[pwe > Thres]
         l = len(wave); panel = np.arange(l)
         spe = np.append(spe, np.zeros(l - len(spe)))
@@ -153,6 +162,7 @@ def hybird_select(pet, pwe, wave, spe, Thres):
         else:
             pet_a = pet
         pwe_a = np.append(pwe_b, np.ones(pen))
+#         pwe_a = np.around(pwe); pet_a = pet
     pet_a = pet_a[pwe_a > 0]; pwe_a = pwe_a[pwe_a > 0]; pwe_a = pwe_a[np.argsort(pet_a)]; pet_a = np.sort(pet_a)
     if not len(pet_a) > 0:
         pet_a = pet[np.argmax(pwe)]; pwe_a = np.array([1])

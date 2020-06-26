@@ -5,9 +5,8 @@ jinpchannelN:=$(shell seq -f '%02g' 0 29)
 junoseq:=2 4
 junopre:=junoWave
 junochannelN:=$(shell seq 0 3)
+fragnum:=50
 datfold:=/srv/waveform-analysis/dataset
-fragnum:=49
-fragseq:=$(shell seq -f '%02g' 0 ${fragnum})
 tfold:=$(method)
 ifdef chunk
 	seq:=x
@@ -20,11 +19,6 @@ else
 endif
 prefix:=$($(set)pre)
 mod:=tot sub
-ifeq ($(method), mcmc)
-    core:=inference.py
-else
-    core:=fit.py
-endif
 ifeq ($(method), takara)
     predict:=nn
 else
@@ -51,15 +45,12 @@ $(tfold)/resu-$(set)/sub-%.h5: $(tfold)/resu-$(set)/tot-%.h5 $(datfoldi)/$(set)/
 	@mkdir -p $(dir $@)
 	export OMP_NUM_THREADS=2 && python3 adjust.py $< $(word 2,$^) --ref $(word 3,$^) -o $@ > $@.log 2>&1
 define fit
-$(tfold)/resu-$(set)/tot-$(1).h5: $(fragseq:%=$(tfold)/unad-$(set)/unad-$(1)-%.h5)
+$(tfold)/resu-$(set)/tot-$(1).h5: $(datfoldi)/$(set)/$(prefix)$(1).h5 spe-$(set).h5
 	@mkdir -p $$(dir $$@)
-	python3 integrate.py $$^ --num ${fragnum} --met $(method) -o $$@
-$(tfold)/unad-$(set)/unad-$(1)-%.h5: $(datfoldi)/$(set)/$(prefix)$(1).h5 spe-$(set).h5
-	@mkdir -p $$(dir $$@)
-	export OMP_NUM_THREADS=2 && python3 $(core) $$< --met $(method) --ref $$(word 2,$$^) --num $(fragnum) -o $$@ > $$@.log 2>&1
+	export OMP_NUM_THREADS=2 && python3 fit.py $$< --met $(method) --ref $$(word 2,$$^) -N $(fragnum) -o $$@ > $$@.log 2>&1
 endef
 define nn
-$(tfold)/resu-$(set)/tot-$(1).h5 : $(datfold)/$(set)/$(prefix)$(1).h5 $(Nets) | .Bulletin
+$(tfold)/resu-$(set)/tot-$(1).h5 : $(datfoldi)/$(set)/$(prefix)$(1).h5 $(Nets) | .Bulletin
 	@mkdir -p $(dir $$@)
 	python3 -u Prediction_Processing_Total.py $$< $$@ $(datfold)/$(set)/Nets -D 1 > $(dir $$@)Analysis.log 2>&1
 endef

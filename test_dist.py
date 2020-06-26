@@ -19,6 +19,10 @@ args = psr.parse_args()
 if args.print:
     sys.stdout = None
 
+fref = args.ref[0]
+fipt = args.ipt
+fopt = args.opt
+
 def wpdistance(df_ans, df_sub, df_wav):
     Chnum = len(np.unique(df_ans['ChannelID']))
     e_ans = df_ans['EventID']*Chnum + df_ans['ChannelID']
@@ -74,16 +78,12 @@ def wpdistance(df_ans, df_sub, df_wav):
         print('\rGrading Process:|{}>{}|{:6.2f}%'.format(((20 * c)//gl)*'-', (19-(20*c)//gl)*' ', 100 * ((c+1)/gl)), end = '' if c != gl-1 else '\n')
     return dt
 
-def main(fref, fipt, fopt):
-    with h5py.File(fref, 'r', libver='latest', swmr=True) as ref, h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
-        df_ans = ref['GroundTruth']
-        df_wav = ref['Waveform']
-        df_sub = ipt['Answer']
-        method = df_sub.attrs['Method']
-        dt = wpdistance(df_ans, df_sub, df_wav)
-    with h5py.File(fopt, 'w') as h5f:
-        dset = h5f.create_dataset('Record', data=dt, compression='gzip')
-        dset.attrs['Method'] = method
-
-if __name__ == '__main__':
-    main(args.ref[0], args.ipt, args.opt)
+with h5py.File(fref, 'r', libver='latest', swmr=True) as ref, h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
+    df_ans = ref['GroundTruth']
+    df_wav = ref['Waveform']
+    df_sub = ipt['Answer']
+    method = ipt.attrs['Method']
+    dt = wpdistance(df_ans, df_sub, df_wav)
+with h5py.File(fopt, 'w') as h5f:
+    dset = h5f.create_dataset('Record', data=dt, compression='gzip')
+    dset.attrs['Method'] = method

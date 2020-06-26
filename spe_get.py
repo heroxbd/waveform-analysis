@@ -21,6 +21,8 @@ args = psr.parse_args()
 
 N = args.spenum
 L = args.spelen
+h5_path = args.ipt
+single_pe_path = args.opt
 if args.print:
     sys.stdout = None
 
@@ -128,9 +130,5 @@ def generate_standard(h5_path, single_pe_path):
         dset.attrs['Thres'] = spe_pre['thres']
         dset.attrs['ChannelID'] = cid
 
-def main(h5_path, single_pe_path):
-    if not os.path.exists(single_pe_path):
-        generate_standard(h5_path, single_pe_path) # generate response model
-
-if __name__ == '__main__':
-    main(args.ipt, args.opt)
+if not os.path.exists(single_pe_path):
+    generate_standard(h5_path, single_pe_path) # generate response model
