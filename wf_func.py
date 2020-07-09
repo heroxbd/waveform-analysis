@@ -21,7 +21,7 @@ plt.rcParams['lines.linewidth'] = 1.0
 Eta = 1
 Er = 0.01
 
-def fit_N(wave, spe_pre, method):
+def fit_N(wave, spe_pre, method, eta=0):
     l = wave.shape[0]
     spe_l = spe_pre['spe'].shape[0] 
     n = math.ceil(spe_l/10)
@@ -43,7 +43,7 @@ def fit_N(wave, spe_pre, method):
             possible = possible[np.logical_and(possible>=0, possible<l)]
             if len(possible) != 0:
                 if method == 'xiaopeip':
-                    pf_r = xiaopeip_core(wave, spe_pre['spe'], fitp, possible)
+                    pf_r = xiaopeip_core(wave, spe_pre['spe'], fitp, possible, eta=eta)
             else:
                 flag = 0
         else:
@@ -58,14 +58,14 @@ def fit_N(wave, spe_pre, method):
     pf[possible] = pf_r
     return pf
 
-def xiaopeip_core(wave, spe, fitp, possible):
+def xiaopeip_core(wave, spe, fitp, possible, eta=0):
     l = wave.shape[0]
     spe = np.concatenate([spe, np.zeros(l - spe.shape[0])])
     ans0 = np.zeros_like(possible).astype(np.float64)
     b = np.zeros((possible.shape[0], 2)).astype(np.float64)
     b[:, 1] = np.inf
     mne = spe[np.mod(fitp.reshape(fitp.shape[0], 1) - possible.reshape(1, possible.shape[0]), l)]
-    ans = opti.fmin_l_bfgs_b(norm_fit, ans0, args=(mne, wave[fitp]), approx_grad=True, bounds=b, maxfun=500000)
+    ans = opti.fmin_l_bfgs_b(norm_fit, ans0, args=(mne, wave[fitp], eta), approx_grad=True, bounds=b, maxfun=500000)
     # ans = opti.fmin_slsqp(norm_fit, ans0, args=(mne, wave[fitp]), bounds=b, iprint=-1, iter=500000)
     # ans = opti.fmin_tnc(norm_fit, ans0, args=(mne, wave[fitp]), approx_grad=True, bounds=b, messages=0, maxfun=500000)
     pf_r = ans[0]
