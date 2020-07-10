@@ -57,14 +57,11 @@ $(tfold)/resu-$(set)/tot-$(1).h5 : $(datfoldi)/$(set)/$(prefix)$(1).h5 $(Nets) |
 endef
 $(foreach i,$(rseq),$(eval $(call $(predict),$(i))))
 
-.Bulletin:
-	rm -f ./.bulletin.swp
-
 model : $(Nets)
 
 $(datfold)/$(set)/Nets/Channel%.torch_net : $(datfold)/$(set)/$(prefix)Channel%/.Training_finished ;
 
-$(datfold)/$(set)/$(prefix)Channel%/.Training_finished : $(datfold)/$(set)/PreProcess/Pre_Channel%.h5 | .Bulletin
+$(datfold)/$(set)/$(prefix)Channel%/.Training_finished : $(datfold)/$(set)/PreProcess/Pre_Channel%.h5
 	@mkdir -p $(dir $@)
 	@mkdir -p $(datfold)/$(set)/Nets
 	python3 -u Data_Processing.py $^ -n $* -B 64 -o $(datfold)/$(set)/Nets/Channel$*.torch_net $(dir $@) > $(dir $@)Train.log 2>&1

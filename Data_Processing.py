@@ -69,17 +69,13 @@ print("set_splitted")
 print("training_set ", len(Wave_train), ", testing_set", len(Wave_test))
 
 # Making Dataset
-# train_data = Data.TensorDataset(data_tensor=torch.from_numpy(Wave_train).float(),\
-#                              target_tensor=torch.from_numpy(PET_train).float())
-train_data = Data.TensorDataset(torch.from_numpy(Wave_train).cuda(device=device).float(),
-                                torch.from_numpy(PET_train).cuda(device=device).float())
+train_data = Data.TensorDataset(torch.from_numpy(Wave_train).float(),
+                                torch.from_numpy(PET_train).float())
 
 train_loader = Data.DataLoader(dataset=train_data, batch_size=BATCHSIZE, shuffle=True, pin_memory=False)
 
-# test_data = Data.TensorDataset(data_tensor=torch.from_numpy(Wave_test).float(),\
-#                              target_tensor=torch.from_numpy(PET_test).float())
-test_data = Data.TensorDataset(torch.from_numpy(Wave_test).float().cuda(device=device).float(),
-                               torch.from_numpy(PET_test).cuda(device=device).float())
+test_data = Data.TensorDataset(torch.from_numpy(Wave_test).float(),
+                               torch.from_numpy(PET_test).float())
 
 test_loader = Data.DataLoader(dataset=test_data, batch_size=BATCHSIZE, shuffle=False, pin_memory=False)
 
@@ -89,7 +85,7 @@ def testing(test_loader) :
     batch_count = 0
     for j, data in enumerate(test_loader, 0):
         inputs, labels = data
-        inputs, labels = Variable(inputs), Variable(labels)
+        inputs, labels = Variable(inputs.cuda(device=device)), Variable(labels.cuda(device=device))
         outputs = net(inputs)
         for batch_index_2 in range(outputs.shape[0]):  # range(BATCHSIZE)
             #  the reminder group of BATCHING may not be BATCH_SIZE
@@ -110,8 +106,8 @@ def testing(test_loader) :
 # Neural Networks
 from CNN_Module import Net_1
 
-trial_data = Data.TensorDataset(torch.from_numpy(Wave_test[0:1000]).cuda(device=device).float(),
-                                torch.from_numpy(PET_test[0:1000]).cuda(device=device).float())
+trial_data = Data.TensorDataset(torch.from_numpy(Wave_test[0:1000]).float(),
+                                torch.from_numpy(PET_test[0:1000]).float())
 trial_loader = Data.DataLoader(dataset=trial_data, batch_size=BATCHSIZE, shuffle=False, pin_memory=False)
 
 if os.path.exists(Model) :
@@ -143,7 +139,7 @@ for epoch in range(25):  # loop over the dataset multiple times
         inputs, labels = data
 
         # wrap them in Variable
-        inputs, labels = Variable(inputs), Variable(labels)
+        inputs, labels = Variable(inputs.cuda(device=device)), Variable(labels.cuda(device=device))
         # zero the parameter gradients
         optimizer.zero_grad()
 
