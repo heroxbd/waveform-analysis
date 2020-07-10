@@ -9,6 +9,7 @@ from scipy import optimize as opti
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import numba
 import h5py
 from scipy.interpolate import interp1d
 
@@ -212,6 +213,7 @@ def vali_base(waveform, m_l, thres):
     vali = pos2omi(pos, waveform.shape[0])
     return vali
 
+@numba.jit
 def deduct_base(waveform, m_l=None, thres=None, itera=20, mode='fast'):
     def deduct(wave):
         wave = wave - np.min(wave)

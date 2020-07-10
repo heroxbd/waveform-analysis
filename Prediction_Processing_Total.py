@@ -25,7 +25,6 @@ import torch
 from torch.nn import functional as F
 
 from multiprocessing import Pool
-from JPwaptool import JPwaptool
 
 from IPython import embed
 

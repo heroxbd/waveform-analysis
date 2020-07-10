@@ -6,7 +6,8 @@ junoseq:=2 4
 junopre:=junoWave
 junochannelN:=$(shell seq 0 3)
 fragnum:=50
-datfold:=/srv/waveform-analysis/dataset
+datfold:=/mnt/stage/waveform-analysis/dataset
+#datfold:=/srv/waveform-analysis/dataset
 tfold:=$(method)
 ifdef chunk
 	seq:=x
@@ -71,9 +72,9 @@ $(datfold)/$(set)/$(prefix)Channel%/.Training_finished : $(datfold)/$(set)/PrePr
 
 $(PreData) : PreProcess
 
-PreProcess : $(seq:%=$(datfold)/$(set)/$(prefix)%.h5)
+PreProcess : $(seq:%=$(datfold)/$(set)/$(prefix)%.h5) spe-$(set).h5
 	@mkdir -p $(datfold)/$(set)/PreProcess
-	python3 -u Data_Pre-Processing.py $(datfold)/$(set)/$(prefix) -o $(datfold)/$(set)/PreProcess/Pre_Channel -N $(seq) > $(datfold)/$(set)/PreProcess/PreProcess.log 2>&1
+	python3 -u Data_Pre-Processing.py $(datfold)/$(set)/$(prefix) -o $(datfold)/$(set)/PreProcess/Pre_Channel -N $(seq) --ref $(word $(words $^), $^) > $(datfold)/$(set)/PreProcess/PreProcess.log 2>&1
 
 $(datfoldi)/$(set)/$(prefix)x.h5: $(datfold)/$(set)/$(prefix)$(chunk).h5
 	@mkdir -p $(dir $@)
