@@ -17,20 +17,24 @@
 \usepackage{pdfpages}
 \usepackage[justification=centering]{caption}
 \usepackage{listings}
+\usepackage{authblk}
 
 \hypersetup{citecolor=pureblue}%文献引用颜色
 \bibliographystyle{ieeetr}
 \setlength{\parindent}{2em}
 \titlecontents{section}[0mm]
-                       {\vspace{.2\baselineskip}\bfseries}
-                       {\thecontentslabel~\hspace{.5em}}
-                       {}
-                       {\dotfill\contentspage[{\makebox[0pt][r]{\thecontentspage}}]}
-                       [\vspace{.1\baselineskip}]
+                        {\vspace{.2\baselineskip}\bfseries}
+                        {\thecontentslabel~\hspace{.5em}}
+                        {}
+                        {\dotfill\contentspage[{\makebox[0pt][r]{\thecontentspage}}]}
+                        [\vspace{.1\baselineskip}]
 
 \title{Notes on PMT Waveform Analysis and Ghost Hunter 1}
-\author{Somebody}
-\date{today}
+\author[1]{Dacheng Xu\thanks{xdc17@mails.tsinghua.edu.cn}}
+\affil[1]{Department of Engineering Physics, Tsinghua University}
+\author[2]{Yiyang Wu\thanks{wuyiyang17@mails.tsinghua.edu.cn}}
+\affil[2]{Department of Physics, Tsinghua University}
+\date{2020}
 
 \begin{document}
 \maketitle

@@ -1,17 +1,6 @@
 \section{Introduction} % (fold)
 \label{sec:Introduction}
-This is an Introduction
-\subsection{Wasserstein distance} % (fold)
-\label{sub:Wasserstein distance}
-    \begin{equation}
-        W_{p}(\mu ,\nu ):=\left(\inf _{\gamma \in \Gamma (\mu ,\nu )}\int _{M\times M}d(x,y)^{p}\,\mathrm {d} \gamma (x,y)\right)^{1/p}
-        \label{eq:w-dist-def}
-    \end{equation}
-    \begin{figure}[H]
-        \centering
-            \includegraphics[width=0.95\textwidth]{figures/Wasserstein.pdf}
-        \caption{Wasserstein transportation}
-        \label{fig:Wasserstein transportation}
-    \end{figure}
-% subsection  Wasserstein distance (end)
+Traditionally, we only save charge integration and time over threshold of the waveform output of PMT in neutrino experiments. But extracting the information of time and number of photons hitting will provide more detailed information of light transmit model in detector and will finally enhance the performance of event reconstruction, even particle identification. Therefore PMT waveform analysis is necessary when we presume completely usage of PMT output. 
+
+In April 2018, Jinping Neutrino Experiment group proposed a \href{https://mp.weixin.qq.com/s?__biz=MzA4MTAwMzgzOA==&mid=2650872289&idx=2&sn=48145a6598545d201f940e0459de99dd&chksm=846e2db0b319a4a627e902d0d6ed4b9d968225566021342c5935764963f352fbe02db1bdb333&mpshare=1&scene=1&srcid=0307c4HOvK0ChJUcq9blC3ub%23rd}{online data contest} whose topic is PMT waveform analysis. During the contest, Wasserstein distance and Poisson distance are used to assess the performance of algorithm. After contest, we collected several algorithms submitted by participants and we checked, redesigned and tested these algorithms to provide practical data processing flow applied on neutrino experiments where PMT is included. 
 % section Introduction (end)
