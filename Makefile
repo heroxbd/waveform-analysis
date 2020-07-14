@@ -6,8 +6,8 @@ junoseq:=2 4
 junopre:=junoWave
 junochannelN:=$(shell seq 0 3)
 fragnum:=50
-datfold:=/mnt/stage/waveform-analysis/dataset
-#datfold:=/srv/waveform-analysis/dataset
+#datfold:=/mnt/stage/waveform-analysis/dataset
+datfold:=/srv/waveform-analysis/dataset
 tfold:=$(method)
 ifdef chunk
 	seq:=x

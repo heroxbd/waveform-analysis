@@ -12,7 +12,6 @@ SavePath = args.opt
 reference = args.ref
 
 from time import time
-start = time()
 global_start = time()
 
 import os
@@ -21,8 +20,6 @@ import tables
 import numba
 from multiprocessing import Pool, cpu_count
 import pandas as pd
-import warnings
-warnings.filterwarnings('ignore')
 import wf_func as wff
 
 @numba.jit
@@ -49,6 +46,7 @@ def Read_Data(sliceNo, filename, Wave_startentry, Wave_endentry, Truth_startentr
     print('Reading File ' + filename)
     Waveforms_and_info = WaveformTable[Wave_startentry:Wave_endentry]
     GroundTruth = GroundTruthTable[Truth_startentry:Truth_endentry]
+    GroundTruth = GroundTruth[np.logical_and(GroundTruth['PETime'] >= 0, GroundTruth['PETime'] < WindowSize)]
     h5file.close()
     return (sliceNo, {'Waveform': TableToDataFrame(Waveforms_and_info), 'GroundTruth': TableToDataFrame(GroundTruth)})
 
@@ -81,7 +79,6 @@ class PreProcessedData(tables.IsDescription):
     Waveform = tables.Col.from_type('float32', shape=WindowSize, pos=1)
 
 print('training data pre-processing savepath is {}'.format(os.path.dirname(SavePath)))
-print('Initialization Finished, consuming {:.5f}s.'.format(time() - start))
 spe_pre = wff.read_model(reference[0])
 sliceNo = 0
 trainfile_list = []  # index sliceNo; value: number of waveforms to be readed
@@ -91,7 +88,7 @@ for iFile in FileNo :
     h5file = tables.open_file(filename, 'r')
     if iFile == FileNo[0]:
         origin_dtype = h5file.root.Waveform.dtype
-        WindowSize = origin_dtype['Waveform'].shape[0]
+        WindowSize = len(origin_dtype['Waveform'])
     Waveform_Len = len(h5file.root.Waveform)
     GroundTruth_Len = len(h5file.root.GroundTruth)
     slices = np.append(np.arange(0, Waveform_Len, 150000), Waveform_Len)
@@ -100,6 +97,7 @@ for iFile in FileNo :
         trainfile_list.append((sliceNo, filename, slices[i], slices[i + 1], Truth_slices[i], Truth_slices[i + 1]))
         sliceNo = sliceNo + 1
     h5file.close()
+print('Initialization Finished, consuming {:.5f}s.'.format(time() - start))
 with Pool(min(len(trainfile_list), cpu_count())) as pool :
     Reading_Result = dict(pool.starmap(Read_Data, trainfile_list))
 Waveforms_and_info = pd.concat([Reading_Result[i]['Waveform'] for i in range(len(trainfile_list))])
