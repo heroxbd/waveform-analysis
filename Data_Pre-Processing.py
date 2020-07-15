@@ -1,4 +1,5 @@
-#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import argparse
 psr = argparse.ArgumentParser()
 psr.add_argument('ipt', help='input file prefix')
@@ -74,10 +75,6 @@ def PreProcess(channelid) :
     Prefile.close()
     return
 
-class PreProcessedData(tables.IsDescription):
-    HitSpectrum = tables.Col.from_type('uint8', shape=WindowSize, pos=0)
-    Waveform = tables.Col.from_type('float32', shape=WindowSize, pos=1)
-
 print('training data pre-processing savepath is {}'.format(os.path.dirname(SavePath)))
 spe_pre = wff.read_model(reference[0])
 sliceNo = 0
@@ -104,6 +101,9 @@ Waveforms_and_info = pd.concat([Reading_Result[i]['Waveform'] for i in range(len
 GroundTruth = pd.concat([Reading_Result[i]['GroundTruth'] for i in range(len(trainfile_list))])
 print('Data Loaded, consuming {:.5f}s'.format(time() - start))
 
+class PreProcessedData(tables.IsDescription):
+    HitSpectrum = tables.Col.from_type('uint8', shape=WindowSize, pos=0)
+    Waveform = tables.Col.from_type('float32', shape=WindowSize, pos=1)
 
 Grouped_Waves = Waveforms_and_info.groupby(by='ChannelID')
 Grouped_Truth = GroundTruth.groupby(by='ChannelID')
