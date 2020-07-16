@@ -213,7 +213,6 @@ def vali_base(waveform, m_l, thres):
     vali = pos2omi(pos, waveform.shape[0])
     return vali
 
-@numba.jit
 def deduct_base(waveform, m_l=None, thres=None, itera=20, mode='fast'):
     def deduct(wave):
         wave = wave - np.min(wave)

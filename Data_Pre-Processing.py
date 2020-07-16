@@ -18,6 +18,7 @@ global_start = time()
 import os
 import numpy as np
 import tables
+import h5py
 import numba
 from multiprocessing import Pool, cpu_count
 import pandas as pd
@@ -61,18 +62,9 @@ def PreProcess(channelid) :
         Shifted_Waves[i] = wff.deduct_base(spe_pre[channelid]['epulse'] * Origin_Waves[i], spe_pre[channelid]['m_l'], spe_pre[channelid]['thres'], 20, 'detail')
 
     HitSpectrum = Make_Time_Vector(Truth_of_this_channel, Waves_of_this_channel)
-
-    # create Pre-Processed output file
-    Prefile = tables.open_file(SavePath + '{:02d}.h5'.format(channelid), mode='w', title='Pre-Processed-Training-Data')
-    # Create group and tables
-    TrainDataTable = Prefile.create_table('/', 'TrainDataTable', PreProcessedData, 'Wave and HitSpectrum')
-    tablerow = TrainDataTable.row
-    for i in range(len(HitSpectrum)) :
-        tablerow['Waveform'] = Shifted_Waves[i]
-        tablerow['HitSpectrum'] = HitSpectrum[i]
-        tablerow.append()
-    TrainDataTable.flush()
-    Prefile.close()
+    with h5py.File(SavePath + '{:02d}.h5'.format(channelid), 'w') as opt:
+        opt.create_dataset('Waveform', data=Shifted_Waves, compression='gzip')
+        opt.create_dataset('HitSpectrum', data=HitSpectrum, compression='gzip')
     return
 
 print('training data pre-processing savepath is {}'.format(os.path.dirname(SavePath)))
@@ -85,7 +77,7 @@ for iFile in FileNo :
     h5file = tables.open_file(filename, 'r')
     if iFile == FileNo[0]:
         origin_dtype = h5file.root.Waveform.dtype
-        WindowSize = len(origin_dtype['Waveform'])
+        WindowSize = origin_dtype['Waveform'].shape[0]
     Waveform_Len = len(h5file.root.Waveform)
     GroundTruth_Len = len(h5file.root.GroundTruth)
     slices = np.append(np.arange(0, Waveform_Len, 150000), Waveform_Len)
@@ -100,10 +92,6 @@ with Pool(min(len(trainfile_list), cpu_count())) as pool :
 Waveforms_and_info = pd.concat([Reading_Result[i]['Waveform'] for i in range(len(trainfile_list))])
 GroundTruth = pd.concat([Reading_Result[i]['GroundTruth'] for i in range(len(trainfile_list))])
 print('Data Loaded, consuming {:.5f}s'.format(time() - start))
-
-class PreProcessedData(tables.IsDescription):
-    HitSpectrum = tables.Col.from_type('uint8', shape=WindowSize, pos=0)
-    Waveform = tables.Col.from_type('float32', shape=WindowSize, pos=1)
 
 Grouped_Waves = Waveforms_and_info.groupby(by='ChannelID')
 Grouped_Truth = GroundTruth.groupby(by='ChannelID')

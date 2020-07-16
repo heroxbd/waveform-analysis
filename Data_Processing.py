@@ -35,7 +35,7 @@ import pytorch_stats_loss as stats_loss
 if ChannelID % 2 == 1 :
     device = torch.device(0)
 else :
-    device = torch.device(1)
+    device = torch.device(0)
 # Make Saving_Directory
 if not os.path.exists(SavePath):
     os.makedirs(SavePath)
@@ -49,15 +49,15 @@ testing_record = open((testing_record_name + ".txt"), "a+")
 
 # Loading Data
 PreFile = tables.open_file(filename, 'r')
-Data_set = PreFile.root.TrainDataTable
+# Data_set = PreFile.root.TrainDataTable
 if max_set_number > 0 :
     max_set_number = min(max_set_number, len(Data_set))
 else :
     max_set_number = None
 
 print("Reading Data...")
-WaveData = (Data_set[0:max_set_number]['Waveform'])
-PETData = Data_set[0:max_set_number]['HitSpectrum']
+WaveData = PreFile.root.Waveform[0:max_set_number]
+PETData = PreFile.root.HitSpectrum[0:max_set_number]
 WindowSize = len(WaveData[0])
 # Make Shift For +5 ns
 PETData = np.concatenate((np.zeros((len(PETData), 5)), PETData[:, 5:]), axis=-1)
