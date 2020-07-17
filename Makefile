@@ -1,5 +1,5 @@
 SHELL:=bash
-jinpseq:=$(shell seq 0 2)
+jinpseq:=$(shell seq 1 9)
 jinppre:=ztraining-
 jinpchannelN:=$(shell seq -f '%02g' 0 29)
 junoseq:=2 4
@@ -19,7 +19,7 @@ else
     datfoldi:=$(datfold)
 endif
 prefix:=$($(set)pre)
-mod:=tot sub
+conv:=tot sub
 ifeq ($(method), takara)
     predict:=nn
 else
@@ -39,19 +39,20 @@ $(tfold)/dist-$(set)/hist-$(1)-%.pdf: $(tfold)/dist-$(set)/distr-$(1)-%.h5
 	python3 draw_dist.py $$^ -o $$@
 $(tfold)/dist-$(set)/distr-$(1)-%.h5: $(datfoldi)/$(set)/$(prefix)%.h5 $(tfold)/resu-$(set)/$(1)-%.h5 spe-$(set).h5
 	@mkdir -p $$(dir $$@)
-	python3 test_dist.py $$(word 2,$$^) --ref $$< $$(word 3,$$^) -o $$@ > $$@.log 2>&1
+	python3 test_dist.py $$(word 2,$$^) --mod $(mod) --ref $$< $$(word 3,$$^) -o $$@ > $$@.log 2>&1
 endef
-$(foreach i,$(mod),$(eval $(call measure,$(i))))
+$(foreach i,$(conv),$(eval $(call measure,$(i))))
 $(tfold)/resu-$(set)/sub-%.h5: $(tfold)/resu-$(set)/tot-%.h5 $(datfoldi)/$(set)/$(prefix)%.h5 spe-$(set).h5
 	@mkdir -p $(dir $@)
-	export OMP_NUM_THREADS=2 && python3 adjust.py $< $(word 2,$^) --ref $(word 3,$^) -o $@ > $@.log 2>&1
+	export OMP_NUM_THREADS=2 && python3 adjust.py $< $(word 2,$^) --mod $(mod) --ref $(word 3,$^) -o $@ > $@.log 2>&1
 define fit
 $(tfold)/resu-$(set)/tot-$(1).h5: $(datfoldi)/$(set)/$(prefix)$(1).h5 spe-$(set).h5 model.pkl
 	@mkdir -p $$(dir $$@)
-	export OMP_NUM_THREADS=2 && python3 fit.py $$< --met $(method) --ref $$(wordlist 2,3,$$^) -N $(fragnum) -o $$@ > $$@.log 2>&1
+	export OMP_NUM_THREADS=2 && python3 fit.py $$< --mod $(mod) --met $(method) --ref $$(wordlist 2,3,$$^) -N $(fragnum) -o $$@ > $$@.log 2>&1
 endef
+
 define nn
-$(tfold)/resu-$(set)/tot-$(1).h5 : $(datfoldi)/$(set)/$(prefix)$(1).h5 $(Nets) | .Bulletin
+$(tfold)/resu-$(set)/tot-$(1).h5 : $(datfoldi)/$(set)/$(prefix)$(1).h5 $(Nets)
 	@mkdir -p $(dir $$@)
 	python3 -u Prediction_Processing_Total.py $$< $$@ $(datfold)/$(set)/Nets -D 1 > $(dir $$@)Analysis.log 2>&1
 endef

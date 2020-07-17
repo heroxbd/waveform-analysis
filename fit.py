@@ -22,6 +22,7 @@ Demo = False
 psr = argparse.ArgumentParser()
 psr.add_argument('-o', dest='opt', type=str, help='output file')
 psr.add_argument('ipt', type=str, help='input file')
+psr.add_argument('--mod', type=str, help='mode of pe or charge')
 psr.add_argument('--met', type=str, help='fitting method')
 psr.add_argument('--ref', type=str, nargs='+', help='reference file')
 psr.add_argument('-N', dest='Ncpu', type=int, help='cpu number', default=50)
@@ -31,6 +32,7 @@ args = psr.parse_args()
 fipt = args.ipt
 fopt = args.opt
 reference = args.ref
+mode = args.mod
 method = args.met
 Ncpu = args.Ncpu
 if args.demo:
@@ -96,12 +98,15 @@ def inferencing(a, b):
                 pos_r = t if t[0] >= 0 else np.array([0])
             lenpf = len(pf)
             end = start + lenpf
-            dt['PETime'][start:end] = pos_r.astype(np.uint16)
-            dt['Weight'][start:end] = pf.astype(np.float16)
+            dti['PETime'][start:end] = pos_r.astype(np.uint16)
+            if mode == 'Weight':
+                dt[mode][start:end] = pf.astype(np.float16)
+            elif mode == 'Charge':
+                dt[mode][start:end] = pf.astype(np.float16) * np.sum(spe[cid])
             dt['EventID'][start:end] = ent[i]['EventID']
             dt['ChannelID'][start:end] = ent[i]['ChannelID']
             start = end
-    dt = dt[dt['Weight'] > 0]
+    dt = dt[dt[mode] > 0]
     dt = np.sort(dt, kind='stable', order=['EventID', 'ChannelID', 'PETime'])
     return dt
 
@@ -124,17 +129,20 @@ def fitting(a, b):
             lenpf = len(pwe)
             end = start + lenpf
             dt['PETime'][start:end] = pet.astype(np.uint16)
-            dt['Weight'][start:end] = pwe.astype(np.float16)
+            if mode == 'Weight':
+                dt[mode][start:end] = pwe.astype(np.float16)
+            elif mode == 'Charge':
+                dt[mode][start:end] = pwe.astype(np.float16) * np.sum(spe_pre[ent[i]['ChannelID']]['spe'])
             dt['EventID'][start:end] = ent[i]['EventID']
             dt['ChannelID'][start:end] = ent[i]['ChannelID']
             start = end
-    dt = dt[dt['Weight'] > 0]
+    dt = dt[dt[mode] > 0]
     dt = np.sort(dt, kind='stable', order=['EventID', 'ChannelID', 'PETime'])
     return dt
 
 spe_pre = wff.read_model(reference[0])
 stanmodel = pickle.load(open(reference[1], 'rb'))
-opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PETime', np.uint16), ('Weight', np.float16)])
+opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PETime', np.uint16), (mode, np.float16)])
 with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
     l = len(ipt['Waveform'])
     print('{} waveforms will be computed'.format(l))

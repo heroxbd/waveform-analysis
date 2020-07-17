@@ -4,12 +4,14 @@ import sys
 import h5py
 import numpy as np
 import argparse
+from shutil import copyfile
 from multiprocessing import Pool
 import wf_func as wff
 
 psr = argparse.ArgumentParser()
 psr.add_argument('-o', dest='opt', help='output file')
 psr.add_argument('ipt', help='input file', nargs='+')
+psr.add_argument('--mod', type=str, help='mode of pe or charge')
 psr.add_argument('--ref', type=str, help='reference file')
 psr.add_argument('-N', dest='Ncpu', type=int, help='cpu number', default=50)
 psr.add_argument('-p', dest='pri', action='store_false', help='print bool', default=True)
@@ -18,6 +20,7 @@ args = psr.parse_args()
 fopt = args.opt
 fipt = args.ipt
 reference = args.ref
+mode = args.mod
 
 Ncpu = args.Ncpu
 Thres = 0.2
@@ -60,17 +63,20 @@ def select(a, b):
     dt = dt[dt['Weight'] > 0]
     return dt
 
-opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PETime', np.float32), ('Weight', np.uint8), ('PEdiff', np.float32)])
-with h5py.File(fipt[0], 'r', libver='latest', swmr=True) as fi:
-    method = fi['Answer'].attrs['Method']
-with h5py.File(fipt[1], 'r', libver='latest', swmr=True) as fi:
-    l = len(fi['Waveform'])
-chunk = l // Ncpu + 1
-slices = np.vstack((np.arange(0, l, chunk), np.append(np.arange(chunk, l, chunk), l))).T.astype(np.int).tolist()
-with Pool(Ncpu) as pool:
-    select_result = pool.starmap(select, slices)
-result = np.hstack(select_result)
-with h5py.File(fopt, 'w') as final:
-    dset = final.create_dataset('Answer', data=result, compression='gzip')
-    dset.attrs['Method'] = method
-    print('The output file path is {}'.format(fopt))
+if mode == 'Weight':
+    opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PETime', np.uint16), ('Weight', np.uint8), ('PEdiff', np.float32)])
+    with h5py.File(fipt[0], 'r', libver='latest', swmr=True) as fi:
+        method = fi['Answer'].attrs['Method']
+    with h5py.File(fipt[1], 'r', libver='latest', swmr=True) as fi:
+        l = len(fi['Waveform'])
+    chunk = l // Ncpu + 1
+    slices = np.vstack((np.arange(0, l, chunk), np.append(np.arange(chunk, l, chunk), l))).T.astype(np.int).tolist()
+    with Pool(Ncpu) as pool:
+        select_result = pool.starmap(select, slices)
+    result = np.hstack(select_result)
+    with h5py.File(fopt, 'w') as final:
+        dset = final.create_dataset('Answer', data=result, compression='gzip')
+        dset.attrs['Method'] = method
+elif mode == 'Charge':
+    copyfile(fipt[0], fopt)
+print('The output file path is {}'.format(fopt))

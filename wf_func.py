@@ -270,17 +270,6 @@ def pf_to_tw(pf, thres = 0):
     pwe = pf[pf > thres]
     pet = np.argwhere(pf > thres).flatten()
     return pet, pwe
-1
-def showwave(pet, pwe, spe, leng):
-    print(spe.shape)
-    spe = np.concatenate((np.zeros(leng), spe)); spe = np.concatenate((spe, np.zeros(leng)))
-    time = np.arange(-leng, -leng + len(spe))
-    f = interp1d(time, spe)
-    wave = np.zeros(leng)
-    tp = np.arange(leng)
-    for i in range(len(pet)):
-        wave += f(tp - pet[i]) * pwe[i]
-    return wave
 
 def demo(pet, pwe, tth, spe_pre, leng, possible, wave, cid):
     print('possible = {}'.format(possible))
@@ -306,7 +295,8 @@ def demo(pet, pwe, tth, spe_pre, leng, possible, wave, cid):
     q_a = np.sum(pwe_a)
     pdist_a = np.abs(Q - q_a) * scipy.stats.poisson.pmf(Q, Q)
     print('after wdist is {}, pdist is {}'.format(wdist_a, pdist_a))
-    wave_a = showwave(pet_a, pwe_a, spe_pre['spe'], leng)
+    pf_a = np.zeros(leng); pf_a[pet_a] = pwe_a
+    wave_a = np.convolve(spe_pre['spe'], pf_a, 'full')[:leng]
     print('after Resi-norm = {}'.format(np.linalg.norm(wave-wave_a)))
     plt.plot(wave, c='b', label='original WF')
     plt.plot(wave0, c='k', label='truth WF')
