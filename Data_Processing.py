@@ -22,6 +22,7 @@ from scipy import stats
 from sklearn.model_selection import train_test_split
 
 import torch
+torch.manual_seed(0)
 import torch.utils.data as Data
 from torch import optim
 from torch.autograd import Variable

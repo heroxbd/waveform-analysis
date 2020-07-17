@@ -1,5 +1,5 @@
 SHELL:=bash
-jinpseq:=$(shell seq 1 9)
+jinpseq:=$(shell seq 0 2)
 jinppre:=ztraining-
 jinpchannelN:=$(shell seq -f '%02g' 0 29)
 junoseq:=2 4

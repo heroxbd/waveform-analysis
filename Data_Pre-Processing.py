@@ -24,7 +24,6 @@ from multiprocessing import Pool, cpu_count
 import pandas as pd
 import wf_func as wff
 
-@numba.jit
 def Make_Time_Vector(GroundTruth, Waveforms_and_info) :
     i = 0
     Time_Series = np.zeros((len(Waveforms_and_info), WindowSize), dtype=np.uint8)
