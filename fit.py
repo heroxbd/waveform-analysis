@@ -14,7 +14,7 @@ from jax import random
 import numpyro
 import numpyro.distributions as dist
 from numpyro.infer import MCMC, NUTS
-from multiprocessing import Pool
+from multiprocessing import Pool, cpu_count
 import wf_func as wff
 
 Demo = False
@@ -150,7 +150,7 @@ with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
     assert leng >= len(spe_pre[0]['spe']), 'Single PE too long which is {}'.format(len(spe_pre[0]['spe']))
 chunk = l // Ncpu + 1
 slices = np.vstack((np.arange(0, l, chunk), np.append(np.arange(chunk, l, chunk), l))).T.astype(np.int).tolist()
-with Pool(Ncpu) as pool:
+with Pool(min(Ncpu, cpu_count())) as pool:
     if method == 'mcmc':
         select_result = pool.starmap(inferencing, slices)
     else:
