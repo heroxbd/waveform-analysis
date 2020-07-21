@@ -1,12 +1,11 @@
 SHELL:=bash
-jinpseq:=$(shell seq 0 2)
+jinpseq:=$(shell seq 0 9)
 jinppre:=ztraining-
 jinpchannelN:=$(shell seq -f '%02g' 0 29)
 junoseq:=2 4
 junopre:=junoWave
 junochannelN:=$(shell seq 0 3)
 fragnum:=50
-#datfold:=/mnt/stage/waveform-analysis/dataset
 datfold:=/srv/waveform-analysis/dataset
 tfold:=$(method)
 ifdef chunk
@@ -39,22 +38,22 @@ $(tfold)/dist-$(set)/hist-$(1)-%.pdf: $(tfold)/dist-$(set)/distr-$(1)-%.h5
 	python3 draw_dist.py $$^ -o $$@
 $(tfold)/dist-$(set)/distr-$(1)-%.h5: $(datfoldi)/$(set)/$(prefix)%.h5 $(tfold)/resu-$(set)/$(1)-%.h5 spe-$(set).h5
 	@mkdir -p $$(dir $$@)
-	python3 test_dist.py $$(word 2,$$^) --mod $(mod) --ref $$< $$(word 3,$$^) -o $$@ > $$@.log 2>&1
+	python3 test_dist.py $$(word 2,$$^) --mod $(mode) --ref $$< $$(word 3,$$^) -o $$@ > $$@.log 2>&1
 endef
 $(foreach i,$(conv),$(eval $(call measure,$(i))))
 $(tfold)/resu-$(set)/sub-%.h5: $(tfold)/resu-$(set)/tot-%.h5 $(datfoldi)/$(set)/$(prefix)%.h5 spe-$(set).h5
 	@mkdir -p $(dir $@)
-	export OMP_NUM_THREADS=2 && python3 adjust.py $< $(word 2,$^) --mod $(mod) --ref $(word 3,$^) -o $@ > $@.log 2>&1
+	export OMP_NUM_THREADS=2 && python3 adjust.py $< $(word 2,$^) --mod $(mode) --ref $(word 3,$^) -o $@ > $@.log 2>&1
 define fit
-$(tfold)/resu-$(set)/tot-$(1).h5: $(datfoldi)/$(set)/$(prefix)$(1).h5 spe-$(set).h5 model.pkl
+$(tfold)/resu-$(set)/tot-$(1).h5: $(datfoldi)/$(set)/$(prefix)$(1).h5 spe-$(set).h5
 	@mkdir -p $$(dir $$@)
-	export OMP_NUM_THREADS=2 && python3 fit.py $$< --mod $(mod) --met $(method) --ref $$(wordlist 2,3,$$^) -N $(fragnum) -o $$@ > $$@.log 2>&1
+	export OMP_NUM_THREADS=2 && python3 fit.py $$< --mod $(mode) --met $(method) --ref $$(wordlist 2,3,$$^) -N $(fragnum) -o $$@ > $$@.log 2>&1
 endef
 
 define nn
-$(tfold)/resu-$(set)/tot-$(1).h5 : $(datfoldi)/$(set)/$(prefix)$(1).h5 $(Nets)
-	@mkdir -p $(dir $$@)
-	python3 -u Prediction_Processing_Total.py $$< $$@ $(datfold)/$(set)/Nets -D 1 > $(dir $$@)Analysis.log 2>&1
+$(tfold)/resu-$(set)/tot-$(1).h5 : $(datfoldi)/$(set)/$(prefix)$(1).h5 spe-$(set).h5 $(Nets)
+	@mkdir -p $$(dir $$@)
+	python3 -u Prediction_Processing_Total.py $$< --mod $(mode) --met $(method) -o $$@ --ref $$(word 2,$$^) -N $(datfold)/$(set)/Nets -D 1 > $(dir $$@)Analysis.log 2>&1
 endef
 $(foreach i,$(rseq),$(eval $(call $(predict),$(i))))
 
@@ -76,7 +75,7 @@ PreProcess : $(seq:%=$(datfold)/$(set)/$(prefix)%.h5) spe-$(set).h5
 
 $(datfoldi)/$(set)/$(prefix)x.h5: $(datfold)/$(set)/$(prefix)$(chunk).h5
 	@mkdir -p $(dir $@)
-	python3 cut_data.py $^ -o $@ -a -1 -b 10000
+	python3 cut_data.py $^ -o $@ -a -1 -b 100000
 
 spe-$(set).h5: $(datfold)/$(set)/$(prefix)$(word 1,$($(set)seq)).h5
 	python3 spe_get.py $^ -o $@ --num 10000 --len 80

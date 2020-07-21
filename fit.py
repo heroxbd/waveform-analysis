@@ -22,7 +22,7 @@ Demo = False
 psr = argparse.ArgumentParser()
 psr.add_argument('-o', dest='opt', type=str, help='output file')
 psr.add_argument('ipt', type=str, help='input file')
-psr.add_argument('--mod', type=str, help='mode of pe or charge')
+psr.add_argument('--mod', type=str, help='mode of weight or charge')
 psr.add_argument('--met', type=str, help='fitting method')
 psr.add_argument('--ref', type=str, nargs='+', help='reference file')
 psr.add_argument('-N', dest='Ncpu', type=int, help='cpu number', default=50)

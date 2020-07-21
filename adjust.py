@@ -71,6 +71,7 @@ if mode == 'Weight':
         l = len(fi['Waveform'])
     chunk = l // Ncpu + 1
     slices = np.vstack((np.arange(0, l, chunk), np.append(np.arange(chunk, l, chunk), l))).T.astype(np.int).tolist()
+    select(0, l)
     with Pool(Ncpu) as pool:
         select_result = pool.starmap(select, slices)
     result = np.hstack(select_result)

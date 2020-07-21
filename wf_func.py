@@ -130,7 +130,7 @@ def xpp_convol(pet, wgt):
         pet = seg['PETime'][1:-1][seg['Wgt_b'][1:-1] > 0]
     else:
         pwe = np.array([1])
-        pet = seg['PETime'][np.argmax(seg['Weight'])]
+        pet = np.array([seg['PETime'][np.argmax(seg['Weight'])]])
     return pet, pwe
 
 def potential(t, pet, resi):

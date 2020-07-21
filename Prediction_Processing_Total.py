@@ -5,6 +5,8 @@ psr = argparse.ArgumentParser()
 psr.add_argument('ipt', help='input file')
 psr.add_argument('-o', dest='opt', help='output')
 psr.add_argument('-N', dest='NetDir', help='Network directory')
+psr.add_argument('--mod', type=str, help='mode of weight or charge')
+psr.add_argument('--met', type=str, help='method')
 psr.add_argument('--ref', type=str, nargs='+', help='reference file')
 psr.add_argument('-B', '--batchsize', dest='BAT', type=int, default=15000)
 psr.add_argument('-D', '--device', dest='Device', type=str, default='cpu')
@@ -15,6 +17,8 @@ filename = args.ipt
 BATCHSIZE = args.BAT
 Device = args.Device
 reference = args.ref
+mode = args.mod
+method = args.met
 
 import time
 global_start = time.time()
@@ -23,6 +27,7 @@ import numpy as np
 import tables
 import pandas as pd
 from tqdm import tqdm
+import h5py
 
 import torch
 from torch.nn import functional as F
@@ -77,9 +82,10 @@ for channelid in tqdm(channelid_set, desc='Loading Nets of each channel') :
 print('Net Loaded, consuming {0:.4f}s'.format(time.time() - tic))
 
 filter_limit = 0.9 / WindowSize
-Timeline = torch.arange(WindowSize, device=device)
+Timeline = np.arange(WindowSize).reshape(1, WindowSize)
 
 def Forward(channelid) :
+    SPECharge = spe_pre[channelid]['spe'].sum()
     Data_of_this_channel = Channel_Grouped_Waveform.get_group(channelid)
     Shifted_Wave = np.vstack(Data_of_this_channel['Waveform'])
     EventIDs = np.array(Data_of_this_channel['EventID'])
@@ -88,26 +94,27 @@ def Forward(channelid) :
     EventData = np.empty(0, dtype=np.int64)
     slices = np.append(np.arange(0, len(Shifted_Wave), BATCHSIZE), len(Shifted_Wave))
     for i in range(len(slices) - 1) :
-        inputs = torch.from_numpy(Shifted_Wave[slices[i]:slices[i + 1]])
-        Prediction = nets[channelid].forward(inputs.to(device=device)).data
+        inputs = Shifted_Wave[slices[i]:slices[i + 1]]
+        TotalPE = np.abs(np.sum(inputs, axis=1) / SPECharge)
+        Prediction = nets[channelid].forward(torch.from_numpy(inputs).to(device=device)).data.cpu().numpy()
         PETime = Prediction > filter_limit
-        pe_numbers = PETime.sum(1)
-        no_pe_found = (pe_numbers == 0)
+        pe_numbers = PETime.sum(axis=1)
+        no_pe_found = pe_numbers == 0
         if no_pe_found.any() :
             # print('Cannot find any pe in Event {0}, Channel {1}'.format(EventIDs[slices[i]:slices[i + 1]][no_pe_found.cpu().numpy()], channelid))
-            guessed_petime = F.relu(inputs[no_pe_found].max(1)[1] - 7)
+            guessed_petime = np.around(inputs[no_pe_found].argmax(axis=1) - spe_pre[channelid]['peak_c'])
+            guessed_petime = np.where(guessed_petime > 0, guessed_petime, 0)
             PETime[no_pe_found, guessed_petime] = True
             Prediction[no_pe_found, guessed_petime] = 1
             pe_numbers[no_pe_found] = 1
-        Weights = np.append(Weights, Prediction[PETime].cpu().numpy())
-        TimeMatrix = Timeline.repeat([len(PETime), 1])[PETime]
-        PETimes = np.append(PETimes, TimeMatrix.cpu().numpy())
-        pe_numbers = pe_numbers.cpu().numpy()
+        Prediction = (Prediction / np.sum(Prediction, axis=1)[:,None] * TotalPE[:,None])[PETime]
+        Weights = np.append(Weights, Prediction)
+        TimeMatrix = np.repeat(Timeline, len(PETime), axis=0)[PETime]
+        PETimes = np.append(PETimes, TimeMatrix)
         EventData = np.append(EventData, np.repeat(EventIDs[slices[i]:slices[i + 1]], pe_numbers))
         ChannelData = np.empty(EventData.shape, dtype=np.int16)
         ChannelData.fill(channelid)
     return pd.DataFrame({'PETime': PETimes, 'Weight': Weights, 'EventID': EventData, 'ChannelID': ChannelData})
-
 
 tic = time.time()
 cpu_tic = time.process_time()
@@ -116,18 +123,12 @@ for ch in tqdm(channelid_set, desc='Predict for each channel') :
     Result.append(Forward(ch))
 Result = pd.concat(Result)
 Result = Result.sort_values(by=['EventID', 'ChannelID'])
+Result = Result.to_records(index=False)
 print('Prediction generated, real time {0:.4f}s, cpu time {1:.4f}s'.format(time.time() - tic, time.process_time() - cpu_tic))
 
-class AnswerData(tables.IsDescription):
-    EventID = tables.Int64Col(pos=0)
-    ChannelID = tables.Int16Col(pos=1)
-    PETime = tables.Int16Col(pos=2)
-    Weight = tables.Float32Col(pos=3)
+with h5py.File(output, 'w') as opt:
+    dset = opt.create_dataset('Answer', data=Result, compression='gzip')
+    dset.attrs['Method'] = method
+    print('The output file path is {}'.format(output))
 
-
-AnswerFile = tables.open_file(output, mode='w', title='OneTonDetector', filters=tables.Filters(complevel=4))
-AnswerTable = AnswerFile.create_table('/', 'Answer', AnswerData, 'Answer')
-AnswerTable.append([Result[name].to_numpy() for name in AnswerTable.colnames])
-AnswerTable.flush()
-AnswerFile.close()
 print('Finished! Consuming {0:.2f}s in total, cpu time {1:.2f}s.'.format(time.time() - global_start, time.process_time() - cpu_global_start))
