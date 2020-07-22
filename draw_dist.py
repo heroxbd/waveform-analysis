@@ -7,12 +7,27 @@ import argparse
 psr = argparse.ArgumentParser()
 psr.add_argument('-o', dest='opt', help='output file')
 psr.add_argument('ipt', help='input file')
+psr.add_argument('--mod', type=str, help='mode of weight or charge', choices=['Weight', 'Charge'])
 psr.add_argument('-p', dest='pri', action='store_false', help='print bool', default=True)
 args = psr.parse_args()
+mode = args.mod
+if mode == 'Weight':
+    extradist = 'pdist'
+    pecount = 'PEnum'
+    pecountlabel = 'PEnum diff'
+    extradistlabel = ['P-dist', r'$P-dist/\mathrm{1}$']
+elif mode == 'Charge':
+    extradist = 'chargediff'
+    pecount = 'PEpos'
+    pecountlabel = None
+    extradistlabel = ['Charge Diff', r'$Charge Diff/\mathrm{mV}$']
+if args.pri:
+    sys.stdout = None
 
 import csv
 import numpy as np
 from scipy import stats
+from tqdm import tqdm
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -27,9 +42,6 @@ plt.rcParams['font.size'] = 10
 plt.rcParams['lines.markersize'] = 2
 plt.rcParams['lines.linewidth'] = 1.0
 
-if args.pri:
-    sys.stdout = None
-
 def my_cmap():
     plasma = cm.get_cmap('plasma', 65536)
     newcolors = plasma(np.linspace(0, 1, 65536))
@@ -40,30 +52,30 @@ def my_cmap():
 
 mycmp = my_cmap()
 with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as distfile:
-    dt = distfile['Record']
-    method = dt.attrs['Method']
+    dt = distfile['Record'][:]
+    method = distfile['Record'].attrs['Method']
     pdf = PdfPages(args.opt)
     N = int(np.percentile(dt['wdist'], 90)+1)
 
-    penum = np.unique(dt['PEnum'])
+    penum = np.unique(dt[pecount])
     l = min(50, penum.max())
     wdist_stats = np.zeros((l, 4))
-    pdist_stats = np.zeros((l, 4))
-    for i in np.arange(l):
+    edist_stats = np.zeros((l, 4))
+    for i in tqdm(range(l), disable=args.pri):
         if i+1 in penum:
-            dtwpi = dt['wdist'][dt['PEnum'] == i+1]
-            dtppi = dt['pdist'][dt['PEnum'] == i+1]
+            dtwpi = dt['wdist'][dt[pecount] == i+1]
+            dtepi = dt[extradist][dt[pecount] == i+1]
             wdist_stats[i, 0] = np.median(dtwpi)
             wdist_stats[i, 1] = np.median(np.absolute(dtwpi - np.median(dtwpi)))
             wdist_stats[i, 2] = np.mean(dtwpi)
             wdist_stats[i, 3] = np.std(dtwpi)
-            pdist_stats[i, 0] = np.median(dtppi)
-            pdist_stats[i, 1] = np.median(np.absolute(dtppi - np.median(dtppi)))
-            pdist_stats[i, 2] = np.mean(dtppi)
-            pdist_stats[i, 3] = np.std(dtppi)
-            pediff = dt['PEdiff'][dt['PEnum'] == i+1]
-            rss_recon = dt['RSS_recon'][dt['PEnum'] == i+1]
-            rss_truth = dt['RSS_truth'][dt['PEnum'] == i+1]
+            edist_stats[i, 0] = np.median(dtepi)
+            edist_stats[i, 1] = np.median(np.absolute(dtepi - np.median(dtepi)))
+            edist_stats[i, 2] = np.mean(dtepi)
+            edist_stats[i, 3] = np.std(dtepi)
+            pediff = dt['PEdiff'][dt[pecount] == i+1]
+            rss_recon = dt['RSS_recon'][dt[pecount] == i+1]
+            rss_truth = dt['RSS_truth'][dt[pecount] == i+1]
             plt.rcParams['figure.figsize'] = (12, 6)
             fig = plt.figure()
             gs = gridspec.GridSpec(2, 2, figure=fig, left=0.05, right=0.95, top=0.9, bottom=0.1, wspace=0.1, hspace=0.2)
@@ -72,24 +84,23 @@ with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as distfile:
             a = (dtwpi < N).sum()
             b = len(dtwpi)
             ax1.set_title('count {}(<{})/{}={:.2f}'.format(a, N, b, a/b))
-            ax1.set_xlabel(r'W-dist/ns')
+            ax1.set_xlabel('$W-dist/\mathrm{ns}$')
             ax2 = fig.add_subplot(gs[0, 1])
-            ax2.hist(dtppi[np.logical_not(np.isnan(dtppi))], bins=100)
-            ax2.set_xlabel(r'P-dist')
+            ax2.hist(dtepi, bins=100)
+            ax2.set_xlabel(extradistlabel[1])
             ax3 = fig.add_subplot(gs[1, 0])
             ax3.hist(pediff[np.logical_not(np.isnan(pediff))], bins=100)
-            ax3.set_xlabel(r'Adjust PE diff')
+            ax3.set_xlabel(pecountlabel)
             ax4 = fig.add_subplot(gs[1, 1])
             bins = np.linspace(-50, 50, 100)
             ax4.hist(rss_recon - rss_truth, bins=bins, density=1)
-            ax4.set_xlabel(r'$\mathrm{RSS}_{recon} - \mathrm{RSS}_{truth}/\mathrm{mV}^{2}$, within (-100, 100)')
-            fig.suptitle(args.ipt.split('/')[-1] + ' PEnum={:.0f}'.format(i+1))
+            ax4.set_xlabel('$\mathrm{RSS}_{recon} - \mathrm{RSS}_{truth}/\mathrm{mV}^{2}$, within (-100, 100)')
+            fig.suptitle(args.ipt.split('/')[-1] + ' ' + pecount + '={:.0f}'.format(i+1))
             pdf.savefig(fig)
             plt.close()
         else:
             wdist_stats[i, :] = np.nan
-            pdist_stats[i, :] = np.nan
-        print('\rDrawing Process:|{}>{}|{:6.2f}%'.format(((20*i)//l)*'-', (19-(20*i)//l)*' ', 100*(i+1)/l), end='' if i != l - 1 else '\n')
+            edist_stats[i, :] = np.nan
 
     plt.rcParams['figure.figsize'] = (12, 6)
     fig = plt.figure()
@@ -99,16 +110,17 @@ with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as distfile:
     a = (dt['wdist'] < N).sum()
     b = len(dt['wdist'])
     ax1.set_title('count {}(Wd<{})/{}={:.2f}'.format(a, N, b, a/b))
+    ax1.set_xlabel('$W-dist/\mathrm{ns}$')
     ax2 = fig.add_subplot(gs[1, 0])
-    pdist = dt['pdist'] 
-    ax2.hist(pdist[np.logical_not(np.isnan(pdist))], bins=100, density=1)
+    ax2.hist(dt[extradist][dt[extradist] > -500], bins=100, density=1)
+    ax2.set_xlabel(extradistlabel[1])
     ax3 = fig.add_subplot(gs[:, 1])
-    dtwdistvali = np.logical_and(dt['wdist']<N, np.logical_and(np.logical_and(dt['wdist']!=0, pdist!=0), np.logical_not(np.isnan(pdist))))
-    h2 = ax3.hist2d(dt['wdist'][dtwdistvali], dt['pdist'][dtwdistvali], bins=(200, 200), cmap=mycmp)
+    vali = np.logical_and(dt[extradist] > -500, dt['wdist'] < N)
+    h2 = ax3.hist2d(dt['wdist'][vali], dt[extradist][vali], bins=(100, 100), cmap=mycmp)
     fig.colorbar(h2[3], ax=ax3, aspect=50)
-    ax3.set_xlabel(r'W-dist/ns')
-    ax3.set_ylabel(r'P-dist')
-    ax3.set_title('W&P-dist histogram, Wd<{}, flawed'.format(N))
+    ax3.set_xlabel('$W-dist/\mathrm{ns}$')
+    ax3.set_ylabel(extradistlabel[1])
+    ax3.set_title('W\&'+'Extra-dist histogram, Wd<{}ns, flawed'.format(N))
     fig.suptitle(args.ipt.split('/')[-1] + ' Dist stats, method = ' + str(method))
     plt.close()
     pdf.savefig(fig)
@@ -123,20 +135,20 @@ with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as distfile:
     ax1.plot(wdist_stats[:, 2], c='C2', label='W mean')
     ax1.plot(wdist_stats[:, 2] + wdist_stats[:, 3], c='C3', label='W mean + std')
     ax1.plot(wdist_stats[:, 2] - wdist_stats[:, 3], c='C3', label='W mean - std')
-    ax1.set_xlabel(r'PEnum')
-    ax1.set_ylabel(r'W-dist')
-    ax1.set_title(r'W-dist vs PEnum stats')
+    ax1.set_xlabel(pecount)
+    ax1.set_ylabel('$W-dist/\mathrm{ns}$')
+    ax1.set_title('W-dist vs ' + pecount + ' stats')
     ax1.legend()
     ax2 = fig.add_subplot(gs[0, 1])
-    ax2.plot(pdist_stats[:, 0], c='C0', label='P median')
-    ax2.plot(pdist_stats[:, 0] + pdist_stats[:, 1], c='C1', label='P median + mad')
-    ax2.plot(pdist_stats[:, 0] - pdist_stats[:, 1], c='C1', label='P median - mad')
-    ax2.plot(pdist_stats[:, 2], c='C2', label='P mean')
-    ax2.plot(pdist_stats[:, 2] + pdist_stats[:, 3], c='C3', label='P mean + std')
-    ax2.plot(pdist_stats[:, 2] - pdist_stats[:, 3], c='C3', label='P mean - std')
-    ax2.set_xlabel(r'PEnum')
-    ax2.set_ylabel(r'P-dist')
-    ax2.set_title(r'P-dist vs PEnum stats')
+    ax2.plot(edist_stats[:, 0], c='C0', label=extradistlabel[0][0] + ' median')
+    ax2.plot(edist_stats[:, 0] + edist_stats[:, 1], c='C1', label=extradistlabel[0][0] + ' median + mad')
+    ax2.plot(edist_stats[:, 0] - edist_stats[:, 1], c='C1', label=extradistlabel[0][0] + ' median - mad')
+    ax2.plot(edist_stats[:, 2], c='C2', label=extradistlabel[0][0] + ' mean')
+    ax2.plot(edist_stats[:, 2] + edist_stats[:, 3], c='C3', label=extradistlabel[0][0] + ' mean + std')
+    ax2.plot(edist_stats[:, 2] - edist_stats[:, 3], c='C3', label=extradistlabel[0][0] + ' mean - std')
+    ax2.set_xlabel(pecount)
+    ax2.set_ylabel(extradistlabel[1])
+    ax2.set_title(extradistlabel[0] + ' vs ' + pecount + ' stats')
     ax2.legend()
     fig.suptitle(args.ipt.split('/')[-1] + ' Dist stats, method = ' + str(method))
     plt.close()

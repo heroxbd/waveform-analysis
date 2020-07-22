@@ -1,28 +1,41 @@
 # -*- COding: utf-8 -*-
 
+import sys
 import numpy as np
 import csv
+from tqdm import tqdm
 import h5py
 import argparse
 
 psr = argparse.ArgumentParser()
 psr.add_argument('-o', dest='opt', help='output')
 psr.add_argument('ipt', help='input')
+psr.add_argument('--mod', type=str, help='mode of weight or charge', choices=['Weight', 'Charge'])
+psr.add_argument('-p', dest='pri', action='store_false', help='print bool', default=True)
 args = psr.parse_args()
+mode = args.mod
+if mode == 'Weight':
+    extradist = 'pdist'
+    pecount = 'PEnum'
+elif mode == 'Charge':
+    extradist = 'chargediff'
+    pecount = 'PEpos'
+if args.pri:
+    sys.stdout = None
 
 with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as distfile:
-    dt = distfile['Record']
+    dt = distfile['Record'][:]
     l = len(dt)
     wd = dt['wdist'].mean()
-    pd = dt['pdist'].mean()
-    penum, c = np.unique(dt['PEnum'], return_counts=True)
+    pd = dt[extradist].mean()
+    penum, c = np.unique(dt[pecount], return_counts=True)
     pe_c = np.zeros((len(penum), 2)).astype(np.uint32)
     pe_dist = np.zeros((len(penum), 2))
     pe_c[:, 0] = penum
     pe_c[:, 1] = c
-    for i in range(len(penum)):
-        pe_dist[i, 0] = np.mean(dt['wdist'][dt['PEnum'] == penum[i]])
-        pe_dist[i, 1] = np.mean(dt['pdist'][dt['PEnum'] == penum[i]])
+    for i in tqdm(range(len(penum)), disable=args.pri):
+        pe_dist[i, 0] = np.mean(dt['wdist'][dt[pecount] == penum[i]])
+        pe_dist[i, 1] = np.mean(dt[extradist][dt[pecount] == penum[i]])
 with open(args.opt, 'w+') as csvf:
     csvwr = csv.writer(csvf)
     csvwr.writerow([args.ipt, str(wd), str(pd)])

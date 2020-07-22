@@ -16,13 +16,16 @@ import numpyro.distributions as dist
 from numpyro.infer import MCMC, NUTS
 from multiprocessing import Pool, cpu_count
 import wf_func as wff
+import time
+global_start = time.time()
+cpu_global_start = time.process_time()
 
 Demo = False
 
 psr = argparse.ArgumentParser()
 psr.add_argument('-o', dest='opt', type=str, help='output file')
 psr.add_argument('ipt', type=str, help='input file')
-psr.add_argument('--mod', type=str, help='mode of weight or charge')
+psr.add_argument('--mod', type=str, help='mode of weight or charge', choices=['Weight', 'Charge'])
 psr.add_argument('--met', type=str, help='fitting method')
 psr.add_argument('--ref', type=str, nargs='+', help='reference file')
 psr.add_argument('-N', dest='Ncpu', type=int, help='cpu number', default=50)
@@ -33,6 +36,10 @@ fipt = args.ipt
 fopt = args.opt
 reference = args.ref
 mode = args.mod
+if mode == 'Weight':
+    petime = 'PETime'
+elif mode == 'Charge':
+    petime = 'RiseTime'
 method = args.met
 Ncpu = args.Ncpu
 if args.demo:
@@ -98,7 +105,7 @@ def inferencing(a, b):
                 pos_r = t if t[0] >= 0 else np.array([0])
             lenpf = len(pf)
             end = start + lenpf
-            dti['PETime'][start:end] = pos_r.astype(np.uint16)
+            dti[petime][start:end] = pos_r.astype(np.uint16)
             if mode == 'Weight':
                 dt[mode][start:end] = pf.astype(np.float16)
             elif mode == 'Charge':
@@ -107,7 +114,7 @@ def inferencing(a, b):
             dt['ChannelID'][start:end] = ent[i]['ChannelID']
             start = end
     dt = dt[dt[mode] > 0]
-    dt = np.sort(dt, kind='stable', order=['EventID', 'ChannelID', 'PETime'])
+    dt = np.sort(dt, kind='stable', order=['EventID', 'ChannelID'])
     return dt
 
 def fitting(a, b):
@@ -128,7 +135,7 @@ def fitting(a, b):
 
             lenpf = len(pwe)
             end = start + lenpf
-            dt['PETime'][start:end] = pet.astype(np.uint16)
+            dt[petime][start:end] = pet.astype(np.uint16)
             if mode == 'Weight':
                 dt[mode][start:end] = pwe.astype(np.float16)
             elif mode == 'Charge':
@@ -137,12 +144,12 @@ def fitting(a, b):
             dt['ChannelID'][start:end] = ent[i]['ChannelID']
             start = end
     dt = dt[dt[mode] > 0]
-    dt = np.sort(dt, kind='stable', order=['EventID', 'ChannelID', 'PETime'])
+    dt = np.sort(dt, kind='stable', order=['EventID', 'ChannelID'])
     return dt
 
 spe_pre = wff.read_model(reference[0])
-stanmodel = pickle.load(open(reference[1], 'rb'))
-opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PETime', np.uint16), (mode, np.float16)])
+#stanmodel = pickle.load(open(reference[1], 'rb'))
+opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), (petime, np.uint16), (mode, np.float16)])
 with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
     l = len(ipt['Waveform'])
     print('{} waveforms will be computed'.format(l))
@@ -150,14 +157,19 @@ with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
     assert leng >= len(spe_pre[0]['spe']), 'Single PE too long which is {}'.format(len(spe_pre[0]['spe']))
 chunk = l // Ncpu + 1
 slices = np.vstack((np.arange(0, l, chunk), np.append(np.arange(chunk, l, chunk), l))).T.astype(np.int).tolist()
+print('Initialization finished, real time {0:.4f}s, cpu time {1:.4f}s'.format(time.time() - global_start, time.process_time() - cpu_global_start))
+tic = time.time()
+cpu_tic = time.process_time()
 with Pool(min(Ncpu, cpu_count())) as pool:
     if method == 'mcmc':
         select_result = pool.starmap(inferencing, slices)
     else:
         select_result = pool.starmap(fitting, slices)
-#select_result = inferencing(slices[0][0], slices[-1][-1])
 result = np.hstack(select_result)
+result = np.sort(result, kind='stable', order=['EventID', 'ChannelID'])
+print('Prediction generated, real time {0:.4f}s, cpu time {1:.4f}s'.format(time.time() - tic, time.process_time() - cpu_tic))
 with h5py.File(fopt, 'w') as opt:
     dset = opt.create_dataset('Answer', data=result, compression='gzip')
     dset.attrs['Method'] = method
     print('The output file path is {}'.format(fopt))
+print('Finished! Consuming {0:.2f}s in total, cpu time {1:.2f}s.'.format(time.time() - global_start, time.process_time() - cpu_global_start))

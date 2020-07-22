@@ -1,21 +1,27 @@
 # -*- coding: utf-8 -*-
 
+import os
 import argparse
 psr = argparse.ArgumentParser()
-psr.add_argument('ipt', help='input file prefix')
+psr.add_argument('ipt', help='input file direction & prefix')
 psr.add_argument('-o', '--outputdir', dest='opt', help='output_dir')
-psr.add_argument('-N', '--NFiles', dest='NFiles', type=int, nargs='+', help='entries of files')
+psr.add_argument('--mod', type=str, help='mode of weight or charge', choices=['Weight', 'Charge'])
 psr.add_argument('--ref', type=str, nargs='+', help='reference file')
 args = psr.parse_args()
-FileNo = args.NFiles
-prefix = args.ipt
 SavePath = args.opt
 reference = args.ref
+mode = args.mod
+if mode == 'Weight':
+    petime = 'PETime'
+elif mode == 'Charge':
+    petime = 'RiseTime'
+filedir, prefix = os.path.split(args.ipt)
+files = os.listdir(filedir)
+files = [filedir+'/'+fi for fi in files if prefix in fi and not os.path.isdir(fi)]
 
 from time import time
 global_start = time()
 
-import os
 import numpy as np
 import tables
 import h5py
@@ -28,12 +34,15 @@ def Make_Time_Vector(GroundTruth, Waveforms_and_info) :
     i = 0
     Time_Series = np.zeros((len(Waveforms_and_info), WindowSize), dtype=np.uint8)
     Wave_EventID = Waveforms_and_info['EventID'].to_numpy()
-    Truth_EventID = GroundTruth['EventID'].to_numpy()
-    PETime = GroundTruth['PETime'].to_numpy()
-    nt = len(Truth_EventID)
+    Truth_EventID = GroundTruth['EventID'].to_numpy(); nt = len(Truth_EventID)
+    PETime = GroundTruth[petime].to_numpy()
+    if mode == 'Charge':
+        Mode = GroundTruth[mode].to_numpy()
+    elif mode == 'Weight':
+        Mode = np.ones_like(PETime)
     for j in range(len(Waveforms_and_info)) :
         while i < nt and Wave_EventID[j] == Truth_EventID[i] :
-            Time_Series[j][PETime[i]] = Time_Series[j][PETime[i]] + 1
+            Time_Series[j][PETime[i]] = Time_Series[j][PETime[i]] + Mode[i]
             i = i + 1
     return Time_Series
 
@@ -47,7 +56,7 @@ def Read_Data(sliceNo, filename, Wave_startentry, Wave_endentry, Truth_startentr
     print('Reading File ' + filename)
     Waveforms_and_info = WaveformTable[Wave_startentry:Wave_endentry]
     GroundTruth = GroundTruthTable[Truth_startentry:Truth_endentry]
-    GroundTruth = GroundTruth[np.logical_and(GroundTruth['PETime'] >= 0, GroundTruth['PETime'] < WindowSize)]
+    GroundTruth = GroundTruth[np.logical_and(GroundTruth[petime] >= 0, GroundTruth[petime] < WindowSize)]
     h5file.close()
     return (sliceNo, {'Waveform': TableToDataFrame(Waveforms_and_info), 'GroundTruth': TableToDataFrame(GroundTruth)})
 
@@ -71,10 +80,9 @@ spe_pre = wff.read_model(reference[0])
 sliceNo = 0
 trainfile_list = []  # index sliceNo; value: number of waveforms to be readed
 start = time()
-for iFile in FileNo :
-    filename = prefix + '{}'.format(iFile) + '.h5'
+for filename in files :
     h5file = tables.open_file(filename, 'r')
-    if iFile == FileNo[0]:
+    if filename == files[0]:
         origin_dtype = h5file.root.Waveform.dtype
         WindowSize = origin_dtype['Waveform'].shape[0]
     Waveform_Len = len(h5file.root.Waveform)

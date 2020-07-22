@@ -13,7 +13,7 @@ import wf_func as wff
 psr = argparse.ArgumentParser()
 psr.add_argument('--ref', dest='ref', help='reference file', nargs='+')
 psr.add_argument('ipt', help="input file")
-psr.add_argument('--mod', type=str, help='mode of pe or charge')
+psr.add_argument('--mod', type=str, help='mode of weight or charge', choices=['Weight', 'Charge'])
 psr.add_argument('-N', dest='Ncpu', type=int, help='cpu number', default=50)
 psr.add_argument('-o', dest='opt', help='output file')
 psr.add_argument('-p', dest='print', action='store_false', help='print bool', default=True)
@@ -25,31 +25,41 @@ if args.print:
 fref = args.ref[0]
 fipt = args.ipt
 fopt = args.opt
-mode = args.mod
 Ncpu = args.Ncpu
+mode = args.mod
+if mode == 'Weight':
+    petime = 'PETime'
+    extradist = 'pdist'
+    pecount = 'PEnum'
+elif mode == 'Charge':
+    petime = 'RiseTime'
+    extradist = 'chargediff'
+    pecount = 'PEpos'
 
 def wpdist(a, b):
-    for i, c in zip(range(a, b), range(b-a)):
+    dt = np.zeros(b - a, dtype=opdt); dt[extradist] = np.nan; dt['PEdiff'] = np.nan
+    for i, c in zip(range(a, b), range(b - a)):
         cid = df_wav[i_wav[i]]['ChannelID']
         wave = wff.deduct_base(spe_pre[cid]['epulse'] * df_wav[i_wav[i]]['Waveform'], spe_pre[cid]['m_l'], spe_pre[cid]['thres'], 20, 'detail')
         
         wl = df_sub[i_sub[i]:i_sub[i+1]][mode]
-        pet_sub = df_sub[i_sub[i]:i_sub[i+1]]['PETime']
+        pet_sub = df_sub[i_sub[i]:i_sub[i+1]][petime]
         pf_s = np.zeros(leng); pf_s[pet_sub] = wl
         wave1 = np.convolve(spe_pre[cid]['spe'], pf_s, 'full')[:leng]
         if mode == 'Weight':
-            pet0, pwe0 = np.unique(df_ans[i_ans[i]:i_ans[i+1]]['PETime'], return_counts=True)
+            pet0, pwe0 = np.unique(df_ans[i_ans[i]:i_ans[i+1]][petime], return_counts=True)
             pf0 = np.zeros(leng); pf0[pet0] = pwe0
             wave0 = np.convolve(spe_pre[cid]['spe'], pf0, 'full')[:leng]
             Q = i_ans[i+1]-i_ans[i]; q = np.sum(wl)
-            dt['pdist'][c] = np.abs(Q - q) * scipy.stats.poisson.pmf(Q, Q)
-            dt['PEnum'][c] = Q
+            dt[extradist][c] = np.abs(Q - q) * scipy.stats.poisson.pmf(Q, Q)
+            dt[pecount][c] = Q
         elif mode == 'Charge':
-            pet0 = df_ans[i_ans[i]:i_ans[i+1]]['RiseTime']; pwe0 = df_ans[i_ans[i]:i_ans[i+1]][mode] 
+            pet0 = df_ans[i_ans[i]:i_ans[i+1]][petime]; pwe0 = df_ans[i_ans[i]:i_ans[i+1]][mode] 
             pf0 = np.zeros(leng); pf0[pet0] = pwe0
             wave0 = np.convolve(spe_pre[cid]['spe'], pf0, 'full')[:leng] / np.sum(spe_pre[cid]['spe'])
             wave1 = wave1 / np.sum(spe_pre[cid]['spe'])
-            dt['PEnum'][c] = len(pet0)
+            dt[extradist][c] = np.sum(wl) - np.sum(pwe0)
+            dt[pecount][c] = len(pet0)
 
         dt['wdist'][c] = scipy.stats.wasserstein_distance(pet0, pet_sub, u_weights=pwe0, v_weights=wl)
         dt['EventID'][c] = df_wav[i_wav[i]]['EventID']//Chnum
@@ -74,9 +84,8 @@ e_ans = df_ans['EventID']*Chnum + df_ans['ChannelID']
 e_ans, i_ans = np.unique(e_ans, return_index=True)
 i_ans = np.append(i_ans, len(df_ans))
 
-gl = len(e_ans); leng = len(df_wav[0]['Waveform'])
-opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PEnum', np.uint16), ('wdist', np.float32), ('pdist', np.float32), ('RSS_recon', np.float32), ('RSS_truth', np.float32), ('PEdiff', np.float32)])
-dt = np.zeros(gl, dtype=opdt); dt['pdist'] = np.nan; dt['PEdiff'] = np.nan
+opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), (pecount, np.uint16), ('wdist', np.float32), (extradist, np.float32), ('RSS_recon', np.float32), ('RSS_truth', np.float32), ('PEdiff', np.float32)])
+leng = len(df_wav[0]['Waveform'])
 
 e_wav = df_wav['EventID']*Chnum + df_wav['ChannelID']; df_wav = df_wav[np.isin(e_wav, e_ans)]
 e_wav, i_wav = np.unique(df_wav['EventID']*Chnum + df_wav['ChannelID'], return_index=True)

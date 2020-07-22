@@ -5,20 +5,24 @@ psr = argparse.ArgumentParser()
 psr.add_argument('ipt', help='input file')
 psr.add_argument('-o', dest='opt', help='output')
 psr.add_argument('-N', dest='NetDir', help='Network directory')
-psr.add_argument('--mod', type=str, help='mode of weight or charge')
+psr.add_argument('--mod', type=str, help='mode of weight or charge', choices=['Weight', 'Charge'])
 psr.add_argument('--met', type=str, help='method')
 psr.add_argument('--ref', type=str, nargs='+', help='reference file')
 psr.add_argument('-B', '--batchsize', dest='BAT', type=int, default=15000)
 psr.add_argument('-D', '--device', dest='Device', type=str, default='cpu')
 args = psr.parse_args()
 NetDir = args.NetDir
-output = args.opt
 filename = args.ipt
+output = args.opt
 BATCHSIZE = args.BAT
 Device = args.Device
 reference = args.ref
-mode = args.mod
 method = args.met
+mode = args.mod
+if mode == 'Weight':
+    petime = 'PETime'
+elif mode == 'Charge':
+    petime = 'RiseTime'
 
 import time
 global_start = time.time()
@@ -90,12 +94,15 @@ def Forward(channelid) :
     Shifted_Wave = np.vstack(Data_of_this_channel['Waveform'])
     EventIDs = np.array(Data_of_this_channel['EventID'])
     PETimes = np.empty(0, dtype=np.int16)
-    Weights = np.empty(0, dtype=np.float32)
+    PEmeasure = np.empty(0, dtype=np.float32)
     EventData = np.empty(0, dtype=np.int64)
     slices = np.append(np.arange(0, len(Shifted_Wave), BATCHSIZE), len(Shifted_Wave))
     for i in range(len(slices) - 1) :
         inputs = Shifted_Wave[slices[i]:slices[i + 1]]
-        TotalPE = np.abs(np.sum(inputs, axis=1) / SPECharge)
+        Total = np.abs(np.sum(inputs, axis=1)) / SPECharge
+        Total = np.where(Total > 0.1, Total, 0.1)
+        if mode == 'Charge':
+            Total = Total * SPECharge
         Prediction = nets[channelid].forward(torch.from_numpy(inputs).to(device=device)).data.cpu().numpy()
         PETime = Prediction > filter_limit
         pe_numbers = PETime.sum(axis=1)
@@ -107,14 +114,14 @@ def Forward(channelid) :
             PETime[no_pe_found, guessed_petime] = True
             Prediction[no_pe_found, guessed_petime] = 1
             pe_numbers[no_pe_found] = 1
-        Prediction = (Prediction / np.sum(Prediction, axis=1)[:,None] * TotalPE[:,None])[PETime]
-        Weights = np.append(Weights, Prediction)
+        Prediction = (Prediction / np.sum(Prediction, axis=1)[:,None] * Total[:,None])[PETime]
+        PEmeasure = np.append(PEmeasure, Prediction)
         TimeMatrix = np.repeat(Timeline, len(PETime), axis=0)[PETime]
         PETimes = np.append(PETimes, TimeMatrix)
         EventData = np.append(EventData, np.repeat(EventIDs[slices[i]:slices[i + 1]], pe_numbers))
         ChannelData = np.empty(EventData.shape, dtype=np.int16)
         ChannelData.fill(channelid)
-    return pd.DataFrame({'PETime': PETimes, 'Weight': Weights, 'EventID': EventData, 'ChannelID': ChannelData})
+    return pd.DataFrame({petime: PETimes, mode: PEmeasure, 'EventID': EventData, 'ChannelID': ChannelData})
 
 tic = time.time()
 cpu_tic = time.process_time()
