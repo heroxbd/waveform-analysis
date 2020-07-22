@@ -121,7 +121,7 @@ checking_period = np.int(0.25 * (len(Wave_train) / BATCHSIZE))
 training_result = []
 testing_result = []
 print('training start with batchsize={0}'.format(BATCHSIZE))
-for epoch in range(25):  # loop over the dataset multiple times
+for epoch in range(37):  # loop over the dataset multiple times
     running_loss = 0.0
     for i, data in enumerate(train_loader, 0):
         # get the inputs
