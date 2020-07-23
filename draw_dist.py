@@ -20,7 +20,7 @@ elif mode == 'Charge':
     extradist = 'chargediff'
     pecount = 'PEpos'
     pecountlabel = None
-    extradistlabel = ['Charge-diff', r'$Charge-diff/\mathrm{mV}$']
+    extradistlabel = ['Charge-diff', r'$Charge-diff/\mathrm{mV}\cdot\mathrm{ns}$']
 if args.pri:
     sys.stdout = None
 
@@ -57,10 +57,6 @@ with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as distfile:
     pdf = PdfPages(args.opt)
     N = int(np.percentile(dt['wdist'], 90)+1)
     M = -500
-    if mode == 'Weight':
-        sumtitle = 'W\&'+extradistlabel[0]+' hist,Wd<{}ns,'.format(N)+'flawed'
-    elif mode == 'Charge':
-        sumtitle = 'W-dist\&'+extradistlabel[0]+' hist,Wd<{}ns,'.format(N)+'Cd>{}mV'.format(M)+'flawed'
 
     penum = np.unique(dt[pecount])
     l = min(50, penum.max())
@@ -88,7 +84,7 @@ with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as distfile:
             ax1.hist(dtwpi[dtwpi < N], bins=100)
             a = (dtwpi < N).sum()
             b = len(dtwpi)
-            ax1.set_title('count {}(<{})/{}={:.2f}'.format(a, N, b, a/b))
+            ax1.set_title('count {}(<{}ns)/{}={:.2f}'.format(a, N, b, a/b))
             ax1.set_xlabel('$W-dist/\mathrm{ns}$')
             ax2 = fig.add_subplot(gs[0, 1])
             ax2.hist(dtepi, bins=100)
@@ -107,17 +103,25 @@ with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as distfile:
             wdist_stats[i, :] = np.nan
             edist_stats[i, :] = np.nan
 
+    a = (dt['wdist'] < N).sum()
+    b = (dt[extradist] > M).sum()
+    l = len(dt['wdist'])
+    if mode == 'Weight':
+        extradisttitle = None
+        sumtitle = 'W\&'+extradistlabel[0]+' hist,Wd<{}ns,'.format(N)+'flawed'
+    elif mode == 'Charge':
+        extradisttitle = 'count {}(Cd>{}mV*ns)/{}={:.2f}'.format(b, M, l, b/l)
+        sumtitle = 'W-dist\&'+extradistlabel[0]+' hist,Wd<{}ns,'.format(N)+'Cd>{}mV*ns,'.format(M)+'flawed'
     plt.rcParams['figure.figsize'] = (12, 6)
     fig = plt.figure()
-    gs = gridspec.GridSpec(2, 2, figure=fig, left=0.1, right=0.9, top=0.9, bottom=0.1, wspace=0.2, hspace=0.2)
+    gs = gridspec.GridSpec(2, 2, figure=fig, left=0.1, right=0.9, top=0.9, bottom=0.1, wspace=0.2, hspace=0.3)
     ax1 = fig.add_subplot(gs[0, 0])
     ax1.hist(dt['wdist'][dt['wdist']<N], bins=100, density=1)
-    a = (dt['wdist'] < N).sum()
-    b = len(dt['wdist'])
-    ax1.set_title('count {}(Wd<{})/{}={:.2f}'.format(a, N, b, a/b))
+    ax1.set_title('count {}(Wd<{}ms)/{}={:.2f}'.format(a, N, l, a/l))
     ax1.set_xlabel('$W-dist/\mathrm{ns}$')
     ax2 = fig.add_subplot(gs[1, 0])
     ax2.hist(dt[extradist][dt[extradist] > M], bins=100, density=1)
+    ax2.set_title(extradisttitle)
     ax2.set_xlabel(extradistlabel[1])
     ax3 = fig.add_subplot(gs[:, 1])
     vali = np.logical_and(np.logical_and(dt[extradist]>M, dt['wdist']<N),np.logical_and(dt[extradist]!=0, dt['wdist']!=0))
