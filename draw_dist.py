@@ -20,7 +20,7 @@ elif mode == 'Charge':
     extradist = 'chargediff'
     pecount = 'PEpos'
     pecountlabel = None
-    extradistlabel = ['Charge Diff', r'$Charge Diff/\mathrm{mV}$']
+    extradistlabel = ['Charge-diff', r'$Charge-diff/\mathrm{mV}$']
 if args.pri:
     sys.stdout = None
 
@@ -56,6 +56,11 @@ with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as distfile:
     method = distfile['Record'].attrs['Method']
     pdf = PdfPages(args.opt)
     N = int(np.percentile(dt['wdist'], 90)+1)
+    M = -500
+    if mode == 'Weight':
+        sumtitle = 'W\&'+extradistlabel[0]+' hist,Wd<{}ns,'.format(N)+'flawed'
+    elif mode == 'Charge':
+        sumtitle = 'W-dist\&'+extradistlabel[0]+' hist,Wd<{}ns,'.format(N)+'Cd>{}mV'.format(M)+'flawed'
 
     penum = np.unique(dt[pecount])
     l = min(50, penum.max())
@@ -112,15 +117,15 @@ with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as distfile:
     ax1.set_title('count {}(Wd<{})/{}={:.2f}'.format(a, N, b, a/b))
     ax1.set_xlabel('$W-dist/\mathrm{ns}$')
     ax2 = fig.add_subplot(gs[1, 0])
-    ax2.hist(dt[extradist][dt[extradist] > -500], bins=100, density=1)
+    ax2.hist(dt[extradist][dt[extradist] > M], bins=100, density=1)
     ax2.set_xlabel(extradistlabel[1])
     ax3 = fig.add_subplot(gs[:, 1])
-    vali = np.logical_and(dt[extradist] > -500, dt['wdist'] < N)
+    vali = np.logical_and(np.logical_and(dt[extradist]>M, dt['wdist']<N),np.logical_and(dt[extradist]!=0, dt['wdist']!=0))
     h2 = ax3.hist2d(dt['wdist'][vali], dt[extradist][vali], bins=(100, 100), cmap=mycmp)
     fig.colorbar(h2[3], ax=ax3, aspect=50)
     ax3.set_xlabel('$W-dist/\mathrm{ns}$')
     ax3.set_ylabel(extradistlabel[1])
-    ax3.set_title('W\&'+'Extra-dist histogram, Wd<{}ns, flawed'.format(N))
+    ax3.set_title(sumtitle)
     fig.suptitle(args.ipt.split('/')[-1] + ' Dist stats, method = ' + str(method))
     plt.close()
     pdf.savefig(fig)
