@@ -1,8 +1,0 @@
-\beamer@sectionintoc {1}{Jinping Neutrino Experiment}{3}{0}{1}
-\beamer@sectionintoc {2}{Motivation}{6}{0}{2}
-\beamer@sectionintoc {3}{Wasserstein Distance \& Poisson Distance}{10}{0}{3}
-\beamer@sectionintoc {4}{Method of Convolutional Neural Network}{15}{0}{4}
-\beamer@sectionintoc {5}{Method of Fitting}{20}{0}{5}
-\beamer@sectionintoc {6}{Result}{23}{0}{6}
-\beamer@sectionintoc {7}{Summary \& Outlook}{26}{0}{7}
-\beamer@sectionintoc {8}{Backup}{29}{1}{8}
