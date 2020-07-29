@@ -17,12 +17,6 @@ ifdef chunk
 else
     datfoldi:=$(datfold)
 endif
-ifeq ($(mode), Charge)
-    conv:=tot
-endif
-ifeq ($(mode), PEnum)
-    conv:=tot sub
-endif
 ifeq ($(method), takara)
     predict:=nn
 else
@@ -34,30 +28,22 @@ Nets:=$(channelN:%=$(datfold)/$(set)/$(mode)/Nets/Channel%.torch_net)
 
 .PHONY : all
 
-all : $(conv:%=%all)
-suball : $(rseq:%=$(tfold)/dist-$(set)/hist-sub-%.pdf) $(rseq:%=$(tfold)/dist-$(set)/record-sub-%.csv)
-totall : $(rseq:%=$(tfold)/dist-$(set)/hist-tot-%.pdf) $(rseq:%=$(tfold)/dist-$(set)/record-tot-%.csv)
-define measure
-$(tfold)/dist-$(set)/record-$(1)-%.csv : $(tfold)/dist-$(set)/distr-$(1)-%.h5
-	python3 csv_dist.py $$^ --mod $(mode) -o $$@
-$(tfold)/dist-$(set)/hist-$(1)-%.pdf : $(tfold)/dist-$(set)/distr-$(1)-%.h5
-	python3 draw_dist.py $$^ --mod $(mode) -o $$@
-$(tfold)/dist-$(set)/distr-$(1)-%.h5 : $(datfoldi)/$(set)/$(prefix)%.h5 $(tfold)/resu-$(set)/$(1)-%.h5 spe-$(set).h5
-	@mkdir -p $$(dir $$@)
-	python3 test_dist.py $$(word 2,$$^) --mod $(mode) --ref $$< $$(word 3,$$^) -o $$@ > $$@.log 2>&1
-endef
-$(foreach i,$(conv),$(eval $(call measure,$(i))))
-$(tfold)/resu-$(set)/sub-%.h5 : $(tfold)/resu-$(set)/tot-%.h5 $(datfoldi)/$(set)/$(prefix)%.h5 spe-$(set).h5
+all : $(rseq:%=$(tfold)/dist-$(set)/hist-%.pdf) $(rseq:%=$(tfold)/dist-$(set)/record-%.csv)
+$(tfold)/dist-$(set)/record-%.csv : $(tfold)/dist-$(set)/distr-%.h5
+	python3 csv_dist.py $^ --mod $(mode) -o $@
+$(tfold)/dist-$(set)/hist-%.pdf : $(tfold)/dist-$(set)/distr-%.h5
+	python3 draw_dist.py $^ --mod $(mode) -o $@
+$(tfold)/dist-$(set)/distr-%.h5 : $(datfoldi)/$(set)/$(prefix)%.h5 $(tfold)/resu-$(set)/sub-%.h5 spe-$(set).h5
 	@mkdir -p $(dir $@)
-	export OMP_NUM_THREADS=2 && python3 adjust.py $< $(word 2,$^) --mod $(mode) --ref $(word 3,$^) -o $@ > $@.log 2>&1
+	python3 test_dist.py $(word 2,$^) --mod $(mode) --ref $< $(word 3,$^) -o $@ > $@.log 2>&1
 define fit
-$(tfold)/resu-$(set)/tot-$(1).h5 : $(datfoldi)/$(set)/$(prefix)$(1).h5 spe-$(set).h5
+$(tfold)/resu-$(set)/sub-$(1).h5 : $(datfoldi)/$(set)/$(prefix)$(1).h5 spe-$(set).h5
 	@mkdir -p $$(dir $$@)
 	export OMP_NUM_THREADS=2 && python3 fit.py $$< --mod $(mode) --met $(method) --ref $$(wordlist 2,3,$$^) -N $(fragnum) -o $$@ > $$@.log 2>&1
 endef
 
 define nn
-$(tfold)/resu-$(set)/tot-$(1).h5 : $(datfoldi)/$(set)/$(prefix)$(1).h5 spe-$(set).h5 $(Nets)
+$(tfold)/resu-$(set)/sub-$(1).h5 : $(datfoldi)/$(set)/$(prefix)$(1).h5 spe-$(set).h5 $(Nets)
 	@mkdir -p $$(dir $$@)
 	python3 -u Prediction_Processing_Total.py $$< --mod $(mode) --met $(method) -o $$@ --ref $$(word 2,$$^) -N $(datfold)/$(set)/$(mode)/Nets -D 1 > $$@.log 2>&1
 endef

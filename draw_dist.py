@@ -117,7 +117,7 @@ with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as distfile:
     gs = gridspec.GridSpec(2, 2, figure=fig, left=0.1, right=0.9, top=0.9, bottom=0.1, wspace=0.2, hspace=0.3)
     ax1 = fig.add_subplot(gs[0, 0])
     ax1.hist(dt['wdist'][dt['wdist']<N], bins=100, density=1)
-    ax1.set_title('count {}(Wd<{}ms)/{}={:.2f}'.format(a, N, l, a/l))
+    ax1.set_title('count {}(Wd<{}ns)/{}={:.2f}'.format(a, N, l, a/l))
     ax1.set_xlabel('$W-dist/\mathrm{ns}$')
     ax2 = fig.add_subplot(gs[1, 0])
     ax2.hist(dt[extradist][dt[extradist] > M], bins=100, density=1)

@@ -117,17 +117,19 @@ def fitting(a, b):
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
         ent = ipt['Waveform']
         leng = len(ent[0]['Waveform'])
-        dt = np.zeros((b - a) * (leng//5), dtype=opdt)
+        dt = np.zeros((b - a) * leng, dtype=opdt)
         start = 0
         end = 0
         for i in range(a, b):
             wave = wff.deduct_base(spe_pre[ent[i]['ChannelID']]['epulse'] * ent[i]['Waveform'], spe_pre[ent[i]['ChannelID']]['m_l'], spe_pre[ent[i]['ChannelID']]['thres'], 20, 'detail')
 
             if method == 'xiaopeip':
-                pf = wff.fit_N(wave, spe_pre[ent[i]['ChannelID']], 'xiaopeip', eta=E)
+                pet, pwe, _ = wff.fit_N(wave, spe_pre[ent[i]['ChannelID']], 'xiaopeip', eta=E)
             elif method == 'lucyddm':
-                pf = wff.lucyddm_core(wave, spe_pre[ent[i]['ChannelID']]['spe'])
-            pet, pwe = wff.pf_to_tw(pf, Thres)
+                pf = wff.lucyddm_core(wave, spe_pre[ent[i]['ChannelID']])
+                pet, pwe = wff.pf_to_tw(pf, Thres)
+            elif method == 'threshold':
+                pet, pwe = wff.threshold(wave, spe_pre[ent[i]['ChannelID']])
 
             lenpf = len(pwe)
             end = start + lenpf
