@@ -82,47 +82,48 @@ def generate_standard(h5_path, single_pe_path):
     num = 0
 
     with h5py.File(h5_path[0], 'r', libver='latest', swmr=True) as ztrfile:
-        Gt = ztrfile['GroundTruth']
-        Wf = ztrfile['Waveform']
-        Chnum = len(np.unique(Gt['ChannelID']))
-        e_gt = Gt['EventID']*Chnum + Gt['ChannelID']
-        e_gt, i_gt = np.unique(e_gt, return_index=True)
-        e_wf = Wf['EventID']*Chnum + Wf['ChannelID']
-        e_wf, i_wf = np.unique(e_wf, return_index=True)
-        leng = len(Wf[0]['Waveform'])
-        p = 0
-        for e_gt_i, a, b in zip(e_gt, np.nditer(i_gt), it.chain(np.nditer(i_gt[1:]), [len(Gt)])):
-            while e_wf[p] < e_gt_i:
-                p = p + 1
-            pt = np.sort(Gt[a:b]['PETime']).astype(np.int)
-            pt = pt[pt >= 0]
-            if pt.shape[0] != 0:
-                if len(pt) == 1 and pt[0] < leng - L:
-                    ps = pt
-                else:
-                    dpta = np.diff(pt, prepend=pt[0])
-                    dptb = np.diff(pt, append=pt[-1])
-                    ps = pt[np.logical_and(dpta > L, dptb > L)]#long distance to other spe in both forepart & backpart
-                if ps.shape[0] != 0:
-                    for k in range(len(ps)):
-                        dt[num]['EventID'] = Wf[i_wf[p]]['EventID']
-                        dt[num]['ChannelID'] = Wf[i_wf[p]]['ChannelID']
-                        dt[num]['speWf'] = Wf[i_wf[p]]['Waveform'][ps[k]:ps[k]+L]
-                        num += 1
-                        if num >= N:
-                            break
-            print('\rSingle PE Generating:|{}>{}|{:6.2f}%'.format(((20*(num-1))//N)*'-', (19 - (20*(num-1))//N)*' ', 100 * (num / N)), end=''if num != N else '\n')
-            if num >= N or b == len(Gt):
-                dt = dt[:num] # cut empty dt part
-                dt = np.sort(dt, kind='stable', order=['EventID', 'ChannelID'])
-                if Chnum < 100:
-                    assert Chnum == len(np.unique(dt['ChannelID']))
-                else:
-                    dt['ChannelID'] = 0
-                print('{} speWf generated'.format(len(dt)))
-                spemean, epulse, cid = mean(dt)
-                spe_pre = pre_analysis(spemean, epulse, Wf[:10000])
-                break
+        Gt = ztrfile['GroundTruth'][:]
+        Wf = ztrfile['Waveform'][:]
+    Gt = np.sort(Gt, kind='stable', order=['EventID', 'ChannelID'])
+    Wf = np.sort(Wf, kind='stable', order=['EventID', 'ChannelID'])
+    Chnum = len(np.unique(Gt['ChannelID']))
+    e_gt, i_gt = np.unique(Gt['EventID']*Chnum + Gt['ChannelID'], return_index=True)
+    i_gt = np.append(i_gt, len(Gt))
+    e_wf, i_wf = np.unique(Wf['EventID']*Chnum + Wf['ChannelID'], return_index=True)
+    Wf = Wf[np.isin(e_wf, e_gt)]
+    e_wf, i_wf = np.unique(Wf['EventID']*Chnum + Wf['ChannelID'], return_index=True)
+    assert len(e_wf) ==  len(e_gt), 'Incomplete Dataset'
+    leng = len(Wf[0]['Waveform'])
+    p = 0
+    for p in range(len(e_wf)):
+        pt = np.sort(Gt[i_gt[p]:i_gt[p+1]]['RiseTime']).astype(np.int)
+        if len(pt) == 1:
+            ps = pt
+        else:
+            dpta = np.diff(pt, prepend=pt[0])
+            dptb = np.diff(pt, append=pt[-1])
+            ps = pt[(dpta > L) & (dptb > L)]#long distance to other spe in both forepart & backpart
+        ps = ps[(ps >= 0) & (ps < leng - L)]
+        if ps.shape[0] != 0:
+            for k in range(len(ps)):
+                dt[num]['EventID'] = Wf[i_wf[p]]['EventID']
+                dt[num]['ChannelID'] = Wf[i_wf[p]]['ChannelID']
+                dt[num]['speWf'] = Wf[i_wf[p]]['Waveform'][ps[k]:ps[k]+L]
+                num += 1
+                if num >= N:
+                    break
+        print('\rSingle PE Generating:|{}>{}|{:6.2f}%'.format(((20*(num-1))//N)*'-', (19 - (20*(num-1))//N)*' ', 100 * (num / N)), end=''if num != N else '\n')
+        if num >= N or p == len(e_wf)-1:
+            dt = dt[:num] # cut empty dt part
+            dt = np.sort(dt, kind='stable', order=['EventID', 'ChannelID'])
+            if Chnum < 100:
+                assert Chnum == len(np.unique(dt['ChannelID']))
+            else:
+                dt['ChannelID'] = 0
+            print('{} speWf generated'.format(len(dt)))
+            spemean, epulse, cid = mean(dt)
+            spe_pre = pre_analysis(spemean, epulse, Wf[:10000])
+            break
     with h5py.File(single_pe_path, 'w') as spp:
         dset = spp.create_dataset('SinglePE', data=dt)
         dset.attrs['SpePositive'] = spe_pre['spe']

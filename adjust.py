@@ -11,7 +11,7 @@ import wf_func as wff
 psr = argparse.ArgumentParser()
 psr.add_argument('-o', dest='opt', help='output file')
 psr.add_argument('ipt', help='input file', nargs='+')
-psr.add_argument('--mod', type=str, help='mode of weight or charge', choices=['Weight', 'Charge'])
+psr.add_argument('--mod', type=str, help='mode of weight', choices=['PEnum', 'Charge'])
 psr.add_argument('--ref', type=str, help='reference file')
 psr.add_argument('-N', dest='Ncpu', type=int, help='cpu number', default=10)
 psr.add_argument('-p', dest='pri', action='store_false', help='print bool', default=True)
@@ -34,8 +34,8 @@ def select(a, b):
         N = len(ipt['Answer'])
         Eid = ipt['Answer']['EventID']
         Cid = ipt['Answer']['ChannelID']
-        Pet = ipt['Answer']['PETime']
-        Wgt = ipt['Answer']['Weight']
+        Pet = ipt['Answer']['RiseTime']
+        Wgt = ipt['Answer']['PEnum']
         Chnum = len(np.unique(Cid))
         Aid = Eid * Chnum + Cid
         e_ans, i_ans, c_ans = np.unique(Aid, return_index=True, return_counts=True)
@@ -53,18 +53,18 @@ def select(a, b):
             pe_var = np.sum(pwe_a) - np.sum(pwe)
             lenpf = len(pwe_a)
             end = start + lenpf
-            dt['PETime'][start:end] = pet_a
-            dt['Weight'][start:end] = pwe_a
+            dt['RiseTime'][start:end] = pet_a
+            dt['PEnum'][start:end] = pwe_a
             dt['EventID'][start:end] = e_ans[i]//Chnum
             dt['ChannelID'][start:end] = cid
             dt['PEdiff'][start] = pe_var
             start = end
         fi.close()
-    dt = dt[dt['Weight'] > 0]
+    dt = dt[dt['PEnum'] > 0]
     return dt
 
-if mode == 'Weight':
-    opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('PETime', np.uint16), ('Weight', np.uint8), ('PEdiff', np.float32)])
+if mode == 'PEnum':
+    opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('RiseTime', np.uint16), ('PEnum', np.uint8), ('PEdiff', np.float32)])
     with h5py.File(fipt[0], 'r', libver='latest', swmr=True) as fi:
         method = fi['Answer'].attrs['Method']
     with h5py.File(fipt[1], 'r', libver='latest', swmr=True) as fi:

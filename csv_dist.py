@@ -10,16 +10,16 @@ import argparse
 psr = argparse.ArgumentParser()
 psr.add_argument('-o', dest='opt', help='output')
 psr.add_argument('ipt', help='input')
-psr.add_argument('--mod', type=str, help='mode of weight or charge', choices=['Weight', 'Charge'])
+psr.add_argument('--mod', type=str, help='mode of weight or charge', choices=['PEnum', 'Charge'])
 psr.add_argument('-p', dest='pri', action='store_false', help='print bool', default=True)
 args = psr.parse_args()
 mode = args.mod
-if mode == 'Weight':
+if mode == 'PEnum':
     extradist = 'pdist'
-    pecount = 'PEnum'
+    pecount = 'TotalPEnum'
 elif mode == 'Charge':
     extradist = 'chargediff'
-    pecount = 'PEpos'
+    pecount = 'TotalPEpos'
 if args.pri:
     sys.stdout = None
 

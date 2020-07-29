@@ -7,18 +7,18 @@ import argparse
 psr = argparse.ArgumentParser()
 psr.add_argument('-o', dest='opt', help='output file')
 psr.add_argument('ipt', help='input file')
-psr.add_argument('--mod', type=str, help='mode of weight or charge', choices=['Weight', 'Charge'])
+psr.add_argument('--mod', type=str, help='mode of weight', choices=['PEnum', 'Charge'])
 psr.add_argument('-p', dest='pri', action='store_false', help='print bool', default=True)
 args = psr.parse_args()
 mode = args.mod
-if mode == 'Weight':
+if mode == 'PEnum':
     extradist = 'pdist'
-    pecount = 'PEnum'
+    pecount = 'TotalPEnum'
     pecountlabel = 'PEnum diff'
     extradistlabel = ['P-dist', r'$P-dist/\mathrm{1}$']
 elif mode == 'Charge':
     extradist = 'chargediff'
-    pecount = 'PEpos'
+    pecount = 'TotalPEpos'
     pecountlabel = None
     extradistlabel = ['Charge-diff', r'$Charge-diff/\mathrm{mV}\cdot\mathrm{ns}$']
 if args.pri:
@@ -106,12 +106,12 @@ with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as distfile:
     a = (dt['wdist'] < N).sum()
     b = (dt[extradist] > M).sum()
     l = len(dt['wdist'])
-    if mode == 'Weight':
+    if mode == 'PEnum':
         extradisttitle = None
-        sumtitle = 'W\&'+extradistlabel[0]+' hist,Wd<{}ns,'.format(N)+'flawed'
+        sumtitle = 'W&'+extradistlabel[0]+' hist,Wd<{}ns,'.format(N)+'flawed'
     elif mode == 'Charge':
         extradisttitle = 'count {}(Cd>{}mV*ns)/{}={:.2f}'.format(b, M, l, b/l)
-        sumtitle = 'W-dist\&'+extradistlabel[0]+' hist,Wd<{}ns,'.format(N)+'Cd>{}mV*ns,'.format(M)+'flawed'
+        sumtitle = 'W-dist&'+extradistlabel[0]+' hist,Wd<{}ns,'.format(N)+'Cd>{}mV*ns,'.format(M)+'flawed'
     plt.rcParams['figure.figsize'] = (12, 6)
     fig = plt.figure()
     gs = gridspec.GridSpec(2, 2, figure=fig, left=0.1, right=0.9, top=0.9, bottom=0.1, wspace=0.2, hspace=0.3)

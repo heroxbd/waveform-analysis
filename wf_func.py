@@ -3,12 +3,14 @@
 import os
 import math
 import numpy as np
+np.set_printoptions(suppress=True)
 import scipy
 import scipy.stats
 from scipy import optimize as opti
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+from mpl_axes_aligner import align
 import numba
 import h5py
 from scipy.interpolate import interp1d
@@ -115,9 +117,9 @@ def ergodic(wave, mne, base):
 
 def xpp_convol(pet, wgt):
     core = np.array([0.9, 1.7, 0.9])
-    idt = np.dtype([('PETime', np.int16), ('Weight', np.float16), ('Wgt_b', np.uint8)])
+    idt = np.dtype([('RiseTime', np.int16), ('Weight', np.float16), ('Wgt_b', np.uint8)])
     seg = np.zeros(np.max(pet) + 3, dtype=idt)
-    seg['PETime'] = np.arange(-1, np.max(pet) + 2)
+    seg['RiseTime'] = np.arange(-1, np.max(pet) + 2)
     seg['Weight'][np.sort(pet) + 1] = wgt[np.argsort(pet)]
     seg['Wgt_b'] = np.around(seg['Weight'])
     resi = seg['Weight'][1:-1] - seg['Wgt_b'][1:-1]
@@ -127,10 +129,10 @@ def xpp_convol(pet, wgt):
     seg['Wgt_b'][(ta > 0)*(tb < 0)*(t > 0.5)*(seg['Wgt_b'] == 0.0)*(seg['Weight'] > 0)] += 1
     if np.sum(seg['Wgt_b'][1:-1] > 0) != 0:
         pwe = seg['Wgt_b'][1:-1][seg['Wgt_b'][1:-1] > 0]
-        pet = seg['PETime'][1:-1][seg['Wgt_b'][1:-1] > 0]
+        pet = seg['RiseTime'][1:-1][seg['Wgt_b'][1:-1] > 0]
     else:
         pwe = np.array([1])
-        pet = np.array([seg['PETime'][np.argmax(seg['Weight'])]])
+        pet = np.array([seg['RiseTime'][np.argmax(seg['Weight'])]])
     return pet, pwe
 
 def potential(t, pet, resi):
@@ -180,6 +182,9 @@ def read_model(spe_path):
         spe = speFile['SinglePE'].attrs['SpePositive']
         thres = speFile['SinglePE'].attrs['Thres']
         spe_pre = {}
+        fig = plt.figure()
+        fig.tight_layout()
+        ax = fig.add_subplot(111)
         for i in range(len(spe)):
             m_l = np.sum(spe[i] > thres[i])
             peak_c = np.argmax(spe[i])
@@ -187,11 +192,11 @@ def read_model(spe_path):
             mar_r = np.sum(spe[i][peak_c:] < thres[i])
             spe_pre_i = {'spe':spe[i], 'epulse':epulse, 'peak_c':peak_c, 'm_l':m_l, 'mar_l':mar_l, 'mar_r':mar_r, 'thres':thres[i]}
             spe_pre.update({cid[i]:spe_pre_i})
-            plt.plot(spe_pre[cid[i]]['spe'])
-        plt.grid()
-        plt.xlabel(r'Time/[ns]')
-        plt.ylabel(r'ADC')
-        plt.savefig('spe.png')
+            ax.plot(spe_pre[cid[i]]['spe'])
+        ax.grid()
+        ax.set_xlabel('$Time/\mathrm{ns}$')
+        ax.set_ylabel('$Voltage/\mathrm{mV}$')
+        fig.savefig('img/spe.png', bbox_inches='tight')
         plt.close()
     return spe_pre
 
@@ -271,57 +276,83 @@ def pf_to_tw(pf, thres = 0):
     pet = np.argwhere(pf > thres).flatten()
     return pet, pwe
 
-def demo(pet, pwe, tth, spe_pre, leng, possible, wave, cid):
+def demo(pet, pwe, tth, spe_pre, leng, possible, wave, cid, mode, adjust=False):
     print('possible = {}'.format(possible))
     penum = len(tth)
     print('PEnum is {}'.format(penum))
-    tru_pet = tth['PETime']
-    pet0, pwe0 = np.unique(tru_pet, return_counts=True)
-    print('truth PETime = {}, Weight = {}'.format(pet0, pwe0))
-    pf0 = np.zeros(leng); pf0[pet0] = pwe0
+    pf0 = np.zeros(leng); pf1 = np.zeros(leng)
+    if mode == 'Weight':
+        tru_pet = tth['RiseTime']
+        t, c = np.unique(tru_pet, return_counts=True)
+        pf0[t] = c
+        pf1[pet] = pwe
+        xlabel = '$PEnum/\mathrm{1}$'
+        distd = '(W/ns,P/1)'; distl = 'pdist'
+        Q = penum; q = np.sum(pwe)
+        edist = np.abs(Q - q) * scipy.stats.poisson.pmf(Q, Q)
+    elif mode == 'Charge':
+        t = tth['RiseTime']; w = tth[mode]
+        t = np.unique(t); c = np.array([np.sum(w[t == i]) for i in t])
+        pf0[t] = c / spe_pre['spe'].sum()
+        pf1[pet] = pwe / spe_pre['spe'].sum()
+        xlabel = '$Charge/\mathrm{mV}\cdot\mathrm{ns}$'
+        distd = '(W/ns,C/mV*ns)'; distl = 'cdiff'
+        edist = pwe.sum() - c.sum()
+    print('truth RiseTime = {}, Weight = {}'.format(t, c))
     wave0 = np.convolve(spe_pre['spe'], pf0, 'full')[:leng]
     print('truth Resi-norm = {}'.format(np.linalg.norm(wave-wave0)))
-    print('before PETime = {}, Weight = {}'.format(pet, pwe))
-    wdist = scipy.stats.wasserstein_distance(tru_pet, pet, v_weights=pwe)
-    Q = penum; q = np.sum(pwe)
-    pdist = np.abs(Q - q) * scipy.stats.poisson.pmf(Q, Q)
-    print('before wdist is {}, pdist is {}'.format(wdist, pdist))
-    pf1 = np.zeros(leng); pf1[pet] = pwe
+    print('RiseTime = {}, Weight = {}'.format(pet, pwe))
+    wdist = scipy.stats.wasserstein_distance(t, pet, u_weights=c, v_weights=pwe)
+    print('wdist = {},'.format(wdist)+distl+' = {}'.format(edist))
     wave1 = np.convolve(spe_pre['spe'], pf1, 'full')[:leng]
-    print('before Resi-norm = {}'.format(np.linalg.norm(wave-wave1)))
-    pet_a, pwe_a = hybird_select(pet, pwe, wave, spe_pre['spe'], 0.2)
-    print('after PETime = {}, Weight = {}'.format(pet_a, pwe_a))
-    wdist_a = scipy.stats.wasserstein_distance(tru_pet, pet_a, v_weights=pwe_a)
-    q_a = np.sum(pwe_a)
-    pdist_a = np.abs(Q - q_a) * scipy.stats.poisson.pmf(Q, Q)
-    print('after wdist is {}, pdist is {}'.format(wdist_a, pdist_a))
-    pf_a = np.zeros(leng); pf_a[pet_a] = pwe_a
-    wave_a = np.convolve(spe_pre['spe'], pf_a, 'full')[:leng]
-    print('after Resi-norm = {}'.format(np.linalg.norm(wave-wave_a)))
-    plt.plot(wave, c='b', label='original WF')
-    plt.plot(wave0, c='k', label='truth WF')
-    plt.plot(wave1, c='y', label='before adjust WF')
-    plt.plot(wave_a, c='m', label='after adjust WF')
-    plt.scatter(possible, wave[possible], marker='+', c='r')
-    plt.xlabel(r'Time/[ns]')
-    plt.ylabel(r'ADC')
-    plt.xlim(200, 400)
-    plt.hlines(spe_pre['thres'], 200, 500, color='c')
-    t, c = np.unique(tru_pet, return_counts=True)
-    plt.vlines(t, 0, 10*c, color='k')
-    hh = -10*(np.max(pwe_a)+1)
-    plt.vlines(pet, -10*pwe+hh, hh, color='y')
-    plt.vlines(pet_a, -10*pwe_a, 0, color='m')
-    plt.legend()
-    plt.grid()
-    plt.title('eid={}, cid={}, wp-dist=({:.2f},{:.2f})->({:.2f},{:.2f})'.format(tth['EventID'][0], tth['ChannelID'][0], wdist, pdist, wdist_a, pdist_a))
-    plt.savefig('demoe{}c{}.png'.format(tth['EventID'][0], tth['ChannelID'][0]))
-    plt.close()
-    plt.plot(spe_pre['spe'], c='b')
-    plt.grid()
-    plt.xlabel(r'Time/[ns]')
-    plt.ylabel(r'ADC')
-    plt.savefig('spe{}.png'.format(cid))
-    plt.close()
+    print('Resi-norm = {}'.format(np.linalg.norm(wave-wave1)))
+
+    fig = plt.figure()
+    fig.tight_layout()
+    ax = fig.add_subplot(111)
+    ax.grid()
+    ax2 = ax.twinx()
+    ax.plot(wave, c='b', label='origin wave')
+    ax.plot(wave0, c='k', label='truth wave')
+    ax.plot(wave1, c='C1', label='recon wave')
+    ax.scatter(possible, wave[possible], marker='+', c='r', label='possible')
+    ax.set_xlabel('$Time/\mathrm{ns}$')
+    ax.set_ylabel('$Voltage/\mathrm{mV}$')
+    ax.set_xlim(250, 500)
+    ax.hlines(spe_pre['thres'], 0, 1029, color='c', label='threshold')
+    ax2.set_ylabel(xlabel)
+    if adjust:
+        pet_a, pwe_a = hybird_select(pet, pwe, wave, spe_pre['spe'], 0.2)
+        print(pwe_a)
+        print('after RiseTime = {}, Weight = {}'.format(pet_a, pwe_a))
+        wdist_a = scipy.stats.wasserstein_distance(t, pet_a, u_weights=c, v_weights=pwe_a)
+        q_a = np.sum(pwe_a)
+        pdist_a = np.abs(Q - q_a) * scipy.stats.poisson.pmf(Q, Q)
+        print('after wdist is {}, pdist is {}'.format(wdist_a, pdist_a))
+        pf_a = np.zeros(leng); pf_a[pet_a] = pwe_a
+        wave_a = np.convolve(spe_pre['spe'], pf_a, 'full')[:leng]
+        print('after Resi-norm = {}'.format(np.linalg.norm(wave-wave_a)))
+        hh = 1.0*math.ceil(pwe.max())
+        ax.plot(wave_a, c='m', label='adjust wave')
+        ax2.vlines(pet_a, -(pwe_a+hh), -hh, color='m', label='adjusted PEnum')
+        fig.suptitle('eid={},cid={},(W/ns,P/1)-dist=({:.2f},{:.2f})->({:.2f},{:.2f})'.format(tth['EventID'][0], tth['ChannelID'][0], wdist, edist, wdist_a, pdist_a))
+    else:
+        fig.suptitle('eid={},cid={},'.format(tth['EventID'][0], tth['ChannelID'][0])+distd+'-dist={:.2f},{:.2f}'.format(wdist, edist))
+    ax2.vlines(t, 0, c, color='g', label='truth '+mode)
+    ax2.vlines(pet, -pwe, 0, color='y', label='recon '+mode)
+    lines, labels = ax.get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+    align.yaxes(ax, 0, ax2, 0)
+    ax2.legend(lines + lines2, labels + labels2)
+    fig.savefig('img/demoe{}c{}.png'.format(tth['EventID'][0], tth['ChannelID'][0]), bbox_inches='tight')
+    fig.clf()
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.plot(spe_pre['spe'], c='b')
+    ax.grid()
+    ax.set_xlabel('$Time/\mathrm{ns}$')
+    ax.set_ylabel('$Voltage/\mathrm{mV}$')
+    fig.savefig('img/spe{}.png'.format(cid), bbox_inches='tight')
+    fig.clf()
     return
 

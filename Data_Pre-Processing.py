@@ -5,16 +5,10 @@ import argparse
 psr = argparse.ArgumentParser()
 psr.add_argument('ipt', help='input file direction & prefix')
 psr.add_argument('-o', '--outputdir', dest='opt', help='output_dir')
-psr.add_argument('--mod', type=str, help='mode of weight or charge', choices=['Weight', 'Charge'])
 psr.add_argument('--ref', type=str, nargs='+', help='reference file')
 args = psr.parse_args()
 SavePath = args.opt
 reference = args.ref
-mode = args.mod
-if mode == 'Weight':
-    petime = 'PETime'
-elif mode == 'Charge':
-    petime = 'RiseTime'
 filedir, prefix = os.path.split(args.ipt)
 files = os.listdir(filedir)
 files = [filedir+'/'+fi for fi in files if prefix in fi and not os.path.isdir(fi)]
@@ -30,19 +24,19 @@ from multiprocessing import Pool, cpu_count
 import pandas as pd
 import wf_func as wff
 
-def Make_Time_Vector(GroundTruth, Waveforms_and_info) :
+def Make_Time_Vector(GroundTruth, Waveforms_and_info, mode) :
     i = 0
     Time_Series = np.zeros((len(Waveforms_and_info), WindowSize), dtype=np.uint8)
     Wave_EventID = Waveforms_and_info['EventID'].to_numpy()
     Truth_EventID = GroundTruth['EventID'].to_numpy(); nt = len(Truth_EventID)
-    PETime = GroundTruth[petime].to_numpy()
+    RiseTime = GroundTruth['RiseTime'].to_numpy()
     if mode == 'Charge':
         Mode = GroundTruth[mode].to_numpy()
     elif mode == 'Weight':
-        Mode = np.ones_like(PETime)
+        Mode = np.ones_like(RiseTime)
     for j in range(len(Waveforms_and_info)) :
         while i < nt and Wave_EventID[j] == Truth_EventID[i] :
-            Time_Series[j][PETime[i]] = Time_Series[j][PETime[i]] + Mode[i]
+            Time_Series[j][RiseTime[i]] = Time_Series[j][RiseTime[i]] + Mode[i]
             i = i + 1
     return Time_Series
 
@@ -56,7 +50,7 @@ def Read_Data(sliceNo, filename, Wave_startentry, Wave_endentry, Truth_startentr
     print('Reading File ' + filename)
     Waveforms_and_info = WaveformTable[Wave_startentry:Wave_endentry]
     GroundTruth = GroundTruthTable[Truth_startentry:Truth_endentry]
-    GroundTruth = GroundTruth[np.logical_and(GroundTruth[petime] >= 0, GroundTruth[petime] < WindowSize)]
+    GroundTruth = GroundTruth[np.logical_and(GroundTruth['RiseTime'] >= 0, GroundTruth['RiseTime'] < WindowSize)]
     h5file.close()
     return (sliceNo, {'Waveform': TableToDataFrame(Waveforms_and_info), 'GroundTruth': TableToDataFrame(GroundTruth)})
 
@@ -69,10 +63,12 @@ def PreProcess(channelid) :
     for i in range(len(Origin_Waves)) :
         Shifted_Waves[i] = wff.deduct_base(spe_pre[channelid]['epulse'] * Origin_Waves[i], spe_pre[channelid]['m_l'], spe_pre[channelid]['thres'], 20, 'detail')
 
-    HitSpectrum = Make_Time_Vector(Truth_of_this_channel, Waves_of_this_channel)
+    WeightSpectrum = Make_Time_Vector(Truth_of_this_channel, Waves_of_this_channel, 'Weight')
+    ChargeSpectrum = Make_Time_Vector(Truth_of_this_channel, Waves_of_this_channel, 'Charge')
     with h5py.File(SavePath + '{:02d}.h5'.format(channelid), 'w') as opt:
         opt.create_dataset('Waveform', data=Shifted_Waves, compression='gzip')
-        opt.create_dataset('HitSpectrum', data=HitSpectrum, compression='gzip')
+        opt.create_dataset('WeightSpectrum', data=WeightSpectrum, compression='gzip')
+        opt.create_dataset('ChargeSpectrum', data=ChargeSpectrum, compression='gzip')
     return
 
 print('training data pre-processing savepath is {}'.format(os.path.dirname(SavePath)))

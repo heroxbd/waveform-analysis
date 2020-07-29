@@ -22,6 +22,6 @@ For each method:
 ## Makefile argument:
 + set: jinp / juno
 + method: takara / xiaopeip / lucyddm / mcmc
-+ mode: Weight / Charge
++ mode: PEnum / Charge
 + rseq: the fileno to be extracted
 + chunk: the fileno for test

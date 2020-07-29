@@ -25,7 +25,7 @@ Demo = False
 psr = argparse.ArgumentParser()
 psr.add_argument('-o', dest='opt', type=str, help='output file')
 psr.add_argument('ipt', type=str, help='input file')
-psr.add_argument('--mod', type=str, help='mode of weight or charge', choices=['Weight', 'Charge'])
+psr.add_argument('--mod', type=str, help='mode of weight', choices=['PEnum', 'Charge'])
 psr.add_argument('--met', type=str, help='fitting method')
 psr.add_argument('--ref', type=str, nargs='+', help='reference file')
 psr.add_argument('-N', dest='Ncpu', type=int, help='cpu number', default=50)
@@ -36,10 +36,6 @@ fipt = args.ipt
 fopt = args.opt
 reference = args.ref
 mode = args.mod
-if mode == 'Weight':
-    petime = 'PETime'
-elif mode == 'Charge':
-    petime = 'RiseTime'
 method = args.met
 Ncpu = args.Ncpu
 if args.demo:
@@ -58,7 +54,7 @@ def loss(x, M, y, eta=E):
     return np.power(y - np.matmul(M, x), 2).sum() + eta * x.sum()
 
 def model(wave, mne, n, eta=E):
-    pf = numpyro.sample('weight', dist.HalfNormal(jnp.ones(n)))
+    pf = numpyro.sample('penum', dist.HalfNormal(jnp.ones(n)))
     y = numpyro.sample('y', dist.Normal(0, 1), obs=jnp.power(wave-jnp.matmul(mne, pf), 2) + eta*jnp.sum(pf))
     return y
 
@@ -93,8 +89,8 @@ def inferencing(a, b):
                     nuts_kernel_collect.update({len(pos) : NUTS(model_collect[len(pos)], step_size=0.01, adapt_step_size=True)})
                     mcmc_collect.update({len(pos) : MCMC(nuts_kernel_collect[len(pos)], num_warmup=warmup, num_samples=samples, num_chains=1, progress_bar=Demo, jit_model_args=True)})
                 mcmc_collect[len(pos)].run(rng_key, wave=jnp.array(wave), mne=jnp.array(mne))
-                # pf = np.mean(np.array(mcmc_collect[len(pos)].get_samples()['weight']), axis=0)
-                pf = lasso_select(np.array(mcmc_collect[len(pos)].get_samples()['weight']), wave, mne)
+                # pf = np.mean(np.array(mcmc_collect[len(pos)].get_samples()['penum']), axis=0)
+                pf = lasso_select(np.array(mcmc_collect[len(pos)].get_samples()['penum']), wave, mne)
                 pos_r = pos[pf > Thres]
                 pf = pf[pf > Thres]
                 if len(pos_r) == 0:
@@ -105,8 +101,8 @@ def inferencing(a, b):
                 pos_r = t if t[0] >= 0 else np.array([0])
             lenpf = len(pf)
             end = start + lenpf
-            dti[petime][start:end] = pos_r.astype(np.uint16)
-            if mode == 'Weight':
+            dti['RiseTime'][start:end] = pos_r.astype(np.uint16)
+            if mode == 'PEnum':
                 dt[mode][start:end] = pf.astype(np.float16)
             elif mode == 'Charge':
                 dt[mode][start:end] = pf.astype(np.float16) * np.sum(spe[cid])
@@ -135,8 +131,8 @@ def fitting(a, b):
 
             lenpf = len(pwe)
             end = start + lenpf
-            dt[petime][start:end] = pet.astype(np.uint16)
-            if mode == 'Weight':
+            dt['RiseTime'][start:end] = pet.astype(np.uint16)
+            if mode == 'PEnum':
                 dt[mode][start:end] = pwe.astype(np.float16)
             elif mode == 'Charge':
                 dt[mode][start:end] = pwe.astype(np.float16) * np.sum(spe_pre[ent[i]['ChannelID']]['spe'])
@@ -149,7 +145,7 @@ def fitting(a, b):
 
 spe_pre = wff.read_model(reference[0])
 #stanmodel = pickle.load(open(reference[1], 'rb'))
-opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), (petime, np.uint16), (mode, np.float16)])
+opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('RiseTime', np.uint16), (mode, np.float16)])
 with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
     l = len(ipt['Waveform'])
     print('{} waveforms will be computed'.format(l))
