@@ -35,6 +35,8 @@ import pytorch_stats_loss as stats_loss
 
 # detecting cuda device and wait in line
 device = torch.device(ChannelID % 2)
+torch.cuda.init()
+torch.cuda.empty_cache()
 # Make Saving_Directory
 if not os.path.exists(SavePath):
     os.makedirs(SavePath)

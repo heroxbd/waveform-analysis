@@ -15,6 +15,8 @@ import numpyro
 import numpyro.distributions as dist
 from numpyro.infer import MCMC, NUTS
 from multiprocessing import Pool, cpu_count
+from tqdm import tqdm
+from JPwaptool import JPwaptool
 import wf_func as wff
 import time
 global_start = time.time()
@@ -44,7 +46,7 @@ if args.demo:
 Thres = 0.1
 warmup = 200
 samples = 1000
-E = 0
+E = 0.0
 
 def lasso_select(pf_r, wave, mne):
     pf_r = pf_r[np.argmin([loss(pf_r[j], mne, wave) for j in range(len(pf_r))])]
@@ -73,7 +75,8 @@ def inferencing(a, b):
         end = 0
         for i in range(a, b):
             cid = ent[i]['ChannelID']
-            wave = wff.deduct_base(spe_pre[cid]['epulse'] * ent[i]['Waveform'], spe_pre[cid]['m_l'], spe_pre[cid]['thres'], 20, 'detail')
+            stream.Calculate(ent[i]['Waveform'])
+            wave = (ent[i]['Waveform'] - stream.ChannelInfo.Pedestal) * spe_pre[cid]['epulse']
             pos = np.argwhere(wave[spe_pre[cid]['peak_c'] + 2:] > spe_pre[cid]['thres']).flatten()
             pf = wave[pos]/(spe_pre[cid]['spe'].sum())
             flag = 1
@@ -115,29 +118,38 @@ def inferencing(a, b):
 
 def fitting(a, b):
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
-        ent = ipt['Waveform']
+        ent = ipt['Waveform'][:]
         leng = len(ent[0]['Waveform'])
+        stream = JPwaptool(leng, 100, 600)
         dt = np.zeros((b - a) * leng, dtype=opdt)
         start = 0
         end = 0
         for i in range(a, b):
-            wave = wff.deduct_base(spe_pre[ent[i]['ChannelID']]['epulse'] * ent[i]['Waveform'], spe_pre[ent[i]['ChannelID']]['m_l'], spe_pre[ent[i]['ChannelID']]['thres'], 20, 'detail')
+            stream.Calculate(ent[i]['Waveform'])
+            wave = (ent[i]['Waveform'] - stream.ChannelInfo.Pedestal) * spe_pre[ent[i]['ChannelID']]['epulse']
 
             if method == 'xiaopeip':
-                pet, pwe, _ = wff.fit_N(wave, spe_pre[ent[i]['ChannelID']], 'xiaopeip', eta=E)
+#                 pet, pwe, ped = wff.xiaopeip(wave, spe_pre[ent[i]['ChannelID']])
+#                 wave = wave - ped
+                pet, pwe = wff.xiaopeip(wave, spe_pre[ent[i]['ChannelID']])
             elif method == 'lucyddm':
-                pf = wff.lucyddm_core(wave, spe_pre[ent[i]['ChannelID']])
-                pet, pwe = wff.pf_to_tw(pf, Thres)
+                pet, pwe = wff.lucyddm(wave, spe_pre[ent[i]['ChannelID']])
             elif method == 'threshold':
                 pet, pwe = wff.threshold(wave, spe_pre[ent[i]['ChannelID']])
+            elif method == 'findpeak':
+                pet = np.array(stream.ChannelInfo.PeakLoc) - spe_pre[ent[i]['ChannelID']]['peak_c']
+                pwe = np.array(stream.ChannelInfo.PeakAmp) / spe_pre[ent[i]['ChannelID']]['spe'].max()
+                pwe = pwe[pet >= 0]; pet = pet[pet >= 0]
+            pet, pwe = wff.clip(pet, pwe, Thres)
 
             lenpf = len(pwe)
             end = start + lenpf
-            dt['RiseTime'][start:end] = pet.astype(np.uint16)
+            dt['RiseTime'][start:end] = pet
             if mode == 'PEnum':
-                dt[mode][start:end] = pwe.astype(np.float16)
+                dt[mode][start:end] = pwe
             elif mode == 'Charge':
-                dt[mode][start:end] = pwe.astype(np.float16) * np.sum(spe_pre[ent[i]['ChannelID']]['spe'])
+                pwe = pwe / pwe.sum() * np.abs(wave.sum())
+                dt[mode][start:end] = pwe
             dt['EventID'][start:end] = ent[i]['EventID']
             dt['ChannelID'][start:end] = ent[i]['ChannelID']
             start = end
@@ -146,8 +158,8 @@ def fitting(a, b):
     return dt
 
 spe_pre = wff.read_model(reference[0])
-#stanmodel = pickle.load(open(reference[1], 'rb'))
-opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('RiseTime', np.uint16), (mode, np.float16)])
+# stanmodel = pickle.load(open(reference[1], 'rb'))
+opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('RiseTime', np.uint16), (mode, np.float64)])
 with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
     l = len(ipt['Waveform'])
     print('{} waveforms will be computed'.format(l))
@@ -163,6 +175,7 @@ with Pool(min(Ncpu, cpu_count())) as pool:
         select_result = pool.starmap(inferencing, slices)
     else:
         select_result = pool.starmap(fitting, slices)
+# select_result = fitting(0, l)
 result = np.hstack(select_result)
 result = np.sort(result, kind='stable', order=['EventID', 'ChannelID'])
 print('Prediction generated, real time {0:.4f}s, cpu time {1:.4f}s'.format(time.time() - tic, time.process_time() - cpu_tic))

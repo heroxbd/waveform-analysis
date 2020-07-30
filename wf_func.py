@@ -12,6 +12,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from mpl_axes_aligner import align
 import numba
+from JPwaptool import JPwaptool
 import h5py
 from scipy.interpolate import interp1d
 
@@ -21,57 +22,65 @@ plt.rcParams['font.size'] = 8
 plt.rcParams['lines.markersize'] = 4.0
 plt.rcParams['lines.linewidth'] = 1.0
 
-def fit_N(wave, spe_pre, method, eta=0):
-    l = wave.shape[0]
-    spe_l = spe_pre['spe'].shape[0] 
-    n = math.ceil(spe_l/10)
-    difth = np.sort(spe_pre['spe'][np.arange(2,spe_l-1)+1]-spe_pre['spe'][np.arange(2,spe_l-1)]-spe_pre['spe'][np.arange(2,spe_l-1)-1]+spe_pre['spe'][np.arange(2,spe_l-1)-2])[n]
-    lowp = np.argwhere(vali_base(wave, spe_pre['m_l'], spe_pre['thres']) == 1).flatten()
-    lowp = lowp[np.logical_and(lowp > 1, lowp < l-1)]
+def xiaopeip(wave, spe_pre, eta=0):
+    l = len(wave)
     flag = 1
+    lowp = np.argwhere(wave > spe_pre['thres']).flatten()
     if len(lowp) != 0:
-        panel = np.zeros(l)
-        for j in lowp:
-            head = j-spe_pre['mar_l'] if j-spe_pre['mar_l'] > 0 else 0
-            tail = j+spe_pre['mar_r'] if j+spe_pre['mar_r'] <= l else l
-            panel[head : tail + 1] = 1
-        fitp = np.argwhere(panel == 1).flatten()
-        numb = np.argwhere(wave[lowp+1]-wave[lowp]-wave[lowp-1]+wave[lowp-2] < difth).flatten()
-        if len(numb) != 0:
-            ran = np.arange(spe_pre['peak_c'] - 1, spe_pre['peak_c'] + 2)
-            possible = np.unique(lowp[numb] - ran.reshape(ran.shape[0], 1))
-            possible = possible[np.logical_and(possible>=0, possible<l)]
-            if len(possible) != 0:
-                if method == 'xiaopeip':
-                    pf_r = xiaopeip_core(wave, spe_pre['spe'], fitp, possible, eta=eta)
-            else:
-                flag = 0
+        fitp = np.arange(lowp.min() - spe_pre['mar_l'], lowp.max() + spe_pre['mar_r'])
+        fitp = np.unique(np.clip(fitp, 0, len(wave)-1))
+        pet = lowp - spe_pre['peak_c']
+        pet = np.unique(np.clip(pet, 0, len(wave)-1))
+        if len(pet) != 0:
+#             pwe, ped = xiaopeip_core(wave, spe_pre['spe'], fitp, pet, eta=eta)
+            pwe = xiaopeip_core(wave, spe_pre['spe'], fitp, pet, eta=eta)
         else:
             flag = 0
     else:
         flag = 0
     if flag == 0:
-        t = np.argwhere(wave == wave.max())[0][0] - spe_pre['peak_c']
-        possible = np.array([t]) if t >= 0 else np.array([0])
-        pf_r = np.array([1])
-    pf = np.zeros_like(wave)
-    pf[possible] = pf_r
-    return pf, possible
+        pet = np.array([np.argmax(wave[spe_pre['peak_c']:])])
+        pwe = np.array([1])
+#     return pet, pwe, ped
+    return pet, pwe
+
+# def xiaopeip_core(wave, spe, fitp, possible, eta=0):
+#     l = len(wave)
+#     spe = np.concatenate([spe, np.zeros(l - spe.shape[0])])
+#     ans0 = np.zeros(len(possible)+1).astype(np.float64)
+#     ans0[-1] = wave.min()
+#     b = np.zeros((len(possible)+1, 2)).astype(np.float64)
+#     b[-1, 0] = -np.inf
+#     b[:, 1] = np.inf
+#     mne = spe[np.mod(fitp.reshape(fitp.shape[0], 1) - possible.reshape(1, possible.shape[0]), l)]
+#     ans = opti.fmin_l_bfgs_b(norm_fit, ans0, args=(mne, wave[fitp], eta), approx_grad=True, bounds=b, maxfun=500000)
+#     # ans = opti.fmin_slsqp(norm_fit, ans0, args=(mne, wave[fitp]), bounds=b, iprint=-1, iter=500000)
+#     # ans = opti.fmin_tnc(norm_fit, ans0, args=(mne, wave[fitp]), approx_grad=True, bounds=b, messages=0, maxfun=500000)
+#     pf = ans[0]
+#     return pf[:-1], pf[-1]
+
+# def norm_fit(x, M, y, eta=0):
+#     return np.power(y - x[-1] - np.matmul(M, x[:-1]), 2).sum() + eta * x.sum()
 
 def xiaopeip_core(wave, spe, fitp, possible, eta=0):
-    l = wave.shape[0]
+    l = len(wave)
     spe = np.concatenate([spe, np.zeros(l - spe.shape[0])])
-    ans0 = np.zeros_like(possible).astype(np.float64)
-    b = np.zeros((possible.shape[0], 2)).astype(np.float64)
+    ans0 = np.zeros(len(possible)).astype(np.float64)
+    b = np.zeros((len(possible), 2)).astype(np.float64)
     b[:, 1] = np.inf
     mne = spe[np.mod(fitp.reshape(fitp.shape[0], 1) - possible.reshape(1, possible.shape[0]), l)]
-    ans = opti.fmin_l_bfgs_b(norm_fit, ans0, args=(mne, wave[fitp], eta), approx_grad=True, bounds=b, maxfun=500000)
+    try:
+        ans = opti.fmin_l_bfgs_b(norm_fit, ans0, args=(mne, wave[fitp], eta), approx_grad=True, bounds=b, maxfun=500000)
+    except ValueError:
+        ans = [np.ones(len(possible)) * 0.2]
     # ans = opti.fmin_slsqp(norm_fit, ans0, args=(mne, wave[fitp]), bounds=b, iprint=-1, iter=500000)
     # ans = opti.fmin_tnc(norm_fit, ans0, args=(mne, wave[fitp]), approx_grad=True, bounds=b, messages=0, maxfun=500000)
-    pf_r = ans[0]
-    return pf_r
+    return ans[0]
 
-def lucyddm_core(waveform, spe_pre, iterations=100):
+def norm_fit(x, M, y, eta=0):
+    return np.power(y - np.matmul(M, x), 2).sum() + eta * x.sum()
+
+def lucyddm(waveform, spe_pre, iterations=100):
     '''Lucy deconvolution
     Parameters
     ----------
@@ -104,19 +113,16 @@ def lucyddm_core(waveform, spe_pre, iterations=100):
         # there is no need to set the bound if the spe and the wave are all none negative
     wave_deconv = np.append(wave_deconv[(l-1)//2+t:], np.zeros((l-1)//2+t))
     # np.convolve(wave_deconv, spe, 'full')[:len(wave)] should be wave
-    return wave_deconv
+    return np.arange(0, len(wave)), wave_deconv
 
 def threshold(wave, spe_pre):
-    pet = np.argwhere(wave[spe_pre['peak_c']:] > spe_pre['thres']).flatten()
-    pwe = wave[spe_pre['peak_c']:][pet] / np.sum(spe_pre['spe'])
+    pet = np.argwhere(wave[spe_pre['peak_c']:] > spe_pre['thres'] * 2).flatten()
+    pwe = wave[spe_pre['peak_c']:][pet]
+    pwe = pwe / pwe.sum() * np.abs(wave.sum()) / spe_pre['spe'].sum()
     if len(pet) == 0:
-        t = np.argwhere(wave == wave.max())[0][0] - spe_pre['peak_c']
-        pet = np.array([t]) if t >= 0 else np.array([0])
+        pet = np.array([np.argmax(wave[spe_pre['peak_c']:])])
         pwe = np.array([1])
     return pet, pwe
-
-def norm_fit(x, M, y, eta=0):
-    return np.power(y - np.matmul(M, x), 2).sum() + eta * x.sum()
 
 def read_model(spe_path):
     with h5py.File(spe_path, 'r', libver='latest', swmr=True) as speFile:
@@ -129,11 +135,10 @@ def read_model(spe_path):
         fig.tight_layout()
         ax = fig.add_subplot(111)
         for i in range(len(spe)):
-            m_l = np.sum(spe[i] > thres[i])
-            peak_c = np.argmax(spe[i])
+            peak_c = np.argmax(spe[i]); t = np.argwhere(spe[i][peak_c:] < 0.1).flatten()[0] + peak_c
             mar_l = np.sum(spe[i][:peak_c] < thres[i])
-            mar_r = np.sum(spe[i][peak_c:] < thres[i])
-            spe_pre_i = {'spe':spe[i], 'epulse':epulse, 'peak_c':peak_c, 'm_l':m_l, 'mar_l':mar_l, 'mar_r':mar_r, 'thres':thres[i]}
+            mar_r = np.sum(spe[i][peak_c:t] < thres[i])
+            spe_pre_i = {'spe':spe[i], 'epulse':epulse, 'peak_c':peak_c, 'mar_l':mar_l, 'mar_r':mar_r, 'thres':thres[i]}
             spe_pre.update({cid[i]:spe_pre_i})
             ax.plot(spe_pre[cid[i]]['spe'])
         ax.grid()
@@ -142,6 +147,15 @@ def read_model(spe_path):
         fig.savefig('img/spe.png', bbox_inches='tight')
         plt.close()
     return spe_pre
+
+def clip(pet, pwe, thres):
+    if len(pet[pwe > thres]) == 0:
+        pet = np.array([pet[np.argmax(pwe)]])
+        pwe = np.array([1])
+    else:
+        pet = pet[pwe > thres]
+        pwe = pwe[pwe > thres]
+    return pet, pwe
 
 def snip_baseline(waveform, itera=20):
     wm = np.min(waveform)
@@ -152,72 +166,6 @@ def snip_baseline(waveform, itera=20):
         v[i:N-i] = np.minimum(v[i:N-i], (v[:N-2*i] + v[2*i:])/2)
     w = np.power(np.exp(np.exp(v) - 1) - 1, 2) - 1 + wm
     return w
-
-def vali_base(waveform, m_l, thres):
-    m = np.median(waveform[waveform < np.median(waveform)])
-    vali = np.where(waveform - m > thres, 1, 0) # valid waveform, not dark noise
-    pos = omi2pos(vali)
-    pos = rm_frag(pos, m_l)
-    vali = pos2omi(pos, waveform.shape[0])
-    return vali
-
-def deduct_base(waveform, m_l=None, thres=None, itera=20, mode='fast'):
-    def deduct(wave):
-        wave = wave - np.min(wave)
-        baseline = snip_baseline(wave, itera)
-        wave = wave - baseline
-        if mode == 'detail':
-            wave = wave - find_base(wave, m_l, thres)
-        elif mode == 'fast':
-            wave = wave - find_base_fast(wave)
-        return wave
-    if waveform.ndim == 2:
-        return np.array([deduct(waveform[i]) for i in range(len(waveform))])
-    else:
-        return deduct(waveform)
-
-def find_base(waveform, m_l, thres):
-    vali = vali_base(waveform, m_l, thres)
-    base_line = np.mean(waveform[vali == 0])
-    return base_line
-
-def find_base_fast(waveform):
-    m = np.median(waveform[waveform < np.median(waveform)])
-    base_line = np.mean(waveform[np.logical_and(waveform < m + 4, waveform > m - 4)])
-    return base_line
-
-def omi2pos(vali):
-    vali_t = np.concatenate((np.array([0]), vali, np.array([0])), axis=0)
-    dval = np.diff(vali_t)
-    pos_begin = np.argwhere(dval == 1).flatten()
-    pos_end = np.argwhere(dval == -1).flatten()
-    pos = np.concatenate((pos_begin.reshape(pos_begin.shape[0], 1), pos_end.reshape(pos_end.shape[0], 1)), axis = 1).astype(np.int16)
-    return pos
-
-def pos2omi(pos, len_n):
-    vali = np.zeros(len_n).astype(np.int16)
-    for i in range(pos.shape[0]):
-        vali[pos[i][0]:pos[i][1]] = 1
-    return vali
-
-def rm_frag(pos, m_l):
-    n = pos.shape[0]
-    pos_t = []
-    for i in range(n):
-        if pos[i][1] - pos[i][0] > m_l//3:
-            pos_t.append(pos[i])
-    pos = np.array(pos_t)
-    return pos
-
-def pf_to_tw(pf, thres = 0):
-    assert thres < 0.5, 'thres is too large, which is {}'.format(thres)
-    if np.max(pf) < thres:
-        t = np.argmax(pf)
-        pf = np.zeros_like(pf)
-        pf[t] = 1
-    pwe = pf[pf > thres]
-    pet = np.argwhere(pf > thres).flatten()
-    return pet, pwe
 
 def demo(pet, pwe, tth, spe_pre, leng, possible, wave, cid, mode):
     print('possible = {}'.format(possible))
@@ -235,7 +183,8 @@ def demo(pet, pwe, tth, spe_pre, leng, possible, wave, cid, mode):
         edist = np.abs(Q - q) * scipy.stats.poisson.pmf(Q, Q)
     elif mode == 'Charge':
         t = tth['RiseTime']; w = tth[mode]
-        t = np.unique(t); c = np.array([np.sum(w[t == i]) for i in t])
+        t = np.unique(t)
+        c = np.array([np.sum(w[tth['RiseTime'] == i]) for i in t])
         pf0[t] = c / spe_pre['spe'].sum()
         pf1[pet] = pwe / spe_pre['spe'].sum()
         xlabel = '$Charge/\mathrm{mV}\cdot\mathrm{ns}$'
@@ -261,7 +210,6 @@ def demo(pet, pwe, tth, spe_pre, leng, possible, wave, cid, mode):
     ax.scatter(possible, wave[possible], marker='+', c='r', label='possible')
     ax.set_xlabel('$Time/\mathrm{ns}$')
     ax.set_ylabel('$Voltage/\mathrm{mV}$')
-    ax.set_xlim(250, 500)
     ax.hlines(spe_pre['thres'], 0, 1029, color='c', label='threshold')
     ax2.set_ylabel(xlabel)
     fig.suptitle('eid={},cid={},'.format(tth['EventID'][0], tth['ChannelID'][0])+distd+'-dist={:.2f},{:.2f}'.format(wdist, edist))
@@ -271,15 +219,15 @@ def demo(pet, pwe, tth, spe_pre, leng, possible, wave, cid, mode):
     lines2, labels2 = ax2.get_legend_handles_labels()
     align.yaxes(ax, 0, ax2, 0)
     ax2.legend(lines + lines2, labels + labels2)
+#     ax.set_xlim(250, 500)
     fig.savefig('img/demoe{}c{}.png'.format(tth['EventID'][0], tth['ChannelID'][0]), bbox_inches='tight')
     fig.clf()
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    ax.plot(spe_pre['spe'], c='b')
-    ax.grid()
-    ax.set_xlabel('$Time/\mathrm{ns}$')
-    ax.set_ylabel('$Voltage/\mathrm{mV}$')
-    fig.savefig('img/spe{}.png'.format(cid), bbox_inches='tight')
-    fig.clf()
+#     fig = plt.figure()
+#     ax = fig.add_subplot(111)
+#     ax.plot(spe_pre['spe'], c='b')
+#     ax.grid()
+#     ax.set_xlabel('$Time/\mathrm{ns}$')
+#     ax.set_ylabel('$Voltage/\mathrm{mV}$')
+#     fig.savefig('img/spe{}.png'.format(cid), bbox_inches='tight')
+#     fig.clf()
     return
-

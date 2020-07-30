@@ -27,6 +27,7 @@ import numpy as np
 import tables
 import pandas as pd
 from tqdm import tqdm
+from JPwaptool import JPwaptool
 import h5py
 
 import torch
@@ -45,7 +46,8 @@ def Read_Data(startentry, endentry) :
             Shifted_Waves_and_info[name] = Waveforms_and_info[name]
     for i in range(len(Waveforms_and_info)) :
         channelid = Waveforms_and_info[i]['ChannelID']
-        Shifted_Waves_and_info[i]['Waveform'] = wff.deduct_base(spe_pre[channelid]['epulse'] * Waveforms_and_info[i]['Waveform'], spe_pre[channelid]['m_l'], spe_pre[channelid]['thres'], 20, 'detail')
+        stream.Calculate(Waveforms_and_info[i]['Waveform'])
+        Shifted_Waves_and_info[i]['Waveform'] = (Waveforms_and_info[i]['Waveform'] - stream.ChannelInfo.Pedestal) * spe_pre[channelid]['epulse']
     RawDataFile.close()
     return pd.DataFrame({name: list(Shifted_Waves_and_info[name]) for name in gpufloat_dtype.names})
 

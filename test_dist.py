@@ -8,6 +8,7 @@ import scipy.stats
 import itertools as it
 import argparse
 from multiprocessing import Pool, cpu_count
+from JPwaptool import JPwaptool
 import wf_func as wff
 
 psr = argparse.ArgumentParser()
@@ -36,9 +37,11 @@ elif mode == 'Charge':
 
 def wpdist(a, b):
     dt = np.zeros(b - a, dtype=opdt); dt[extradist] = np.nan; dt['PEdiff'] = np.nan
+    stream = JPwaptool(len(df_wav[0]['Waveform']), 100, 600)
     for i, c in zip(range(a, b), range(b - a)):
         cid = df_wav[i_wav[i]]['ChannelID']
-        wave = wff.deduct_base(spe_pre[cid]['epulse'] * df_wav[i_wav[i]]['Waveform'], spe_pre[cid]['m_l'], spe_pre[cid]['thres'], 20, 'detail')
+        stream.Calculate(df_wav[i_wav[i]]['Waveform'])
+        wave = (df_wav[i_wav[i]]['Waveform'] - stream.ChannelInfo.Pedestal) * spe_pre[cid]['epulse']
         
         wl = df_sub[i_sub[i]:i_sub[i+1]][mode]
         pet_sub = df_sub[i_sub[i]:i_sub[i+1]]['RiseTime']
@@ -61,7 +64,7 @@ def wpdist(a, b):
             dt[pecount][c] = len(pet0)
 
         dt['wdist'][c] = scipy.stats.wasserstein_distance(pet0, pet_sub, u_weights=pwe0, v_weights=wl)
-        dt['EventID'][c] = df_wav[i_wav[i]]['EventID']//Chnum
+        dt['EventID'][c] = df_wav[i_wav[i]]['EventID']
         dt['ChannelID'][c] = cid
         dt['RSS_truth'][c] = np.power(wave0 - wave, 2).sum()
         dt['RSS_recon'][c] = np.power(wave1 - wave, 2).sum()
@@ -83,7 +86,7 @@ e_ans = df_ans['EventID']*Chnum + df_ans['ChannelID']
 e_ans, i_ans = np.unique(e_ans, return_index=True)
 i_ans = np.append(i_ans, len(df_ans))
 
-opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), (pecount, np.uint16), ('wdist', np.float32), (extradist, np.float32), ('RSS_recon', np.float32), ('RSS_truth', np.float32), ('PEdiff', np.float32)])
+opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), (pecount, np.uint16), ('wdist', np.float64), (extradist, np.float64), ('RSS_recon', np.float64), ('RSS_truth', np.float64), ('PEdiff', np.float64)])
 leng = len(df_wav[0]['Waveform'])
 
 e_wav = df_wav['EventID']*Chnum + df_wav['ChannelID']; df_wav = df_wav[np.isin(e_wav, e_ans)]

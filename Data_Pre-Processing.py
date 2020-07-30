@@ -22,6 +22,7 @@ import h5py
 import numba
 from multiprocessing import Pool, cpu_count
 import pandas as pd
+from JPwaptool import JPwaptool
 import wf_func as wff
 
 def Make_Time_Vector(GroundTruth, Waveforms_and_info, mode) :
@@ -55,13 +56,16 @@ def Read_Data(sliceNo, filename, Wave_startentry, Wave_endentry, Truth_startentr
     return (sliceNo, {'Waveform': TableToDataFrame(Waveforms_and_info), 'GroundTruth': TableToDataFrame(GroundTruth)})
 
 def PreProcess(channelid) :
+    stream = JPwaptool(WindowSize, 100, 600)
     print('PreProcessing channel {:02d}'.format(channelid))
     Waves_of_this_channel = Grouped_Waves.get_group(channelid)
     Truth_of_this_channel = Grouped_Truth.get_group(channelid)
     Origin_Waves = np.vstack(Waves_of_this_channel['Waveform'].to_numpy())
     Shifted_Waves = np.empty((len(Origin_Waves), WindowSize), dtype=np.float32)
     for i in range(len(Origin_Waves)) :
-        Shifted_Waves[i] = wff.deduct_base(spe_pre[channelid]['epulse'] * Origin_Waves[i], spe_pre[channelid]['m_l'], spe_pre[channelid]['thres'], 20, 'detail')
+        stream.Calculate(Origin_Waves[i])
+        wave = (Origin_Waves[i] - stream.ChannelInfo.Pedestal) * spe_pre[channelid]['epulse']
+        Shifted_Waves[i] = (Origin_Waves[i] - stream.ChannelInfo.Pedestal) * spe_pre[channelid]['epulse']
 
     WeightSpectrum = Make_Time_Vector(Truth_of_this_channel, Waves_of_this_channel, 'Weight')
     ChargeSpectrum = Make_Time_Vector(Truth_of_this_channel, Waves_of_this_channel, 'Charge')

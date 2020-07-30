@@ -1,6 +1,6 @@
 SHELL:=bash
-jinpseq:=$(shell seq 0 9)
-jinppre:=ztraining-
+jinpseq:=$(shell seq 0 3)
+jinppre:=electron-
 jinpchannelN:=$(shell seq -f '%02g' 0 29)
 junoseq:=2 4
 junopre:=junoWave
@@ -12,7 +12,7 @@ prefix:=$($(set)pre)
 seq:=$($(set)seq)
 channelN:=$($(set)channelN)
 ifdef chunk
-    rseq:=x
+    rseq:=$(chunk)x
     datfoldi:=dataset
 else
     datfoldi:=$(datfold)
@@ -65,11 +65,11 @@ PreProcess : $(seq:%=$(datfold)/$(set)/$(prefix)%.h5) spe-$(set).h5
 	@mkdir -p $(datfold)/$(set)/PreProcess
 	python3 -u Data_Pre-Processing.py $(datfold)/$(set)/$(prefix) -o $(datfold)/$(set)/PreProcess/Pre_Channel --ref $(word $(words $^), $^) > $(datfold)/$(set)/PreProcess/PreProcess.log 2>&1
 
-$(datfoldi)/$(set)/$(prefix)x.h5 : $(datfold)/$(set)/$(prefix)$(chunk).h5
+$(datfoldi)/$(set)/$(prefix)$(chunk)x.h5 : $(datfold)/$(set)/$(prefix)$(chunk).h5
 	@mkdir -p $(dir $@)
 	python3 cut_data.py $^ -o $@ -a -1 -b 100000
 
-spe-$(set).h5 : $(datfold)/$(set)/$(prefix)$(word 1,$($(set)seq)).h5
+spe-$(set).h5 : $(datfold)/$(set)/$(prefix)$(word $(words $($(set)seq)),$($(set)seq)).h5
 	python3 spe_get.py $^ -o $@ --num 10000 --len 80
 
 model.pkl :
