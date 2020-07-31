@@ -136,6 +136,8 @@ def fitting(a, b):
                 pet, pwe = wff.lucyddm(wave, spe_pre[ent[i]['ChannelID']])
             elif method == 'threshold':
                 pet, pwe = wff.threshold(wave, spe_pre[ent[i]['ChannelID']])
+            elif method == 'fftrans':
+                pet, pwe = wff.waveformfft(wave, spe_pre[ent[i]['ChannelID']])
             elif method == 'findpeak':
                 pet = np.array(stream.ChannelInfo.PeakLoc) - spe_pre[ent[i]['ChannelID']]['peak_c']
                 pwe = np.array(stream.ChannelInfo.PeakAmp) / spe_pre[ent[i]['ChannelID']]['spe'].max()

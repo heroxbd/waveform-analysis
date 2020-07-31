@@ -6,6 +6,7 @@ import numpy as np
 np.set_printoptions(suppress=True)
 import scipy
 import scipy.stats
+from scipy.fftpack import fft, ifft
 from scipy import optimize as opti
 import matplotlib
 matplotlib.use('Agg')
@@ -26,6 +27,7 @@ def xiaopeip(wave, spe_pre, eta=0):
     l = len(wave)
     flag = 1
     lowp = np.argwhere(wave > spe_pre['thres']).flatten()
+    lowp = rm_frag(lowp)
     if len(lowp) != 0:
         fitp = np.arange(lowp.min() - spe_pre['mar_l'], lowp.max() + spe_pre['mar_r'])
         fitp = np.unique(np.clip(fitp, 0, len(wave)-1))
@@ -80,6 +82,17 @@ def xiaopeip_core(wave, spe, fitp, possible, eta=0):
 def norm_fit(x, M, y, eta=0):
     return np.power(y - np.matmul(M, x), 2).sum() + eta * x.sum()
 
+def rm_frag(lowp):
+    t = np.argwhere(np.diff(lowp) > 1).flatten()
+    ind = np.vstack((np.insert(t + 1, 0, 0), np.append(t, len(lowp)))).T
+    slices = [lowp[ind[i][0] : ind[i][1]] for i in range(len(ind))]
+    t = [slices[i] for i in range(len(slices)) if len(slices[i]) > 1]
+    if len(t) == 0:
+        lowp = np.array([])
+    else:
+        lowp = np.concatenate((t), axis=0)
+    return lowp
+
 def lucyddm(waveform, spe_pre, iterations=100):
     '''Lucy deconvolution
     Parameters
@@ -98,7 +111,7 @@ def lucyddm(waveform, spe_pre, iterations=100):
     .. [1] https://en.wikipedia.org/wiki/Richardson%E2%80%93Lucy_deconvolution
     .. [2] https://github.com/scikit-image/scikit-image/blob/master/skimage/restoration/deconvolution.py#L329
     '''
-    wave = np.where(waveform > 0, waveform, 0)
+    wave = np.abs(waveform)
     wave = wave + 0.001
     wave = wave / np.sum(spe_pre['spe'])
     t = np.argwhere(spe_pre['spe'] > 0)[0][0]
@@ -114,6 +127,15 @@ def lucyddm(waveform, spe_pre, iterations=100):
     wave_deconv = np.append(wave_deconv[(l-1)//2+t:], np.zeros((l-1)//2+t))
     # np.convolve(wave_deconv, spe, 'full')[:len(wave)] should be wave
     return np.arange(0, len(wave)), wave_deconv
+
+def waveformfft(wave, spe_pre):
+    length = len(wave)
+    spefft = fft(spe_pre['spe'], 2*length)
+    wavef = fft(wave, 2*length)
+    wavef[(length-int(length*0.7)):(length+int(length*0.7))] = 0
+    signalf = np.true_divide(wavef, spefft)
+    recon = np.real(ifft(signalf, 2*length))
+    return np.arange(length), recon[:length]
 
 def threshold(wave, spe_pre):
     pet = np.argwhere(wave[spe_pre['peak_c']:] > spe_pre['thres'] * 2).flatten()
@@ -167,8 +189,7 @@ def snip_baseline(waveform, itera=20):
     w = np.power(np.exp(np.exp(v) - 1) - 1, 2) - 1 + wm
     return w
 
-def demo(pet, pwe, tth, spe_pre, leng, possible, wave, cid, mode):
-    print('possible = {}'.format(possible))
+def demo(pet, pwe, tth, spe_pre, leng, wave, cid, mode):
     penum = len(tth)
     print('PEnum is {}'.format(penum))
     pf0 = np.zeros(leng); pf1 = np.zeros(leng)
@@ -207,7 +228,6 @@ def demo(pet, pwe, tth, spe_pre, leng, possible, wave, cid, mode):
     ax.plot(wave, c='b', label='origin wave')
     ax.plot(wave0, c='k', label='truth wave')
     ax.plot(wave1, c='C1', label='recon wave')
-    ax.scatter(possible, wave[possible], marker='+', c='r', label='possible')
     ax.set_xlabel('$Time/\mathrm{ns}$')
     ax.set_ylabel('$Voltage/\mathrm{mV}$')
     ax.hlines(spe_pre['thres'], 0, 1029, color='c', label='threshold')
@@ -219,9 +239,10 @@ def demo(pet, pwe, tth, spe_pre, leng, possible, wave, cid, mode):
     lines2, labels2 = ax2.get_legend_handles_labels()
     align.yaxes(ax, 0, ax2, 0)
     ax2.legend(lines + lines2, labels + labels2)
-#     ax.set_xlim(250, 500)
+    ax.set_xlim(min(t.min()-50, 0), max(t.max()+50, leng))
     fig.savefig('img/demoe{}c{}.png'.format(tth['EventID'][0], tth['ChannelID'][0]), bbox_inches='tight')
     fig.clf()
+    plt.close(fig)
 #     fig = plt.figure()
 #     ax = fig.add_subplot(111)
 #     ax.plot(spe_pre['spe'], c='b')
