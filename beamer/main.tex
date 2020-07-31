@@ -51,7 +51,7 @@
 \begin{figure}
     \centering
     \caption{China JinPing Underground Laboratory}
-    \includegraphics[width=1.0\linewidth]{img/mountain.png}
+    \includegraphics[width=0.65\linewidth]{img/WorldMap.jpg}
 \end{figure}
 \begin{itemize}
     \item Overburden $\sim2400\mathrm{m}$
@@ -192,10 +192,86 @@ In this work, we regard \textbf{normalised} Weight (Charge or PEnumber) as the d
 \end{itemize}
 \end{frame}
 
+\section{Intuitive Methods}
+\begin{frame}
+\frametitle{Find Peak}
+\begin{figure}
+    \centering
+    \caption{Find Peak Method Demo, W-dist = 2.72}
+    \includegraphics[width=0.9\linewidth]{img/findpeak.png}
+\end{figure}
+\vspace{-4mm}
+\begin{center}
+    Average W-dist = 12.3
+\end{center}
+\end{frame}
+
+\begin{frame}
+\frametitle{Threshold}
+\begin{figure}
+    \centering
+    \caption{Threshold Method Demo, W-dist = 3.10}
+    \includegraphics[width=0.9\linewidth]{img/threshold.png}
+\end{figure}
+\vspace{-4mm}
+\begin{center}
+    Average W-dist = 3.92
+\end{center}
+\end{frame}
+
+\begin{frame}
+\frametitle{Fast Fourier Transform}
+\begin{columns}
+\column{0.6\textwidth}
+\begin{figure}
+    \centering
+    \caption{Fast Fourier Transform Demo, W-dist = 1.22}
+    \includegraphics[width=1.0\linewidth]{img/fftrans.png}
+\end{figure}
+\vspace{-4mm}
+\begin{center}
+    Average W-dist = 2.1
+\end{center}
+\column{0.4\textwidth}
+\begin{enumerate}
+    \item FFT of Waveform \& Single PE response
+    \item Rectangular filter of FFT(Waveform)
+    \item FFT(Charge) = FFT(Waveform) / FFT(Single PE response)
+    \item IFFT of FFT(Charge)
+\end{enumerate}
+\end{columns}
+\end{frame}
+
+\begin{frame}
+\frametitle{Lucy Deconvolution}
+\begin{columns}
+\column{0.6\textwidth}
+\begin{figure}
+    \centering
+    \caption{Lucy Deconvolution Demo, W-dist = 1.31}
+    \includegraphics[width=1.0\linewidth]{img/lucyddm.png}
+\end{figure}
+\vspace{-4mm}
+\begin{center}
+    Average W-dist = 1.45
+\end{center}
+\column{0.4\textwidth}
+\begin{enumerate}
+    \item Lucy-Richardson deconvolution
+    % \item Main Iteration Process:
+    % \begin{equation*}
+    %         \hat{u}^{(t+1)} = \hat{u}^{(t)} \cdot (\frac{d}{\hat{u}^{(t)} \bigotimes P} \bigotimes P^{*})
+    %     \end{equation*}
+\end{enumerate}
+\end{columns}
+\end{frame}
+
 \section{Method of Convolutional Neural Network}
 
 \begin{frame}
 \frametitle{Input \& Output, Loss}
+\begin{columns}
+\column{0.4\textwidth}
 \hspace{4mm}Input \& Output:
 \begin{itemize}
     \item Input: Pedestal deduced PMT waveform, length = 1029$\mathrm{ns}$
@@ -203,8 +279,18 @@ In this work, we regard \textbf{normalised} Weight (Charge or PEnumber) as the d
 \end{itemize}
 \hspace{4mm}Loss function:
 \begin{itemize}
-    \item Wasserstein Distance \\ $D_{w}=\sum_{i=0}^{1029}|CDF(RiseTime_{recon})_{i} - CDF(RiseTime_{truth})_{i}|$
+    \item Wasserstein Distance
 \end{itemize}
+\column{0.6\textwidth}
+\setlength{\abovecaptionskip}{-2mm}
+\setlength{\belowcaptionskip}{0mm}
+\begin{figure}
+    \centering
+    % \caption{Input \& Output}
+    \includegraphics[width=0.9\linewidth]{img/wave.png}
+    \includegraphics[width=0.9\linewidth]{img/charge.png}
+\end{figure}
+\end{columns}
 \end{frame}
 
 \begin{frame}
@@ -284,14 +370,10 @@ In this work, we regard \textbf{normalised} Weight (Charge or PEnumber) as the d
 \end{figure}
 \end{frame}
 
-% \begin{frame}
-% \frametitle{Application of MCMC}
-    
-% \end{frame}
-
 \section{Result}
 \begin{frame}
 \frametitle{Distances}
+\setlength{\belowcaptionskip}{-2mm}
 \begin{table}
     \centering
     \caption{Reconstruction Result}
@@ -299,11 +381,27 @@ In this work, we regard \textbf{normalised} Weight (Charge or PEnumber) as the d
         \hline
         &  & W-dist/$\mathrm{ns}$ & P-dist/$\mathrm{1}$ & Charge-diff/$\mathrm{mV}\cdot\mathrm{ns}$ \\
         \hline
-        CNN & Charge & 1.82 & - & -77.6 \\
+        FindPeak & Charge & 12.3 & - & 38.7 \\
         \hline
-        CNN & PEnum & 0.79 & 0.14 & - \\
+        FindPeak & PEnum & 15.58 & 0.32 & - \\
         \hline
-        Fitting & Charge & 2.02 & - & -39.7 \\
+        Threshold & Charge & 3.92 & - & 38.7 \\
+        \hline
+        Threshold & PEnum & 7.55 & 0.30 & - \\
+        \hline
+        FFT & Charge & 2.14 & - & 38.7 \\
+        \hline
+        FFT & PEnum & 6.68 & 0.24 & - \\
+        \hline
+        LucyDDM & Charge & 1.45 & - & 38.7 \\
+        \hline
+        LucyDDM & PEnum & 6.19 & 0.30 & - \\
+        \hline
+        CNN & Charge & - & - & - \\
+        \hline
+        CNN & PEnum & - & - & - \\
+        \hline
+        Fitting & Charge & 0.91 & - & 38.7 \\
         \hline
         Fitting & PEnum & 2.62 & 0.12 & - \\
         \hline
@@ -320,9 +418,9 @@ In this work, we regard \textbf{normalised} Weight (Charge or PEnumber) as the d
         \hline
         &  & Performance \\
         \hline
-        CNN & Charge & 6.4s/$10^{5}$Wf \\
+        CNN & Charge & 6.4s/$10^{5}$Wf(1gpu) \\
         \hline
-        CNN & PEnum & 6.3s/$10^{5}$Wf\\
+        CNN & PEnum & 6.3s/$10^{5}$Wf(1gpu)\\
         \hline
         Fitting & Charge & 450s/$10^{5}$Wf(50cpu) \\
         \hline
@@ -339,17 +437,6 @@ In this work, we regard \textbf{normalised} Weight (Charge or PEnumber) as the d
     \item We developed several representative methods to extract photon information hidden in PMT waveform
     \item These methods will improve the accuracy of following-up Event reconstruction
     \item We are working on applying and connecting these methods to Event reconstruction
-\end{itemize}
-\end{frame}
-
-\begin{frame}
-\frametitle{Credit}
-\hspace{4mm}The ideas and methods originally come from a data contest and a summer semester course, main participants are:
-\begin{itemize}
-    \item Benda Xu (Tsinghua University)
-    \item Yiyang Wu (Tsinghua University)
-    \item Yu Xu (Forschungszentrum Jülich)
-    \item $\cdots$
 \end{itemize}
 \end{frame}
 
