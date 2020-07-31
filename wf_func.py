@@ -8,6 +8,7 @@ import scipy
 import scipy.stats
 from scipy.fftpack import fft, ifft
 from scipy import optimize as opti
+from scipy.signal import convolve
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -111,22 +112,19 @@ def lucyddm(waveform, spe_pre, iterations=100):
     .. [1] https://en.wikipedia.org/wiki/Richardson%E2%80%93Lucy_deconvolution
     .. [2] https://github.com/scikit-image/scikit-image/blob/master/skimage/restoration/deconvolution.py#L329
     '''
-    wave = np.abs(waveform)
-    wave = wave + 0.001
-    wave = wave / np.sum(spe_pre['spe'])
-    t = np.argwhere(spe_pre['spe'] > 0)[0][0]
-    spe_t = spe_pre['spe'][spe_pre['spe'] > 0]
-    l = len(spe_t)
-    # use the deconvlution method
-    wave_deconv = np.full(wave.shape, 0.1)
-    spe_mirror = spe_t[::-1]
+    moveDelta = 9
+    spe = np.append(np.zeros(len(spe_pre['spe']) - 2 * moveDelta - 1), np.abs(spe_pre['spe']))
+    waveform = np.where(waveform < 0, 0.0001, waveform)
+    waveform = waveform.astype(np.float)
+    spe = spe.astype(np.float)
+    waveform = waveform / np.sum(spe)
+    wave_deconv = np.array(waveform)
+    spe_mirror = spe[::-1]
     for _ in range(iterations):
-        relative_blur = wave / np.convolve(wave_deconv, spe_t, 'same')
-        wave_deconv = wave_deconv * np.convolve(relative_blur, spe_mirror, 'same')
-        # there is no need to set the bound if the spe and the wave are all none negative
-    wave_deconv = np.append(wave_deconv[(l-1)//2+t:], np.zeros((l-1)//2+t))
-    # np.convolve(wave_deconv, spe, 'full')[:len(wave)] should be wave
-    return np.arange(0, len(wave)), wave_deconv
+        relative_blur = waveform / convolve(wave_deconv, spe, mode='same')
+        wave_deconv *= convolve(relative_blur, spe_mirror, mode='same')
+        # there is no need to set the bound if the spe and the wave are all none negative 
+    return np.arange(0, len(waveform)-moveDelta), wave_deconv[moveDelta:]
 
 def waveformfft(wave, spe_pre):
     length = len(wave)
@@ -239,7 +237,7 @@ def demo(pet, pwe, tth, spe_pre, leng, wave, cid, mode):
     lines2, labels2 = ax2.get_legend_handles_labels()
     align.yaxes(ax, 0, ax2, 0)
     ax2.legend(lines + lines2, labels + labels2)
-    ax.set_xlim(min(t.min()-50, 0), max(t.max()+50, leng))
+    ax.set_xlim(max(t.min()-50, 0), min(t.max()+150, leng))
     fig.savefig('img/demoe{}c{}.png'.format(tth['EventID'][0], tth['ChannelID'][0]), bbox_inches='tight')
     fig.clf()
     plt.close(fig)
