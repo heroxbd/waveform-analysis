@@ -120,7 +120,7 @@ def fitting(a, b):
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
         ent = ipt['Waveform'][:]
         leng = len(ent[0]['Waveform'])
-        stream = JPwaptool(leng, 100, 600)
+        stream = JPwaptool(leng, 150, 600, 7, 15)
         dt = np.zeros((b - a) * leng, dtype=opdt)
         start = 0
         end = 0
