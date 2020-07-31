@@ -1,5 +1,5 @@
 % !TEX program = pdflatex
-\documentclass[handout]{beamer}
+\documentclass{beamer}
 % \documentclass{beamer}
 
 \usetheme{Madrid}
@@ -13,6 +13,7 @@
 \lstset{language=Python,keywordstyle={\bfseries \color{blue}}}
 \usepackage{pdfpages}
 \usepackage{makecell}
+\usepackage{tikz}
 
 \newcommand{\ud}{\mathrm{d}}
 \newcommand{\mev}{\mathrm{MeV}}
@@ -153,6 +154,8 @@
     The difference between Reconstruction Result \& Truth?
 \end{center}
 \end{frame}
+
+\input{Wasserstain}
 
 \begin{frame}
 \frametitle{Wasserstein Distance}
