@@ -1,6 +1,6 @@
 SHELL:=bash
-jinpseq:=$(shell seq 0 3)
-jinppre:=electron-
+jinpseq:=$(shell seq 5 8)
+jinppre:=ztraining-
 jinpchannelN:=$(shell seq -f '%02g' 0 29)
 junoseq:=2 4
 junopre:=junoWave
@@ -69,8 +69,8 @@ $(datfoldi)/$(set)/$(prefix)$(chunk)x.h5 : $(datfold)/$(set)/$(prefix)$(chunk).h
 	@mkdir -p $(dir $@)
 	python3 cut_data.py $^ -o $@ -a -1 -b 100000
 
-spe-$(set).h5 : $(datfold)/$(set)/$(prefix)$(word $(words $($(set)seq)),$($(set)seq)).h5
-	python3 spe_get.py $^ -o $@ --num 10000 --len 80
+spe-$(set).h5 : $(datfold)/$(set)/$(prefix)0.h5
+	python3 spe_get.py $^ -o $@ --num 500000 --len 80
 
 model.pkl :
 	python3 model.py $@

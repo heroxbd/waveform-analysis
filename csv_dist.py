@@ -27,19 +27,27 @@ with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as distfile:
     dt = distfile['Record'][:]
     l = len(dt)
     wd = dt['wdist'].mean()
+    stdwd = dt['wdist'].std()
     pd = dt[extradist].mean()
+    stdpd = dt[extradist].std()
     penum, c = np.unique(dt[pecount], return_counts=True)
     pe_c = np.zeros((len(penum), 2)).astype(np.uint32)
-    pe_dist = np.zeros((len(penum), 2))
+    pe_dist = np.zeros((len(penum), 8))
     pe_c[:, 0] = penum
     pe_c[:, 1] = c
     for i in tqdm(range(len(penum)), disable=args.pri):
         pe_dist[i, 0] = np.mean(dt['wdist'][dt[pecount] == penum[i]])
-        pe_dist[i, 1] = np.mean(dt[extradist][dt[pecount] == penum[i]])
+        pe_dist[i, 1] = np.std(dt['wdist'][dt[pecount] == penum[i]])
+        pe_dist[i, 2] = np.percentile(dt['wdist'][dt[pecount] == penum[i]], 10)
+        pe_dist[i, 3] = np.percentile(dt['wdist'][dt[pecount] == penum[i]], 90)
+        pe_dist[i, 4] = np.mean(dt[extradist][dt[pecount] == penum[i]])
+        pe_dist[i, 5] = np.std(dt[extradist][dt[pecount] == penum[i]])
+        pe_dist[i, 6] = np.percentile(dt[extradist][dt[pecount] == penum[i]], 10)
+        pe_dist[i, 7] = np.percentile(dt[extradist][dt[pecount] == penum[i]], 90)
 with open(args.opt, 'w+') as csvf:
     csvwr = csv.writer(csvf)
-    csvwr.writerow([args.ipt, str(wd), str(pd)])
+    csvwr.writerow([args.ipt, str(wd), str(stdwd), str(stdpd), str(pd)])
     str_pe_c = pe_c.astype(np.str)
     str_pe_dist = pe_dist.astype(np.str)
     for i in range(len(str_pe_dist)):
-        csvwr.writerow([str_pe_c[i,0], str_pe_c[i,1], str_pe_dist[i,0], str_pe_dist[i,1]])
+        csvwr.writerow([str_pe_c[i,0], str_pe_c[i,1]] + [str_pe_dist[i,j] for j in range(8)])

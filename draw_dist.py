@@ -14,12 +14,10 @@ mode = args.mod
 if mode == 'PEnum':
     extradist = 'pdist'
     pecount = 'TotalPEnum'
-    pecountlabel = 'PEnum diff'
     extradistlabel = ['P-dist', r'$P-dist/\mathrm{1}$']
 elif mode == 'Charge':
     extradist = 'chargediff'
     pecount = 'TotalPEpos'
-    pecountlabel = None
     extradistlabel = ['Charge-diff', r'$Charge-diff/\mathrm{mV}\cdot\mathrm{ns}$']
 if args.pri:
     sys.stdout = None
@@ -41,6 +39,7 @@ plt.rcParams['figure.dpi'] = 300
 plt.rcParams['font.size'] = 10
 plt.rcParams['lines.markersize'] = 2
 plt.rcParams['lines.linewidth'] = 1.0
+plt.rcParams['mathtext.fontset'] = 'cm'
 
 def my_cmap():
     plasma = cm.get_cmap('plasma', 65536)
@@ -55,9 +54,19 @@ with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as distfile:
     dt = distfile['Record'][:]
     method = distfile['Record'].attrs['Method']
     pdf = PdfPages(args.opt)
-    N = int(np.percentile(dt['wdist'], 90)+1)
-    M = -500
-
+    N = np.percentile(dt['wdist'], 95)
+    M = 500
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    c, t = np.unique(dt[pecount], return_counts=True)
+    ax.bar(c, t)
+    ax.set_xlabel(pecount)
+    ax.set_ylabel('Count')
+    ax.set_yscale('log')
+    fig.suptitle(pecount + ' summary')
+    pdf.savefig(fig)
+    plt.close(fig)
+    
     penum = np.unique(dt[pecount])
     l = min(50, penum.max())
     wdist_stats = np.zeros((l, 4))
@@ -74,65 +83,64 @@ with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as distfile:
             edist_stats[i, 1] = np.median(np.absolute(dtepi - np.median(dtepi)))
             edist_stats[i, 2] = np.mean(dtepi)
             edist_stats[i, 3] = np.std(dtepi)
-            pediff = dt['PEdiff'][dt[pecount] == i+1]
             rss_recon = dt['RSS_recon'][dt[pecount] == i+1]
             rss_truth = dt['RSS_truth'][dt[pecount] == i+1]
             plt.rcParams['figure.figsize'] = (12, 6)
             fig = plt.figure()
-            gs = gridspec.GridSpec(2, 2, figure=fig, left=0.05, right=0.95, top=0.9, bottom=0.1, wspace=0.1, hspace=0.2)
+            gs = gridspec.GridSpec(2, 2, figure=fig, left=0.05, right=0.95, top=0.9, bottom=0.1, wspace=0.15, hspace=0.2)
             ax1 = fig.add_subplot(gs[0, 0])
-            ax1.hist(dtwpi[dtwpi < N], bins=100)
-            a = (dtwpi < N).sum()
+            n = max(np.percentile(dtwpi, 95), N)
+            ax1.hist(dtwpi[dtwpi < n], bins=200)
+            a = (dtwpi < n).sum()
             b = len(dtwpi)
-            ax1.set_title('count {}(<{}ns)/{}={:.2f}'.format(a, N, b, a/b))
+            ax1.set_title('count {}(<{:.2f}ns)/{}={:.2f}'.format(a, n, b, a/b))
             ax1.set_xlabel('$W-dist/\mathrm{ns}$')
-            ax2 = fig.add_subplot(gs[0, 1])
+            ax2 = fig.add_subplot(gs[1, 0])
             ax2.hist(dtepi, bins=100)
             ax2.set_xlabel(extradistlabel[1])
-            ax3 = fig.add_subplot(gs[1, 0])
-            ax3.hist(pediff[np.logical_not(np.isnan(pediff))], bins=100)
-            ax3.set_xlabel(pecountlabel)
-            ax4 = fig.add_subplot(gs[1, 1])
-            bins = np.linspace(-50, 50, 100)
-            ax4.hist(rss_recon - rss_truth, bins=bins, density=1)
-            ax4.set_xlabel('$\mathrm{RSS}_{recon} - \mathrm{RSS}_{truth}/\mathrm{mV}^{2}$, within (-100, 100)')
+            ax3 = fig.add_subplot(gs[1, 1])
+            deltarss = rss_recon - rss_truth
+            r1 = np.percentile(deltarss, 0)
+            r2 = np.percentile(deltarss, 95)
+            ax3.hist(deltarss[(deltarss > r1) & (deltarss < r2)], bins=200, density=1)
+            ax3.set_xlabel('$\mathrm{RSS}_{recon} - \mathrm{RSS}_{truth}/\mathrm{mV}^{2}$' + ', within ({:.2f}, {:.2f})'.format(r1, r2))
             fig.suptitle(args.ipt.split('/')[-1] + ' ' + pecount + '={:.0f}'.format(i+1))
             pdf.savefig(fig)
-            plt.close()
+            plt.close(fig)
         else:
             wdist_stats[i, :] = np.nan
             edist_stats[i, :] = np.nan
 
     a = (dt['wdist'] < N).sum()
-    b = (dt[extradist] > M).sum()
+    b = (np.abs(dt[extradist]) < M).sum()
     l = len(dt['wdist'])
     if mode == 'PEnum':
         extradisttitle = None
-        sumtitle = 'W&'+extradistlabel[0]+' hist,Wd<{}ns,'.format(N)+'flawed'
+        sumtitle = 'W&'+extradistlabel[0]+' hist,Wd<{:.2f}ns,'.format(N)+'flawed'
     elif mode == 'Charge':
-        extradisttitle = 'count {}(Cd>{}mV*ns)/{}={:.2f}'.format(b, M, l, b/l)
-        sumtitle = 'W-dist&'+extradistlabel[0]+' hist,Wd<{}ns,'.format(N)+'Cd>{}mV*ns,'.format(M)+'flawed'
+        extradisttitle = 'count {}(|Cd|<{}mV*ns)/{}={:.2f}'.format(b, M, l, b/l)
+        sumtitle = 'W-dist&'+extradistlabel[0]+' hist,Wd<{:.2f}ns,'.format(N)+'|Cd|<{}mV*ns,'.format(M)+'flawed'
     plt.rcParams['figure.figsize'] = (12, 6)
     fig = plt.figure()
     gs = gridspec.GridSpec(2, 2, figure=fig, left=0.1, right=0.9, top=0.9, bottom=0.1, wspace=0.2, hspace=0.3)
     ax1 = fig.add_subplot(gs[0, 0])
     ax1.hist(dt['wdist'][dt['wdist']<N], bins=100, density=1)
-    ax1.set_title('count {}(Wd<{}ns)/{}={:.2f}'.format(a, N, l, a/l))
+    ax1.set_title('count {}(Wd<{:.2f}ns)/{}={:.2f}'.format(a, N, l, a/l))
     ax1.set_xlabel('$W-dist/\mathrm{ns}$')
     ax2 = fig.add_subplot(gs[1, 0])
-    ax2.hist(dt[extradist][dt[extradist] > M], bins=100, density=1)
+    ax2.hist(dt[extradist][np.abs(dt[extradist]) < M], bins=100, density=1)
     ax2.set_title(extradisttitle)
     ax2.set_xlabel(extradistlabel[1])
     ax3 = fig.add_subplot(gs[:, 1])
-    vali = np.logical_and(np.logical_and(dt[extradist]>M, dt['wdist']<N),np.logical_and(dt[extradist]!=0, dt['wdist']!=0))
+    vali = np.logical_and(np.logical_and(np.abs(dt[extradist])<M, dt['wdist']<N),np.logical_and(dt[extradist]!=0, dt['wdist']!=0))
     h2 = ax3.hist2d(dt['wdist'][vali], dt[extradist][vali], bins=(100, 100), cmap=mycmp)
     fig.colorbar(h2[3], ax=ax3, aspect=50)
     ax3.set_xlabel('$W-dist/\mathrm{ns}$')
     ax3.set_ylabel(extradistlabel[1])
     ax3.set_title(sumtitle)
     fig.suptitle(args.ipt.split('/')[-1] + ' Dist stats, method = ' + str(method))
-    plt.close()
     pdf.savefig(fig)
+    plt.close(fig)
 
     plt.rcParams['figure.figsize'] = (12, 6)
     fig = plt.figure()
@@ -160,7 +168,7 @@ with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as distfile:
     ax2.set_title(extradistlabel[0] + ' vs ' + pecount + ' stats')
     ax2.legend()
     fig.suptitle(args.ipt.split('/')[-1] + ' Dist stats, method = ' + str(method))
-    plt.close()
     pdf.savefig(fig)
+    plt.close(fig)
 
     pdf.close()

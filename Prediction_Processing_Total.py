@@ -39,6 +39,7 @@ import wf_func as wff
 def Read_Data(startentry, endentry) :
     RawDataFile = tables.open_file(filename, 'r')
     WaveformTable = RawDataFile.root.Waveform
+    stream = JPwaptool(WindowSize, 150, 600, 7, 15)
     Waveforms_and_info = WaveformTable[startentry:endentry]
     Shifted_Waves_and_info = np.empty(Waveforms_and_info.shape, dtype=gpufloat_dtype)
     for name in origin_dtype.names :
@@ -101,7 +102,7 @@ def Forward(channelid) :
         Total = np.where(Total > 0.1, Total, 0.1)
         if mode == 'Charge':
             Total = Total * SPECharge
-        Prediction = nets[channelid].forward(torch.from_numpy(inputs).to(device=device)).data.cpu().numpy()
+        Prediction = np.abs(nets[channelid].forward(torch.from_numpy(inputs).to(device=device)).data.cpu().numpy())
         RiseTime = Prediction > filter_limit
         pe_numbers = RiseTime.sum(axis=1)
         no_pe_found = pe_numbers == 0
@@ -112,7 +113,7 @@ def Forward(channelid) :
             RiseTime[no_pe_found, guessed_risetime] = True
             Prediction[no_pe_found, guessed_risetime] = 1
             pe_numbers[no_pe_found] = 1
-        Prediction = (Prediction / np.sum(Prediction, axis=1)[:,None] * Total[:,None])[RiseTime]
+        Prediction = np.abs((Prediction / np.sum(Prediction, axis=1)[:,None] * Total[:,None])[RiseTime])
         PEmeasure = np.append(PEmeasure, Prediction)
         TimeMatrix = np.repeat(Timeline, len(RiseTime), axis=0)[RiseTime]
         RiseTimes = np.append(RiseTimes, TimeMatrix)

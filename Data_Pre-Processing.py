@@ -56,7 +56,7 @@ def Read_Data(sliceNo, filename, Wave_startentry, Wave_endentry, Truth_startentr
     return (sliceNo, {'Waveform': TableToDataFrame(Waveforms_and_info), 'GroundTruth': TableToDataFrame(GroundTruth)})
 
 def PreProcess(channelid) :
-    stream = JPwaptool(WindowSize, 100, 600)
+    stream = JPwaptool(WindowSize, 150, 600, 7, 15)
     print('PreProcessing channel {:02d}'.format(channelid))
     Waves_of_this_channel = Grouped_Waves.get_group(channelid)
     Truth_of_this_channel = Grouped_Truth.get_group(channelid)

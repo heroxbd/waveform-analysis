@@ -36,7 +36,7 @@ elif mode == 'Charge':
     pecount = 'TotalPEpos'
 
 def wpdist(a, b):
-    dt = np.zeros(b - a, dtype=opdt); dt[extradist] = np.nan; dt['PEdiff'] = np.nan
+    dt = np.zeros(b - a, dtype=opdt); dt[extradist] = np.nan
     stream = JPwaptool(len(df_wav[0]['Waveform']), 100, 600)
     for i, c in zip(range(a, b), range(b - a)):
         cid = df_wav[i_wav[i]]['ChannelID']
@@ -63,13 +63,12 @@ def wpdist(a, b):
             dt[extradist][c] = np.sum(wl) - np.sum(pwe0)
             dt[pecount][c] = len(pet0)
 
-        dt['wdist'][c] = scipy.stats.wasserstein_distance(pet0, pet_sub, u_weights=pwe0, v_weights=wl)
+#         dt['wdist'][c] = scipy.stats.wasserstein_distance(pet0, pet_sub, u_weights=pwe0, v_weights=wl)
+        dt['wdist'][c] = scipy.stats.wasserstein_distance(pet0[pwe0 > 0], pet_sub, u_weights=pwe0[pwe0 > 0], v_weights=wl)
         dt['EventID'][c] = df_wav[i_wav[i]]['EventID']
         dt['ChannelID'][c] = cid
         dt['RSS_truth'][c] = np.power(wave0 - wave, 2).sum()
         dt['RSS_recon'][c] = np.power(wave1 - wave, 2).sum()
-        if 'PEdiff' in df_sub.dtype.names:
-            dt['PEdiff'][c] = df_sub[i_sub[i]]['PEdiff']
     return dt
 
 spe_pre = wff.read_model(args.ref[1])
@@ -86,7 +85,7 @@ e_ans = df_ans['EventID']*Chnum + df_ans['ChannelID']
 e_ans, i_ans = np.unique(e_ans, return_index=True)
 i_ans = np.append(i_ans, len(df_ans))
 
-opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), (pecount, np.uint16), ('wdist', np.float64), (extradist, np.float64), ('RSS_recon', np.float64), ('RSS_truth', np.float64), ('PEdiff', np.float64)])
+opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), (pecount, np.uint16), ('wdist', np.float64), (extradist, np.float64), ('RSS_recon', np.float64), ('RSS_truth', np.float64)])
 leng = len(df_wav[0]['Waveform'])
 
 e_wav = df_wav['EventID']*Chnum + df_wav['ChannelID']; df_wav = df_wav[np.isin(e_wav, e_ans)]

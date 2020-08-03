@@ -1,42 +1,37 @@
 # -*- coding: utf-8 -*-
 
 import os
-import sys
 import numpy as np
+from tqdm import tqdm
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import h5py
 import argparse
 import itertools as it
+from JPwaptool import JPwaptool
 import wf_func as wff
 
 psr = argparse.ArgumentParser()
 psr.add_argument('ipt', nargs='+', help='input file')
 psr.add_argument('-o', dest='opt', help='output file')
-psr.add_argument('--num', dest='spenum', type=int, help='num of speWf')
-psr.add_argument('--len', dest='spelen', type=int, help='length of speWf')
-psr.add_argument('-p', dest='print', action='store_false', help='print bool', default=True)
+psr.add_argument('--num', dest='spenum', type=int, help='num of speWf', default=5e5)
+psr.add_argument('--len', dest='spelen', type=int, help='length of speWf', default=80)
 args = psr.parse_args()
 
 N = args.spenum
 L = args.spelen
 h5_path = args.ipt
 single_pe_path = args.opt
-if args.print:
-    sys.stdout = None
 
 def mean(dt):
     Chnum = np.unique(dt['ChannelID'])
-    N = 10
     cid = np.zeros(len(Chnum))
-    spemean = np.zeros((len(Chnum), len(dt[0]['speWf'])-N))
+    spemean = np.zeros((len(Chnum), L))
     for i in range(len(Chnum)):
         dt_cid = dt[dt['ChannelID']==Chnum[i]]
         spemean_i = np.mean(dt_cid['speWf'], axis=0)
-        base_vol = np.mean(spemean_i[-N:])
-        spemean_i = spemean_i[:-N] - base_vol
-        if np.sum(spemean_i) > 0:
+        if np.median(spemean_i) > 0:
             epulse = 1
         else:
             epulse = -1
@@ -45,39 +40,17 @@ def mean(dt):
         spemean[i] = spemean_i
     return spemean, epulse, Chnum
 
-def pre_analysis(spemean, epulse, Wf):
-    Chnum = np.unique(Wf['ChannelID'])
+def pre_analysis(spemean, stddt):
+    Chnum = np.unique(stddt['ChannelID'])
     thres = np.zeros(len(Chnum))
     for i in range(len(Chnum)):
-        Wf_cid = Wf[Wf['ChannelID']==Chnum[i]]
-        sam = wff.deduct_base(epulse * Wf_cid['Waveform'], mode='fast').flatten()
-        a_std = np.std(np.sort(sam)[:-sam.shape[0]//3])
-        t = 0
-        r = 3
-        j = 0
-        while np.abs(t - a_std) > 0.01:
-            a = 0
-            b = 0
-            t = a_std
-            dt = np.zeros(N).astype(np.float128)
-            while True:
-                wave = wff.deduct_base(Wf_cid[j]['Waveform'], mode='fast')
-                j = (j + 1)%len(Wf_cid)
-                vali = wff.vali_base(wave, np.sum(spemean[i] > r*a_std), r*a_std)
-                a = b
-                b = a + np.sum(vali == 0)
-                if b >= N:
-                    dt[a:] = wave[vali==0][:N-a]-np.mean(wave[vali==0])
-                    break
-                else:
-                    dt[a:b] = wave[vali==0]-np.mean(wave[vali==0])
-            a_std = np.std(dt, ddof=1).astype(np.float64)
-        thres[i] = r*a_std
+        stddt_cid = stddt[stddt['ChannelID']==Chnum[i]]['PedWave']
+        thres[i] = 3 * np.std(stddt_cid, ddof=-1)
     spe_pre = {'spe':spemean, 'thres':thres}
     return spe_pre
 
 def generate_standard(h5_path, single_pe_path):
-    npdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('speWf', np.uint16, L)])  # set datatype
+    npdt = np.dtype([('ChannelID', np.uint32), ('speWf', np.float64, L)])  # set datatype
     dt = np.zeros(N, dtype=npdt)
     num = 0
 
@@ -95,7 +68,8 @@ def generate_standard(h5_path, single_pe_path):
     assert len(e_wf) ==  len(e_gt), 'Incomplete Dataset'
     leng = len(Wf[0]['Waveform'])
     p = 0
-    for p in range(len(e_wf)):
+    stream = JPwaptool(leng, 150, 600, 7, 15)
+    for p in tqdm(range(len(e_wf))):
         pt = np.sort(Gt[i_gt[p]:i_gt[p+1]]['RiseTime']).astype(np.int)
         if len(pt) == 1:
             ps = pt
@@ -105,25 +79,44 @@ def generate_standard(h5_path, single_pe_path):
             ps = pt[(dpta > L) & (dptb > L)]#long distance to other spe in both forepart & backpart
         ps = ps[(ps >= 0) & (ps < leng - L)]
         if ps.shape[0] != 0:
+            stream.Calculate(Wf[i_wf[p]]['Waveform'])
+            wave = Wf[i_wf[p]]['Waveform'] - stream.ChannelInfo.Pedestal
             for k in range(len(ps)):
-                dt[num]['EventID'] = Wf[i_wf[p]]['EventID']
                 dt[num]['ChannelID'] = Wf[i_wf[p]]['ChannelID']
-                dt[num]['speWf'] = Wf[i_wf[p]]['Waveform'][ps[k]:ps[k]+L]
+                dt[num]['speWf'] = wave[ps[k]:ps[k]+L]
                 num += 1
                 if num >= N:
                     break
-        print('\rSingle PE Generating:|{}>{}|{:6.2f}%'.format(((20*(num-1))//N)*'-', (19 - (20*(num-1))//N)*' ', 100 * (num / N)), end=''if num != N else '\n')
         if num >= N or p == len(e_wf)-1:
             dt = dt[:num] # cut empty dt part
-            dt = np.sort(dt, kind='stable', order=['EventID', 'ChannelID'])
             if Chnum < 100:
                 assert Chnum == len(np.unique(dt['ChannelID']))
             else:
                 dt['ChannelID'] = 0
             print('{} speWf generated'.format(len(dt)))
-            spemean, epulse, cid = mean(dt)
-            spe_pre = pre_analysis(spemean, epulse, Wf[:10000])
             break
+    
+    npstddt = np.dtype([('ChannelID', np.uint32), ('PedWave', np.float64)])  # set datatype
+    panel = np.arange(0, leng)
+    stddt = np.zeros(N * 10, dtype=npstddt); stddt['PedWave'] = np.nan
+    start = 0
+    for p in tqdm(range(len(e_wf))):
+        pt = np.sort(Gt[i_gt[p]:i_gt[p+1]]['RiseTime']).astype(np.int)
+        c = np.concatenate(([np.arange(i, i+L) for i in pt]))
+        c = np.unique(np.clip(c, 0, leng))
+        c = panel[np.logical_not(np.isin(panel, c))]
+        stream.Calculate(Wf[i_wf[p]]['Waveform'])
+        wave = Wf[i_wf[p]]['Waveform'] - stream.ChannelInfo.Pedestal
+        end = start + len(c)
+        stddt[start:min(end, N * 10)]['ChannelID'] = Wf[i_wf[p]]['ChannelID']
+        stddt[start:min(end, N * 10)]['PedWave'] = wave[c][:min(len(c), N * 10 - start)]
+        start = end
+        if end >= N * 10:
+            break
+    stddt = stddt[np.logical_not(np.isnan(stddt['PedWave']))]
+    spemean, epulse, cid = mean(dt)
+    assert len(cid) == len(np.unique(stddt['ChannelID'])), 'Incomplete PedWave'
+    spe_pre = pre_analysis(spemean, stddt)
     with h5py.File(single_pe_path, 'w') as spp:
         dset = spp.create_dataset('SinglePE', data=dt)
         dset.attrs['SpePositive'] = spe_pre['spe']

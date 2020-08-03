@@ -237,7 +237,7 @@ def demo(pet, pwe, tth, spe_pre, leng, wave, cid, mode):
     lines2, labels2 = ax2.get_legend_handles_labels()
     align.yaxes(ax, 0, ax2, 0)
     ax2.legend(lines + lines2, labels + labels2)
-    ax.set_xlim(max(t.min()-50, 0), min(t.max()+150, leng))
+#     ax.set_xlim(max(t.min()-50, 0), min(t.max()+150, leng))
     fig.savefig('img/demoe{}c{}.png'.format(tth['EventID'][0], tth['ChannelID'][0]), bbox_inches='tight')
     fig.clf()
     plt.close(fig)

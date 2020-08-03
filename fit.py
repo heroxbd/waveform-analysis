@@ -70,6 +70,8 @@ def inferencing(a, b):
     mcmc_collect = {}
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
         ent = ipt['Waveform']
+        leng = len(ent[0]['Waveform'])
+        stream = JPwaptool(leng, 150, 600, 7, 15)
         dt = np.zeros((b - a) * (leng//5), dtype=opdt)
         start = 0
         end = 0
