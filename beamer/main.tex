@@ -7,13 +7,17 @@
 
 \definecolor{THUpurple}{RGB}{102,8,116}
 
+\usepackage{amsmath}
 \usepackage{caption}
 \usepackage{listings}
+\usepackage{lmodern}
 \usepackage{xcolor}
 \lstset{language=Python,keywordstyle={\bfseries \color{blue}}}
 \usepackage{pdfpages}
 \usepackage{makecell}
+\usepackage[EULERGREEK]{sansmath}
 \usepackage{tikz}
+\usefonttheme[onlymath]{serif}
 
 \newcommand{\ud}{\mathrm{d}}
 \newcommand{\mev}{\mathrm{MeV}}
@@ -23,15 +27,14 @@
 \setbeamersize{text margin left=10mm,text margin right=10mm}
 % \setlength{\belowcaptionskip}{-2mm}
 \title[Waveform Analysis]{A Comprehensive Survey of PMT Waveform Analysis Methods}
-% \author[Dacheng Xu]{Dacheng Xu \\ [4mm] \includegraphics[height=1.5cm]{img/Tsinghua_University_Logo.png} \hspace{2mm} \includegraphics[height=1.5cm]{img/Js.png}}
-% \institute[THU]{Tsinghua University \\ [2mm] On Behalf of \normalsize{Jinping Neutrino Experiment Collaboration}}
-\date[DANCE]{July 31, 2020}
-% \logo{\includegraphics[height=1.5cm]{img/J.png}}
+\author[Dacheng Xu]{Dacheng Xu \and Erjin Bao \and Yiyang Wu  \\ Benda Xu \and Yu Xu \and Geliang Zhang \\ [8mm] \includegraphics[height=2cm]{img/Tsinghua_University_Logo.png}}
+\date[DANCE]{August 4, 2020}
 
 \AtBeginSection[]
 {
-    \begin{frame}
+    \begin{frame}[noframenumbering]
         \frametitle{Outline}
+        \thispagestyle{empty}
         \tableofcontents[currentsection]
     \end{frame}
 }
@@ -40,13 +43,15 @@
 \captionsetup[figure]{labelfont={bf},name={Fig}}
 \frame{\titlepage}
 
-\begin{frame}
+\begin{frame}[noframenumbering]
 \frametitle{Outline}
+\thispagestyle{empty}
 \tableofcontents
 \end{frame}
 
-\section{Jinping Neutrino Experiment}
+\section{Motivation}
 \begin{frame}
+\setcounter{page}{0}
 \frametitle{CJPL}
 \begin{figure}
     \centering
@@ -57,20 +62,16 @@
     \item Overburden $\sim2400\mathrm{m}$
     \item Extremely low cosmic-ray $\mu$ flux
     \item Low reactor neutrino flux
-    \item Ideal site of low background neutrino physics research
+    \item Ideal site of low background physics research
 \end{itemize}
 \end{frame}
 
 \begin{frame}
 \frametitle{Jinping Neutrino Experiment}
 \setlength{\abovecaptionskip}{-2mm}
-\begin{figure}
-    \centering
-    \includegraphics[width=0.3\linewidth]{img/J.png}
-\end{figure}
 \vspace{-4mm}
 \begin{columns}
-\column{0.5\textwidth}
+\column{0.33\textwidth}
 \begin{center}
     Ongoing
 \end{center}
@@ -79,19 +80,45 @@
     \caption{1-ton prototype}
     \includegraphics[width=0.6\linewidth]{img/prototype.jpeg}
 \end{figure}
-\column{0.5\textwidth}
+\column{0.34\textwidth}
 \begin{center}
-    Futuristic
+    Next
 \end{center}
 \begin{figure}
     \centering
     \caption{$\sim$100t detector}
     \includegraphics[width=0.6\linewidth]{img/100tondetector.png}
 \end{figure}
+\column{0.33\textwidth}
+\begin{center}
+    Future
+\end{center}
+\begin{figure}
+    \centering
+    \caption{$\sim$5000t detector}
+    \includegraphics[width=0.6\linewidth]{img/DetectoratJinping.jpg}
+\end{figure}
 \end{columns}
 \end{frame}
 
-\section{Motivation}
+\begin{frame}
+\frametitle{Neutrino Detector}
+\begin{columns}
+\column{0.5\textwidth}
+\begin{figure}
+    \centering
+    \caption{Future Detector at Jinping}
+    \includegraphics[width=1.0\linewidth]{img/DetectoratJinping.jpg}
+\end{figure}
+\column{0.5\textwidth}
+\begin{itemize}
+    \item Study neutrino property based on interaction
+    \item Study interaction based on light
+    \item PMT: extremely sensitive detectors of light
+\end{itemize}
+\end{columns}
+\end{frame}
+
 \begin{frame}
 \frametitle{Photomultiplier Tube}
 \setlength{\abovecaptionskip}{0mm}
@@ -113,19 +140,19 @@
     3 individual processes:
 \end{center}
 \begin{itemize}
-    \item Photon detection
     \item Photon-Electron conversion
     \item Electron collection
+    \item Amplify
 \end{itemize}
 \end{columns}
 \end{frame}
 
 \begin{frame}
-\frametitle{Previous Method}
-\hspace{4mm}Previously, when handling PMT waveforms, we record:
+\frametitle{Naive Method}
+\hspace{4mm}Naively, when handling PMT waveforms, we record:
 \begin{itemize}
     \item First HitTime
-    \item Integration of Waveform(Charge)
+    \item Integration of Waveform (Charge)
 \end{itemize}
 \begin{figure}
     \centering
@@ -138,7 +165,7 @@
 \frametitle{New Goal}
 \begin{itemize}
     \item Extract All Detailed Photon Information in 1 Window
-    \item Including: RiseTime (The time when electron hit first dynode) \& Charge or PEnumber
+    \item Including: HitTime (The time when electron hit first dynode) \& Charge or PEnumber
 \end{itemize}
 \begin{figure}
     \centering
@@ -155,44 +182,117 @@
 \end{center}
 \end{frame}
 
+\begin{frame}
+\frametitle{Familiar Distances}
+\begin{columns}
+\column{0.3\textwidth}
+\begin{itemize}
+    \item $L_{1}$ : $\int|p-q|$
+    \item $L_{2}$ : $\int(p-q)^{2}$
+    \item $\chi^{2}$ : $\int\frac{(p-q)^{2}}{q}$
+    \item $\cdots$
+\end{itemize}
+\column{0.7\textwidth}
+Shortcoming:
+\begin{itemize}
+    \item Cannot compare discrete distribution with continuous distribution
+    \item Ignore the geometry of space
+\end{itemize}
+\begin{figure}
+    \centering
+    \includegraphics[width=1.0\linewidth]{img/tab.png}
+\end{figure}
+\end{columns}
+\end{frame}
+
 \input{Wasserstain}
 
 \begin{frame}
-\frametitle{Wasserstein Distance}
-Let ($\chi$, $d$) be a Polish metric space, and let $p\in[1, +\infty)$. For any two probability measures $\mu, \nu$, on $\chi$, the Wasserstein distance of order $p$ between $\mu$ and $\nu$ is defined by formula\footnotemark[1]:
-\begin{equation*}
-    W_{p}(\mu, \nu) = (\inf_{\pi\in\Pi(\mu, \nu)} \int_{\chi}d(x, y)^{p}d\pi(x,y))^{1/p}
-\end{equation*}
-Which means: transporting mass with measure $\mu$ to have measure $\nu$ with minimal effort
-\footnotetext[1]{Optimal transport: old and new, C{\'e}dric Villani, 2008}
-\end{frame}
-
-\begin{frame}
-\frametitle{Wasserstein Distance}
-In this work, we regard \textbf{normalised} Weight (Charge or PEnumber) as the discrete distribution (or probability mass function) of RiseTime, 
-\begin{itemize}
-    \item Which means: $Weight(RiseTime) = Pr(RiseTime)$
-    \item Distance: $D_{w}=\sum_{i=0}^{1029}|CDF(RiseTime_{recon})_{i} - CDF(RiseTime_{truth})_{i}|$
-    \item $CDF$: Cumulative distribution function, \\ PMT WindowSize = 1029$\mathrm{ns}$
-    \item Example:\begin{itemize}
-        \item $RiseTime_{recon} = [0, 1, 2, 3], Weight_{recon} = [0.3, 0.7, 0.0, 0.0]$, $RiseTime_{truth} = [0, 1, 2, 3], Weight_{truth} = [0.0, 0.0, 0.5, 0.5]$
-        \item $CDF(RiseTime_{recon}) = [0.3, 1.0, 1.0, 1.0]$, \\ $CDF(RiseTime_{truth}) = [0.0, 0.0, 0.5, 1.0]$
-        \item $D_{w} = SUM[Abs([0.3, 1.0, 1.0, 1.0] - [0.0, 0.0, 0.5, 1.0])] = 1.8$
-        \end{itemize}
-    \item It is proved that this definition of distance is equivalent to Wasserstein Distance (p=1)
-\end{itemize}
+\frametitle{Wasserstein Distance Demo}
+\setlength{\abovecaptionskip}{-2mm}
+\setlength{\belowcaptionskip}{0mm}
+$D_{w}=\sum|\mathrm{CDF}(a) - \mathrm{CDF}(b)|$ \\
+$CDF$: Cumulative Distribution Function
+\begin{columns}
+\column{0.4\textwidth}
+\begin{figure}
+    \centering
+    \includegraphics[width=1.0\linewidth]{img/a.png}
+\end{figure}
+\vspace{-7mm}
+\begin{figure}
+    \centering
+    \includegraphics[width=1.0\linewidth]{img/b.png}
+\end{figure}
+\column{0.1\textwidth}
+\begin{tikzpicture}
+    \node[] at (-2.5, 1) (a1) {};
+    \node[] at (-1, 0.5) (a2) {};
+    \node[] at (-2.5, -1) (b1) {};
+    \node[] at (-1, -0.5) (b2) {};
+    \draw [->, line width=0.5mm] (a1) -- node[anchor=south] {CDF} (a2);
+    \draw [->, line width=0.5mm] (b1) -- node[anchor=north] {CDF} (b2);
+\end{tikzpicture}
+\column{0.5\textwidth}
+\vspace{2mm}\begin{figure}
+    \centering
+    \includegraphics[width=1.0\linewidth]{img/ab.png}
+\end{figure}
+\rightline{W-dist = $1.8\mathrm{ns}$}
+\end{columns}
+This definition of distance is equivalent to Wasserstein Distance
 \end{frame}
 
 \begin{frame}
 \frametitle{Poisson Distance}
 \hspace{4mm}Poisson Distance is used \textbf{only} when reconstruct PEnumber
 \begin{itemize}
-    \item $Q = \sum_{i=0}^{1029}PEnumber_{truth_i}; q = \sum_{i=0}^{1029}PEnumber_{recon_i}$
+    \item $Q = \sum PEnumber_{truth_i}; q = \sum PEnumber_{recon_i}$
     \item $D_{p} = |Q-q|*Poisson(Q|Q)$
 \end{itemize}
 \end{frame}
 
-\section{Intuitive Methods}
+\section{Methods}
+
+\begin{frame}
+\frametitle{Input \& Output, Loss}
+\begin{columns}
+\column{0.4\textwidth}
+\hspace{4mm}Input \& Output:
+\begin{itemize}
+    \item Input: Pedestal deduced PMT waveform
+    \item Output: Weight (Charge or PEnumber) sequence
+\end{itemize}
+\column{0.6\textwidth}
+\setlength{\abovecaptionskip}{-2mm}
+\setlength{\belowcaptionskip}{0mm}
+\begin{figure}
+    \centering
+    \includegraphics[width=0.9\linewidth]{img/wave.png}
+    \includegraphics[width=0.9\linewidth]{img/charge.png}
+\end{figure}
+\end{columns}
+\end{frame}
+
+\begin{frame}
+\frametitle{Data Sample}
+% PEpos is the count of HitTime
+\begin{columns}
+\column{0.6\textwidth}
+\begin{figure}
+    \centering
+    \caption{Data Structure}
+    \includegraphics[width=1.0\linewidth]{img/pepos.png}
+\end{figure}
+\column{0.4\textwidth}
+\begin{figure}
+    \centering
+    \caption{Data Structure}
+    \includegraphics[width=1.0\linewidth]{img/dataset.png}
+\end{figure}
+\end{columns}
+\end{frame}
+
 \begin{frame}
 \frametitle{Find Peak}
 \begin{figure}
@@ -207,10 +307,10 @@ In this work, we regard \textbf{normalised} Weight (Charge or PEnumber) as the d
 \end{frame}
 
 \begin{frame}
-\frametitle{Threshold}
+\frametitle{Waveform Shift}
 \begin{figure}
     \centering
-    \caption{Threshold Method Demo, W-dist = 3.10}
+    \caption{Waveform Shift Method Demo, W-dist = 3.10}
     \includegraphics[width=0.9\linewidth]{img/threshold.png}
 \end{figure}
 \vspace{-4mm}
@@ -236,7 +336,7 @@ In this work, we regard \textbf{normalised} Weight (Charge or PEnumber) as the d
 \begin{enumerate}
     \item FFT of Waveform \& Single PE response
     \item Rectangular filter of FFT(Waveform)
-    \item FFT(Charge) = FFT(Waveform) / FFT(Single PE response)
+    \item FFT(Charge) = FFT(Waveform) / FFT(SPE)
     \item IFFT of FFT(Charge)
 \end{enumerate}
 \end{columns}
@@ -258,55 +358,9 @@ In this work, we regard \textbf{normalised} Weight (Charge or PEnumber) as the d
 \column{0.4\textwidth}
 \begin{enumerate}
     \item Lucy-Richardson deconvolution
-    % \item Main Iteration Process:
-    % \begin{equation*}
-    %         \hat{u}^{(t+1)} = \hat{u}^{(t)} \cdot (\frac{d}{\hat{u}^{(t)} \bigotimes P} \bigotimes P^{*})
-    %     \end{equation*}
+    \item A nonlinear iterative method
+    \item Prohibit Charge $<$ 0
 \end{enumerate}
-\end{columns}
-\end{frame}
-
-\section{Method of Convolutional Neural Network}
-
-\begin{frame}
-\frametitle{Input \& Output, Loss}
-\begin{columns}
-\column{0.4\textwidth}
-\hspace{4mm}Input \& Output:
-\begin{itemize}
-    \item Input: Pedestal deduced PMT waveform, length = 1029$\mathrm{ns}$
-    \item Output: Weight (Charge or PEnumber) sequence, length = 1029$\mathrm{ns}$
-\end{itemize}
-\hspace{4mm}Loss function:
-\begin{itemize}
-    \item Wasserstein Distance
-\end{itemize}
-\column{0.6\textwidth}
-\setlength{\abovecaptionskip}{-2mm}
-\setlength{\belowcaptionskip}{0mm}
-\begin{figure}
-    \centering
-    % \caption{Input \& Output}
-    \includegraphics[width=0.9\linewidth]{img/wave.png}
-    \includegraphics[width=0.9\linewidth]{img/charge.png}
-\end{figure}
-\end{columns}
-\end{frame}
-
-\begin{frame}
-\frametitle{Data Sample}
-\begin{columns}
-\column{0.5\textwidth}
-\hspace{4mm}Dataset:
-\begin{itemize}
-    \item Events of $e^{-}$ within $1\mev$ to $8\mev$
-\end{itemize}
-\column{0.5\textwidth}
-\begin{figure}
-    \centering
-    \caption{Data Structure}
-    \includegraphics[width=1.0\linewidth]{img/dataset.png}
-\end{figure}
 \end{columns}
 \end{frame}
 
@@ -317,7 +371,7 @@ In this work, we regard \textbf{normalised} Weight (Charge or PEnumber) as the d
 \begin{figure}[H]
     \centering
     \caption{CNN Structure}
-    \includegraphics[width=1.0\textwidth]{img/model.pdf}
+    \includegraphics[width=0.8\textwidth]{img/model.png}
 \end{figure}
 \column{0.65\textwidth}
 \lstinputlisting[language=Python, basicstyle=\tiny]{CNN}
@@ -330,7 +384,7 @@ In this work, we regard \textbf{normalised} Weight (Charge or PEnumber) as the d
 \column{0.35\textwidth}
 \begin{itemize}
     \item Train CNN by each Channel (30PMTs)
-    \item $\sim$427k waveform for each Channel
+    \item $\sim$280k waveform for each Channel
     \item epoch = 36
     \item Learning rate = $0.01$
 \end{itemize}
@@ -342,8 +396,6 @@ In this work, we regard \textbf{normalised} Weight (Charge or PEnumber) as the d
 \end{figure}
 \end{columns}
 \end{frame}
-
-\section{Method of Fitting}
 
 \begin{frame}
 \frametitle{Single PE Model}
@@ -357,15 +409,15 @@ In this work, we regard \textbf{normalised} Weight (Charge or PEnumber) as the d
 \begin{frame}
 \frametitle{Fitting Process}
 \begin{itemize}
-    \item Fitting parameter: Weight in each RiseTime
+    \item Fitting parameter: Weight in each HitTime
     \item loss is Residual sum squares of Waveform
-    \item Loss = $\sum_{i}^{1029}(Wave_{recon_i}-Wave_{truth_i})^{2}$
+    \item Loss = $\sum(Wave_{recon}-Wave_{truth})^{2}$
     \item using \lstinline{scipy.optimize.fmin_l_bfgs_b}
 \end{itemize}
 \setlength{\belowcaptionskip}{0mm}
 \begin{figure}
     \centering
-    \caption{Demo}
+    \caption{Fitting Demo}
     \includegraphics[width=0.7\linewidth]{img/demo.png}
 \end{figure}
 \end{frame}
@@ -373,40 +425,85 @@ In this work, we regard \textbf{normalised} Weight (Charge or PEnumber) as the d
 \section{Result}
 \begin{frame}
 \frametitle{Distances}
-\setlength{\belowcaptionskip}{-2mm}
+\setlength{\belowcaptionskip}{0mm}
 \begin{table}
     \centering
-    \caption{Reconstruction Result}
-    \begin{tabular}{c|c|c|c|c}
+    \caption{Reconstruction Result($\pm1\sigma$)}
+    \begin{tabular}{c|c|c|c}
         \hline
-        &  & W-dist/$\mathrm{ns}$ & P-dist/$\mathrm{1}$ & Charge-diff/$\mathrm{mV}\cdot\mathrm{ns}$ \\
+        &  & W-dist/$\mathrm{ns}$ & P-dist/$\mathrm{1}$ \\
         \hline
-        FindPeak & Charge & 12.3 & - & 38.7 \\
+        FindPeak & Charge & $12.3\pm18.5$ & - \\
         \hline
-        FindPeak & PEnum & 15.58 & 0.32 & - \\
+        FindPeak & PEnum & $15.58\pm18.8$ & $0.32\pm0.3$ \\
         \hline
-        Threshold & Charge & 3.92 & - & 38.7 \\
+        Threshold & Charge & $3.92\pm3.6$ & - \\
         \hline
-        Threshold & PEnum & 7.55 & 0.30 & - \\
+        Threshold & PEnum & $7.55\pm8.1$ & $0.30\pm0.2$ \\
         \hline
-        FFT & Charge & 2.14 & - & 38.7 \\
+        FFT & Charge & $2.14\pm4.1$ & - \\
         \hline
-        FFT & PEnum & 6.68 & 0.24 & - \\
+        FFT & PEnum & $6.68\pm8.0$ & $0.24\pm0.2$ \\
         \hline
-        LucyDDM & Charge & 1.45 & - & 38.7 \\
+        LucyDDM & Charge & $1.45\pm2.5$ & - \\
         \hline
-        LucyDDM & PEnum & 6.19 & 0.30 & - \\
+        LucyDDM & PEnum & $6.19\pm6.9$ & $0.30\pm0.2$ \\
         \hline
-        CNN & Charge & - & - & - \\
+        CNN & Charge & $1.76\pm3.3$ & - \\
         \hline
-        CNN & PEnum & - & - & - \\
+        CNN & PEnum & - & - \\
         \hline
-        Fitting & Charge & 0.91 & - & 38.7 \\
+        Fitting & Charge & $0.91\pm1.5$ & - \\
         \hline
-        Fitting & PEnum & 2.62 & 0.12 & - \\
+        Fitting & PEnum & $2.62\pm6.3$ & $0.12\pm0.2$ \\
         \hline
     \end{tabular}
 \end{table}
+\end{frame}
+
+\begin{frame}
+\frametitle{CNN Result Histogram}
+\begin{figure}
+    \centering
+    \caption{CNN Charge Result Histogram}
+    \includegraphics[width=1.0\linewidth]{img/takarahist.png}
+\end{figure}
+\end{frame}
+
+\begin{frame}
+\frametitle{CNN Result Histogram}
+\setlength{\abovecaptionskip}{0mm}
+\setlength{\belowcaptionskip}{0mm}
+\begin{figure}
+    \centering
+    \caption{W-dist vs PEpos}
+    \includegraphics[width=0.9\linewidth]{img/takarastats.png}
+\end{figure}
+\end{frame}
+
+\begin{frame}
+\frametitle{Fitting Result Histogram}
+\begin{figure}
+    \centering
+    \caption{Fitting Charge Result Histogram}
+    \includegraphics[width=1.0\linewidth]{img/xiaopeiphist.png}
+\end{figure}
+\end{frame}
+
+\begin{frame}
+\frametitle{Fitting Result Histogram}
+\setlength{\abovecaptionskip}{0mm}
+\setlength{\belowcaptionskip}{0mm}
+\begin{columns}
+\column{0.7\textwidth}
+\begin{figure}
+    \centering
+    \caption{W-dist vs PEpos}
+    \includegraphics[width=0.9\linewidth]{img/xiaopeipstats.png}
+\end{figure}
+\column{0.3\textwidth}
+PEpos is the count of distinct HitTime
+\end{columns}
 \end{frame}
 
 \begin{frame}
@@ -418,13 +515,13 @@ In this work, we regard \textbf{normalised} Weight (Charge or PEnumber) as the d
         \hline
         &  & Performance \\
         \hline
-        CNN & Charge & 6.4s/$10^{5}$Wf(1gpu) \\
+        CNN & Charge & 6.0s/$10^{5}$Wf(1gpu) \\
         \hline
-        CNN & PEnum & 6.3s/$10^{5}$Wf(1gpu)\\
+        CNN & PEnum & -s/$10^{5}$Wf(1gpu)\\
         \hline
-        Fitting & Charge & 450s/$10^{5}$Wf(50cpu) \\
+        Fitting & Charge & 1230s/$10^{5}$Wf(50cpu) \\
         \hline
-        Fitting & PEnum & 560s/$10^{5}$Wf(50cpu) \\
+        Fitting & PEnum & 1570s/$10^{5}$Wf(50cpu) \\
         \hline
     \end{tabular}
 \end{table}
@@ -442,7 +539,8 @@ In this work, we regard \textbf{normalised} Weight (Charge or PEnumber) as the d
 
 \appendix
 \section{Backup}
-\begin{frame}
+\begin{frame}[noframenumbering]
+\thispagestyle{empty}
 \frametitle{Backup}
     
 \end{frame}
