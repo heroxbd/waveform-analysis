@@ -114,7 +114,7 @@ else :
         net = Net_1().to(device)
         loss = testing(trial_loader)
         print('Trying initial parameters with loss={:.2f}'.format(loss))
-    lr = 1e-2
+    lr = 5e-3
 print('Initial loss={}'.format(loss))
 print('Sum of parameters: {:.4f}'.format(sum(parm.numel() for parm in net.parameters())))
 # optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9) #0.001
