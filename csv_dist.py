@@ -28,8 +28,12 @@ with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as distfile:
     l = len(dt)
     wd = dt['wdist'].mean()
     stdwd = dt['wdist'].std()
+    pwd1 = np.percentile(dt['wdist'], 10)
+    pwd2 = np.percentile(dt['wdist'], 90)
     pd = dt[extradist].mean()
     stdpd = dt[extradist].std()
+    ppd1 = np.percentile(dt[extradist], 10)
+    ppd2 = np.percentile(dt[extradist], 90)
     penum, c = np.unique(dt[pecount], return_counts=True)
     pe_c = np.zeros((len(penum), 2)).astype(np.uint32)
     pe_dist = np.zeros((len(penum), 8))
@@ -46,7 +50,7 @@ with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as distfile:
         pe_dist[i, 7] = np.percentile(dt[extradist][dt[pecount] == penum[i]], 90)
 with open(args.opt, 'w+') as csvf:
     csvwr = csv.writer(csvf)
-    csvwr.writerow([args.ipt, str(wd), str(stdwd), str(stdpd), str(pd)])
+    csvwr.writerow([str(), args.ipt, str(wd), str(stdwd), str(pwd1), str(pwd2), str(pd), str(stdpd), str(ppd1), str(ppd2)])
     str_pe_c = pe_c.astype(np.str)
     str_pe_dist = pe_dist.astype(np.str)
     for i in range(len(str_pe_dist)):

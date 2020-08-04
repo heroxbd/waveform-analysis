@@ -26,6 +26,7 @@ from JPwaptool import JPwaptool
 import wf_func as wff
 
 def Make_Time_Vector(GroundTruth, Waveforms_and_info, mode) :
+    GroundTruth[GroundTruth['Charge'] > 0]
     i = 0
     Time_Series = np.zeros((len(Waveforms_and_info), WindowSize), dtype=np.uint8)
     Wave_EventID = Waveforms_and_info['EventID'].to_numpy()
@@ -33,7 +34,7 @@ def Make_Time_Vector(GroundTruth, Waveforms_and_info, mode) :
     RiseTime = GroundTruth['RiseTime'].to_numpy()
     if mode == 'Charge':
         Mode = GroundTruth[mode].to_numpy()
-    elif mode == 'Weight':
+    elif mode == 'PEnum':
         Mode = np.ones_like(RiseTime)
     for j in range(len(Waveforms_and_info)) :
         while i < nt and Wave_EventID[j] == Truth_EventID[i] :
@@ -67,11 +68,11 @@ def PreProcess(channelid) :
         wave = (Origin_Waves[i] - stream.ChannelInfo.Pedestal) * spe_pre[channelid]['epulse']
         Shifted_Waves[i] = (Origin_Waves[i] - stream.ChannelInfo.Pedestal) * spe_pre[channelid]['epulse']
 
-    WeightSpectrum = Make_Time_Vector(Truth_of_this_channel, Waves_of_this_channel, 'Weight')
+    PEnumSpectrum = Make_Time_Vector(Truth_of_this_channel, Waves_of_this_channel, 'PEnum')
     ChargeSpectrum = Make_Time_Vector(Truth_of_this_channel, Waves_of_this_channel, 'Charge')
     with h5py.File(SavePath + '{:02d}.h5'.format(channelid), 'w') as opt:
         opt.create_dataset('Waveform', data=Shifted_Waves, compression='gzip')
-        opt.create_dataset('WeightSpectrum', data=WeightSpectrum, compression='gzip')
+        opt.create_dataset('PEnumSpectrum', data=PEnumSpectrum, compression='gzip')
         opt.create_dataset('ChargeSpectrum', data=ChargeSpectrum, compression='gzip')
     return
 

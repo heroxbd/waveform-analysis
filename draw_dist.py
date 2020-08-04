@@ -101,7 +101,7 @@ with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as distfile:
             ax3 = fig.add_subplot(gs[1, 1])
             deltarss = rss_recon - rss_truth
             r1 = np.percentile(deltarss, 0)
-            r2 = np.percentile(deltarss, 95)
+            r2 = np.percentile(deltarss, 98)
             ax3.hist(deltarss[(deltarss > r1) & (deltarss < r2)], bins=200, density=1)
             ax3.set_xlabel('$\mathrm{RSS}_{recon} - \mathrm{RSS}_{truth}/\mathrm{mV}^{2}$' + ', within ({:.2f}, {:.2f})'.format(r1, r2))
             fig.suptitle(args.ipt.split('/')[-1] + ' ' + pecount + '={:.0f}'.format(i+1))
