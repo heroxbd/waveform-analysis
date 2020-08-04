@@ -23,6 +23,7 @@ plt.rcParams['figure.dpi'] = 300
 plt.rcParams['font.size'] = 8
 plt.rcParams['lines.markersize'] = 4.0
 plt.rcParams['lines.linewidth'] = 1.0
+plt.rcParams['mathtext.fontset'] = 'cm'
 
 def xiaopeip(wave, spe_pre, eta=0):
     l = len(wave)
@@ -187,7 +188,7 @@ def snip_baseline(waveform, itera=20):
     w = np.power(np.exp(np.exp(v) - 1) - 1, 2) - 1 + wm
     return w
 
-def demo(pet, pwe, tth, spe_pre, leng, wave, cid, mode):
+def demo(pet, pwe, tth, spe_pre, leng, wave, cid, mode, full=False):
     penum = len(tth)
     print('PEnum is {}'.format(penum))
     pf0 = np.zeros(leng); pf1 = np.zeros(leng)
@@ -237,16 +238,17 @@ def demo(pet, pwe, tth, spe_pre, leng, wave, cid, mode):
     lines2, labels2 = ax2.get_legend_handles_labels()
     align.yaxes(ax, 0, ax2, 0)
     ax2.legend(lines + lines2, labels + labels2)
-#     ax.set_xlim(max(t.min()-50, 0), min(t.max()+150, leng))
+    if full:
+        ax.set_xlim(max(t.min()-50, 0), min(t.max()+150, leng))
     fig.savefig('img/demoe{}c{}.png'.format(tth['EventID'][0], tth['ChannelID'][0]), bbox_inches='tight')
     fig.clf()
     plt.close(fig)
-#     fig = plt.figure()
-#     ax = fig.add_subplot(111)
-#     ax.plot(spe_pre['spe'], c='b')
-#     ax.grid()
-#     ax.set_xlabel('$Time/\mathrm{ns}$')
-#     ax.set_ylabel('$Voltage/\mathrm{mV}$')
-#     fig.savefig('img/spe{}.png'.format(cid), bbox_inches='tight')
-#     fig.clf()
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.plot(spe_pre['spe'], c='b')
+    ax.grid()
+    ax.set_xlabel('$Time/\mathrm{ns}$')
+    ax.set_ylabel('$Voltage/\mathrm{mV}$')
+    fig.savefig('img/spe{}.png'.format(cid), bbox_inches='tight')
+    fig.clf()
     return
