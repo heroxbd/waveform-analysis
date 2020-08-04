@@ -56,16 +56,16 @@
 \setcounter{page}{0}
 \frametitle{CJPL}
 \begin{columns}
-\column{0.5\textwidth}
+\column{0.45\textwidth}
 \begin{figure}
     \centering
-    \caption{China JinPing Underground Laboratory}
+    \caption{China JinPing Underground Laboratory\protect\footnotemark[1]}
     \includegraphics[width=1.0\linewidth]{img/WorldMap.jpg}
 \end{figure}
-\column{0.5\textwidth}
+\column{0.55\textwidth}
 \begin{figure}
     \centering
-    \caption{Total intensity of $\mu$ at different underground sites}
+    \caption{Total intensity of $\mu$ at different underground sites\protect\footnotemark[2]}
     \includegraphics[width=1.0\linewidth]{img/muonlab.pdf}
 \end{figure}
 \end{columns}
@@ -75,11 +75,17 @@
     \item Low reactor neutrino flux
     \item Ideal site of low background physics research
 \end{itemize}
+\footnotetext[1]{{\tiny Beacom et al. Physics prospects of the Jinping neutrino experiment 2017}}
+\footnotetext[2]{{\tiny Guo et al. Muon Flux Measurement at China Jinping Underground Laboratory 2020}}
 \end{frame}
 
 \begin{frame}
 \frametitle{Jinping Neutrino Experiment}
 \setlength{\abovecaptionskip}{-2mm}
+\begin{figure}
+    \centering
+    \includegraphics[width=0.25\linewidth]{img/J.png}
+\end{figure}
 \vspace{-4mm}
 \begin{columns}
 \column{0.33\textwidth}
@@ -123,43 +129,55 @@
 \end{figure}
 \column{0.5\textwidth}
 \begin{itemize}
-    \item Study neutrino property based on interaction
-    \item Study interaction based on light
+    \item Neutrino involved interaction happens in liquid scintillator produce light
     \item PMT: extremely sensitive detectors of light
+    \item Timing resolution is crucial in neutrino event construction
+    \item How to improve PMT's timing resolution? 
 \end{itemize}
 \end{columns}
 \end{frame}
 
 \begin{frame}
-\frametitle{Photomultiplier Tube}
-\setlength{\abovecaptionskip}{0mm}
+\frametitle{PMT timing resolution}
+\setlength{\abovecaptionskip}{-2mm}
 \setlength{\belowcaptionskip}{0mm}
 \begin{columns}
 \column{0.6\textwidth}
 \begin{figure}
     \centering
     \caption{PMT}
-    \includegraphics[width=0.3\linewidth]{img/PMT.png}
-\end{figure}
-\begin{figure}
-    \centering
-    \caption{PMT Single PE response}
-    \includegraphics[width=0.9\linewidth]{img/pmtspe.png}
+    \includegraphics[width=0.25\linewidth]{img/PMT.png}
 \end{figure}
 \column{0.4\textwidth}
 \begin{center}
     3 individual processes:
 \end{center}
+\vspace{-4mm}
 \begin{itemize}
     \item Photon-Electron conversion
     \item Electron collection
     \item Amplify
 \end{itemize}
 \end{columns}
+\begin{columns}
+\column{0.5\textwidth}
+\begin{figure}
+    \centering
+    \caption{PMT Single PE response}
+    \includegraphics[width=1.0\linewidth]{img/pmtspe.png}
+\end{figure}
+\column{0.5\textwidth}
+\begin{figure}
+    \centering
+    \caption{Pile-up in waveform}
+    \includegraphics[width=1.0\linewidth]{img/wave.png}
+\end{figure}
+\end{columns}
+Pile-up will significantly worsen timing resolution! 
 \end{frame}
 
 \begin{frame}
-\frametitle{Naive Method}
+\frametitle{Naive Method to solve pile-up problem}
 \hspace{4mm}Naively, when handling PMT waveforms, we record:
 \begin{itemize}
     \item First HitTime
@@ -173,10 +191,10 @@
 \end{frame}
 
 \begin{frame}
-\frametitle{New Goal}
+\frametitle{New Goal to determine HitTime}
 \begin{itemize}
-    \item Extract All Detailed Photon Information in 1 Window
-    \item Including: HitTime (The time when electron hit first dynode) \& Charge or PEnumber
+    \item Extract All Detailed Photon Timing in 1 Window
+    \item Including: HitTime (The time when electron hit first dynode) \& Charge or \#PE (number of photon electron)
 \end{itemize}
 \begin{figure}
     \centering
@@ -186,23 +204,31 @@
 \end{frame}
 
 \begin{frame}
-\frametitle{Charge vs PEnum}
-\setlength{\abovecaptionskip}{0mm}
-\setlength{\belowcaptionskip}{0mm}
+\frametitle{Significant change of Charge for single PE}
+% \setlength{\abovecaptionskip}{0mm}
+% \setlength{\belowcaptionskip}{0mm}
+\hspace{8mm}One PE can induce a variety of Charge
+\begin{columns}
+\column{0.5\textwidth}
 \begin{figure}
     \centering
-    \caption{10 Single PE response}
-    \includegraphics[width=0.8\linewidth]{img/spewaves.png}
+    \caption{10 Single PE responses}
+    \includegraphics[width=1.0\linewidth]{img/spewaves.png}
 \end{figure}
-\vspace{-4mm}
-\hspace{8mm}Difference charge for one photon electron
+\column{0.5\textwidth}
+\begin{figure}
+    \centering
+    \caption{Distribution of Charge}
+    \includegraphics[width=1.0\linewidth]{img/chargehist.png}
+\end{figure}
+\end{columns}
 \end{frame}
 
-\section{Wasserstein Distance}
+\section{Figure of merit: Wasserstein Distance}
 \begin{frame}
-\frametitle{Measurement of difference}
+\frametitle{The difference of Timing}
 \begin{center}
-    The difference between Reconstruction Result \& Truth?
+    How to define the difference (distance) between reconstruction result \& truth properly?
 \end{center}
 \end{frame}
 
@@ -220,7 +246,7 @@
 Shortcoming:
 \begin{itemize}
     \item Cannot compare discrete distribution with continuous distribution
-    \item Ignore the geometry of space
+    \item Not sensitive to Timing
 \end{itemize}
 \begin{figure}
     \centering
@@ -267,17 +293,20 @@ $CDF$: Cumulative Distribution Function
 This definition of distance is equivalent to Wasserstein Distance
 \end{frame}
 
-\section{Methods}
+\section{Waveform Analysis Methods}
 
 \begin{frame}
-\frametitle{Input \& Output, Loss}
+\frametitle{Test Setup}
 \begin{columns}
 \column{0.4\textwidth}
 \hspace{4mm}Input \& Output:
 \begin{itemize}
-    \item Input: Pedestal deduced PMT waveform
-    \item Output: Weight (Charge or PEnumber) sequence
+    \item Input: Pedestal subtracted PMT waveform
+    \item Output: Weight (Charge or \#PE) sequence
 \end{itemize}
+\hspace{4mm}Loss:
+
+\hspace{4mm}Wasserstein distance \\ \hspace{4mm}between reconstruction \\ \hspace{4mm}result \& truth
 \column{0.6\textwidth}
 \setlength{\abovecaptionskip}{-2mm}
 \setlength{\belowcaptionskip}{0mm}
@@ -291,13 +320,13 @@ This definition of distance is equivalent to Wasserstein Distance
 
 \begin{frame}
 \frametitle{Data Sample}
-PEpos \& PEnum is the count of HitTime
+TotalPEnum is the count of HitTime in one waveform
 \begin{columns}
 \column{0.6\textwidth}
 \begin{figure}
     \centering
-    \caption{PEpos Histogram}
-    \includegraphics[width=1.0\linewidth]{img/pepos.png}
+    \caption{TotalPEnum Histogram}
+    \includegraphics[width=1.0\linewidth]{img/penum.png}
 \end{figure}
 \column{0.4\textwidth}
 \begin{figure}
@@ -309,7 +338,7 @@ PEpos \& PEnum is the count of HitTime
 \end{frame}
 
 \begin{frame}
-\frametitle{Find Peak}
+\frametitle{Method 1: Find Peak}
 \begin{figure}
     \centering
     \caption{Find Peak Method Demo, W-dist = 4.02}
@@ -317,12 +346,12 @@ PEpos \& PEnum is the count of HitTime
 \end{figure}
 \vspace{-4mm}
 \begin{center}
-    Average W-dist = 10.70 (Charge), 11.62 (PEnum)
+    Average W-dist = 10.70 (Charge), 11.62 (\#PE)
 \end{center}
 \end{frame}
 
 \begin{frame}
-\frametitle{Waveform Shift}
+\frametitle{Method 2: Waveform Shift}
 \begin{figure}
     \centering
     \caption{Waveform Shift Method Demo, W-dist = 10.75}
@@ -330,22 +359,22 @@ PEpos \& PEnum is the count of HitTime
 \end{figure}
 \vspace{-4mm}
 \begin{center}
-    Average W-dist = 3.67 (Charge), 4.69 (PEnum)
+    Average W-dist = 3.67 (Charge), 4.69 (\#PE)
 \end{center}
 \end{frame}
 
 \begin{frame}
-\frametitle{Fast Fourier Transform}
+\frametitle{Method 3: Fourier Deconvolution}
 \begin{columns}
 \column{0.6\textwidth}
 \begin{figure}
     \centering
-    \caption{Fast Fourier Transform Demo, W-dist = 1.63}
+    \caption{Fourier Deconvolution Demo, W-dist = 1.63}
     \includegraphics[width=1.0\linewidth]{img/fftrans.png}
 \end{figure}
 \vspace{-4mm}
 \begin{center}
-    Average W-dist = 1.44 (Charge), 3.08 (PEnum)
+    Average W-dist = 1.44 (Charge), 3.08 (\#PE)
 \end{center}
 \column{0.4\textwidth}
 \begin{enumerate}
@@ -358,7 +387,7 @@ PEpos \& PEnum is the count of HitTime
 \end{frame}
 
 \begin{frame}
-\frametitle{Lucy Deconvolution}
+\frametitle{Method 4: Lucy Deconvolution}
 \begin{columns}
 \column{0.6\textwidth}
 \begin{figure}
@@ -368,19 +397,18 @@ PEpos \& PEnum is the count of HitTime
 \end{figure}
 \vspace{-4mm}
 \begin{center}
-    Average W-dist = 0.93 (Charge), 2.74 (PEnum)
+    Average W-dist = 0.93 (Charge), 2.74 (\#PE)
 \end{center}
 \column{0.4\textwidth}
 \begin{enumerate}
     \item Lucy-Richardson deconvolution
-    \item A nonlinear iterative method
-    \item Prohibit Charge $<$ 0
+    \item Nonlinear iterative method with Charge $>$ 0 constraint
 \end{enumerate}
 \end{columns}
 \end{frame}
 
 \begin{frame}
-\frametitle{CNN Structure}
+\frametitle{Method 5: CNN Structure}
 \begin{columns}
 \column{0.35\textwidth}
 \begin{figure}[H]
@@ -394,11 +422,11 @@ PEpos \& PEnum is the count of HitTime
 \end{frame}
 
 \begin{frame}
-\frametitle{Training Process}
+\frametitle{Method 5: Training Process}
 \begin{columns}
 \column{0.35\textwidth}
 \begin{itemize}
-    \item Train CNN by each Channel (30PMTs)
+    \item Train CNN by each PMT Channel
     \item $\sim$450k waveform for each Channel
     \item epoch = 36
     \item Learning rate = $0.01$
@@ -406,81 +434,72 @@ PEpos \& PEnum is the count of HitTime
 \column{0.65\textwidth}
 \begin{figure}
     \centering
-    \caption{Loss variation during training (Channel 5)}
+    \caption{Loss variation during training}
     \includegraphics[width=1.0\linewidth]{img/epoch.png}
 \end{figure}
 \end{columns}
 \end{frame}
 
 \begin{frame}
-\frametitle{CNN Result}
+\frametitle{Method 5: CNN Result}
 \begin{figure}
     \centering
-    \caption{CNN PEnum Result Histogram}
+    \caption{CNN \#PE Result Histogram}
     \includegraphics[width=0.85\linewidth]{img/takarapenumhist.png}
 \end{figure}
 \begin{center}
-    Average W-dist = 2.25 (Charge), 0.76 (PEnum)
+    Average W-dist = 2.25 (Charge), 0.76 (\#PE)
 \end{center}
 \end{frame}
 
 \begin{frame}
-\frametitle{CNN Result}
+\frametitle{Method 5: CNN Result}
 \setlength{\abovecaptionskip}{0mm}
 \setlength{\belowcaptionskip}{0mm}
 \begin{figure}
     \centering
-    \caption{CNN PEnum W-dist vs PEnum}
+    \caption{CNN \#PE W-dist vs TotalPEnum}
     \includegraphics[width=0.65\linewidth]{img/takarapenumstats.png}
 \end{figure}
 \end{frame}
 
 \begin{frame}
-\frametitle{Single PE Model}
-\begin{figure}
-    \centering
-    \caption{Single PE Model}
-    \includegraphics[width=0.9\linewidth]{img/spe.png}
-\end{figure}
-\end{frame}
-
-\begin{frame}
-\frametitle{Fitting (Match Pursuit) Process}
+\frametitle{Method 6: Fitting (Match Pursuit) Process}
 \begin{itemize}
     \item Fitting parameter: Weight in each HitTime
     \item loss is Residual sum squares of Waveform
     \item Loss = $\sum(Wave_{recon}-Wave_{truth})^{2}$
-    \item using \lstinline{scipy.optimize.fmin_l_bfgs_b}
+    \item using l\_bfgs\_b
 \end{itemize}
 \setlength{\abovecaptionskip}{0mm}
 \setlength{\belowcaptionskip}{0mm}
 \begin{figure}
     \centering
-    \caption{Fitting Demo}
-    \includegraphics[width=0.78\linewidth]{img/demo.png}
+    \caption{Fitting Demo, W-dist = 1.51}
+    \includegraphics[width=0.85\linewidth]{img/demo.png}
 \end{figure}
 \end{frame}
 
 \begin{frame}
-\frametitle{Fitting Result}
+\frametitle{Method 6: Fitting Result}
 \begin{figure}
     \centering
     \caption{Fitting Charge Result Histogram}
     \includegraphics[width=0.85\linewidth]{img/xiaopeipchargehist.png}
 \end{figure}
 \begin{center}
-    Average W-dist = 0.54 (Charge), 2.46 (PEnum)
+    Average W-dist = 0.54 (Charge), 2.46 (\#PE)
 \end{center}
 \end{frame}
 
 \begin{frame}
-\frametitle{Fitting Result}
+\frametitle{Method 6: Fitting Result}
 \setlength{\abovecaptionskip}{0mm}
 \setlength{\belowcaptionskip}{0mm}
 \begin{figure}
     \centering
-    \caption{Fitting Charge W-dist vs PEpos}
-    \includegraphics[width=0.65\linewidth]{img/xiaopeipchargestats.png}
+    \caption{Fitting Charge W-dist vs TotalPEnum}
+    \includegraphics[width=0.65\linewidth]{img/xiaopeipchargestats-1.png}
 \end{figure}
 \end{frame}
 
@@ -498,7 +517,7 @@ PEpos \& PEnum is the count of HitTime
 \frametitle{Distances}
 \begin{figure}
     \centering
-    \caption{Distances of methods, error bar 10 - 90 percentile (PEnum)}
+    \caption{Distances of methods, error bar 10 - 90 percentile (\#PE)}
     \includegraphics[width=1.0\linewidth]{img/summarypenum.png}
 \end{figure}
 \end{frame}
@@ -512,25 +531,47 @@ PEpos \& PEnum is the count of HitTime
         \hline
         &  & Performance \\
         \hline
-        CNN & Charge & 6.0s/$10^{5}$Wf(1gpu) \\
+        CNN & Charge & 6.0s/$10^{5}$Wf (gpu) \\
         \hline
-        CNN & PEnum & 6.0s/$10^{5}$Wf(1gpu)\\
+        CNN & \#PE & 6.0s/$10^{5}$Wf (gpu)\\
         \hline
-        Fitting & Charge & 2000s/$10^{5}$Wf(50cpu) \\
+        Fitting & Charge & 2000s/$10^{5}$Wf (cpu) \\
         \hline
-        Fitting & PEnum & 2000s/$10^{5}$Wf(50cpu) \\
+        Fitting & \#PE & 2000s/$10^{5}$Wf (cpu) \\
+        \hline
+        LucyDDM & Charge & 24s/$10^{5}$Wf (cpu) \\
+        \hline
+        LucyDDM & \#PE & 24s/$10^{5}$Wf (cpu) \\
         \hline
     \end{tabular}
 \end{table}
+\hspace{4mm}\begin{itemize}
+    \item gpu: Using half of NVIDIA Tesla K80
+    \item cpu: Using 50 CPU core of AMD EYPC 7702
+\end{itemize}
 \end{frame}
 
 \section{Summary \& Outlook}
 \begin{frame}
 \frametitle{Summary \& Outlook}
 \begin{itemize}
-    \item We developed several representative methods to extract photon information hidden in PMT waveform
-    \item These methods will improve the accuracy of following-up Event reconstruction
-    \item We are working on applying and connecting these methods to Event reconstruction
+    \item We developed several representative methods to extract photon timing information hidden in PMT waveform. 
+    \item These methods will improve event reconstruction and particle identification. 
+    \item We are working on applying these methods to event reconstruction and particle identification. 
+    \item Fitting method is the best for reconstruction of Charge, while LucyDDM looks promising. 
+    \item CNN method is the best for reconstruction of \#PE. 
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Acknowledgement}
+\begin{itemize}
+    \item Prof. Shaomin Chen \& Prof. Zhe Wang, Tsinghua University, Jinping Neutrino Experiment Collaboration
+    \item Developer of JSAP(Jinping neutrino experiment Simulation and Analysis Package), Ziyi Guo et al. 
+    \item Aiqiang Zhang \& Jihui Pei, Tsinghua University
+    \item Student Association of Science and Technology, Department of Engineering Physics, Tsinghua University
+    \item Student Association of Science and Technology, Department of Physics, Tsinghua University
+    \item Student Association of Science and Technology, Department of Computer Science and Technology, Tsinghua University
 \end{itemize}
 \end{frame}
 
@@ -539,9 +580,9 @@ PEpos \& PEnum is the count of HitTime
 \begin{frame}[noframenumbering]
 \thispagestyle{empty}
 \frametitle{Backup - Poisson Distance \& Charge Diff}
-\hspace{4mm}Poisson Distance is used \textbf{only} when reconstruct PEnumber
+\hspace{4mm}Poisson Distance is used \textbf{only} when reconstruct \#PE
 \begin{itemize}
-    \item $Q = \sum PEnumber_{truth_i}; q = \sum PEnumber_{recon_i}$
+    \item $Q = \sum \#PE_{truth_i}; q = \sum \#PE_{recon_i}$
     \item $D_{p} = |Q-q|*\mathrm{Poisson}(Q|Q)$
 \end{itemize}
 \hspace{4mm}Charge Diff is used \textbf{only} when reconstruct Charge
@@ -549,7 +590,7 @@ PEpos \& PEnum is the count of HitTime
 
 \begin{frame}[noframenumbering]
 \thispagestyle{empty}
-\frametitle{Backup - PEpos vs PEnum}
+\frametitle{Backup - TotalPEpos vs TotalPEnum}
 \begin{columns}
 \column{0.5\textwidth}
 \begin{figure}
@@ -569,7 +610,7 @@ PEpos \& PEnum is the count of HitTime
 \frametitle{Backup - Fitting Result}
 \begin{figure}
     \centering
-    \caption{Fitting PEnum Result Histogram}
+    \caption{Fitting \#PE Result Histogram}
     \includegraphics[width=0.85\linewidth]{img/xiaopeippenumhist.png}
 \end{figure}
 \end{frame}
@@ -581,7 +622,7 @@ PEpos \& PEnum is the count of HitTime
 \setlength{\belowcaptionskip}{0mm}
 \begin{figure}
     \centering
-    \caption{Fitting PEnum W-dist vs PEpos}
+    \caption{Fitting \#PE W-dist vs PEpos}
     \includegraphics[width=0.65\linewidth]{img/xiaopeippenumstats.png}
 \end{figure}
 \end{frame}
