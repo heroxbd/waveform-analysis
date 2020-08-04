@@ -26,8 +26,8 @@
 \setbeamercolor{structure}{fg=THUpurple}
 \setbeamersize{text margin left=10mm,text margin right=10mm}
 % \setlength{\belowcaptionskip}{-2mm}
-\title[Waveform Analysis]{A Comprehensive Survey of PMT Waveform Analysis Methods}
-\author[Dacheng Xu]{Dacheng Xu \and Erjin Bao \and Yiyang Wu  \\ Benda Xu \and Yu Xu \and Geliang Zhang \\ [8mm] \includegraphics[height=2cm]{img/Tsinghua_University_Logo.png}}
+\title[Waveform Analysis]{A Survey of PMT Waveform Analysis Methods}
+\author[Dacheng Xu]{Dacheng Xu \\ [4mm] In cooperation with \and Erjin Bao \and Yiyang Wu  \\ Benda Xu \and Yu Xu \and Geliang Zhang \\ [4mm] \includegraphics[height=2cm]{img/Tsinghua_University_Logo.png} \hspace{6mm} \includegraphics[height=2cm]{img/Js.png} \\ [4mm] at DANCE Machine Learning Workshop 2020 \\ [-8mm]}
 \date[DANCE]{August 4, 2020}
 
 \AtBeginSection[]
@@ -51,13 +51,24 @@
 
 \section{Motivation}
 \begin{frame}
+\setlength{\abovecaptionskip}{0mm}
+\setlength{\belowcaptionskip}{0mm}
 \setcounter{page}{0}
 \frametitle{CJPL}
+\begin{columns}
+\column{0.5\textwidth}
 \begin{figure}
     \centering
     \caption{China JinPing Underground Laboratory}
-    \includegraphics[width=0.65\linewidth]{img/WorldMap.jpg}
+    \includegraphics[width=1.0\linewidth]{img/WorldMap.jpg}
 \end{figure}
+\column{0.5\textwidth}
+\begin{figure}
+    \centering
+    \caption{Total intensity of $\mu$ at different underground sites}
+    \includegraphics[width=1.0\linewidth]{img/muonlab.pdf}
+\end{figure}
+\end{columns}
 \begin{itemize}
     \item Overburden $\sim2400\mathrm{m}$
     \item Extremely low cosmic-ray $\mu$ flux
@@ -174,7 +185,20 @@
 \end{figure}
 \end{frame}
 
-\section{Wasserstein Distance \& Poisson Distance}
+\begin{frame}
+\frametitle{Charge vs PEnum}
+\setlength{\abovecaptionskip}{0mm}
+\setlength{\belowcaptionskip}{0mm}
+\begin{figure}
+    \centering
+    \caption{10 Single PE response}
+    \includegraphics[width=0.8\linewidth]{img/spewaves.png}
+\end{figure}
+\vspace{-4mm}
+\hspace{8mm}Difference charge for one photon electron
+\end{frame}
+
+\section{Wasserstein Distance}
 \begin{frame}
 \frametitle{Measurement of difference}
 \begin{center}
@@ -243,15 +267,6 @@ $CDF$: Cumulative Distribution Function
 This definition of distance is equivalent to Wasserstein Distance
 \end{frame}
 
-\begin{frame}
-\frametitle{Poisson Distance}
-\hspace{4mm}Poisson Distance is used \textbf{only} when reconstruct PEnumber
-\begin{itemize}
-    \item $Q = \sum PEnumber_{truth_i}; q = \sum PEnumber_{recon_i}$
-    \item $D_{p} = |Q-q|*Poisson(Q|Q)$
-\end{itemize}
-\end{frame}
-
 \section{Methods}
 
 \begin{frame}
@@ -276,12 +291,12 @@ This definition of distance is equivalent to Wasserstein Distance
 
 \begin{frame}
 \frametitle{Data Sample}
-% PEpos is the count of HitTime
+PEpos \& PEnum is the count of HitTime
 \begin{columns}
 \column{0.6\textwidth}
 \begin{figure}
     \centering
-    \caption{Data Structure}
+    \caption{PEpos Histogram}
     \includegraphics[width=1.0\linewidth]{img/pepos.png}
 \end{figure}
 \column{0.4\textwidth}
@@ -297,12 +312,12 @@ This definition of distance is equivalent to Wasserstein Distance
 \frametitle{Find Peak}
 \begin{figure}
     \centering
-    \caption{Find Peak Method Demo, W-dist = 2.72}
+    \caption{Find Peak Method Demo, W-dist = 4.02}
     \includegraphics[width=0.9\linewidth]{img/findpeak.png}
 \end{figure}
 \vspace{-4mm}
 \begin{center}
-    Average W-dist = 12.3
+    Average W-dist = 10.70 (Charge), 11.62 (PEnum)
 \end{center}
 \end{frame}
 
@@ -310,12 +325,12 @@ This definition of distance is equivalent to Wasserstein Distance
 \frametitle{Waveform Shift}
 \begin{figure}
     \centering
-    \caption{Waveform Shift Method Demo, W-dist = 3.10}
+    \caption{Waveform Shift Method Demo, W-dist = 10.75}
     \includegraphics[width=0.9\linewidth]{img/threshold.png}
 \end{figure}
 \vspace{-4mm}
 \begin{center}
-    Average W-dist = 3.92
+    Average W-dist = 3.67 (Charge), 4.69 (PEnum)
 \end{center}
 \end{frame}
 
@@ -325,12 +340,12 @@ This definition of distance is equivalent to Wasserstein Distance
 \column{0.6\textwidth}
 \begin{figure}
     \centering
-    \caption{Fast Fourier Transform Demo, W-dist = 1.22}
+    \caption{Fast Fourier Transform Demo, W-dist = 1.63}
     \includegraphics[width=1.0\linewidth]{img/fftrans.png}
 \end{figure}
 \vspace{-4mm}
 \begin{center}
-    Average W-dist = 2.1
+    Average W-dist = 1.44 (Charge), 3.08 (PEnum)
 \end{center}
 \column{0.4\textwidth}
 \begin{enumerate}
@@ -348,12 +363,12 @@ This definition of distance is equivalent to Wasserstein Distance
 \column{0.6\textwidth}
 \begin{figure}
     \centering
-    \caption{Lucy Deconvolution Demo, W-dist = 1.31}
+    \caption{Lucy Deconvolution Demo, W-dist = 1.25}
     \includegraphics[width=1.0\linewidth]{img/lucyddm.png}
 \end{figure}
 \vspace{-4mm}
 \begin{center}
-    Average W-dist = 1.45
+    Average W-dist = 0.93 (Charge), 2.74 (PEnum)
 \end{center}
 \column{0.4\textwidth}
 \begin{enumerate}
@@ -384,17 +399,40 @@ This definition of distance is equivalent to Wasserstein Distance
 \column{0.35\textwidth}
 \begin{itemize}
     \item Train CNN by each Channel (30PMTs)
-    \item $\sim$280k waveform for each Channel
+    \item $\sim$450k waveform for each Channel
     \item epoch = 36
     \item Learning rate = $0.01$
 \end{itemize}
 \column{0.65\textwidth}
 \begin{figure}
     \centering
-    \caption{Data Structure}
+    \caption{Loss variation during training (Channel 5)}
     \includegraphics[width=1.0\linewidth]{img/epoch.png}
 \end{figure}
 \end{columns}
+\end{frame}
+
+\begin{frame}
+\frametitle{CNN Result}
+\begin{figure}
+    \centering
+    \caption{CNN PEnum Result Histogram}
+    \includegraphics[width=0.85\linewidth]{img/takarapenumhist.png}
+\end{figure}
+\begin{center}
+    Average W-dist = 2.25 (Charge), 0.76 (PEnum)
+\end{center}
+\end{frame}
+
+\begin{frame}
+\frametitle{CNN Result}
+\setlength{\abovecaptionskip}{0mm}
+\setlength{\belowcaptionskip}{0mm}
+\begin{figure}
+    \centering
+    \caption{CNN PEnum W-dist vs PEnum}
+    \includegraphics[width=0.65\linewidth]{img/takarapenumstats.png}
+\end{figure}
 \end{frame}
 
 \begin{frame}
@@ -407,103 +445,62 @@ This definition of distance is equivalent to Wasserstein Distance
 \end{frame}
 
 \begin{frame}
-\frametitle{Fitting Process}
+\frametitle{Fitting (Match Pursuit) Process}
 \begin{itemize}
     \item Fitting parameter: Weight in each HitTime
     \item loss is Residual sum squares of Waveform
     \item Loss = $\sum(Wave_{recon}-Wave_{truth})^{2}$
     \item using \lstinline{scipy.optimize.fmin_l_bfgs_b}
 \end{itemize}
+\setlength{\abovecaptionskip}{0mm}
 \setlength{\belowcaptionskip}{0mm}
 \begin{figure}
     \centering
     \caption{Fitting Demo}
-    \includegraphics[width=0.7\linewidth]{img/demo.png}
+    \includegraphics[width=0.78\linewidth]{img/demo.png}
+\end{figure}
+\end{frame}
+
+\begin{frame}
+\frametitle{Fitting Result}
+\begin{figure}
+    \centering
+    \caption{Fitting Charge Result Histogram}
+    \includegraphics[width=0.85\linewidth]{img/xiaopeipchargehist.png}
+\end{figure}
+\begin{center}
+    Average W-dist = 0.54 (Charge), 2.46 (PEnum)
+\end{center}
+\end{frame}
+
+\begin{frame}
+\frametitle{Fitting Result}
+\setlength{\abovecaptionskip}{0mm}
+\setlength{\belowcaptionskip}{0mm}
+\begin{figure}
+    \centering
+    \caption{Fitting Charge W-dist vs PEpos}
+    \includegraphics[width=0.65\linewidth]{img/xiaopeipchargestats.png}
 \end{figure}
 \end{frame}
 
 \section{Result}
 \begin{frame}
 \frametitle{Distances}
-\setlength{\belowcaptionskip}{0mm}
-\begin{table}
-    \centering
-    \caption{Reconstruction Result($\pm1\sigma$)}
-    \begin{tabular}{c|c|c|c}
-        \hline
-        &  & W-dist/$\mathrm{ns}$ & P-dist/$\mathrm{1}$ \\
-        \hline
-        FindPeak & Charge & $12.3\pm18.5$ & - \\
-        \hline
-        FindPeak & PEnum & $15.58\pm18.8$ & $0.32\pm0.3$ \\
-        \hline
-        Threshold & Charge & $3.92\pm3.6$ & - \\
-        \hline
-        Threshold & PEnum & $7.55\pm8.1$ & $0.30\pm0.2$ \\
-        \hline
-        FFT & Charge & $2.14\pm4.1$ & - \\
-        \hline
-        FFT & PEnum & $6.68\pm8.0$ & $0.24\pm0.2$ \\
-        \hline
-        LucyDDM & Charge & $1.45\pm2.5$ & - \\
-        \hline
-        LucyDDM & PEnum & $6.19\pm6.9$ & $0.30\pm0.2$ \\
-        \hline
-        CNN & Charge & $1.76\pm3.3$ & - \\
-        \hline
-        CNN & PEnum & - & - \\
-        \hline
-        Fitting & Charge & $0.91\pm1.5$ & - \\
-        \hline
-        Fitting & PEnum & $2.62\pm6.3$ & $0.12\pm0.2$ \\
-        \hline
-    \end{tabular}
-\end{table}
-\end{frame}
-
-\begin{frame}
-\frametitle{CNN Result Histogram}
 \begin{figure}
     \centering
-    \caption{CNN Charge Result Histogram}
-    \includegraphics[width=1.0\linewidth]{img/takarahist.png}
+    \caption{Distances of methods, error bar 10 - 90 percentile (Charge)}
+    \includegraphics[width=1.0\linewidth]{img/summarycharge.png}
 \end{figure}
 \end{frame}
 
 \begin{frame}
-\frametitle{CNN Result Histogram}
-\setlength{\abovecaptionskip}{0mm}
-\setlength{\belowcaptionskip}{0mm}
+\frametitle{Distances}
 \begin{figure}
     \centering
-    \caption{W-dist vs PEpos}
-    \includegraphics[width=0.9\linewidth]{img/takarastats.png}
+    \caption{Distances of methods, error bar 10 - 90 percentile (PEnum)}
+    \includegraphics[width=1.0\linewidth]{img/summarypenum.png}
 \end{figure}
-\end{frame}
-
-\begin{frame}
-\frametitle{Fitting Result Histogram}
-\begin{figure}
-    \centering
-    \caption{Fitting Charge Result Histogram}
-    \includegraphics[width=1.0\linewidth]{img/xiaopeiphist.png}
-\end{figure}
-\end{frame}
-
-\begin{frame}
-\frametitle{Fitting Result Histogram}
-\setlength{\abovecaptionskip}{0mm}
-\setlength{\belowcaptionskip}{0mm}
-\begin{columns}
-\column{0.7\textwidth}
-\begin{figure}
-    \centering
-    \caption{W-dist vs PEpos}
-    \includegraphics[width=0.9\linewidth]{img/xiaopeipstats.png}
-\end{figure}
-\column{0.3\textwidth}
-PEpos is the count of distinct HitTime
-\end{columns}
 \end{frame}
 
 \begin{frame}
@@ -517,11 +514,11 @@ PEpos is the count of distinct HitTime
         \hline
         CNN & Charge & 6.0s/$10^{5}$Wf(1gpu) \\
         \hline
-        CNN & PEnum & -s/$10^{5}$Wf(1gpu)\\
+        CNN & PEnum & 6.0s/$10^{5}$Wf(1gpu)\\
         \hline
-        Fitting & Charge & 1230s/$10^{5}$Wf(50cpu) \\
+        Fitting & Charge & 2000s/$10^{5}$Wf(50cpu) \\
         \hline
-        Fitting & PEnum & 1570s/$10^{5}$Wf(50cpu) \\
+        Fitting & PEnum & 2000s/$10^{5}$Wf(50cpu) \\
         \hline
     \end{tabular}
 \end{table}
@@ -541,8 +538,92 @@ PEpos is the count of distinct HitTime
 \section{Backup}
 \begin{frame}[noframenumbering]
 \thispagestyle{empty}
-\frametitle{Backup}
-    
+\frametitle{Backup - Poisson Distance \& Charge Diff}
+\hspace{4mm}Poisson Distance is used \textbf{only} when reconstruct PEnumber
+\begin{itemize}
+    \item $Q = \sum PEnumber_{truth_i}; q = \sum PEnumber_{recon_i}$
+    \item $D_{p} = |Q-q|*\mathrm{Poisson}(Q|Q)$
+\end{itemize}
+\hspace{4mm}Charge Diff is used \textbf{only} when reconstruct Charge
+\end{frame}
+
+\begin{frame}[noframenumbering]
+\thispagestyle{empty}
+\frametitle{Backup - PEpos vs PEnum}
+\begin{columns}
+\column{0.5\textwidth}
+\begin{figure}
+    \centering
+    \includegraphics[width=1.0\linewidth]{img/pepos.png}
+\end{figure}
+\column{0.5\textwidth}
+\begin{figure}
+    \centering
+    \includegraphics[width=1.0\linewidth]{img/penum.png}
+\end{figure}
+\end{columns}
+\end{frame}
+
+\begin{frame}[noframenumbering]
+\thispagestyle{empty}
+\frametitle{Backup - Fitting Result}
+\begin{figure}
+    \centering
+    \caption{Fitting PEnum Result Histogram}
+    \includegraphics[width=0.85\linewidth]{img/xiaopeippenumhist.png}
+\end{figure}
+\end{frame}
+
+\begin{frame}[noframenumbering]
+\thispagestyle{empty}
+\frametitle{Backup - Fitting Result}
+\setlength{\abovecaptionskip}{0mm}
+\setlength{\belowcaptionskip}{0mm}
+\begin{figure}
+    \centering
+    \caption{Fitting PEnum W-dist vs PEpos}
+    \includegraphics[width=0.65\linewidth]{img/xiaopeippenumstats.png}
+\end{figure}
+\end{frame}
+
+\begin{frame}[noframenumbering]
+\thispagestyle{empty}
+\frametitle{Backup - CNN Result}
+\begin{figure}
+    \centering
+    \caption{CNN Charge Result Histogram}
+    \includegraphics[width=0.85\linewidth]{img/takarachargehist.png}
+\end{figure}
+\end{frame}
+
+\begin{frame}[noframenumbering]
+\thispagestyle{empty}
+\frametitle{Backup - CNN Result}
+\setlength{\abovecaptionskip}{0mm}
+\setlength{\belowcaptionskip}{0mm}
+\begin{figure}
+    \centering
+    \caption{CNN Charge W-dist vs PEpos}
+    \includegraphics[width=0.65\linewidth]{img/takarachargestats.png}
+\end{figure}
+\end{frame}
+
+\begin{frame}[noframenumbering]
+\thispagestyle{empty}
+\frametitle{Backup - Large W-dist}
+\begin{figure}
+    \centering
+    \includegraphics[width=1.0\linewidth]{img/demoe15231c15.png}
+\end{figure}
+\end{frame}
+
+\begin{frame}[noframenumbering]
+\thispagestyle{empty}
+\frametitle{Backup - Large W-dist}
+\begin{figure}
+    \centering
+    \includegraphics[width=1.0\linewidth]{img/demoe22746c2.png}
+\end{figure}
 \end{frame}
 
 \end{document}
