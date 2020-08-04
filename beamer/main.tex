@@ -154,7 +154,7 @@
 \end{center}
 \vspace{-4mm}
 \begin{itemize}
-    \item Photon-Electron conversion
+    \item Photo-Electron conversion
     \item Electron collection
     \item Amplify
 \end{itemize}
@@ -194,7 +194,7 @@ Pile-up will significantly worsen timing resolution!
 \frametitle{New Goal to determine HitTime}
 \begin{itemize}
     \item Extract All Detailed Photon Timing in 1 Window
-    \item Including: HitTime (The time when electron hit first dynode) \& Charge or \#PE (number of photon electron)
+    \item Including: HitTime (The time when electron hit first dynode) \& Charge or \#PE (number of photo-electrons)
 \end{itemize}
 \begin{figure}
     \centering
@@ -207,7 +207,7 @@ Pile-up will significantly worsen timing resolution!
 \frametitle{Significant change of Charge for single PE}
 % \setlength{\abovecaptionskip}{0mm}
 % \setlength{\belowcaptionskip}{0mm}
-\hspace{8mm}One PE can induce a variety of Charge
+\hspace{8mm}One PE can induce a variety of charges
 \begin{columns}
 \column{0.5\textwidth}
 \begin{figure}
@@ -246,7 +246,7 @@ Pile-up will significantly worsen timing resolution!
 Shortcoming:
 \begin{itemize}
     \item Cannot compare discrete distribution with continuous distribution
-    \item Not sensitive to Timing
+    \item Not sensitive to timing
 \end{itemize}
 \begin{figure}
     \centering
@@ -464,7 +464,7 @@ TotalPEnum is the count of HitTime in one waveform
 \end{frame}
 
 \begin{frame}
-\frametitle{Method 6: Fitting (Match Pursuit) Process}
+\frametitle{Method 6: Fitting (Matching Pursuit)}
 \begin{itemize}
     \item Fitting parameter: Weight in each HitTime
     \item loss is Residual sum squares of Waveform
@@ -547,7 +547,7 @@ TotalPEnum is the count of HitTime in one waveform
 \end{table}
 \hspace{4mm}\begin{itemize}
     \item gpu: Using half of NVIDIA Tesla K80
-    \item cpu: Using 50 CPU core of AMD EYPC 7702
+    \item cpu: Using 50 CPU cores of AMD EYPC 7702
 \end{itemize}
 \end{frame}
 
@@ -557,7 +557,7 @@ TotalPEnum is the count of HitTime in one waveform
 \begin{itemize}
     \item Fitting method is the best for reconstruction of Charge, while LucyDDM looks promising. 
     \item CNN method is the best for reconstruction of \#PE, and it is also the fastest. 
-    \item We developed several representative methods to extract photon timing information hidden in PMT waveform. 
+    \item We developed several representative methods to extract photon timing information hidden in PMT waveforms. 
     \item These methods will improve event reconstruction and particle identification. 
     \item We are working on applying these methods to event reconstruction and particle identification. 
 \end{itemize}
@@ -567,7 +567,7 @@ TotalPEnum is the count of HitTime in one waveform
 \frametitle{Acknowledgement}
 \begin{itemize}
     \item Prof. Shaomin Chen \& Prof. Zhe Wang, Tsinghua University, Jinping Neutrino Experiment Collaboration
-    \item Developer of JSAP(Jinping neutrino experiment Simulation and Analysis Package), Ziyi Guo et al. 
+    \item Developers of JSAP(Jinping neutrino experiment Simulation and Analysis Package), Ziyi Guo et al. 
     \item Aiqiang Zhang \& Jihui Pei, Tsinghua University
     \item Student Association of Science and Technology, Department of Engineering Physics, Tsinghua University
     \item Student Association of Science and Technology, Department of Physics, Tsinghua University
