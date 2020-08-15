@@ -13,7 +13,6 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from mpl_axes_aligner import align
-import numba
 from JPwaptool import JPwaptool
 import h5py
 from scipy.interpolate import interp1d
@@ -192,7 +191,7 @@ def demo(pet, pwe, tth, spe_pre, leng, wave, cid, mode, full=False):
     penum = len(tth)
     print('PEnum is {}'.format(penum))
     pf0 = np.zeros(leng); pf1 = np.zeros(leng)
-    if mode == 'Weight':
+    if mode == 'PEnum':
         tru_pet = tth['RiseTime']
         t, c = np.unique(tru_pet, return_counts=True)
         pf0[t] = c

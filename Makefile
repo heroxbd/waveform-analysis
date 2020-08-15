@@ -45,7 +45,7 @@ endef
 define nn
 $(tfold)/resu-$(set)/sub-$(1).h5 : $(datfoldi)/$(set)/$(prefix)$(1).h5 spe-$(set).h5 $(Nets)
 	@mkdir -p $$(dir $$@)
-	python3 -u Prediction_Processing_Total.py $$< --mod $(mode) --met $(method) -o $$@ --ref $$(word 2,$$^) -N $(datfold)/$(set)/$(mode)/Nets -D 1 > $$@.log 2>&1
+	python3 -u Prediction_Processing_Total.py $$< --mod $(mode) --met $(method) -o $$@ --ref $$(word 2,$$^) -N $(datfold)/$(set)/$(mode)/Nets -D 0 > $$@.log 2>&1
 endef
 $(foreach i,$(rseq),$(eval $(call $(predict),$(i))))
 
@@ -67,7 +67,7 @@ PreProcess : $(seq:%=$(datfold)/$(set)/$(prefix)%.h5) spe-$(set).h5
 
 $(datfoldi)/$(set)/$(prefix)$(chunk)x.h5 : $(datfold)/$(set)/$(prefix)$(chunk).h5
 	@mkdir -p $(dir $@)
-	python3 cut_data.py $^ -o $@ -a -1 -b 100000
+	python3 cut_data.py $^ -o $@ -a -1 -b 10000
 
 spe-$(set).h5 : $(datfold)/$(set)/$(prefix)0.h5
 	python3 spe_get.py $^ -o $@ --num 500000 --len 80
