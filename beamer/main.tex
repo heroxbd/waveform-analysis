@@ -129,16 +129,16 @@
 \end{figure}
 \column{0.5\textwidth}
 \begin{itemize}
-    \item Neutrino involved interaction happens in liquid scintillator produce light
-    \item PMT: extremely sensitive detectors of light
-    \item Timing resolution is crucial in neutrino event construction
+    \item Neutrino involved interactions in liquid scintillator produce light
+    \item PMT: single photon detector
+    \item Timing resolution is crucial in neutrino event reconstruction
     \item How to improve PMT's timing resolution? 
 \end{itemize}
 \end{columns}
 \end{frame}
 
 \begin{frame}
-\frametitle{PMT timing resolution}
+\frametitle{PMT Time Resolution}
 \setlength{\abovecaptionskip}{-2mm}
 \setlength{\belowcaptionskip}{0mm}
 \begin{columns}
@@ -154,9 +154,9 @@
 \end{center}
 \vspace{-4mm}
 \begin{itemize}
-    \item Photon-Electron conversion
+    \item Photon-Electron conversion (photoelectric effect)
     \item Electron collection
-    \item Amplify
+    \item Amplification
 \end{itemize}
 \end{columns}
 \begin{columns}
@@ -193,8 +193,8 @@ Pile-up will significantly worsen timing resolution!
 \begin{frame}
 \frametitle{New Goal to determine HitTime}
 \begin{itemize}
-    \item Extract All Detailed Photon Timing in 1 Window
-    \item Including: HitTime (The time when electron hit first dynode) \& Charge or \#PE (number of photon electron)
+    \item Extract information of all hits in 1 DAQ window
+    \item Including: HitTime (the time when electron hit the first dynode) \& Charge or \#PE (number of photo-electrons)
 \end{itemize}
 \begin{figure}
     \centering
@@ -207,7 +207,7 @@ Pile-up will significantly worsen timing resolution!
 \frametitle{Significant change of Charge for single PE}
 % \setlength{\abovecaptionskip}{0mm}
 % \setlength{\belowcaptionskip}{0mm}
-\hspace{8mm}One PE can induce a variety of Charge
+\hspace{8mm}Single PE induced charge can be a wide distribution, rather than a single value
 \begin{columns}
 \column{0.5\textwidth}
 \begin{figure}
@@ -226,9 +226,9 @@ Pile-up will significantly worsen timing resolution!
 
 \section{Figure of merit: Wasserstein Distance}
 \begin{frame}
-\frametitle{The difference of Timing}
+\frametitle{Figure of merit: Wasserstein Distance}
 \begin{center}
-    How to define the difference (distance) between reconstruction result \& truth properly?
+    How to measure the difference (distance) between reconstruction result \& truth properly?
 \end{center}
 \end{frame}
 
@@ -246,7 +246,7 @@ Pile-up will significantly worsen timing resolution!
 Shortcoming:
 \begin{itemize}
     \item Cannot compare discrete distribution with continuous distribution
-    \item Not sensitive to Timing
+    \item Not sensitive to the time distance 
 \end{itemize}
 \begin{figure}
     \centering
@@ -261,7 +261,7 @@ Shortcoming:
 \frametitle{Wasserstein Distance Demo}
 \setlength{\abovecaptionskip}{-2mm}
 \setlength{\belowcaptionskip}{0mm}
-$D_{w}=\sum|\mathrm{CDF}(a) - \mathrm{CDF}(b)|$ \\
+$D_{W}=\sum_t|\mathrm{CDF}_a(t) - \mathrm{CDF}_b(t)|$ \\
 $CDF$: Cumulative Distribution Function
 \begin{columns}
 \column{0.4\textwidth}
@@ -301,12 +301,12 @@ This definition of distance is equivalent to Wasserstein Distance
 \column{0.4\textwidth}
 \hspace{4mm}Input \& Output:
 \begin{itemize}
-    \item Input: Pedestal subtracted PMT waveform
-    \item Output: Weight (Charge or \#PE) sequence
+    \item Input: pedestal subtracted PMT waveform
+    \item Output: weight (Charge or \#PE) sequence
 \end{itemize}
 \hspace{4mm}Loss:
 
-\hspace{4mm}Wasserstein distance \\ \hspace{4mm}between reconstruction \\ \hspace{4mm}result \& truth
+\hspace{4mm}Wasserstein distance \\ \hspace{4mm}between reconstructed \\ \hspace{4mm}result \& truth
 \column{0.6\textwidth}
 \setlength{\abovecaptionskip}{-2mm}
 \setlength{\belowcaptionskip}{0mm}
@@ -364,7 +364,7 @@ TotalPEnum is the count of HitTime in one waveform
 \end{frame}
 
 \begin{frame}
-\frametitle{Method 3: Fourier Deconvolution}
+\frametitle{Method 3: Fourier Transform (Deconvolution)}
 \begin{columns}
 \column{0.6\textwidth}
 \begin{figure}
@@ -377,6 +377,7 @@ TotalPEnum is the count of HitTime in one waveform
     Average W-dist = 1.44 (Charge), 3.08 (\#PE)
 \end{center}
 \column{0.4\textwidth}
+Steps:
 \begin{enumerate}
     \item FFT of Waveform \& Single PE response
     \item Rectangular filter of FFT(Waveform)
@@ -408,7 +409,7 @@ TotalPEnum is the count of HitTime in one waveform
 \end{frame}
 
 \begin{frame}
-\frametitle{Method 5: CNN Structure}
+\frametitle{Method 5: Convolutional Neural Network}
 \begin{columns}
 \column{0.35\textwidth}
 \begin{figure}[H]
@@ -422,14 +423,15 @@ TotalPEnum is the count of HitTime in one waveform
 \end{frame}
 
 \begin{frame}
-\frametitle{Method 5: Training Process}
+\frametitle{Method 5: Convolutional Neural Network}
+\Large Training Process \normalsize
 \begin{columns}
 \column{0.35\textwidth}
 \begin{itemize}
     \item Train CNN by each PMT Channel
     \item $\sim$450k waveform for each Channel
-    \item epoch = 36
-    \item Learning rate = $0.01$
+    \item Looping dataset 36 times
+    \item Initial learning rate = $0.01$
 \end{itemize}
 \column{0.65\textwidth}
 \begin{figure}
@@ -441,7 +443,8 @@ TotalPEnum is the count of HitTime in one waveform
 \end{frame}
 
 \begin{frame}
-\frametitle{Method 5: CNN Result}
+\frametitle{Method 5: Convolutional Neural Network}
+\Large Result \normalsize
 \begin{figure}
     \centering
     \caption{CNN \#PE Result Histogram}
@@ -464,10 +467,10 @@ TotalPEnum is the count of HitTime in one waveform
 \end{frame}
 
 \begin{frame}
-\frametitle{Method 6: Fitting (Match Pursuit) Process}
+\frametitle{Method 6: Fitting (Matching Pursuit)}
 \begin{itemize}
-    \item Fitting parameter: Weight in each HitTime
-    \item loss is Residual sum squares of Waveform
+    \item Fitting parameter: weight of each HitTime
+    \item Loss is residual sum squares of Waveform
     \item Loss = $\sum(Wave_{recon}-Wave_{truth})^{2}$
     \item using l\_bfgs\_b
 \end{itemize}
@@ -505,7 +508,7 @@ TotalPEnum is the count of HitTime in one waveform
 
 \section{Result}
 \begin{frame}
-\frametitle{Distances}
+\frametitle{Result: Accuracy}
 \begin{figure}
     \centering
     \caption{Distances of methods, error bar 10 - 90 percentile (Charge)}
@@ -514,7 +517,7 @@ TotalPEnum is the count of HitTime in one waveform
 \end{frame}
 
 \begin{frame}
-\frametitle{Distances}
+\frametitle{Result: Accuracy}
 \begin{figure}
     \centering
     \caption{Distances of methods, error bar 10 - 90 percentile (\#PE)}
@@ -523,7 +526,7 @@ TotalPEnum is the count of HitTime in one waveform
 \end{frame}
 
 \begin{frame}
-\frametitle{Efficiency}
+\frametitle{Result: Efficiency}
 \begin{table}
     \centering
     \caption{Reconstruction Efficiency}
@@ -531,23 +534,23 @@ TotalPEnum is the count of HitTime in one waveform
         \hline
         &  & Performance \\
         \hline
-        CNN & Charge & 6.0s/$10^{5}$Wf (gpu) \\
+        CNN & Charge & 6.0s/$10^{5}$Wf (GPU) \\
         \hline
-        CNN & \#PE & 6.0s/$10^{5}$Wf (gpu)\\
+        CNN & \#PE & 6.0s/$10^{5}$Wf (GPU)\\
         \hline
-        Fitting & Charge & 2000s/$10^{5}$Wf (cpu) \\
+        Fitting & Charge & 2000s/$10^{5}$Wf (CPU) \\
         \hline
-        Fitting & \#PE & 2000s/$10^{5}$Wf (cpu) \\
+        Fitting & \#PE & 2000s/$10^{5}$Wf (CPU) \\
         \hline
-        LucyDDM & Charge & 24s/$10^{5}$Wf (cpu) \\
+        LucyDDM & Charge & 24s/$10^{5}$Wf (CPU) \\
         \hline
-        LucyDDM & \#PE & 24s/$10^{5}$Wf (cpu) \\
+        LucyDDM & \#PE & 24s/$10^{5}$Wf (CPU) \\
         \hline
     \end{tabular}
 \end{table}
 \hspace{4mm}\begin{itemize}
-    \item gpu: Using half of NVIDIA Tesla K80
-    \item cpu: Using 50 CPU core of AMD EYPC 7702
+    \item GPU: Using one graphic card of NVIDIA Tesla K80
+    \item CPU: Using 50 CPU cores of AMD EYPC 7702
 \end{itemize}
 \end{frame}
 
@@ -555,11 +558,11 @@ TotalPEnum is the count of HitTime in one waveform
 \begin{frame}
 \frametitle{Summary \& Outlook}
 \begin{itemize}
-    \item We developed several representative methods to extract photon timing information hidden in PMT waveform. 
-    \item These methods will improve event reconstruction and particle identification. 
-    \item We are working on applying these methods to event reconstruction and particle identification. 
     \item Fitting method is the best for reconstruction of Charge, while LucyDDM looks promising. 
-    \item CNN method is the best for reconstruction of \#PE. 
+    \item CNN method is the best for reconstruction of \#PE, and it is also the fastest (GPU accelerated). 
+    \item We developed several representative methods to extract photon timing information hidden in PMT waveforms. 
+    \item These methods will improve the precision of event reconstruction and particle identification. 
+    \item We are working on applying these methods on analyzing real data. 
 \end{itemize}
 \end{frame}
 
@@ -567,7 +570,7 @@ TotalPEnum is the count of HitTime in one waveform
 \frametitle{Acknowledgement}
 \begin{itemize}
     \item Prof. Shaomin Chen \& Prof. Zhe Wang, Tsinghua University, Jinping Neutrino Experiment Collaboration
-    \item Developer of JSAP(Jinping neutrino experiment Simulation and Analysis Package), Ziyi Guo et al. 
+    \item Developers of JSAP(Jinping neutrino experiment Simulation and Analysis Package), Ziyi Guo et al. 
     \item Aiqiang Zhang \& Jihui Pei, Tsinghua University
     \item Student Association of Science and Technology, Department of Engineering Physics, Tsinghua University
     \item Student Association of Science and Technology, Department of Physics, Tsinghua University
