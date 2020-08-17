@@ -49,6 +49,7 @@ def wpdist(a, b):
         wave1 = np.convolve(spe_pre[cid]['spe'], pf_s, 'full')[:leng]
         if mode == 'PEnum':
             pet0, pwe0 = np.unique(df_ans[i_ans[i]:i_ans[i+1]]['RiseTime'], return_counts=True)
+            t = pet0; w = pwe0
             pf0 = np.zeros(leng); pf0[pet0] = pwe0
             wave0 = np.convolve(spe_pre[cid]['spe'], pf0, 'full')[:leng]
             Q = i_ans[i+1]-i_ans[i]; q = np.sum(wl)
@@ -56,15 +57,15 @@ def wpdist(a, b):
             dt[pecount][c] = Q
         elif mode == 'Charge':
             t = df_ans[i_ans[i]:i_ans[i+1]]['RiseTime']; w = df_ans[i_ans[i]:i_ans[i+1]][mode]
+            t = t[w>0]; w = w[w>0]
             pet0 = np.unique(t); pwe0 = np.array([np.sum(w[t == i]) for i in pet0])
             pf0 = np.zeros(leng); pf0[pet0] = pwe0
             wave0 = np.convolve(spe_pre[cid]['spe'], pf0, 'full')[:leng] / np.sum(spe_pre[cid]['spe'])
             wave1 = wave1 / np.sum(spe_pre[cid]['spe'])
-            dt[extradist][c] = np.sum(wl) - np.sum(pwe0)
+            dt[extradist][c] = np.sum(wl) - np.sum(w)
             dt[pecount][c] = len(pet0)
 
-#         dt['wdist'][c] = scipy.stats.wasserstein_distance(pet0, pet_sub, u_weights=pwe0, v_weights=wl)
-        dt['wdist'][c] = scipy.stats.wasserstein_distance(pet0[pwe0 > 0], pet_sub, u_weights=pwe0[pwe0 > 0], v_weights=wl)
+        dt['wdist'][c] = scipy.stats.wasserstein_distance(t, pet_sub, u_weights=w, v_weights=wl)
         dt['EventID'][c] = df_wav[i_wav[i]]['EventID']
         dt['ChannelID'][c] = cid
         dt['RSS_truth'][c] = np.power(wave0 - wave, 2).sum()

@@ -45,6 +45,9 @@ def torch_cdf_loss(tensor_a,tensor_b,p=1):
     cdf_loss = cdf_distance.mean()
     return cdf_loss
 
+def torch_l2_loss(tensor_a,tensor_b,core):
+    return torch.norm(torch.matmul(tensor_a, core) - torch.matmul(tensor_b, core), dim=-1).mean()
+
 def torch_validate_distibution(tensor_a,tensor_b):
     # Zero sized dimension is not supported by pytorch, we suppose there is no empty inputs
     # Weights should be non-negetive, and with a positive and finite sum

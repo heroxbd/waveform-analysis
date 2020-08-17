@@ -45,7 +45,7 @@ def pre_analysis(spemean, stddt):
     thres = np.zeros(len(Chnum))
     for i in range(len(Chnum)):
         stddt_cid = stddt[stddt['ChannelID']==Chnum[i]]['PedWave']
-        thres[i] = 3 * np.std(stddt_cid, ddof=-1)
+        thres[i] = 5 * np.std(stddt_cid, ddof=-1)
     spe_pre = {'spe':spemean, 'thres':thres}
     return spe_pre
 

@@ -28,17 +28,18 @@ import wf_func as wff
 def Make_Time_Vector(GroundTruth, Waveforms_and_info, mode) :
     GroundTruth[GroundTruth['Charge'] > 0]
     i = 0
-    Time_Series = np.zeros((len(Waveforms_and_info), WindowSize), dtype=np.uint8)
     Wave_EventID = Waveforms_and_info['EventID'].to_numpy()
     Truth_EventID = GroundTruth['EventID'].to_numpy(); nt = len(Truth_EventID)
     RiseTime = GroundTruth['RiseTime'].to_numpy()
     if mode == 'Charge':
+        Time_Series = np.zeros((len(Waveforms_and_info), WindowSize), dtype=np.float64)
         Mode = GroundTruth[mode].to_numpy()
     elif mode == 'PEnum':
-        Mode = np.ones_like(RiseTime)
+        Time_Series = np.zeros((len(Waveforms_and_info), WindowSize), dtype=np.uint8)
+        Mode = np.ones(len(RiseTime), dtype=np.float64)
     for j in range(len(Waveforms_and_info)) :
         while i < nt and Wave_EventID[j] == Truth_EventID[i] :
-            Time_Series[j][RiseTime[i]] = Time_Series[j][RiseTime[i]] + Mode[i]
+            Time_Series[j][RiseTime[i]] = Time_Series[j][RiseTime[i]] + max(Mode[i], 0)
             i = i + 1
     return Time_Series
 

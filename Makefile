@@ -53,10 +53,10 @@ model : $(Nets)
 
 $(datfold)/$(set)/$(mode)/Nets/Channel%.torch_net : $(datfold)/$(set)/$(mode)/$(prefix)Channel%/.Training_finished ;
 
-$(datfold)/$(set)/$(mode)/$(prefix)Channel%/.Training_finished : $(datfold)/$(set)/PreProcess/Pre_Channel%.h5
+$(datfold)/$(set)/$(mode)/$(prefix)Channel%/.Training_finished : $(datfold)/$(set)/PreProcess/Pre_Channel%.h5 spe-$(set).h5
 	@mkdir -p $(dir $@)
 	@mkdir -p $(datfold)/$(set)/$(mode)/Nets
-	python3 -u Data_Processing.py $^ -n $* -B 64 --mod $(mode) -o $(datfold)/$(set)/$(mode)/Nets/Channel$*.torch_net $(dir $@) > $(dir $@)Train.log 2>&1
+	python3 -u Data_Processing.py $< -n $* -B 64 --mod $(mode) --ref $(word $(words $^), $^) -o $(datfold)/$(set)/$(mode)/Nets/Channel$*.torch_net $(dir $@) > $(dir $@)Train.log 2>&1
 	@touch $@
 
 $(PreData) : PreProcess

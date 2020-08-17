@@ -37,6 +37,7 @@ def xiaopeip(wave, spe_pre, eta=0):
         if len(pet) != 0:
 #             pwe, ped = xiaopeip_core(wave, spe_pre['spe'], fitp, pet, eta=eta)
             pwe = xiaopeip_core(wave, spe_pre['spe'], fitp, pet, eta=eta)
+            pwe = pwe / np.sum(pwe) * np.sum(wave) / np.sum(spe_pre['spe'])
         else:
             flag = 0
     else:
@@ -49,13 +50,13 @@ def xiaopeip(wave, spe_pre, eta=0):
 
 # def xiaopeip_core(wave, spe, fitp, possible, eta=0):
 #     l = len(wave)
-#     spe = np.concatenate([spe, np.zeros(l - spe.shape[0])])
+#     spe = np.concatenate([spe, np.zeros(l - len(spe))])
 #     ans0 = np.zeros(len(possible)+1).astype(np.float64)
 #     ans0[-1] = wave.min()
 #     b = np.zeros((len(possible)+1, 2)).astype(np.float64)
 #     b[-1, 0] = -np.inf
 #     b[:, 1] = np.inf
-#     mne = spe[np.mod(fitp.reshape(fitp.shape[0], 1) - possible.reshape(1, possible.shape[0]), l)]
+#     mne = spe[np.mod(fitp.reshape(len(fitp), 1) - possible.reshape(1, len(possible)), l)]
 #     ans = opti.fmin_l_bfgs_b(norm_fit, ans0, args=(mne, wave[fitp], eta), approx_grad=True, bounds=b, maxfun=500000)
 #     # ans = opti.fmin_slsqp(norm_fit, ans0, args=(mne, wave[fitp]), bounds=b, iprint=-1, iter=500000)
 #     # ans = opti.fmin_tnc(norm_fit, ans0, args=(mne, wave[fitp]), approx_grad=True, bounds=b, messages=0, maxfun=500000)
@@ -67,13 +68,14 @@ def xiaopeip(wave, spe_pre, eta=0):
 
 def xiaopeip_core(wave, spe, fitp, possible, eta=0):
     l = len(wave)
-    spe = np.concatenate([spe, np.zeros(l - spe.shape[0])])
-    ans0 = np.zeros(len(possible)).astype(np.float64)
+    spe = np.concatenate([spe, np.zeros(l - len(spe))])
+    ans0 = np.ones(len(possible)).astype(np.float64)
     b = np.zeros((len(possible), 2)).astype(np.float64)
     b[:, 1] = np.inf
-    mne = spe[np.mod(fitp.reshape(fitp.shape[0], 1) - possible.reshape(1, possible.shape[0]), l)]
+    mne = spe[np.mod(fitp.reshape(len(fitp), 1) - possible.reshape(1, len(possible)), l)]
     try:
         ans = opti.fmin_l_bfgs_b(norm_fit, ans0, args=(mne, wave[fitp], eta), approx_grad=True, bounds=b, maxfun=500000)
+#         ans = opti.fmin_l_bfgs_b(wdist_fit, ans0, args=(mne, wave[fitp], eta), approx_grad=True, bounds=b, maxfun=500000)
     except ValueError:
         ans = [np.ones(len(possible)) * 0.2]
     # ans = opti.fmin_slsqp(norm_fit, ans0, args=(mne, wave[fitp]), bounds=b, iprint=-1, iter=500000)
@@ -82,6 +84,10 @@ def xiaopeip_core(wave, spe, fitp, possible, eta=0):
 
 def norm_fit(x, M, y, eta=0):
     return np.power(y - np.matmul(M, x), 2).sum() + eta * x.sum()
+
+def wdist_fit(x, M, y, eta=0):
+    r = np.matmul(M, x)
+    return np.sum(np.abs(np.cumsum(r) / np.sum(r) - np.cumsum(y) / np.sum(y)))
 
 def rm_frag(lowp):
     t = np.argwhere(np.diff(lowp) > 1).flatten()
@@ -193,8 +199,8 @@ def demo(pet, pwe, tth, spe_pre, leng, wave, cid, mode, full=False):
     pf0 = np.zeros(leng); pf1 = np.zeros(leng)
     if mode == 'PEnum':
         tru_pet = tth['RiseTime']
-        t, c = np.unique(tru_pet, return_counts=True)
-        pf0[t] = c
+        t, w = np.unique(tru_pet, return_counts=True)
+        pf0[t] = w
         pf1[pet] = pwe
         xlabel = '$PEnum/\mathrm{1}$'
         distd = '(W/ns,P/1)'; distl = 'pdist'
@@ -202,18 +208,18 @@ def demo(pet, pwe, tth, spe_pre, leng, wave, cid, mode, full=False):
         edist = np.abs(Q - q) * scipy.stats.poisson.pmf(Q, Q)
     elif mode == 'Charge':
         t = tth['RiseTime']; w = tth[mode]
-        t = np.unique(t)
-        c = np.array([np.sum(w[tth['RiseTime'] == i]) for i in t])
-        pf0[t] = c / spe_pre['spe'].sum()
+        tu = np.unique(t)
+        cu = np.array([np.sum(w[tth['RiseTime'] == i]) for i in tu])
+        pf0[tu] = cu / spe_pre['spe'].sum()
         pf1[pet] = pwe / spe_pre['spe'].sum()
         xlabel = '$Charge/\mathrm{mV}\cdot\mathrm{ns}$'
         distd = '(W/ns,C/mV*ns)'; distl = 'cdiff'
-        edist = pwe.sum() - c.sum()
-    print('truth RiseTime = {}, Weight = {}'.format(t, c))
+        edist = pwe.sum() - w.sum()
+    print('truth RiseTime = {}, Weight = {}'.format(t, w))
     wave0 = np.convolve(spe_pre['spe'], pf0, 'full')[:leng]
     print('truth Resi-norm = {}'.format(np.linalg.norm(wave-wave0)))
     print('RiseTime = {}, Weight = {}'.format(pet, pwe))
-    wdist = scipy.stats.wasserstein_distance(t, pet, u_weights=c, v_weights=pwe)
+    wdist = scipy.stats.wasserstein_distance(t, pet, u_weights=w, v_weights=pwe)
     print('wdist = {},'.format(wdist)+distl+' = {}'.format(edist))
     wave1 = np.convolve(spe_pre['spe'], pf1, 'full')[:leng]
     print('Resi-norm = {}'.format(np.linalg.norm(wave-wave1)))
@@ -231,7 +237,7 @@ def demo(pet, pwe, tth, spe_pre, leng, wave, cid, mode, full=False):
     ax.hlines(spe_pre['thres'], 0, 1029, color='c', label='threshold')
     ax2.set_ylabel(xlabel)
     fig.suptitle('eid={},cid={},'.format(tth['EventID'][0], tth['ChannelID'][0])+distd+'-dist={:.2f},{:.2f}'.format(wdist, edist))
-    ax2.vlines(t, 0, c, color='g', label='truth '+mode)
+    ax2.vlines(tu, 0, cu, color='g', label='truth '+mode)
     ax2.vlines(pet, -pwe, 0, color='y', label='recon '+mode)
     lines, labels = ax.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()
@@ -250,4 +256,5 @@ def demo(pet, pwe, tth, spe_pre, leng, wave, cid, mode, full=False):
     ax.set_ylabel('$Voltage/\mathrm{mV}$')
     fig.savefig('img/spe{}.png'.format(cid), bbox_inches='tight')
     fig.clf()
+    plt.close(fig)
     return
