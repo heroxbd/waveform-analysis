@@ -64,7 +64,8 @@ PETData = PreFile.root[mode+'Spectrum'][0:max_set_number]
 WindowSize = len(WaveData[0])
 spe_pre = wff.read_model(reference)
 spe = np.concatenate([spe_pre[ChannelID]['spe'], np.zeros(WindowSize - len(spe_pre[ChannelID]['spe']))])
-spe = spe / np.sum(spe)
+if mode == 'Charge':
+    spe = spe / np.sum(spe)
 mnecpu = spe[np.mod(np.arange(WindowSize).reshape(WindowSize, 1) - np.arange(WindowSize).reshape(1, WindowSize), WindowSize)]
 mne = torch.from_numpy(mnecpu.T).float().to(device=device)
 print('Data_loaded')
@@ -80,6 +81,11 @@ train_data = Data.TensorDataset(torch.from_numpy(Wave_train).float().to(device=d
 train_loader = Data.DataLoader(dataset=train_data, batch_size=BATCHSIZE, shuffle=True, pin_memory=False)
 test_data = Data.TensorDataset(torch.from_numpy(Wave_test).float().to(device=device),
                                torch.from_numpy(PET_test).float().to(device=device))
+# train_data = Data.TensorDataset(torch.from_numpy(Wave_train).float().to(device=device),
+#                                 torch.from_numpy(Wave_train).float().to(device=device))
+# train_loader = Data.DataLoader(dataset=train_data, batch_size=BATCHSIZE, shuffle=True, pin_memory=False)
+# test_data = Data.TensorDataset(torch.from_numpy(Wave_test).float().to(device=device),
+#                                torch.from_numpy(Wave_test).float().to(device=device))
 
 test_loader = Data.DataLoader(dataset=test_data, batch_size=BATCHSIZE, shuffle=False, pin_memory=False)
 
@@ -102,7 +108,9 @@ def testing(test_loader, met='wdist') :
             if met == 'wdist':
                 cost = stats.wasserstein_distance(np.arange(WindowSize), np.arange(WindowSize), output_vec, label_vec)
             elif met == 'l2':
+#                 cost = np.sum(np.power(np.matmul(mnecpu, output_vec) - np.matmul(mnecpu, label_vec), 2)) / (np.sum(output_vec * label_vec > 0) + 1e-3)
                 cost = np.linalg.norm(np.matmul(mnecpu, output_vec) - np.matmul(mnecpu, label_vec), ord=2)
+#                 cost = np.linalg.norm(np.matmul(mnecpu, output_vec) - label_vec, ord=2)
             batch_result += cost
         batch_count += 1
     return batch_result / (BATCHSIZE * batch_count)
@@ -148,8 +156,8 @@ for epoch in range(37):  # loop over the dataset multiple times
 
         # forward + backward + optimize
         outputs = net(inputs)
-#         loss = stats_loss.torch_wasserstein_loss(outputs, labels)
         loss = stats_loss.torch_l2_loss(outputs, labels, mne)
+#         loss = stats_loss.torch_l2_loss(outputs, inputs, mne)
         loss.backward()
         optimizer.step()
 
