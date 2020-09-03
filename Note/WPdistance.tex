@@ -1,5 +1,30 @@
 \section{Wasserstein-distance and Poisson-distance} % (fold)
 \subsection{Wasserstein distance}
+A figure of merit to discrete the difference between reconstruction result and the truth is crucial. $P(X)$ and $Q(X)$ are 2 probability density function of random variable $X$. There are many ways to measure the difference(distance) of $P(X)$ and $Q(X)$: 
+
+\begin{figure}[H]
+\begin{minipage}{.5\textwidth}
+\begin{align*}
+    L_{1} &= \int|p-q| \\
+    L_{2} &= \int(p-q)^{2} \\
+    \chi^{2} &= \int\frac{(p-q)^{2}}{q} \\
+    \cdots
+\end{align*}
+\end{minipage}
+\begin{minipage}{.5\textwidth}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1.0\linewidth]{figures/tab.png}
+    \caption{L2 distance demo}
+    \label{fig:l2}
+\end{figure}
+\end{minipage}
+\end{figure}
+
+But the shortcoming of these distances is obvious. They cannot compare discrete distribution with continuous distribution. And they are not sensitive to timing. As the graph shows, the L2 distances between the distribution of a-b1 and a-b2 is both 0.25, but the shape of the b1-b2 distribution is very different(Fig \ref{fig:l2}). 
+
+Wasserstein distance can overcome these difficulty. Wasserstein distance between $\mu$ and $\nu$ as the minimal effort to transport mass from distribution $\mu$ to $\nu$. Further the mass moves, more the effort we need to give. So we can imagine that the effort is controlled by the plan about how we transport the mass. The transport plan is described by $\gamma(x, y)$
+
 \label{sub:Wasserstein distance}
     \begin{equation}
         W_{p}(\mu ,\nu ):=\left(\inf _{\gamma \in \Gamma (\mu ,\nu )}\int _{M\times M}d(x,y)^{p}\,\mathrm {d} \gamma (x,y)\right)^{1/p}
@@ -7,10 +32,13 @@
     \end{equation}
     \begin{figure}[H]
         \centering
-            \includegraphics[width=0.95\textwidth]{figures/Wasserstein.pdf}
+            \includegraphics[width=0.3\textwidth]{figures/Wasserstein.pdf}
         \caption{Wasserstein transportation}
         \label{fig:Wasserstein transportation}
     \end{figure}
+
+In practice, the loss we used in numerical calculation is defined here. CDF here means cumulative distribution function.  We first calculate subtraction of the CDF of A and the CDF of B. Then take the sum of absolute value of the subtraction. That is the L1 distance of cumulative distribution function of A \& B. We can prove that the distance we define here is equivalent to Wasserstein distance. 
+
 % subsection Wasserstein distance (end)
 \subsection{Poisson distance}
 % subsection Poisson distance (end)
