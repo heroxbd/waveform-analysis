@@ -1,5 +1,5 @@
 \section{Waveform of PMT} % (fold)
-PMT is a device which is highly sensitive to even single photon. Therefore, PMT is widely used in neutrino experiments based on liquid and dark matter experiment. In neutrino experiments, liquid scintillator emits light after excited by candidate particles and charged particles emit Cherenkov light in liquid. Timing resolution is crucial in neutrino event reconstruction. 
+PMT(Photomultiplier Tube) is a device which is highly sensitive to even single photon. Therefore, PMT is widely used in neutrino experiments based on liquid and dark matter experiment. In neutrino experiments, liquid scintillator emits light after excited by candidate particles and charged particles emit Cherenkov light in liquid. Timing resolution is crucial in neutrino event reconstruction. 
 
 Timing resolution is determined by PMT and waveform analysis. Typical PMT response includes 3 individual processes: photo-electron conversion happened on photocathode. Electron collection by the first dynode. And amplification of electrons between dynodes. So 1 photon incoming has a certain probability to be observed via PMT voltage(Fig \ref{fig:spe}). But if photons hit the PMT continually, the PE response will pile-up(Fig \ref{fig:pile}) and the waveform analysis will be difficult. Pile-up will significantly worsen timing resolution. 
 
@@ -22,7 +22,7 @@ Timing resolution is determined by PMT and waveform analysis. Typical PMT respon
 \end{minipage}
 \end{figure}
 
-Naively, when we handle PMT waveform we record the first hittime according to threshold and the integration of waveform. So one waveform is converted to a pair of numbers. And we lose more detailed information of the waveform(Fig \ref{fig:tradi}). The new goal is to extract information of all hits in 1 DAQ window including HitTime (the time when electron hit the first dynode) \& Charge or \#PE (number of photo-electrons)(Fig \ref{fig:new})
+Naively, when handling PMT waveform we record the first hittime according to threshold and the integration of waveform. One waveform is converted to a pair of numbers. More detailed information of the waveform(Fig \ref{fig:tradi}) was lost. The new goal in this work is to extract information of all hits in 1 DAQ window including HitTime (the time when electron hit the first dynode) \& Charge or \#PE (number of photo-electrons)(Fig \ref{fig:new})
 
 \begin{figure}[H]
 \begin{minipage}{.5\textwidth}
@@ -41,6 +41,15 @@ Naively, when we handle PMT waveform we record the first hittime according to th
     \label{fig:new}
 \end{figure}
 \end{minipage}
+\end{figure}
+
+Charge is the integration of waveform component which induced by single photo-electron. Single PE induced charge can be a wide distribution, rather than a single value. Reconstructing PEnum is more difficult. 
+
+\begin{figure}[H]
+    \centering
+    \caption{Distribution of Charge}
+    \includegraphics[width=0.6\linewidth]{figures/chargehist.png}
+    \label{fig:charge}
 \end{figure}
 
 % section Waveform of PMT (end)
