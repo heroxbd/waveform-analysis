@@ -84,7 +84,7 @@ for channelid in tqdm(channelid_set, desc='Loading Nets of each channel') :
     nets[channelid] = torch.load(NetDir + '/Channel{:02d}.torch_net'.format(channelid), map_location=device)
 print('Net Loaded, consuming {0:.4f}s'.format(time.time() - tic))
 
-filter_limit = 0.9 / WindowSize
+filter_limit = 0.05
 Timeline = np.arange(WindowSize).reshape(1, WindowSize)
 
 def Forward(channelid) :
@@ -99,21 +99,23 @@ def Forward(channelid) :
     for i in range(len(slices) - 1) :
         inputs = Shifted_Wave[slices[i]:slices[i + 1]]
         Total = np.abs(np.sum(inputs, axis=1)) / SPECharge
-        Total = np.where(Total > 0.1, Total, 0.1)
-        if mode == 'Charge':
-            Total = Total * SPECharge
-        Prediction = np.abs(nets[channelid].forward(torch.from_numpy(inputs).to(device=device)).data.cpu().numpy())
+        Total = np.where(Total > 1e-4, Total, 1e-4)
+        Prediction = nets[channelid].forward(torch.from_numpy(inputs).to(device=device)).data.cpu().numpy()
+        Prediction = Prediction / np.sum(Prediction, axis=1)[:, None] * Total[:, None]
         RiseTime = Prediction > filter_limit
         pe_numbers = RiseTime.sum(axis=1)
         no_pe_found = pe_numbers == 0
         if no_pe_found.any() :
-            # print('Cannot find any pe in Event {0}, Channel {1}'.format(EventIDs[slices[i]:slices[i + 1]][no_pe_found.cpu().numpy()], channelid))
             guessed_risetime = np.around(inputs[no_pe_found].argmax(axis=1) - spe_pre[channelid]['peak_c'])
             guessed_risetime = np.where(guessed_risetime > 0, guessed_risetime, 0)
             RiseTime[no_pe_found, guessed_risetime] = True
             Prediction[no_pe_found, guessed_risetime] = 1
             pe_numbers[no_pe_found] = 1
-        Prediction = np.abs((Prediction / np.sum(Prediction, axis=1)[:,None] * Total[:,None])[RiseTime])
+        Prediction = np.where(Prediction > filter_limit, Prediction, 0)
+        Prediction = Prediction / np.sum(Prediction, axis=1)[:, None] * Total[:, None]
+        if mode == 'Charge':
+            Prediction = Prediction * SPECharge
+        Prediction = Prediction[RiseTime]
         PEmeasure = np.append(PEmeasure, Prediction)
         TimeMatrix = np.repeat(Timeline, len(RiseTime), axis=0)[RiseTime]
         RiseTimes = np.append(RiseTimes, TimeMatrix)
