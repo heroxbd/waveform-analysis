@@ -38,7 +38,11 @@ on Polish spaces. There is a minimum function in the functional space of $\gamma
         \label{fig:Wasserstein transportation}
     \end{figure}
 
-In practice, the loss we used in numerical calculation is defined here. CDF here means cumulative distribution function.  We first calculate subtraction of the CDF of A and the CDF of B. Then take the sum of absolute value of the subtraction. That is the L1 distance of cumulative distribution function of A \& B. We can prove that the distance we define here is equivalent to Wasserstein distance. 
+In practice, the loss we used in numerical calculation is defined here. CDF here means cumulative distribution function. We first calculate subtraction of the CDF of A and the CDF of B. Then take the sum of absolute value of the subtraction. That is the L1 distance of cumulative distribution function of A \& B. We can prove that the distance we define here is equivalent to Wasserstein distance. 
+
+\begin{equation}
+    W_{p}=\sum_t|\mathrm{CDF}_A(t) - \mathrm{CDF}_B(t)|
+\end{equation}
 
 % subsection Wasserstein distance (end)
 \subsection{Poisson distance}

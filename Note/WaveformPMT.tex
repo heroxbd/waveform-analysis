@@ -22,7 +22,7 @@ Timing resolution is determined by PMT and waveform analysis. Typical PMT respon
 \end{minipage}
 \end{figure}
 
-Naively, when handling PMT waveform we record the first hittime according to threshold and the integration of waveform. One waveform is converted to a pair of numbers. More detailed information of the waveform(Fig \ref{fig:tradi}) was lost. The new goal in this work is to extract information of all hits in 1 DAQ window including HitTime (the time when electron hit the first dynode) \& Charge or \#PE (number of photo-electrons)(Fig \ref{fig:new})
+Naively, when handling PMT waveform we record the first hittime according to threshold and the integration of waveform. One waveform is converted to a pair of numbers. More detailed information of the waveform(Fig \ref{fig:tradi}) was lost. The new goal in this work is to extract information of all hits in 1 DAQ window including HitTime (the time when electron hit the first dynode) \& Charge or \#PE (number of photo-electrons in specific time, Fig \ref{fig:new}). The time we defined here is discrete value in 1 window of data-taking(from 0 to 1029ns in 1ton prototype data-taking system). 
 
 \begin{figure}[H]
 \begin{minipage}{.5\textwidth}
@@ -43,7 +43,7 @@ Naively, when handling PMT waveform we record the first hittime according to thr
 \end{minipage}
 \end{figure}
 
-Charge is the integration of waveform component which induced by single photo-electron. Single PE induced charge can be a wide distribution, rather than a single value. Reconstructing PEnum is more difficult. 
+Charge is the integration of waveform component which induced by single photo-electron. Single PE induced charge can be a wide distribution, rather than a single value. Reconstructing \#PE is more difficult than reconstructing Charge. 
 
 \begin{figure}[H]
     \centering

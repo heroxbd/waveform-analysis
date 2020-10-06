@@ -61,7 +61,11 @@ A threshold is settled with respect to noise in simulation data. In waveform shi
 \end{figure}
 
 \subsection{Fourier Transform Deconvolution}
-Third method is Fourier deconvolution. Assuming that the waveform is the convolution of single pe response and hittime sequence, we compute the fft of waveform and single pe response, add a rectangular filter, then compute the inverse fft of the quotient of filtered fft of waveform and fft of single pe response. 
+Third method is Fourier deconvolution. Assuming that the waveform is the convolution of single pe response and hittime sequence, the fft of waveform and single pe response are computed. A rectangular filter is added. Then compute the inverse fft of the quotient of filtered fft of waveform and fft of single pe response. 
+
+\begin{itemize}
+    \item Results = IFFT\{ Filter[ FFT(Waveform) / FFT(SPE) ] \}
+\end{itemize}
 
 \begin{figure}[H]
     \centering
@@ -71,6 +75,8 @@ Third method is Fourier deconvolution. Assuming that the waveform is the convolu
 
 \subsection{Lucy Deconvolution}
 Lucy-Richardson deconvolution is a non linear iteration method, to calculate the deconvolution of signals. Lucy deconvolution has an advantage against Fourier deconvolution which is a constraint that charge or penum are larger than 0. 
+
+
 
 \begin{figure}[H]
     \centering
