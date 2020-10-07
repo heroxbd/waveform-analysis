@@ -1,54 +1,39 @@
 % !TEX program = pdflatex
-\documentclass{article}
-\usepackage{titletoc}
-\usepackage{graphicx}
-\usepackage{geometry}
-\usepackage{booktabs}
-\usepackage{indentfirst}
-\usepackage{tikz}
+\documentclass[11pt,a4paper]{article}
+\usepackage{jinstpub}
+
 \usepackage{float}
-\usepackage{subfigure}
-\usepackage{cite}
-\usepackage{hyperref} 
-% \usepackage[fleqn]{amsmath}
-\usepackage{amsmath}
-\usepackage{amssymb}
-\usepackage{amsfonts}
-\usepackage{mathrsfs}
-\usepackage{pdfpages}
-\usepackage[justification=centering]{caption}
 \usepackage{listings}
-\usepackage{authblk}
 
-\hypersetup{citecolor=pureblue}%文献引用颜色
-\bibliographystyle{ieeetr}
-\setlength{\parindent}{2em}
-\titlecontents{section}[0mm]
-                        {\vspace{.2\baselineskip}\bfseries}
-                        {\thecontentslabel~\hspace{.5em}}
-                        {}
-                        {\dotfill\contentspage[{\makebox[0pt][r]{\thecontentspage}}]}
-                        [\vspace{.1\baselineskip}]
+\title{A Survey of PMT Waveform Analysis Methods}
 
-\title{Notes on PMT Waveform Analysis and Ghost Hunter 1}
-\author[1]{Erjin Bao}
-\affil[1]{Institute of Automatio, Chinese Academy of Sciences}
-\author[2]{Yiyang Wu\thanks{wuyiyang17@mails.tsinghua.edu.cn}}
-\affil[2]{Department of Physics, Tsinghua University}
-\author[3]{Benda Xu}
-\author[4]{Dacheng Xu\thanks{xdc17@mails.tsinghua.edu.cn}}
-\affil[3,4]{Department of Engineering Physics, Tsinghua University}
-\author[5]{Yu Xu}
-\affil[5]{IKP-2, Forschungszentrum Jülich}
-\author[6]{Geliang Zhang}
-\affil[6]{School of Securities and Futures, Southwestern University of Finance and Economics}
-\date{2020}
+\author[a]{E. Bao,}
+\author[b]{Y. Wu,}
+\author[c]{B. Xu,}
+\author[c]{D. Xu,}
+\author[d]{Y. Xu,}
+\author[e]{and G. Zhang}
+
+\affiliation[a]{Institute of Automatio, Chinese Academy of Sciences}
+\affiliation[b]{Department of Physics, Tsinghua University}
+\affiliation[c]{Department of Engineering Physics, Tsinghua University}
+\affiliation[d]{IKP-2, Forschungszentrum Jülich}
+\affiliation[e]{School of Securities and Futures, Southwestern University of Finance and Economics}
+
+\emailAdd{xxx@xxx}
+
+\abstract{\input{Abstract}}
+
+\keywords{PMTs, Neutrino detectors, Data analysis}
+
+\arxivnumber{1234.56789}
+
+\collaboration[]{on behalf of XXX collaboration}
 
 \begin{document}
 \maketitle
+\flushbottom
 
-\tableofcontents
-\input{Abstract}
 \input{Introduction}
 \input{Jinping}
 \input{WaveformPMT}
@@ -56,4 +41,5 @@
 \input{Algorithm}
 \input{Performance}
 \input{Conclusion}
+\input{Acknowledgement}
 \end{document}

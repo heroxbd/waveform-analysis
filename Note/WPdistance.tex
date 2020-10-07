@@ -1,6 +1,6 @@
-\section{Wasserstein-distance and Poisson-distance} % (fold)
+\section{Wasserstein distance} % (fold)
 \subsection{Wasserstein distance}
-A figure of merit to discrete the difference between reconstruction result and the truth is crucial. $P(X)$ and $Q(X)$ are 2 probability density function of random variable $X$. There are many ways to measure the difference(distance) of $P(X)$ and $Q(X)$: 
+A figure of merit to discrete the difference between reconstruction result and the truth is crucial. $P(X)$ and $Q(X)$ are 2 probability density function of random variable $X$. There are many ways to measure the difference (distance) of $P(X)$ and $Q(X)$: 
 
 \begin{figure}[H]
 \begin{minipage}{.5\textwidth}
@@ -14,16 +14,15 @@ A figure of merit to discrete the difference between reconstruction result and t
 \begin{minipage}{.5\textwidth}
 \begin{figure}[H]
     \centering
-    \includegraphics[width=1.0\linewidth]{figures/tab.png}
-    \caption{L2 distance demo}
-    \label{fig:l2}
+    \includegraphics[width=0.5\linewidth]{figures/tab.png}
+    \caption{\label{fig:l2} L2 distance demo}
 \end{figure}
 \end{minipage}
 \end{figure}
 
-But these distances have certain shortcomings. They cannot compare discrete distribution with continuous distribution. And they are not sensitive to timing. As the graph shows, the L2 distances between the distribution of a-b1 and a-b2 is both 0.25, but the shape of the b1-b2 distribution is very different(Fig \ref{fig:l2}). 
+But these distances have certain shortcomings. They cannot compare discrete distribution with continuous distribution. And they are not sensitive to timing. As the graph shows, the L2 distances between the distribution of a--b1 and a--b2 is both 0.25, but the shape of the b1--b2 distribution is very different (see figure~\ref{fig:l2}). 
 
-Wasserstein distance can overcome these difficulty. Wasserstein distance between $\mu$ and $\nu$ as the minimal effort to transport mass from distribution $\mu$ to $\nu$. Further the mass moves, more the effort we need to give. The transport plan is described by $\gamma(x, y)$. $d(x,y)^{p}$ in the formula \ref{eq:w-dist-def} is the Borel measure in
+Wasserstein distance can overcome these difficulty. Wasserstein distance between $\mu$ and $\nu$ as the minimal effort to transport mass from distribution $\mu$ to $\nu$. Further the mass moves, more the effort we need to give. The transport plan is described by $\gamma(x, y)$. $d(x,y)^{p}$ in the formula \eqref{eq:w-dist-def} is the Borel measure in
 on Polish spaces. There is a minimum function in the functional space of $\gamma(x, y)$, whose corresponding $W_{p}(\mu ,\nu)$ is the Wasserstein distance between $\mu$ and $\nu$. 
 
 \label{sub:Wasserstein distance}
@@ -34,8 +33,7 @@ on Polish spaces. There is a minimum function in the functional space of $\gamma
     \begin{figure}[H]
         \centering
             \includegraphics[width=0.5\textwidth]{figures/Wasserstein.pdf}
-        \caption{Wasserstein transportation}
-        \label{fig:Wasserstein transportation}
+        \caption{\label{fig:Wasserstein transportation} Wasserstein transportation}
     \end{figure}
 
 In practice, the loss we used in numerical calculation is defined here. CDF here means cumulative distribution function. We first calculate subtraction of the CDF of A and the CDF of B. Then take the sum of absolute value of the subtraction. That is the L1 distance of cumulative distribution function of A \& B. We can prove that the distance we define here is equivalent to Wasserstein distance. 
@@ -46,7 +44,7 @@ In practice, the loss we used in numerical calculation is defined here. CDF here
 
 % subsection Wasserstein distance (end)
 \subsection{Poisson distance}
-Poisson Distance is used \textbf{only} when reconstruct \#PE. $Q$ and $q$ in equation \ref{eq:p-dist-def} are total number of PE in simulation truth and reconstruction result. $\mathrm{Poisson}(Q|Q)$ is the probability of $Q$ in a Poisson distribution with expectation value of $Q$. 
+Poisson Distance is used \emph{only} when reconstruct \#PE. $Q$ and $q$ in equation \eqref{eq:p-dist-def} are total number of PE in simulation truth and reconstruction result. $\mathrm{Poisson}(Q|Q)$ is the probability of $Q$ in a Poisson distribution with expectation value of $Q$. 
 
 \label{sub:Poisson distance}
     \begin{align}
