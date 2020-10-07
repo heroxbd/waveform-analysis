@@ -19,9 +19,9 @@ from scipy.interpolate import interp1d
 
 plt.rcParams['savefig.dpi'] = 300
 plt.rcParams['figure.dpi'] = 300
-plt.rcParams['font.size'] = 8
-plt.rcParams['lines.markersize'] = 4.0
-plt.rcParams['lines.linewidth'] = 1.0
+plt.rcParams['font.size'] = 4
+plt.rcParams['lines.markersize'] = 1.0
+plt.rcParams['lines.linewidth'] = 2.0
 plt.rcParams['mathtext.fontset'] = 'cm'
 
 def xiaopeip(wave, spe_pre, eta=0):
@@ -202,7 +202,7 @@ def demo(pet, pwe, tth, spe_pre, leng, wave, cid, mode, full=False):
         t, w = np.unique(tru_pet, return_counts=True)
         pf0[t] = w
         pf1[pet] = pwe
-        xlabel = '$PEnum/\mathrm{1}$'
+        ylabel = '$PEnum/\mathrm{1}$'
         distd = '(W/ns,P/1)'; distl = 'pdist'
         Q = penum; q = np.sum(pwe)
         edist = np.abs(Q - q) * scipy.stats.poisson.pmf(Q, Q)
@@ -212,7 +212,7 @@ def demo(pet, pwe, tth, spe_pre, leng, wave, cid, mode, full=False):
         cu = np.array([np.sum(w[tth['RiseTime'] == i]) for i in tu])
         pf0[tu] = cu / spe_pre['spe'].sum()
         pf1[pet] = pwe / spe_pre['spe'].sum()
-        xlabel = '$Charge/\mathrm{mV}\cdot\mathrm{ns}$'
+        ylabel = '$Charge/\mathrm{mV}\cdot\mathrm{ns}$'
         distd = '(W/ns,C/mV*ns)'; distl = 'cdiff'
         edist = pwe.sum() - w.sum()
     print('truth RiseTime = {}, Weight = {}'.format(t, w))
@@ -224,37 +224,81 @@ def demo(pet, pwe, tth, spe_pre, leng, wave, cid, mode, full=False):
     wave1 = np.convolve(spe_pre['spe'], pf1, 'full')[:leng]
     print('Resi-norm = {}'.format(np.linalg.norm(wave-wave1)))
 
-    fig = plt.figure()
-    fig.tight_layout()
-    ax = fig.add_subplot(111)
-    ax.grid()
-    ax2 = ax.twinx()
-    ax.plot(wave, c='b', label='origin wave')
-    ax.plot(wave0, c='k', label='truth wave')
-    ax.plot(wave1, c='C1', label='recon wave')
-    ax.set_xlabel('$Time/\mathrm{ns}$')
-    ax.set_ylabel('$Voltage/\mathrm{mV}$')
-    ax.hlines(spe_pre['thres'], 0, 1029, color='c', label='threshold')
-    ax2.set_ylabel(xlabel)
-    fig.suptitle('eid={},cid={},'.format(tth['EventID'][0], tth['ChannelID'][0])+distd+'-dist={:.2f},{:.2f}'.format(wdist, edist))
-    ax2.vlines(tu, 0, cu, color='g', label='truth '+mode)
-    ax2.vlines(pet, -pwe, 0, color='y', label='recon '+mode)
-    lines, labels = ax.get_legend_handles_labels()
-    lines2, labels2 = ax2.get_legend_handles_labels()
-    align.yaxes(ax, 0, ax2, 0)
-    ax2.legend(lines + lines2, labels + labels2)
+    fig = plt.figure(figsize=(10, 10))
+    ax0 = fig.add_axes((.1, .2, .8, .3))
+    ax0.plot(wave, c='b', label='origin wave')
+    ax0.plot(wave0, c='k', label='truth wave')
+    ax0.plot(wave1, c='C1', label='recon wave')
+    ax0.set_ylabel('$Voltage/\mathrm{mV}$')
+    ax0.hlines(spe_pre['thres'], 0, 1029, color='c', label='threshold')
+    ax0.set_xticklabels([])
+    ax0.set_yticks(np.arange(0, max(wave), 20))
+    ax0.legend(loc=1)
+    ax0.grid()
     if full:
-        ax.set_xlim(max(t.min()-50, 0), min(t.max()+150, leng))
+        ax0.set_xlim(0, leng)
+    else:
+        ax0.set_xlim(max(t.min()-50, 0), min(t.max()+150, leng))
+    ax1 = fig.add_axes((.1, .5, .8, .2))
+    ax1.vlines(tu, 0, cu, color='g', label='truth '+mode)
+    ax1.set_ylabel(ylabel)
+    ax1.set_xticklabels([])
+    ax1.set_xlim(ax0.get_xlim())
+    ax1.set_yticks(np.arange(0, max(cu), 50))
+    ax1.legend(loc=1)
+    ax1.grid()
+    ax2 = fig.add_axes((.1, .7, .8, .2))
+    ax2.vlines(pet, 0, pwe, color='y', label='recon '+mode)
+    ax2.set_ylabel(ylabel)
+    ax2.set_xticklabels([])
+    ax2.set_xlim(ax0.get_xlim())
+    ax2.set_yticks(np.arange(0, max(pwe), 50))
+    ax2.legend(loc=1)
+    ax2.grid()
+    ax3 = fig.add_axes((.1, .1, .8, .1))
+    ax3.scatter(np.arange(leng), wave1 - wave, c='k', label='residual wave', marker='.')
+    ax3.set_xlabel('$t/\mathrm{ns}$')
+    ax3.set_ylabel('$Voltage/\mathrm{mV}$')
+    ax3.set_xlim(ax0.get_xlim())
+    ax3.legend(loc=1)
+    ax3.grid()
+    fig.suptitle('eid={},cid={},'.format(tth['EventID'][0], tth['ChannelID'][0])+distd+'-dist={:.2f},{:.2f}'.format(wdist, edist), y=0.95)
     fig.savefig('img/demoe{}c{}.png'.format(tth['EventID'][0], tth['ChannelID'][0]), bbox_inches='tight')
     fig.clf()
     plt.close(fig)
+    
+#     fig = plt.figure()
+#     fig.tight_layout()
+#     ax = fig.add_subplot(111)
+#     ax.grid()
+#     ax2 = ax.twinx()
+#     ax.plot(wave, c='b', label='origin wave')
+#     ax.plot(wave0, c='k', label='truth wave')
+#     ax.plot(wave1, c='C1', label='recon wave')
+#     ax.set_xlabel('$Time/\mathrm{ns}$')
+#     ax.set_ylabel('$Voltage/\mathrm{mV}$')
+#     ax.hlines(spe_pre['thres'], 0, 1029, color='c', label='threshold')
+#     ax2.set_ylabel(ylabel)
+#     fig.suptitle('eid={},cid={},'.format(tth['EventID'][0], tth['ChannelID'][0])+distd+'-dist={:.2f},{:.2f}'.format(wdist, edist))
+#     ax2.vlines(tu, 0, cu, color='g', label='truth '+mode)
+#     ax2.vlines(pet, -pwe, 0, color='y', label='recon '+mode)
+#     lines, labels = ax.get_legend_handles_labels()
+#     lines2, labels2 = ax2.get_legend_handles_labels()
+#     align.yaxes(ax, 0, ax2, 0)
+#     ax2.legend(lines + lines2, labels + labels2)
+#     if full:
+#         ax.set_xlim(max(t.min()-50, 0), min(t.max()+150, leng))
+#     fig.savefig('img/demoe{}c{}.png'.format(tth['EventID'][0], tth['ChannelID'][0]), bbox_inches='tight')
+#     fig.clf()
+#     plt.close(fig)
+
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.plot(spe_pre['spe'], c='b')
     ax.grid()
-    ax.set_xlabel('$Time/\mathrm{ns}$')
+    ax.set_xlabel('$t/\mathrm{ns}$')
     ax.set_ylabel('$Voltage/\mathrm{mV}$')
-    fig.savefig('img/spe{}.png'.format(cid), bbox_inches='tight')
+    fig.savefig('img/spe{:02d}.png'.format(cid), bbox_inches='tight')
     fig.clf()
     plt.close(fig)
     return

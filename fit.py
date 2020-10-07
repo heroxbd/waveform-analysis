@@ -30,7 +30,6 @@ psr.add_argument('ipt', type=str, help='input file')
 psr.add_argument('--mod', type=str, help='mode of weight', choices=['PEnum', 'Charge'])
 psr.add_argument('--met', type=str, help='fitting method')
 psr.add_argument('--ref', type=str, nargs='+', help='reference file')
-psr.add_argument('-N', dest='Ncpu', type=int, help='cpu number', default=50)
 psr.add_argument('--demo', dest='demo', action='store_true', help='demo bool', default=False)
 args = psr.parse_args()
 
@@ -39,7 +38,7 @@ fopt = args.opt
 reference = args.ref
 mode = args.mod
 method = args.met
-Ncpu = args.Ncpu
+Ncpu = 50
 if args.demo:
     Demo = True
 

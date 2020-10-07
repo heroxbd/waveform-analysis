@@ -101,7 +101,9 @@ def Forward(channelid) :
         Total = np.abs(np.sum(inputs, axis=1)) / SPECharge
         Total = np.where(Total > 1e-4, Total, 1e-4)
         Prediction = nets[channelid].forward(torch.from_numpy(inputs).to(device=device)).data.cpu().numpy()
-        Prediction = Prediction / np.sum(Prediction, axis=1)[:, None] * Total[:, None]
+        sumPrediction = np.sum(Prediction, axis=1)
+        sumPrediction = np.where(sumPrediction > 1e-4, sumPrediction, 1e-4)
+        Prediction = Prediction / sumPrediction[:, None] * Total[:, None]
         RiseTime = Prediction > filter_limit
         pe_numbers = RiseTime.sum(axis=1)
         no_pe_found = pe_numbers == 0

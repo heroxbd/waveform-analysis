@@ -30,7 +30,6 @@ torch.manual_seed(42)
 import torch.utils.data as Data
 from torch import optim
 from torch.autograd import Variable
-import os
 import time
 import tables
 import wf_func as wff
@@ -143,7 +142,7 @@ checking_period = np.int(0.25 * (len(Wave_train) / BATCHSIZE))
 training_result = []
 testing_result = []
 print('training start with batchsize={0}'.format(BATCHSIZE))
-for epoch in range(37):  # loop over the dataset multiple times
+for epoch in range(49):  # loop over the dataset multiple times
     running_loss = 0.0
     for i, data in enumerate(train_loader, 0):
         # get the inputs
@@ -156,8 +155,9 @@ for epoch in range(37):  # loop over the dataset multiple times
 
         # forward + backward + optimize
         outputs = net(inputs)
-        loss = stats_loss.torch_l2_loss(outputs, labels, mne)
+#         loss = stats_loss.torch_l2_loss(outputs, labels, mne)
 #         loss = stats_loss.torch_l2_loss(outputs, inputs, mne)
+        loss = stats_loss.torch_wasserstein_loss(outputs, labels)
         loss.backward()
         optimizer.step()
 
@@ -172,7 +172,8 @@ for epoch in range(37):  # loop over the dataset multiple times
             running_loss = 0.0
 
     # checking results in testing_s
-    test_performance = testing(test_loader, met='l2')
+    test_performance = testing(test_loader)
+#     test_performance = testing(test_loader, met='l2')
     print('epoch ', str(epoch), ' test:', test_performance)
     testing_record.write('%4f ' % (test_performance))
     testing_result.append(test_performance)
