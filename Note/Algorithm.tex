@@ -1,6 +1,6 @@
 \section{Algorithm} % (fold)
 
-Before taking deep look into the methods, input and output need to be defined. The input is pedestal subtracted PMT waveform (see figure~\ref{fig:input}), and the output is the charge or penumber sequence (see figure~\ref{fig:output}). 
+Before taking deep look into the methods, input and output need to be defined. The input is pedestal subtracted PMT waveform (see figure~\ref{fig:input}), and the output is the $q_{r}$ or $n_{r}$ sequence (see figure~\ref{fig:output}). 
 
 \begin{figure}[H]
 \begin{minipage}{.5\textwidth}
@@ -19,14 +19,14 @@ Before taking deep look into the methods, input and output need to be defined. T
 \end{minipage}
 \end{figure}
 
-Total photo-electron number is the count of hittime. The histogram of Total photo-electron number and data structure show in figure (see figure~\ref{fig:penum}). 
+The histogram of $N_{pe}$ and data structure show in figure (see figure~\ref{fig:penum}). 
 
 \begin{figure}[H]
 \begin{minipage}{.5\textwidth}
 \begin{figure}[H]
     \centering
         \includegraphics[width=1.0\textwidth]{figures/penum.png}
-    \caption{\label{fig:penum} TotalPEnum Histogram}
+    \caption{\label{fig:penum} $N_{pe}$ Histogram}
 \end{figure}
 \end{minipage}
 \begin{minipage}{.5\textwidth}
@@ -39,7 +39,7 @@ Total photo-electron number is the count of hittime. The histogram of Total phot
 \end{figure}
 
 \subsection{Find peak}
-First intuitive method is find peak method. First we find the peak of waveform, then we move leftward. The delta t we move is the peak time of single pe response. 
+First intuitive method is find peak method. First we find the peak of waveform, then we move leftward. The delta t we move is the peak time of $v_{spe}$. 
 
 \begin{figure}[H]
     \centering
@@ -48,7 +48,7 @@ First intuitive method is find peak method. First we find the peak of waveform, 
 \end{figure}
 
 \subsection{Waveform shift}
-A threshold is settled with respect to noise in simulation data. In waveform shift method, first we locate the part of waveform exceeds threshold. Then we shift the exceeding part leftward. The time length shifted is referenced to single PE response. And treat the normalized exceeding part as charge or penum. 
+A threshold $v_{th}$ is settled with respect to noise in simulation data. In waveform shift method, first we locate $v_{w}(t)$ which exceeds $v_{th}$. Then we shift the exceeding part leftward. The time length shifted is referenced to $v_{spe}$. And treat the normalized exceeding part as $q_{r}(t_{H})$ or $n_{r}(t_{H})$. 
 
 \begin{figure}[H]
     \centering
@@ -57,10 +57,10 @@ A threshold is settled with respect to noise in simulation data. In waveform shi
 \end{figure}
 
 \subsection{Fourier transform deconvolution}
-Third method is Fourier deconvolution. Assuming that the waveform is the convolution of single pe response and hittime sequence, the fft of waveform and single pe response are computed. A rectangular filter is added. Then compute the inverse fft of the quotient of filtered fft of waveform and fft of single pe response. 
+Third method is Fourier deconvolution. Assuming that the waveform is the convolution of $v_{spe}$ and $t_{H}$, the fft of $v_{w}$ and $v_{spe}$ are computed. A rectangular filter is added. Then compute the inverse fft of the quotient of filtered fft of $v_{w}$ and fft of $v_{spe}$. 
 
 \begin{itemize}
-    \item Results = IFFT\{ Filter[ FFT(Waveform) / FFT(SPE) ] \}
+    \item Results = IFFT\{ Filter[ FFT($v_{w}$) / FFT($v_{spe}$) ] \}
 \end{itemize}
 
 \begin{figure}[H]
@@ -70,7 +70,18 @@ Third method is Fourier deconvolution. Assuming that the waveform is the convolu
 \end{figure}
 
 \subsection{Lucy deconvolution}
-Lucy-Richardson deconvolution is a non linear iteration method, to calculate the deconvolution of signals. Lucy deconvolution has an advantage against Fourier deconvolution which is a constraint that charge or penum are larger than 0. 
+Lucy-Richardson deconvolution is a non linear iteration method, to calculate the deconvolution of signals. Lucy deconvolution has an advantage against Fourier deconvolution which is a constraint that $q_{r}(t_{H})$ or $n_{r}(t_{H})$ are larger than 0. 
+
+In $t$-th Lucy iteration, the calculation shows in \eqref{eq:lucy-inter}
+\begin{align}
+    q_{r}^{(0)} &= \frac{v_{w}}{\int v_{spe}} \\
+    q_{r}^{(t)} &= q_{r}^{(t-1)} \cdot \left(\frac{v_{w}}{q_{r}^{(t-1)} \otimes v_{spe}} \otimes v^{*}_{spe}\right)
+    \label{eq:lucy-inter}
+\end{align}
+
+$v^{*}_{spe}$ is flipped $v_{spe}$. 
+
+Usually 50 iterations were performed. A demonstration shows below: 
 
 \begin{figure}[H]
     \centering
@@ -79,12 +90,12 @@ Lucy-Richardson deconvolution is a non linear iteration method, to calculate the
 \end{figure}
 
 \subsection{Fitting}
-First we extract enough single PE response from simulation data in fitting method. We suppose the average of these waveforms is the single PE response. In fitting process, the parameter is weight in each discrete hittime. The loss which we need to optimize is the truth wave and reconstructed wave according to the parameters. The graph here shows one of the fitting result. We can see the truth waveform and reconstructed waveform is very similar. 
+First we extract enough $v_{spe}(t)$ from simulation data in fitting method. We suppose the average of these $v_{w}$ is the $v_{spe}$. In fitting process, the parameter is $q_{r}(t_{H})$ or $n_{r}(t_{H})$ in each discrete $t_{H}$. The loss which we need to optimize is the truth wave and reconstructed wave according to the parameters. The figure \ref{fig:fitting} shows one of the fitting result. We can see the truth waveform $v_{w}$ and reconstructed waveform $v_{r}$ are very similar. 
 
-\begin{figure}
+\begin{figure}[H]
     \centering
-    \includegraphics[width=0.5\linewidth]{figures/demo.png}
-    \caption{Fitting Demo, W-dist = 2.23}
+    \includegraphics[width=0.8\linewidth]{figures/demo.png}
+    \caption{\label{fig:fitting} Fitting Demo, W-dist = 2.23}
 \end{figure}
 
 \begin{figure}[H]
@@ -92,14 +103,14 @@ First we extract enough single PE response from simulation data in fitting metho
 \begin{figure}[H]
     \centering
         \includegraphics[width=1.0\textwidth]{figures/xiaopeippenumhist.png}
-    \caption{Fitting \#PE Result Histogram}
+    \caption{$W_{d}$ Histogram when fitting $n_{r}$}
 \end{figure}
 \end{minipage}
 \begin{minipage}{.5\textwidth}
 \begin{figure}[H]
     \centering
         \includegraphics[width=0.7\textwidth]{figures/xiaopeippenumstats.png}
-    \caption{Fitting \#PE W-dist vs TotalPEnum}
+    \caption{$W_{d}$ vs $N_{pe}$ when fitting $n_{r}$}
 \end{figure}
 \end{minipage}
 \end{figure}
@@ -108,14 +119,14 @@ First we extract enough single PE response from simulation data in fitting metho
 \begin{figure}[H]
     \centering
         \includegraphics[width=1.0\textwidth]{figures/xiaopeipchargehist.png}
-    \caption{Fitting Charge Result Histogram}
+    \caption{$W_{d}$ Histogram when fitting $q_{r}$}
 \end{figure}
 \end{minipage}
 \begin{minipage}{.5\textwidth}
 \begin{figure}[H]
     \centering
         \includegraphics[width=0.7\textwidth]{figures/xiaopeipchargestats.png}
-    \caption{Fitting Charge W-dist vs TotalPEpos}
+    \caption{$W_{d}$ vs $N_{pos}$ when fitting $q_{r}$}
 \end{figure}
 \end{minipage}
 \end{figure}
@@ -167,6 +178,7 @@ A direct implementation of judgement metrics into loss function is often difficu
 \end{minipage}
 \end{figure}
 
+\subsubsection{Result}
 In the training process, we trained CNN for each PMT channel. The loss which is Wasserstein distance during training show in figure \ref{fig:loss}. 
 
 \begin{figure}[H]
@@ -175,21 +187,21 @@ In the training process, we trained CNN for each PMT channel. The loss which is 
     \caption{\label{fig:loss} Loss variation during training}
 \end{figure}
 
-The result shows that CNN is the best for reconstruction of Charge and \#PE. 
+The result shows that CNN is the best for reconstruction of $q_{r}(t_{H})$ and $n_{r}(t_{H})$. 
 
 \begin{figure}[H]
 \begin{minipage}{.5\textwidth}
 \begin{figure}[H]
     \centering
         \includegraphics[width=1.0\textwidth]{figures/takarapenumhist.png}
-    \caption{CNN \#PE Result Histogram}
+    \caption{$W_{d}$ Histogram when CNN $n_{r}$}
 \end{figure}
 \end{minipage}
 \begin{minipage}{.5\textwidth}
 \begin{figure}[H]
     \centering
         \includegraphics[width=0.7\textwidth]{figures/takarapenumstats.png}
-    \caption{CNN \#PE W-dist vs TotalPEnum}
+    \caption{$W_{d}$ vs $N_{pe}$ when CNN $n_{r}$}
 \end{figure}
 \end{minipage}
 \end{figure}
@@ -198,14 +210,14 @@ The result shows that CNN is the best for reconstruction of Charge and \#PE.
 \begin{figure}[H]
     \centering
         \includegraphics[width=1.0\textwidth]{figures/takarachargehist.png}
-    \caption{CNN Charge Result Histogram}
+    \caption{$W_{d}$ Histogram when CNN $q_{r}$}
 \end{figure}
 \end{minipage}
 \begin{minipage}{.5\textwidth}
 \begin{figure}[H]
     \centering
         \includegraphics[width=0.7\textwidth]{figures/takarachargestats.png}
-    \caption{CNN Charge W-dist vs TotalPEpos}
+    \caption{$W_{d}$ vs $N_{pos}$ when CNN $q_{r}$}
 \end{figure}
 \end{minipage}
 \end{figure}

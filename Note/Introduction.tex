@@ -1,4 +1,21 @@
 \section{Introduction} % (fold)
 \label{sec:Introduction}
 Traditionally, we only save charge integration and time over threshold of the waveform output of PMT in neutrino experiments. But extracting the information of time and number of photons hitting will provide more detailed information of light transmit model in detector and will finally enhance the performance of event reconstruction, even particle identification. Therefore PMT waveform analysis is necessary when we pursue completely usage of PMT output. 
+
+\paragraph{Notations}
+\begin{itemize}
+    \item $t$ - Time of waveform
+    \item $t_{H}$ - Hittime, time of PE hitting first dynode
+    \item $v_{w}(t)$ - Pedestal reduced origin waveform voltage
+    \item $v_{spe}(t)$ - Single-photoelectron (SPE) response
+    \item $v_{th}$ - Voltage threshold
+    \item $q_{r}(t_{H})$ - Reconstructed charge
+    \item $n_{r}(t_{H})$ - Reconstructed number of PE
+    \item $v_{r}(t)$ - Reconstructed waveform
+    \item $Q$ - Total Charge in a DAQ window
+    \item $N_{pe}$ - Total PE number in a DAQ window
+    \item $N_{pos}$ - Total number of hittime in a DAQ window
+    \item $W_{d}$ - Wasserstein distance
+\end{itemize}
+The $t$ and $t_{H}$ we defined here is discrete value in 1 DAQ window (from 0 to 1029ns, step size is 1ns in Jinping 1ton prototype DAQ system). 
 % section Introduction (end)

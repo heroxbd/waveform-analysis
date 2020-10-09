@@ -1,9 +1,8 @@
 \section{Wasserstein distance} % (fold)
-\subsection{Wasserstein distance}
 A figure of merit to discrete the difference between reconstruction result and the truth is crucial. $P(X)$ and $Q(X)$ are 2 probability density function of random variable $X$. There are many ways to measure the difference (distance) of $P(X)$ and $Q(X)$: 
 
 \begin{figure}[H]
-\begin{minipage}{.5\textwidth}
+\begin{minipage}{.25\textwidth}
 \begin{align*}
     L_{1} &= \int|p-q| \\
     L_{2} &= \int(p-q)^{2} \\
@@ -11,10 +10,10 @@ A figure of merit to discrete the difference between reconstruction result and t
     \cdots
 \end{align*}
 \end{minipage}
-\begin{minipage}{.5\textwidth}
+\begin{minipage}{.7\textwidth}
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.5\linewidth]{figures/tab.png}
+    \includegraphics[width=0.8\linewidth]{figures/tab.png}
     \caption{\label{fig:l2} L2 distance demo}
 \end{figure}
 \end{minipage}
@@ -36,23 +35,9 @@ on Polish spaces. There is a minimum function in the functional space of $\gamma
         \caption{\label{fig:Wasserstein transportation} Wasserstein transportation}
     \end{figure}
 
-In practice, the loss we used in numerical calculation is defined here. CDF here means cumulative distribution function. We first calculate subtraction of the CDF of A and the CDF of B. Then take the sum of absolute value of the subtraction. That is the L1 distance of cumulative distribution function of A \& B. We can prove that the distance we define here is equivalent to Wasserstein distance. 
+In practice, the loss we used in numerical calculation is defined here. We first calculate subtraction of the cumulative distribution function (CDF) of A and the CDF of B. Then take the sum of absolute value of the subtraction. That is the L1 distance of cumulative distribution function of A \& B. We can prove that the distance we define here is equivalent to Wasserstein distance. 
 
 \begin{equation}
     W_{p}=\sum_t|\mathrm{CDF}_A(t) - \mathrm{CDF}_B(t)|
 \end{equation}
-
-% subsection Wasserstein distance (end)
-\subsection{Poisson distance}
-Poisson Distance is used \emph{only} when reconstruct \#PE. $Q$ and $q$ in equation \eqref{eq:p-dist-def} are total number of PE in simulation truth and reconstruction result. $\mathrm{Poisson}(Q|Q)$ is the probability of $Q$ in a Poisson distribution with expectation value of $Q$. 
-
-\label{sub:Poisson distance}
-    \begin{align}
-        Q = \sum \#PE_{truth_i} \\
-        q = \sum \#PE_{recon_i} \\
-        D_{p} = |Q-q|*\mathrm{Poisson}(Q|Q)
-        \label{eq:p-dist-def}
-    \end{align}
-
-% subsection Poisson distance (end)
 % section Wasserstein-distance and Poisson-distance (end)
