@@ -19,7 +19,7 @@ from scipy.interpolate import interp1d
 
 plt.rcParams['savefig.dpi'] = 300
 plt.rcParams['figure.dpi'] = 300
-plt.rcParams['font.size'] = 4
+plt.rcParams['font.size'] = 8
 plt.rcParams['lines.markersize'] = 1.0
 plt.rcParams['lines.linewidth'] = 2.0
 plt.rcParams['mathtext.fontset'] = 'cm'
