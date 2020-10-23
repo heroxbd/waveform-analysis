@@ -68,51 +68,51 @@ Ncpu = 100
 chunk = N // Ncpu + 1
 slices = np.vstack((np.arange(0, N, chunk), np.append(np.arange(chunk, N, chunk), N))).T.astype(np.int).tolist()
 
-Mu = np.arange(2, 22, 5).astype(np.int)
-Tau = np.arange(10, 40, 10).astype(np.int)
-Sigma = np.arange(1, 11, 5).astype(np.int)
-Deltat = np.zeros((len(Mu), len(Tau), len(Sigma), N))
-Deltat0 = np.zeros((len(Mu), len(Tau), len(Sigma), N))
-Std = np.zeros((len(Mu), len(Tau), len(Sigma)))
-Std0 = np.zeros((len(Mu), len(Tau), len(Sigma)))
+# Mu = np.arange(2, 22, 5).astype(np.int)
+# Tau = np.arange(10, 40, 10).astype(np.int)
+# Sigma = np.arange(1, 11, 5).astype(np.int)
+# Deltat = np.zeros((len(Mu), len(Tau), len(Sigma), N))
+# Deltat0 = np.zeros((len(Mu), len(Tau), len(Sigma), N))
+# Std = np.zeros((len(Mu), len(Tau), len(Sigma)))
+# Std0 = np.zeros((len(Mu), len(Tau), len(Sigma)))
 
-np.random.seed(0)
-for m in trange(len(Mu), desc='   mu'):
-    for t in trange(len(Tau), desc='  tau'):
-        for s in trange(len(Sigma), desc='sigma'):
-            mu = Mu[m]
-            tau = Tau[t]
-            sigma = Sigma[s]
+# np.random.seed(0)
+# for m in trange(len(Mu), desc='   mu'):
+#     for t in trange(len(Tau), desc='  tau'):
+#         for s in trange(len(Sigma), desc='sigma'):
+#             mu = Mu[m]
+#             tau = Tau[t]
+#             sigma = Sigma[s]
             
-            Deltat[m, t, s], Deltat0[m, t, s], Std[m, t, s], Std0[m , t, s] = deltatime(mu, tau, sigma)
+#             Deltat[m, t, s], Deltat0[m, t, s], Std[m, t, s], Std0[m , t, s] = deltatime(mu, tau, sigma)
 
-            fig = plt.figure(figsize=(12, 8))
-            ax = fig.add_axes((.1, .1, .8, .8))
-            ax.hist(Deltat[m, t, s], bins=100, alpha=0.5, color='b', label='all PE')
-            ax.hist(Deltat0[m, t, s], bins=100, alpha=0.5, color='r', label='1st PE')
-            ax.set_xlabel(r'$\Delta t/\mathrm{ns}$')
-            ax.set_ylabel(r'$Count$')
-            ax.set_title(r'$\mu=${:.01f}'.format(mu) + r'$\mathrm{ns}\ $' + 
-                         r'$\tau=${:.01f}'.format(tau) + r'$\mathrm{ns}\ $' + 
-                         r'$\sigma=${:.01f}'.format(sigma) + r'$\mathrm{ns}\ $' + 
-                         r'$\mathrm{N}=$' + '{:2d}\n'.format(N) + 
-                         r'$\delta_{1st}-\delta_{all}=$' + 
-                         r'{:.02f}$-${:.02f}$=${:.02f}'.format(Std0[m , t, s], Std[m, t, s], Std0[m , t, s] - Std[m, t, s]) + 
-                         r'$\mathrm{ns}$')
-            ax.legend()
-            fig.savefig('img/vs/vs-{:02d}-{:02d}-{:02d}.png'.format(mu, tau, sigma))
-            plt.close()
+#             fig = plt.figure(figsize=(12, 8))
+#             ax = fig.add_axes((.1, .1, .8, .8))
+#             ax.hist(Deltat[m, t, s], bins=100, alpha=0.5, color='b', label='all PE')
+#             ax.hist(Deltat0[m, t, s], bins=100, alpha=0.5, color='r', label='1st PE')
+#             ax.set_xlabel(r'$\Delta t/\mathrm{ns}$')
+#             ax.set_ylabel(r'$Count$')
+#             ax.set_title(r'$\mu=${:.01f}'.format(mu) + r'$\mathrm{ns}\ $' + 
+#                          r'$\tau=${:.01f}'.format(tau) + r'$\mathrm{ns}\ $' + 
+#                          r'$\sigma=${:.01f}'.format(sigma) + r'$\mathrm{ns}\ $' + 
+#                          r'$\mathrm{N}=$' + '{:2d}\n'.format(N) + 
+#                          r'$\delta_{1st}-\delta_{all}=$' + 
+#                          r'{:.02f}$-${:.02f}$=${:.02f}'.format(Std0[m , t, s], Std[m, t, s], Std0[m , t, s] - Std[m, t, s]) + 
+#                          r'$\mathrm{ns}$')
+#             ax.legend()
+#             fig.savefig('img/vs/vs-{:02d}-{:02d}-{:02d}.png'.format(mu, tau, sigma))
+#             plt.close()
 
-fig = plt.figure(figsize=(12, 8))
-ax = fig.add_axes((.1, .1, .8, .8))
-ax.hist(Deltat.flatten(), bins=100, alpha=0.5, color='b', label='all PE')
-ax.hist(Deltat0.flatten(), bins=100, alpha=0.5, color='r', label='1st PE')
-ax.set_xlabel(r'$\Delta t/\mathrm{ns}$')
-ax.set_ylabel(r'$Count$')
-ax.set_title(r'$\mathrm{N}=$' + '{:2d}\n'.format(N) + 
-             r'$\delta_{1st}-\delta_{all}=$' + 
-             r'{:.02f}$-${:.02f}$=${:.02f}'.format(np.std(Deltat0, ddof=-1), np.std(Deltat, ddof=-1), np.std(Deltat0, ddof=-1) - np.std(Deltat, ddof=-1)) + 
-             r'$\mathrm{ns}$')
-ax.legend()
-fig.savefig('img/vs/vs.png')
-plt.close()
+# fig = plt.figure(figsize=(12, 8))
+# ax = fig.add_axes((.1, .1, .8, .8))
+# ax.hist(Deltat.flatten(), bins=100, alpha=0.5, color='b', label='all PE')
+# ax.hist(Deltat0.flatten(), bins=100, alpha=0.5, color='r', label='1st PE')
+# ax.set_xlabel(r'$\Delta t/\mathrm{ns}$')
+# ax.set_ylabel(r'$Count$')
+# ax.set_title(r'$\mathrm{N}=$' + '{:2d}\n'.format(N) + 
+#              r'$\delta_{1st}-\delta_{all}=$' + 
+#              r'{:.02f}$-${:.02f}$=${:.02f}'.format(np.std(Deltat0, ddof=-1), np.std(Deltat, ddof=-1), np.std(Deltat0, ddof=-1) - np.std(Deltat, ddof=-1)) + 
+#              r'$\mathrm{ns}$')
+# ax.legend()
+# fig.savefig('img/vs/vs.png')
+# plt.close()
