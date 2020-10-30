@@ -14,13 +14,6 @@ import scipy.interpolate as interpolate
 from scipy.stats import rv_continuous, poisson, uniform
 import matplotlib.pyplot as plt
 
-plt.rcParams['savefig.dpi'] = 100
-plt.rcParams['figure.dpi'] = 100
-plt.rcParams['font.size'] = 20
-plt.rcParams['lines.markersize'] = 1.0
-plt.rcParams['lines.linewidth'] = 2.0
-plt.rcParams['mathtext.fontset'] = 'cm'
-
 def glow(n, tau):
     return np.random.exponential(tau, size=n)
 

@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import h5py
 import argparse
 import itertools as it
-from JPwaptool import JPwaptool
+from JPwaptoolN import JPwaptool
 import wf_func as wff
 
 psr = argparse.ArgumentParser()

@@ -10,24 +10,29 @@ n4M3 = np.array([[-0.0117845, 0.00589226, 0.0109428, 0.00757576, 1.38826e-18, -0
                  [0.0723906, -0.119529, -0.162458, -0.106061, -1.91768e-17, 0.106061, 0.162458, 0.119529, -0.0723906], 
                  [-0.0909091, 0.0606061, 0.168831, 0.233766, 0.255411, 0.233766, 0.168831, 0.0606061, -0.0909091]])
 
+class ChannelInfo:
+    def __init__(self):
+        self.ChannelId = -1
+        self.Pedestal = 0
+        self.PedestalStd = 0
+        self.BslnMean = 0
+        self.BslnStd = 0
+        self.Charge = 0
+#         self.FullCharge = 0
+#         self.Peak = 0
+#         self.RiseTime = 0
+#         self.PE = 0
+        self.ChargeMaskLen = 0
+        self.PedMaskLen = 0
+#         self.nPeak_in_frnt = 0
+#         self.HitTime = np.array([]).astype(np.int)
+        self.PeakLoc = np.array([]).astype(np.int)
+        self.PeakAmp = np.array([])
+        return
+    
 class JPwaptool:
     def __init__(self, WindowSize, bl_end=50, inte_end=400, frnt_blur=10, back_blur=50):
-        self.ChannelInfo = {'ChannelId' : -1, 
-                            'Pedestal' : 0, 
-                            'PedestalStd' : 0, 
-                            'BslnMean' : 0, 
-                            'BslnStd' : 0, 
-                            'Charge' : 0, 
-#                             'FullCharge' : 0, 
-#                             'Peak' : 0, 
-#                             'RiseTime' : 0, 
-#                             'PE' : 0, 
-                            'ChargeMaskLen' : 0, 
-                            'PedMaskLen' : 0, 
-#                             'nPeak_in_frnt' : 0, 
-#                             'HitTime' : np.array([]).astype(np.int), 
-                            'PeakLoc' : np.array([]).astype(np.int), 
-                            'PeakAmp' : np.array([])}
+        self.ChannelInfo = ChannelInfo
         self.WindowSize = WindowSize
         self.ped_upperlimit = 0
         self.ped_lowerlimmit = 0
@@ -42,7 +47,7 @@ class JPwaptool:
         return
     
     def Return_Result(self):
-        return self.ChannelInfo['Pedestal'], self.ChannelInfo['PedestalStd'], self.ChannelInfo['Charge'], self.ChannelInfo['PedMaskLen'], self.ChannelInfo['ChargeMaskLen']
+        return self.ChannelInfo.Pedestal, self.ChannelInfo.PedestalStd, self.ChannelInfo.Charge, self.ChannelInfo.PedMaskLen, self.ChannelInfo.ChargeMaskLen
     
     def GetThreMask(self, data):
         histogram = np.zeros(self.WindowSize+1, dtype=np.int)
@@ -95,9 +100,9 @@ class JPwaptool:
         return back_blur_start
     
     def GetPedinfo(self, data):
-        self.ChannelInfo['PedMaskLen'] = 0
-        self.ChannelInfo['BslnMean'] = 0
-        self.ChannelInfo['BslnStd'] = 0
+        self.ChannelInfo.PedMaskLen = 0
+        self.ChannelInfo.BslnMean = 0
+        self.ChannelInfo.BslnStd = 0
         reach_bl_end = False
         for i in range(self.WindowSize):
             if self.ChargeMask[i]:
@@ -107,31 +112,31 @@ class JPwaptool:
                 self.PedMask[i] = False
                 continue
             self.PedMask[i] = True
-            self.ChannelInfo['BslnMean'] += data[i]
-            self.ChannelInfo['BslnStd'] += data[i]*data[i]
-            self.ChannelInfo['PedMaskLen'] += 1
+            self.ChannelInfo.BslnMean += data[i]
+            self.ChannelInfo.BslnStd += data[i]*data[i]
+            self.ChannelInfo.PedMaskLen += 1
             if reach_bl_end:
                 continue
-            if (i >= self.bl_end and self.ChannelInfo['PedMaskLen'] >= self.WindowSize/15) or i == self.WindowSize-1:
-                self.ChannelInfo['Pedestal'] = self.ChannelInfo['BslnMean']
-                self.ChannelInfo['PedestalStd'] = self.ChannelInfo['BslnStd']
-                count = self.ChannelInfo['PedMaskLen']
-        if self.ChannelInfo['PedMaskLen'] == 0:
-            self.ChannelInfo['BslnMean'] = np.mean(data)
-            self.ChannelInfo['BslnStd'] = np.std(data)
+            if (i >= self.bl_end and self.ChannelInfo.PedMaskLen >= self.WindowSize/15) or i == self.WindowSize-1:
+                self.ChannelInfo.Pedestal = self.ChannelInfo.BslnMean
+                self.ChannelInfo.PedestalStd = self.ChannelInfo.BslnStd
+                count = self.ChannelInfo.PedMaskLen
+        if self.ChannelInfo.PedMaskLen == 0:
+            self.ChannelInfo.BslnMean = np.mean(data)
+            self.ChannelInfo.BslnStd = np.std(data)
         else:
-            self.ChannelInfo['BslnMean'] = self.ChannelInfo['BslnMean'] / self.ChannelInfo['PedMaskLen']
-            self.ChannelInfo['BslnStd'] = self.ChannelInfo['BslnStd'] / self.ChannelInfo['PedMaskLen'] - self.ChannelInfo['BslnMean'] * self.ChannelInfo['BslnMean']
+            self.ChannelInfo.BslnMean = self.ChannelInfo.BslnMean / self.ChannelInfo.PedMaskLen
+            self.ChannelInfo.BslnStd = self.ChannelInfo.BslnStd / self.ChannelInfo.PedMaskLen - self.ChannelInfo.BslnMean * self.ChannelInfo.BslnMean
         if count == 0:
-            self.ChannelInfo['Pedestal'] = np.mean(data[:50])
-            self.ChannelInfo['PedestalStd'] = np.std(data[:50])
+            self.ChannelInfo.Pedestal = np.mean(data[:50])
+            self.ChannelInfo.PedestalStd = np.std(data[:50])
         else:
-            self.ChannelInfo['Pedestal'] = self.ChannelInfo['Pedestal'] / count
-            self.ChannelInfo['PedestalStd'] = np.sqrt(self.ChannelInfo['PedestalStd'] / count - self.ChannelInfo['Pedestal'] * self.ChannelInfo['Pedestal'])
+            self.ChannelInfo.Pedestal = self.ChannelInfo.Pedestal / count
+            self.ChannelInfo.PedestalStd = np.sqrt(self.ChannelInfo.PedestalStd / count - self.ChannelInfo.Pedestal * self.ChannelInfo.Pedestal)
         return
     
     def GetCharge(self, data, debug=False):
-        self.ChannelInfo['ChargeMaskLen'] = 0
+        self.ChannelInfo.ChargeMaskLen = 0
         charge = 0
         i = self.bl_end
         while self.ChargeMask[i]:
@@ -142,20 +147,20 @@ class JPwaptool:
         while i < self.inte_end:
             if self.ChargeMask[i]:
                 charge += data[i]
-                self.ChannelInfo['ChargeMaskLen'] += 1
+                self.ChannelInfo.ChargeMaskLen += 1
                 if debug:
-                    print('{}: {}, {}: {}'.format(i, data[i], self.ChannelInfo['ChargeMaskLen'], charge))
+                    print('{}: {}, {}: {}'.format(i, data[i], self.ChannelInfo.ChargeMaskLen, charge))
             i += 1
         while self.ChargeMask[i]:
             if i == self.WindowSize:
                 charge += data[i]
-                self.ChannelInfo['ChargeMaskLen'] += 1
+                self.ChannelInfo.ChargeMaskLen += 1
                 if debug:
-                    print('{}: {}, {}: {}'.format(i, data[i], self.ChannelInfo['ChargeMaskLen'], charge))
+                    print('{}: {}, {}: {}'.format(i, data[i], self.ChannelInfo.ChargeMaskLen, charge))
             i += 1
         if debug:
-            print(self.ChannelInfo['Pedestal']*self.ChannelInfo['ChargeMaskLen']-charge)
-        return self.ChannelInfo['Pedestal']*self.ChannelInfo['ChargeMaskLen']-charge
+            print(self.ChannelInfo.Pedestal*self.ChannelInfo.ChargeMaskLen-charge)
+        return self.ChannelInfo.Pedestal*self.ChannelInfo.ChargeMaskLen-charge
     
     def FindPeaksSG(self, data):
         z = fft(data)
@@ -171,7 +176,7 @@ class JPwaptool:
             for k in range(-n, n+1):
                 aa = 0
                 if i+k<0 or i+k>self.WindowSize-1:
-                    aa = self.ChannelInfo['Pedestal']
+                    aa = self.ChannelInfo.Pedestal
                 else:
                     aa = data2[i+k]
                 diff[i] += aa*n4M3[M-1][k+n]
@@ -191,7 +196,7 @@ class JPwaptool:
                 peakAmp1 = data2[max(i-2, 0):min(i+3, self.WindowSize)][np.argmin(data2[max(i-2, 0):min(i+3, self.WindowSize)])]
                 peakLoc = np.arange(max(i-2, 0), min(i+3, self.WindowSize))[np.argmin(data[max(i-2, 0):min(i+3, self.WindowSize)])]
                 peakAmp2 = data[peakLoc]
-                if self.ChannelInfo['Pedestal'] - peakAmp1 > 3*self.ChannelInfo['PedestalStd'] and self.ChannelInfo['Pedestal'] - peakAmp2 > 3*self.ChannelInfo['PedestalStd']:
+                if self.ChannelInfo.Pedestal - peakAmp1 > 3*self.ChannelInfo.PedestalStd and self.ChannelInfo.Pedestal - peakAmp2 > 3*self.ChannelInfo.PedestalStd:
                     flat_l = False
                     flat_r = False
                     if i < self.WindowSize - 5:
@@ -215,7 +220,7 @@ class JPwaptool:
                         peakList = np.append(peakList, peakLoc)
         if len(peakList) == 0:
             mindataLoc = np.argmin(data2)
-            if self.ChannelInfo['Pedestal'] - data2[mindataLoc] > 3*self.ChannelInfo['PedestalStd']:
+            if self.ChannelInfo.Pedestal - data2[mindataLoc] > 3*self.ChannelInfo.PedestalStd:
                 minIter = np.argmin(data[max(mindataLoc-10, 0):min(mindataLoc+10, self.WindowSize)])
                 peakList = np.append(peakList, minIter)
         return peakList
@@ -225,20 +230,20 @@ class JPwaptool:
         self.GetThreMask(data)
         self.Dynamic_ExpandMask()
         self.GetPedinfo(data)
-        self.ChannelInfo['Charge'] = self.GetCharge(data)
+        self.ChannelInfo.Charge = self.GetCharge(data)
         peakList = self.FindPeaksSG(data)
-        self.ChannelInfo['PeakLoc'] = np.array([]).astype(np.int)
-        self.ChannelInfo['PeakAmp'] = np.array([])
+        self.ChannelInfo.PeakLoc = np.array([]).astype(np.int)
+        self.ChannelInfo.PeakAmp = np.array([])
         for i in peakList:
-            peakamp = self.ChannelInfo['Pedestal'] - data[i]
+            peakamp = self.ChannelInfo.Pedestal - data[i]
             if peakamp <= 0:
                 continue
-            self.ChannelInfo['PeakLoc'] = np.append(self.ChannelInfo['PeakLoc'], i)
-            self.ChannelInfo['PeakAmp'] = np.append(self.ChannelInfo['PeakAmp'], peakamp)
-        if len(self.ChannelInfo['PeakLoc']) == 0:
+            self.ChannelInfo.PeakLoc = np.append(self.ChannelInfo.PeakLoc, i)
+            self.ChannelInfo.PeakAmp = np.append(self.ChannelInfo.PeakAmp, peakamp)
+        if len(self.ChannelInfo.PeakLoc) == 0:
             item = np.argmin(data)
-            self.ChannelInfo['PeakLoc'] = np.append(self.ChannelInfo['PeakLoc'], item)
-            self.ChannelInfo['PeakAmp'] = np.append(self.ChannelInfo['PeakAmp'], self.ChannelInfo['Pedestal'] - data[item])
+            self.ChannelInfo.PeakLoc = np.append(self.ChannelInfo.PeakLoc, item)
+            self.ChannelInfo.PeakAmp = np.append(self.ChannelInfo.PeakAmp, self.ChannelInfo.Pedestal - data[item])
         return
     
     def FastCalculate(self, data):
@@ -246,5 +251,5 @@ class JPwaptool:
         self.GetThreMask(data)
         self.Dynamic_ExpandMask()
         self.GetPedinfo(data)
-        self.ChannelInfo['Charge'] = self.GetCharge(data)
+        self.ChannelInfo.Charge = self.GetCharge(data)
         return

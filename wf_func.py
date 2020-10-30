@@ -10,19 +10,26 @@ from scipy.fftpack import fft, ifft
 from scipy import optimize as opti
 from scipy.signal import convolve
 import matplotlib
-matplotlib.use('Agg')
+matplotlib.use('pgf')
 import matplotlib.pyplot as plt
 from mpl_axes_aligner import align
 from JPwaptool import JPwaptool
 import h5py
 from scipy.interpolate import interp1d
 
-plt.rcParams['savefig.dpi'] = 300
-plt.rcParams['figure.dpi'] = 300
-plt.rcParams['font.size'] = 8
-plt.rcParams['lines.markersize'] = 1.0
+# plt.style.use('ggplot')
+# plt.style.use('seaborn')
+plt.style.use('classic')
+plt.rcParams['savefig.dpi'] = 100
+plt.rcParams['figure.dpi'] = 100
+plt.rcParams['font.size'] = 16
+plt.rcParams['lines.markersize'] = 4.0
 plt.rcParams['lines.linewidth'] = 2.0
-plt.rcParams['mathtext.fontset'] = 'cm'
+# plt.rcParams['mathtext.fontset'] = 'cm'
+plt.rcParams['text.usetex'] = True
+# plt.rcParams['font.weight'] = 'bold'
+plt.rcParams['pgf.texsystem'] = 'pdflatex'
+plt.rcParams['axes.unicode_minus'] = False
 
 def xiaopeip(wave, spe_pre, eta=0):
     l = len(wave)
@@ -168,9 +175,9 @@ def read_model(spe_path):
             spe_pre.update({cid[i]:spe_pre_i})
             ax.plot(spe_pre[cid[i]]['spe'])
         ax.grid()
-        ax.set_xlabel('$Time/\mathrm{ns}$')
-        ax.set_ylabel('$Voltage/\mathrm{mV}$')
-        fig.savefig('img/spe.png', bbox_inches='tight')
+        ax.set_xlabel(r'$Time/\mathrm{ns}$')
+        ax.set_ylabel(r'$Voltage/\mathrm{mV}$')
+        fig.savefig('Note/figures/pmtspe.pgf')
         plt.close()
     return spe_pre
 
@@ -225,6 +232,7 @@ def demo(pet, pwe, tth, spe_pre, leng, wave, cid, mode, full=False):
     print('Resi-norm = {}'.format(np.linalg.norm(wave-wave1)))
 
     fig = plt.figure(figsize=(10, 10))
+    fig.tight_layout()
     ax0 = fig.add_axes((.1, .2, .8, .3))
     ax0.plot(wave, c='b', label='origin wave')
     ax0.plot(wave0, c='k', label='truth wave')
@@ -263,7 +271,7 @@ def demo(pet, pwe, tth, spe_pre, leng, wave, cid, mode, full=False):
     ax3.legend(loc=1)
     ax3.grid()
     fig.suptitle('eid={},cid={},'.format(tth['EventID'][0], tth['ChannelID'][0])+distd+'-dist={:.2f},{:.2f}'.format(wdist, edist), y=0.95)
-    fig.savefig('img/demoe{}c{}.png'.format(tth['EventID'][0], tth['ChannelID'][0]), bbox_inches='tight')
+    fig.savefig('Note/figures/demoe{}c{}.pgf'.format(tth['EventID'][0], tth['ChannelID'][0]))
     fig.clf()
     plt.close(fig)
     
@@ -288,17 +296,18 @@ def demo(pet, pwe, tth, spe_pre, leng, wave, cid, mode, full=False):
 #     ax2.legend(lines + lines2, labels + labels2)
 #     if full:
 #         ax.set_xlim(max(t.min()-50, 0), min(t.max()+150, leng))
-#     fig.savefig('img/demoe{}c{}.png'.format(tth['EventID'][0], tth['ChannelID'][0]), bbox_inches='tight')
+#     fig.savefig('Note/figures/demoe{}c{}.pgf'.format(tth['EventID'][0], tth['ChannelID'][0]))
 #     fig.clf()
 #     plt.close(fig)
 
     fig = plt.figure()
+    fig.tight_layout()
     ax = fig.add_subplot(111)
     ax.plot(spe_pre['spe'], c='b')
     ax.grid()
     ax.set_xlabel('$t/\mathrm{ns}$')
     ax.set_ylabel('$Voltage/\mathrm{mV}$')
-    fig.savefig('img/spe{:02d}.png'.format(cid), bbox_inches='tight')
+    fig.savefig('Note/figures/spe{:02d}.pgf'.format(cid))
     fig.clf()
     plt.close(fig)
     return

@@ -3,20 +3,16 @@
 Before taking deep look into the methods, input and output need to be defined. The input is pedestal subtracted PMT waveform (see figure~\ref{fig:input}), and the output is the $q_{r}$ or $n_{r}$ sequence (see figure~\ref{fig:output}). 
 
 \begin{figure}[H]
-\begin{minipage}{.5\textwidth}
-\begin{figure}[H]
-    \centering
-        \includegraphics[width=1.0\textwidth]{figures/wave.png}
-    \caption{\label{fig:input} Data input}
-\end{figure}
-\end{minipage}
-\begin{minipage}{.5\textwidth}
-\begin{figure}[H]
-    \centering
-        \includegraphics[width=1.0\textwidth]{figures/charge.png}
-    \caption{\label{fig:output} Data output}
-\end{figure}
-\end{minipage}
+    \begin{subfigure}{0.5\textwidth}
+        \centering
+        \scalebox{0.4}{\input{figures/wave.pgf}}
+        \caption{\label{fig:input} Data input}
+    \end{subfigure}
+    \begin{subfigure}{0.5\textwidth}
+        \centering
+        \scalebox{0.4}{\input{figures/charge.pgf}}
+        \caption{\label{fig:output} Data output}
+    \end{subfigure}
 \end{figure}
 
 The histogram of $N_{pe}$ and data structure show in figure (see figure~\ref{fig:penum}). 
@@ -43,8 +39,8 @@ First intuitive method is find peak method. First we find the peak of waveform, 
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.6\linewidth]{figures/findpeak.png}
-    \caption{Find Peak Method Demo, W-dist = 4.02}
+    \scalebox{0.4}{\input{figures/findpeak.pgf}}
+    \caption{Find Peak Method Demo, W-dist = 11.29}
 \end{figure}
 
 \subsection{Waveform shift}
@@ -52,7 +48,7 @@ A threshold $v_{th}$ is settled with respect to noise in simulation data. In wav
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.6\linewidth]{figures/threshold.png}
+    \scalebox{0.4}{\input{figures/threshold.pgf}}
     \caption{Waveform Shift Method Demo, W-dist = 10.75}
 \end{figure}
 
@@ -65,7 +61,7 @@ Third method is Fourier deconvolution. Assuming that the waveform is the convolu
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.6\linewidth]{figures/fftrans.png}
+    \scalebox{0.4}{\input{figures/fftrans.pgf}}
     \caption{Fourier Deconvolution Demo, W-dist = 1.63}
 \end{figure}
 
@@ -85,7 +81,7 @@ Usually 50 iterations were performed. A demonstration shows below:
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.6\linewidth]{figures/lucyddm.png}
+    \scalebox{0.4}{\input{figures/lucyddm.pgf}}
     \caption{Lucy Deconvolution Demo, W-dist = 1.25}
 \end{figure}
 
@@ -94,7 +90,7 @@ First we extract enough $v_{spe}(t)$ from simulation data in fitting method. We 
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\linewidth]{figures/demo.png}
+    \scalebox{0.4}{\input{figures/demoe1c4.pgf}}
     \caption{\label{fig:fitting} Fitting Demo, W-dist = 2.23}
 \end{figure}
 
@@ -183,7 +179,7 @@ In the training process, we trained CNN for each PMT channel. The loss which is 
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.6\linewidth]{figures/epoch.png}
+    \scalebox{0.4}{\input{figures/epoch.pgf}}
     \caption{\label{fig:loss} Loss variation during training}
 \end{figure}
 

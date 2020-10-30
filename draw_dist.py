@@ -27,7 +27,7 @@ import numpy as np
 from scipy import stats
 from tqdm import tqdm
 import matplotlib
-matplotlib.use('Agg')
+matplotlib.use('pgf')
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from matplotlib.backends.backend_pdf import PdfPages
@@ -68,7 +68,7 @@ with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as distfile:
     plt.close(fig)
     
     penum = np.unique(dt[pecount])
-    l = min(50, penum.max())
+    l = min(20, penum.max())
     wdist_stats = np.zeros((l, 4))
     edist_stats = np.zeros((l, 4))
     for i in tqdm(range(l), disable=args.pri):
