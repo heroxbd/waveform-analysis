@@ -13,7 +13,7 @@ import wf_func as wff
 
 psr = argparse.ArgumentParser()
 psr.add_argument('--ref', dest='ref', help='reference file', nargs='+')
-psr.add_argument('ipt', help="input file")
+psr.add_argument('ipt', help='input file')
 psr.add_argument('--mod', type=str, help='mode of weight', choices=['PEnum', 'Charge'])
 psr.add_argument('-N', dest='Ncpu', type=int, help='cpu number', default=50)
 psr.add_argument('-o', dest='opt', help='output file')

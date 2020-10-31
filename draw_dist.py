@@ -33,13 +33,10 @@ from matplotlib import cm
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.colors import ListedColormap
 import matplotlib.gridspec as gridspec
+import wf_func as wff
 
-plt.rcParams['savefig.dpi'] = 300
-plt.rcParams['figure.dpi'] = 300
-plt.rcParams['font.size'] = 10
-plt.rcParams['lines.markersize'] = 2
-plt.rcParams['lines.linewidth'] = 1.0
-plt.rcParams['mathtext.fontset'] = 'cm'
+matplotlib.rcParams.update(matplotlib.rcParamsDefault)
+plt.rcParams['figure.figsize'] = (12, 8)
 
 def my_cmap():
     plasma = cm.get_cmap('plasma', 65536)
@@ -56,6 +53,7 @@ with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as distfile:
     pdf = PdfPages(args.opt)
     N = np.percentile(dt['wdist'], 95)
     M = 500
+    
     fig = plt.figure()
     ax = fig.add_subplot(111)
     c, t = np.unique(dt[pecount], return_counts=True)
@@ -85,7 +83,6 @@ with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as distfile:
             edist_stats[i, 3] = np.std(dtepi)
             rss_recon = dt['RSS_recon'][dt[pecount] == i+1]
             rss_truth = dt['RSS_truth'][dt[pecount] == i+1]
-            plt.rcParams['figure.figsize'] = (12, 6)
             fig = plt.figure()
             gs = gridspec.GridSpec(2, 2, figure=fig, left=0.05, right=0.95, top=0.9, bottom=0.1, wspace=0.15, hspace=0.2)
             ax1 = fig.add_subplot(gs[0, 0])
@@ -120,7 +117,6 @@ with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as distfile:
     elif mode == 'Charge':
         extradisttitle = 'count {}(|Cd|<{}mV*ns)/{}={:.2f}'.format(b, M, l, b/l)
         sumtitle = 'W-dist&'+extradistlabel[0]+' hist,Wd<{:.2f}ns,'.format(N)+'|Cd|<{}mV*ns,'.format(M)+'flawed'
-    plt.rcParams['figure.figsize'] = (12, 6)
     fig = plt.figure()
     gs = gridspec.GridSpec(2, 2, figure=fig, left=0.1, right=0.9, top=0.9, bottom=0.1, wspace=0.2, hspace=0.3)
     ax1 = fig.add_subplot(gs[0, 0])
@@ -142,7 +138,6 @@ with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as distfile:
     pdf.savefig(fig)
     plt.close(fig)
 
-    plt.rcParams['figure.figsize'] = (12, 6)
     fig = plt.figure()
     gs = gridspec.GridSpec(1, 2, figure=fig, left=0.1, right=0.9, top=0.9, bottom=0.1, wspace=0.2, hspace=0.2)
     ax1 = fig.add_subplot(gs[0, 0])

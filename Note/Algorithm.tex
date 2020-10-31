@@ -18,20 +18,16 @@ Before taking deep look into the methods, input and output need to be defined. T
 The histogram of $N_{pe}$ and data structure show in figure (see figure~\ref{fig:penum}). 
 
 \begin{figure}[H]
-\begin{minipage}{.5\textwidth}
-\begin{figure}[H]
-    \centering
-        \includegraphics[width=1.0\textwidth]{figures/penum.png}
-    \caption{\label{fig:penum} $N_{pe}$ Histogram}
-\end{figure}
-\end{minipage}
-\begin{minipage}{.5\textwidth}
-\begin{figure}[H]
-    \centering
-        \includegraphics[width=0.7\textwidth]{figures/dataset.png}
-    \caption{\label{fig:set} Data Structure}
-\end{figure}
-\end{minipage}
+    \begin{subfigure}{0.5\textwidth}
+        \centering
+        \scalebox{0.4}{\input{figures/penum.pgf}}
+        \caption{\label{fig:penum} $N_{pe}$ Histogram}
+    \end{subfigure}
+    \begin{subfigure}{0.5\textwidth}
+        \centering
+        \scalebox{0.4}{\input{figures/dataframe.pgf}}
+        \caption{\label{fig:set} Data Structure}
+    \end{subfigure}
 \end{figure}
 
 \subsection{Find peak}
