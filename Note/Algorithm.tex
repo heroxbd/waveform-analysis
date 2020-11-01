@@ -91,36 +91,16 @@ First we extract enough $v_{spe}(t)$ from simulation data in fitting method. We 
 \end{figure}
 
 \begin{figure}[H]
-\begin{minipage}{.5\textwidth}
-\begin{figure}[H]
-    \centering
-        \includegraphics[width=1.0\textwidth]{figures/xiaopeippenumhist.png}
-    \caption{$W_{d}$ Histogram when fitting $n_{r}$}
-\end{figure}
-\end{minipage}
-\begin{minipage}{.5\textwidth}
-\begin{figure}[H]
-    \centering
-        \includegraphics[width=0.7\textwidth]{figures/xiaopeippenumstats.png}
-    \caption{$W_{d}$ vs $N_{pe}$ when fitting $n_{r}$}
-\end{figure}
-\end{minipage}
-\end{figure}
-\begin{figure}[H]
-\begin{minipage}{.5\textwidth}
-\begin{figure}[H]
-    \centering
-        \includegraphics[width=1.0\textwidth]{figures/xiaopeipchargehist.png}
-    \caption{$W_{d}$ Histogram when fitting $q_{r}$}
-\end{figure}
-\end{minipage}
-\begin{minipage}{.5\textwidth}
-\begin{figure}[H]
-    \centering
-        \includegraphics[width=0.7\textwidth]{figures/xiaopeipchargestats.png}
-    \caption{$W_{d}$ vs $N_{pos}$ when fitting $q_{r}$}
-\end{figure}
-\end{minipage}
+    \begin{subfigure}{0.5\textwidth}
+        \centering
+        \scalebox{0.4}{\input{figures/xiaopeipchargehist.pgf}}
+        \caption{$W_{d}$ Histogram when fitting $q_{r}$}
+    \end{subfigure}
+    \begin{subfigure}{0.5\textwidth}
+        \centering
+        \scalebox{0.4}{\input{figures/xiaopeipchargestats.pgf}}
+        \caption{$W_{d}$ vs $N_{pos}$ when fitting $q_{r}$}
+    \end{subfigure}
 \end{figure}
 
 % \subsection{CNN}
@@ -160,58 +140,35 @@ A direct implementation of judgement metrics into loss function is often difficu
 \begin{minipage}{.3\textwidth}
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{figures/model.png}
+    \includegraphics[width=0.6\textwidth]{figures/model.png}
     \caption{\label{fig:struct} CNN Structure}
 \end{figure}
 \end{minipage}
-\hspace{4mm}
 \begin{minipage}{.7\textwidth}
-\lstinputlisting[language=Python, basicstyle=\small]{figures/CNN}
+\begin{figure}[H]
+    \centering
+    \scalebox{0.4}{\input{figures/epoch.pgf}}
+    \caption{\label{fig:loss} Loss variation during training}
+\end{figure}
 \end{minipage}
 \end{figure}
 
 \subsubsection{Result}
 In the training process, we trained CNN for each PMT channel. The loss which is Wasserstein distance during training show in figure \ref{fig:loss}. 
 
-\begin{figure}[H]
-    \centering
-    \scalebox{0.4}{\input{figures/epoch.pgf}}
-    \caption{\label{fig:loss} Loss variation during training}
-\end{figure}
-
 The result shows that CNN is the best for reconstruction of $q_{r}(t_{H})$ and $n_{r}(t_{H})$. 
 
 \begin{figure}[H]
-\begin{minipage}{.5\textwidth}
-\begin{figure}[H]
-    \centering
-        \includegraphics[width=1.0\textwidth]{figures/takarapenumhist.png}
-    \caption{$W_{d}$ Histogram when CNN $n_{r}$}
-\end{figure}
-\end{minipage}
-\begin{minipage}{.5\textwidth}
-\begin{figure}[H]
-    \centering
-        \includegraphics[width=0.7\textwidth]{figures/takarapenumstats.png}
-    \caption{$W_{d}$ vs $N_{pe}$ when CNN $n_{r}$}
-\end{figure}
-\end{minipage}
-\end{figure}
-\begin{figure}[H]
-\begin{minipage}{.5\textwidth}
-\begin{figure}[H]
-    \centering
-        \includegraphics[width=1.0\textwidth]{figures/takarachargehist.png}
-    \caption{$W_{d}$ Histogram when CNN $q_{r}$}
-\end{figure}
-\end{minipage}
-\begin{minipage}{.5\textwidth}
-\begin{figure}[H]
-    \centering
-        \includegraphics[width=0.7\textwidth]{figures/takarachargestats.png}
-    \caption{$W_{d}$ vs $N_{pos}$ when CNN $q_{r}$}
-\end{figure}
-\end{minipage}
+    \begin{subfigure}{0.5\textwidth}
+        \centering
+        \scalebox{0.4}{\input{figures/xiaopeipchargehist.pgf}}
+        \caption{$W_{d}$ Histogram when CNN $q_{r}$}
+    \end{subfigure}
+    \begin{subfigure}{0.5\textwidth}
+        \centering
+        \scalebox{0.4}{\input{figures/xiaopeipchargestats.pgf}}
+        \caption{$W_{d}$ vs $N_{pos}$ when CNN $q_{r}$}
+    \end{subfigure}
 \end{figure}
 
 % section Algorithm (end)
