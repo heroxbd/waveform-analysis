@@ -1,38 +1,42 @@
 \section{Algorithm} % (fold)
 
-Before taking deep look into the methods, input and output need to be defined. The input is pedestal subtracted PMT waveform (see figure~\ref{fig:input}), and the output is the $q_{r}$ or $n_{r}$ sequence (see figure~\ref{fig:output}). 
+Before taking deep look into the methods, input and output need to be defined. A Geant4\cite{agostinelli_geant4simulation_2003}-based simulation package simulated events in the 1-ton detector\cite{wang_design_2017}. After collected, all data but PMT response is discarded. The input for waveform analysis is pedestal subtracted PMT waveform (see figure~\ref{fig:input}), and the output is the $q_{r}$ or $n_{r}$ sequence (see figure~\ref{fig:output}). 
 
-\begin{minipage}{.5\textwidth}
+\begin{figure}[H]
+\begin{minipage}[b]{.5\textwidth}
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/wave.pgf}}
     \caption{\label{fig:input} Data Input}
 \end{figure}
 \end{minipage}
-\begin{minipage}{.5\textwidth}
+\begin{minipage}[b]{.5\textwidth}
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/charge.pgf}}
     \caption{\label{fig:output} Data Output}
 \end{figure}
 \end{minipage}
+\end{figure}
 
 The histogram of $N_{pe}$ and data structure show in figure (see figure~\ref{fig:penum}). 
 
-\begin{minipage}{.51\textwidth}
+\begin{figure}[H]
+\begin{minipage}[b]{.51\textwidth}
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/penum.pgf}}
     \caption{\label{fig:penum} $N_{pe}$ Histogram}
 \end{figure}
 \end{minipage}
-\begin{minipage}{.49\textwidth}
+\begin{minipage}[b]{.49\textwidth}
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/dataframe.pgf}}
     \caption{\label{fig:set} Data Structure}
 \end{figure}
 \end{minipage}
+\end{figure}
 
 \subsection{Find peak}
 First intuitive method is find peak method. We first smooth the input waveform using Savitzky–Golay filter, find the peak of waveform, then move the peaks leftward. The $\Delta t$ we move is the peak time of $v_{spe}$. The demonstration here shows a result with W-dist = 11.29ns. 
@@ -106,32 +110,33 @@ The figure \ref{fig:fitting} shows one of the fitting result. We can see the ori
 
 The overall result of W-dist shows in figure (see figure~\ref{fig:fitting-hist}\&\ref{fig:fitting-npos}). The error bar shows 10 to 90 percentile of Wasserstein distance distribution. 
 
-\begin{minipage}{.5\textwidth}
+\begin{figure}[H]
+\begin{minipage}[b]{.5\textwidth}
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/xiaopeipchargehist.pgf}}
     \caption{\label{fig:fitting-hist} $W_{d}$ Histogram when fitting $q_{r}$}
 \end{figure}
 \end{minipage}
-\begin{minipage}{.5\textwidth}
+\begin{minipage}[b]{.5\textwidth}
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/xiaopeipchargestats.pgf}}
     \caption{\label{fig:fitting-npos} $W_{d}$ vs $N_{pos}$ when fitting $q_{r}$}
 \end{figure}
 \end{minipage}
+\end{figure}
 
-% \subsection{CNN}
 \subsection{CNN}
 
 \subsubsection{Network structure}
 %\subsection{What is a good Network Structure?} 
 
-Advances in neural networks have brought breakthroughs in various domains like Computer Vision and Natural Language Processing. As an efficient composition with weighted additions and pointwise nonlinearities, the method has prevailed against most of the traditional algorithms in pattern recognition tasks. In our experiment, we introduced a multi-layer convolutional neural network to process time-sensitive signals from detector outputs. Based on the Physics nature that a detector signal (PMT outputs) do only have a local correlation with recent incoming particles (photons incidents), we chose convolutional setups with a moderate total width coverage. From a view of information, a broader coverage by an output neuron's receptive field on its related area will contribute to higher accuracy, while redundant connections could only lead to excessive computation and lower processing speed. As a result, a wise setup should try to cover all relevant signal areas exclusively while cutting off every connection unnecessary, balancing the speed and accuracy from the two mentioned effects.
+Advances in neural networks have brought breakthroughs in various domains like Computer Vision and Natural Language Processing. As an efficient composition with weighted additions and pointwise nonlinearities, the method has prevailed against most of the traditional algorithms in pattern recognition tasks. In our experiment, we introduced a multi-layer convolutional neural network (CNN) to process time-sensitive signals from detector outputs. Based on the Physics nature that a detector signal (PMT outputs) do only have a local correlation with recent incoming particles (photons incidents), we chose convolutional setups with a moderate total width coverage. From a view of information, a broader coverage by an output neuron's receptive field on its related area will contribute to higher accuracy, while redundant connections could only lead to excessive computation and lower processing speed. As a result, a wise setup should try to cover all relevant signal areas exclusively while cutting off every connection unnecessary, balancing the speed and accuracy from the two mentioned effects.
 
 A similar trade-off also exists in the depth of the neural network. A deeper network could provide more complex combinations to all detected features, and the computation complexity of result calculation changes linearly with the depth. With the existence of advanced structure like residual connection and strategies like batch-norm, depth in training is never a problem. However, to cut the computation in massive experimental data, a network should be relatively shallow. Detector signals are relatively similar and peak-shaped. Such a simple pattern does not require many layers to recognize. A good design for the task is a network with 4 to 6 layers. Deeper structures may bring a slight improvement in precision but will introduce a considerable increase in processing cost.
 
-A convolutional neural network is developed to analys the waveform. Here is the structure of CNN which has 5 convolutional layer (see figure~\ref{fig:struct}). The length of data remains the same. 
+A CNN is developed to analys the waveform. Here is the structure of CNN which has 5 convolutional layer (see figure~\ref{fig:struct}). The length of data remains the same. 
 
 \subsubsection{Processing workflow}
 %\subsection{What is a complete workflow of Data Processing?}
@@ -155,14 +160,14 @@ To cope with sparsity in value-based processing, we have introduced a reconstruc
 A direct implementation of judgement metrics into loss function is often difficult. To deal with sparsity and encourage time accuracy, we established the loss function on the cumulative distribution functions (CDF) of normalized outputs. The form of cumulative sums could build a connection between sequence prediction and its previous values, making optimization through history possible. Moreover, the first Wasserstein distance between two 1D distributions is equivalent to the norm-1 difference of two corresponding CDFs. The optimal transport amount described by this metric is a reliable measurement standard to all distribution differences, including cases in our application.
 
 \begin{figure}[H]
-\begin{minipage}{.3\textwidth}
+\begin{minipage}[b]{.3\textwidth}
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.63\textwidth]{figures/model.png}
     \caption{\label{fig:struct} CNN Structure}
 \end{figure}
 \end{minipage}
-\begin{minipage}{.7\textwidth}
+\begin{minipage}[b]{.7\textwidth}
 \begin{figure}[H]
     \centering
     \resizebox{0.7\textwidth}{!}{\input{figures/epoch.pgf}}
@@ -176,19 +181,21 @@ In the training process, we trained CNN for each PMT channel. The loss which is 
 
 The result shows that CNN is the best for reconstruction of $q_{r}(t_{H})$ and $n_{r}(t_{H})$. The error bar shows 10 to 90 percentile of Wasserstein distance distribution. 
 
-\begin{minipage}{.5\textwidth}
+\begin{figure}[H]
+\begin{minipage}[b]{.5\textwidth}
 \begin{figure}[H]
     \centering
-    \resizebox{\textwidth}{!}{\input{figures/xiaopeipchargehist.pgf}}
+    \resizebox{\textwidth}{!}{\input{figures/takarachargehist.pgf}}
     \caption{$W_{d}$ Histogram when CNN $q_{r}$}
 \end{figure}
 \end{minipage}
-\begin{minipage}{.5\textwidth}
+\begin{minipage}[b]{.5\textwidth}
 \begin{figure}[H]
     \centering
-    \resizebox{\textwidth}{!}{\input{figures/xiaopeipchargestats.pgf}}
+    \resizebox{\textwidth}{!}{\input{figures/takarachargestats.pgf}}
     \caption{$W_{d}$ vs $N_{pos}$ when CNN $q_{r}$}
 \end{figure}
 \end{minipage}
+\end{figure}
 
 % section Algorithm (end)

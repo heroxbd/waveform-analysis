@@ -15,13 +15,11 @@ The number of PE ($N_{pe}$) in a waveform is sampled from a Poisson distribution
 
 The result of the toy MC shows in figure~\ref{fig:reso-diff}, where $\delta_{1st}$ and $\delta_{all}$ are time resolution when using the first PE and all PE, respectively.  Error bars are too thin to be seen. It is distinct that the time resolution is smaller when reconstructing rise time using all PE. 
 
-\begin{minipage}{1.0\textwidth}
-\begin{figure}[H]    
+\begin{figure}[H]
     \centering
     \scalebox{0.35}{\input{figures/vs-deltasub.pgf}}
     \caption{\label{fig:reso-diff} Time resolution improved of waveform analysis}
 \end{figure}
-\end{minipage}
 
 Therefore PMT waveform analysis is necessary when we pursue completely usage of PMT output. 
 
@@ -33,7 +31,7 @@ Therefore PMT waveform analysis is necessary when we pursue completely usage of 
     \item $v_{spe}(t)$ - Single-photoelectron (SPE) response
     \item $v_{th}$ - Voltage threshold
     \item $q_{r}(t_{H})$ - Reconstructed charge
-    \item $n_{r}(t_{H})$ - Reconstructed number of PE
+    \item $n_{r}(t_{H})$ - Reconstructed number of PE (\#PE)
     \item $v_{r}(t)$ - Reconstructed waveform
     \item $Q$ - Total Charge in a DAQ window
     \item $N_{pe}$ - Total PE number in a DAQ window
