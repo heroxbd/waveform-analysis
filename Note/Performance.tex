@@ -1,18 +1,19 @@
 \section{Performance} % (fold)
-A summary of all methods is plotted in \ref{fig:chargesummary} and \ref{fig:penumsummary}. Figure~\ref{fig:chargesummary} is reconstruction of $q_{r}$. Figure~\ref{fig:penumsummary} is reconstruction of $n_{r}$. The errorbar shows 10 to 90 percentile of Wasserstein distance. 
-
+A summary of all methods is plotted in \ref{fig:chargesummary} and \ref{fig:penumsummary}. Figure~\ref{fig:chargesummary} is reconstruction of $q_{r}$. Figure~\ref{fig:penumsummary} is reconstruction of $n_{r}$. The errorbar shows 10 to 90 percentile of Wasserstein distance distribution. 
+\begin{minipage}{.5\textwidth}
 \begin{figure}[H]
-    \begin{subfigure}{0.5\textwidth}
-        \centering
-        \scalebox{0.4}{\input{figures/summarycharge.pgf}}
-        \caption{\label{fig:chargesummary} $W_{d}$ of methods, error bar 10--90 percentile ($q_{r}$)}
-    \end{subfigure}
-    \begin{subfigure}{0.5\textwidth}
-        \centering
-        \scalebox{0.4}{\input{figures/summarypenum.pgf}}
-        \caption{\label{fig:penumsummary} $W_{d}$ of methods, error bar 10--90 percentile ($n_{r}$)}
-    \end{subfigure}
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/summarycharge.pgf}}
+    \caption{\label{fig:chargesummary} $W_{d}$ of methods, error bar 10--90 percentile ($q_{r}$)}
 \end{figure}
+\end{minipage}
+\begin{minipage}{.5\textwidth}
+\begin{figure}[H]
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/summarypenum.pgf}}
+    \caption{\label{fig:penumsummary} $W_{d}$ of methods, error bar 10--90 percentile ($n_{r}$)}
+\end{figure}
+\end{minipage}
 
 The efficiency of CNN fitting and Lucy deconvolution method show in table~\ref{fig:efficiency}. The CNN is faster than Lucy deconvolution, and much faster than fitting. 
 
@@ -38,10 +39,12 @@ The efficiency of CNN fitting and Lucy deconvolution method show in table~\ref{f
     \end{tabular}
 \end{table}
 \hspace{4mm}
+
+The hardware we used listed here: 
 \begin{center}
 \begin{itemize}
-    \item GPU: Using one graphic card of NVIDIA Tesla K80
-    \item CPU: Using 50 CPU cores of AMD EYPC 7702
+    \item GPU: Using one graphic card of NVIDIA\textsuperscript{\textregistered} Tesla\textsuperscript{\textregistered} K80
+    \item CPU: Using 50 CPU cores of AMD EYPC\texttrademark\ 7702
 \end{itemize}
 \end{center}
 

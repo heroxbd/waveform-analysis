@@ -1,5 +1,5 @@
 \section{Wasserstein distance} % (fold)
-A figure of merit to discrete the difference between reconstruction result and the truth is crucial. $P(X)$ and $Q(X)$ are 2 probability density function of random variable $X$. There are many ways to measure the difference (distance) of $P(X)$ and $Q(X)$: 
+A figure of merit to distinguish the difference between reconstruction result and the truth is crucial. $P(X)$ and $Q(X)$ are 2 probability density function of random variable $X$. There are many ways to measure the difference (distance) of $P(X)$ and $Q(X)$: 
 
 \begin{figure}[H]
 \begin{minipage}{.25\textwidth}
@@ -19,12 +19,11 @@ A figure of merit to discrete the difference between reconstruction result and t
 \end{minipage}
 \end{figure}
 
-But these distances have certain shortcomings. They cannot compare discrete distribution with continuous distribution. And they are not sensitive to timing. As the graph shows, the L2 distances between the distribution of a--b1 and a--b2 is both 0.25, but the shape of the b1--b2 distribution is very different (see figure~\ref{fig:l2}). 
+But these distances have certain shortcomings. They cannot compare discrete distribution with continuous distribution. And they are not sensitive to timing: as the graph shows, the L2 distances between the distribution of $a,b_{1}$ and $a,b_{2}$ is both 0.25, but the shape of the $b_{1}$ and $b_{2}$ distribution is very different (see figure~\ref{fig:l2}). 
 
 \label{sub:Wasserstein distance}
     \begin{equation}
-        W_{p}(\mu,\nu):=\left(\inf_{\gamma\in\Phi(\mu,\nu)}\int_{\chi}d(x,y)^{p}\,\mathrm{d}\gamma(x,y)\right)^{1/p}
-        \label{eq:w-dist-def}
+        W_{p}(\mu,\nu):=\left(\inf_{\gamma\in\Phi(\mu,\nu)}\int_{\chi}d(x,y)^{p}\,\mathrm{d}\gamma(x,y)\right)^{1/p} \label{eq:w-dist-def}
     \end{equation}
     \begin{figure}[H]
         \centering
@@ -32,10 +31,9 @@ But these distances have certain shortcomings. They cannot compare discrete dist
         \caption{\label{fig:Wasserstein transportation} Wasserstein transportation}
     \end{figure}
 
-Wasserstein distance can overcome these difficulty. Wasserstein distance between $\mu$ and $\nu$ as the minimal effort to transport mass from distribution $\mu$ to $\nu$. Further the mass moves, more the effort we need to give. The transport plan is described by $\gamma(x, y)$. $d(x,y)^{p}$ in the formula \eqref{eq:w-dist-def} is the Borel measure in
-on Polish spaces. There is a minimum function in the functional space of $\gamma(x, y)$, whose corresponding $W_{p}(\mu ,\nu)$ is the Wasserstein distance between $\mu$ and $\nu$. 
+Wasserstein distance can overcome these difficulty. Wasserstein distance between $\mu$ and $\nu$ as the minimal effort to transport mass from distribution $\mu$ to $\nu$. Further the mass moves, more the effort we need to give. The transport plan is described by $\gamma(x, y)$. $d(x,y)^{p}$ in the formula~\eqref{eq:w-dist-def} is the Borel measure on Polish spaces\cite{villani_2009}. There is a minimum function in the functional space of $\gamma(x, y)$, whose corresponding $W_{p}(\mu ,\nu)$ is the Wasserstein distance between $\mu$ and $\nu$. 
 
-In practice, the loss we used in numerical calculation is defined here. We first calculate subtraction of the cumulative distribution function (CDF) of A and the CDF of B. Then take the sum of absolute value of the subtraction. That is the L1 distance of cumulative distribution function of A \& B. We can prove that the distance we define here is equivalent to Wasserstein distance. 
+In practice, the loss (Wasserstein distance, abbreviated as W-dist) we used in numerical calculation is defined here. We first calculate subtraction of the cumulative distribution function (CDF) of A and the CDF of B. Then take the sum (or integral) of absolute value of the subtraction. That is the L1 distance of cumulative distribution function of A \& B. It is proved that the distance we define here is equivalent to Wasserstein distance. 
 
 \begin{equation}
     W_{p}=\sum_t|\mathrm{CDF}_A(t) - \mathrm{CDF}_B(t)|

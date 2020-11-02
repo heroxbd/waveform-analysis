@@ -2,58 +2,64 @@
 
 Before taking deep look into the methods, input and output need to be defined. The input is pedestal subtracted PMT waveform (see figure~\ref{fig:input}), and the output is the $q_{r}$ or $n_{r}$ sequence (see figure~\ref{fig:output}). 
 
+\begin{minipage}{.5\textwidth}
 \begin{figure}[H]
-    \begin{subfigure}{0.5\textwidth}
-        \centering
-        \scalebox{0.4}{\input{figures/wave.pgf}}
-        \caption{\label{fig:input} Data input}
-    \end{subfigure}
-    \begin{subfigure}{0.5\textwidth}
-        \centering
-        \scalebox{0.4}{\input{figures/charge.pgf}}
-        \caption{\label{fig:output} Data output}
-    \end{subfigure}
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/wave.pgf}}
+    \caption{\label{fig:input} Data Input}
 \end{figure}
+\end{minipage}
+\begin{minipage}{.5\textwidth}
+\begin{figure}[H]
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/charge.pgf}}
+    \caption{\label{fig:output} Data Output}
+\end{figure}
+\end{minipage}
 
 The histogram of $N_{pe}$ and data structure show in figure (see figure~\ref{fig:penum}). 
 
+\begin{minipage}{.51\textwidth}
 \begin{figure}[H]
-    \begin{subfigure}{0.5\textwidth}
-        \centering
-        \scalebox{0.4}{\input{figures/penum.pgf}}
-        \caption{\label{fig:penum} $N_{pe}$ Histogram}
-    \end{subfigure}
-    \begin{subfigure}{0.5\textwidth}
-        \centering
-        \scalebox{0.4}{\input{figures/dataframe.pgf}}
-        \caption{\label{fig:set} Data Structure}
-    \end{subfigure}
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/penum.pgf}}
+    \caption{\label{fig:penum} $N_{pe}$ Histogram}
 \end{figure}
+\end{minipage}
+\begin{minipage}{.49\textwidth}
+\begin{figure}[H]
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/dataframe.pgf}}
+    \caption{\label{fig:set} Data Structure}
+\end{figure}
+\end{minipage}
 
 \subsection{Find peak}
-First intuitive method is find peak method. First we find the peak of waveform, then we move leftward. The delta t we move is the peak time of $v_{spe}$. 
+First intuitive method is find peak method. We first smooth the input waveform using Savitzky–Golay filter, find the peak of waveform, then move the peaks leftward. The $\Delta t$ we move is the peak time of $v_{spe}$. The demonstration here shows a result with W-dist = 11.29ns. 
 
 \begin{figure}[H]
     \centering
     \scalebox{0.4}{\input{figures/findpeak.pgf}}
-    \caption{Find Peak Method Demo, W-dist = 11.29}
+    \caption{Find Peak Method Demo, W-dist = 11.29ns}
 \end{figure}
 
 \subsection{Waveform shift}
-A threshold $v_{th}$ is settled with respect to noise in simulation data. In waveform shift method, first we locate $v_{w}(t)$ which exceeds $v_{th}$. Then we shift the exceeding part leftward. The time length shifted is referenced to $v_{spe}$. And treat the normalized exceeding part as $q_{r}(t_{H})$ or $n_{r}(t_{H})$. 
+A threshold $v_{th}$ is settled with respect to noise in simulation data. In waveform shift method, first we locate $v_{w}(t)$ which exceeds $v_{th}$. Then we shift the exceeding part leftward. The $\Delta t$ we move is the peak time of $v_{spe}$. And treat the normalized exceeding part as $q_{r}(t_{H})$ or $n_{r}(t_{H})$. The demonstration here shows a result with W-dist = 10.75ns. 
 
 \begin{figure}[H]
     \centering
     \scalebox{0.4}{\input{figures/threshold.pgf}}
-    \caption{Waveform Shift Method Demo, W-dist = 10.75}
+    \caption{Waveform Shift Method Demo, W-dist = 10.75ns}
 \end{figure}
 
 \subsection{Fourier transform deconvolution}
-Third method is Fourier deconvolution. Assuming that the waveform is the convolution of $v_{spe}$ and $t_{H}$, the fft of $v_{w}$ and $v_{spe}$ are computed. A rectangular filter is added. Then compute the inverse fft of the quotient of filtered fft of $v_{w}$ and fft of $v_{spe}$. 
+Third method is Fourier deconvolution. First we extract enough $v_{spe}(t)$ from simulation data in fitting method. We suppose the average of these $v_{w}$ is the $v_{spe}$. Assuming that the waveform is the convolution of $v_{spe}$ and $q_{r}(t_{H})$ (or $n_{r}(t_{H})$), the Fast Fourier transform (fft) of $v_{w}$ and $v_{spe}$ are computed. A rectangular filter is added. Then compute the inverse fft of the quotient, which is between filtered fft of $v_{w}$ and fft of $v_{spe}$. 
 
 \begin{itemize}
-    \item Results = IFFT\{ Filter[ FFT($v_{w}$) / FFT($v_{spe}$) ] \}
+    \item Results = IFFT\{ Filter[ FFT($v_{w}$) ] / FFT($v_{spe}$) \}
 \end{itemize}
+
+The demonstration here shows a result with W-dist = 1.63ns. 
 
 \begin{figure}[H]
     \centering
@@ -64,16 +70,13 @@ Third method is Fourier deconvolution. Assuming that the waveform is the convolu
 \subsection{Lucy deconvolution}
 Lucy-Richardson deconvolution is a non linear iteration method, to calculate the deconvolution of signals. Lucy deconvolution has an advantage against Fourier deconvolution which is a constraint that $q_{r}(t_{H})$ or $n_{r}(t_{H})$ are larger than 0. 
 
-In $t$-th Lucy iteration, the calculation shows in \eqref{eq:lucy-inter}
+In $t$-th Lucy iteration, the calculation shows in \eqref{eq:lucy-inter} where $v^{*}_{spe}$ is flipped $v_{spe}$. 
 \begin{align}
     q_{r}^{(0)} &= \frac{v_{w}}{\int v_{spe}} \\
-    q_{r}^{(t)} &= q_{r}^{(t-1)} \cdot \left(\frac{v_{w}}{q_{r}^{(t-1)} \otimes v_{spe}} \otimes v^{*}_{spe}\right)
-    \label{eq:lucy-inter}
+    q_{r}^{(n)} &= q_{r}^{(n-1)} \cdot \left(\frac{v_{w}}{q_{r}^{(n-1)} \otimes v_{spe}} \otimes v^{*}_{spe}\right) \label{eq:lucy-inter}
 \end{align}
 
-$v^{*}_{spe}$ is flipped $v_{spe}$. 
-
-Usually 50 iterations were performed. A demonstration shows below: 
+Usually 50 iterations were performed ($n_{max}=50$). The demonstration here shows a result with W-dist = 1.25ns. 
 
 \begin{figure}[H]
     \centering
@@ -82,26 +85,41 @@ Usually 50 iterations were performed. A demonstration shows below:
 \end{figure}
 
 \subsection{Fitting}
-First we extract enough $v_{spe}(t)$ from simulation data in fitting method. We suppose the average of these $v_{w}$ is the $v_{spe}$. In fitting process, the parameter is $q_{r}(t_{H})$ or $n_{r}(t_{H})$ in each discrete $t_{H}$. The loss which we need to optimize is the truth wave and reconstructed wave according to the parameters. The figure \ref{fig:fitting} shows one of the fitting result. We can see the truth waveform $v_{w}$ and reconstructed waveform $v_{r}$ are very similar. 
+Waveform is the convolution of $v_{spe}$ and $q_{r}(t_{H})$ (or $n_{r}(t_{H})$), using $q_{r}(t_{H})$ as an example below (see formula~\eqref{eq:wave-con}). 
+\begin{align}
+    v_{w} &= q_{r} \otimes v_{spe} \label{eq:wave-con} \\
+    L &= L(v_{r}(t), v_{w}(t)) = L(q_{r}(t_{H}), v_{spe}, v_{w}(t)) = RSS(v_{w}, q_{r} \otimes v_{spe}) \label{eq:loss-rss}
+\end{align}
 
+In fitting process, the parameter is $q_{r}(t_{H})$ or $n_{r}(t_{H})$ in each discrete $t_{H}$. The complete information hided in origin waveform is disturbed by background noise and pile-up. The loss (see formula~\ref{eq:loss-rss}) which is optimized is the Residual sum of squares (RSS) between the origin wave $v_{w}(t)$ and reconstructed wave $v_{r}(t)$ according to the parameters. The parameters will tend to be preciser when the reconstructed wave approaching to the origin wave. 
+
+Fitting program is implemented with Limited-memory BFGS with bound constraint\cite{byrd_limited_1995} (L-BFGS-B). The $q_{r}$ and $n_{r}$ are constrained to be larger than 0. 
+
+The L-BFGS-B depends on gradient evaluation and its iteration stops when gradient is smaller than a certain tiny value. In some circumstances the fitting result may stuck in local minimum rather than global minimum. An program based on Hamiltonian Monte Carlo (HMC) is developed intending to obtain global minimum. HMC is a efficient Markov Chain Monte Carlo (MCMC) method for achieving samples from a distribution for which direct sampling is difficult\cite{neal_mcmc_2012}. The sample derived by HMC can usually be ergodic in the distribution, so the global minimum will be obtain with large sampling set. But the results are similar with L-BFGS-B and HMC. 
+
+The figure \ref{fig:fitting} shows one of the fitting result. We can see the origin waveform $v_{w}$ and reconstructed waveform $v_{r}$ are very similar. The reconstructed and truth $q_{r}$ are also similar. 
 \begin{figure}[H]
     \centering
     \scalebox{0.4}{\input{figures/demoe1c4.pgf}}
-    \caption{\label{fig:fitting} Fitting Demo, W-dist = 2.23}
+    \caption{\label{fig:fitting} Fitting Demo, W-dist = 2.26}
 \end{figure}
 
+The overall result of W-dist shows in figure (see figure~\ref{fig:fitting-hist}\&\ref{fig:fitting-npos}). The error bar shows 10 to 90 percentile of Wasserstein distance distribution. 
+
+\begin{minipage}{.5\textwidth}
 \begin{figure}[H]
-    \begin{subfigure}{0.5\textwidth}
-        \centering
-        \scalebox{0.4}{\input{figures/xiaopeipchargehist.pgf}}
-        \caption{$W_{d}$ Histogram when fitting $q_{r}$}
-    \end{subfigure}
-    \begin{subfigure}{0.5\textwidth}
-        \centering
-        \scalebox{0.4}{\input{figures/xiaopeipchargestats.pgf}}
-        \caption{$W_{d}$ vs $N_{pos}$ when fitting $q_{r}$}
-    \end{subfigure}
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/xiaopeipchargehist.pgf}}
+    \caption{\label{fig:fitting-hist} $W_{d}$ Histogram when fitting $q_{r}$}
 \end{figure}
+\end{minipage}
+\begin{minipage}{.5\textwidth}
+\begin{figure}[H]
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/xiaopeipchargestats.pgf}}
+    \caption{\label{fig:fitting-npos} $W_{d}$ vs $N_{pos}$ when fitting $q_{r}$}
+\end{figure}
+\end{minipage}
 
 % \subsection{CNN}
 \subsection{CNN}
@@ -140,14 +158,14 @@ A direct implementation of judgement metrics into loss function is often difficu
 \begin{minipage}{.3\textwidth}
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.6\textwidth]{figures/model.png}
+    \includegraphics[width=0.63\textwidth]{figures/model.png}
     \caption{\label{fig:struct} CNN Structure}
 \end{figure}
 \end{minipage}
 \begin{minipage}{.7\textwidth}
 \begin{figure}[H]
     \centering
-    \scalebox{0.4}{\input{figures/epoch.pgf}}
+    \resizebox{0.7\textwidth}{!}{\input{figures/epoch.pgf}}
     \caption{\label{fig:loss} Loss variation during training}
 \end{figure}
 \end{minipage}
@@ -156,19 +174,21 @@ A direct implementation of judgement metrics into loss function is often difficu
 \subsubsection{Result}
 In the training process, we trained CNN for each PMT channel. The loss which is Wasserstein distance during training show in figure \ref{fig:loss}. 
 
-The result shows that CNN is the best for reconstruction of $q_{r}(t_{H})$ and $n_{r}(t_{H})$. 
+The result shows that CNN is the best for reconstruction of $q_{r}(t_{H})$ and $n_{r}(t_{H})$. The error bar shows 10 to 90 percentile of Wasserstein distance distribution. 
 
+\begin{minipage}{.5\textwidth}
 \begin{figure}[H]
-    \begin{subfigure}{0.5\textwidth}
-        \centering
-        \scalebox{0.4}{\input{figures/xiaopeipchargehist.pgf}}
-        \caption{$W_{d}$ Histogram when CNN $q_{r}$}
-    \end{subfigure}
-    \begin{subfigure}{0.5\textwidth}
-        \centering
-        \scalebox{0.4}{\input{figures/xiaopeipchargestats.pgf}}
-        \caption{$W_{d}$ vs $N_{pos}$ when CNN $q_{r}$}
-    \end{subfigure}
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/xiaopeipchargehist.pgf}}
+    \caption{$W_{d}$ Histogram when CNN $q_{r}$}
 \end{figure}
+\end{minipage}
+\begin{minipage}{.5\textwidth}
+\begin{figure}[H]
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/xiaopeipchargestats.pgf}}
+    \caption{$W_{d}$ vs $N_{pos}$ when CNN $q_{r}$}
+\end{figure}
+\end{minipage}
 
 % section Algorithm (end)

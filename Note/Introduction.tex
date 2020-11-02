@@ -4,12 +4,16 @@ PMT is involved in many neutrino and dark matter experiments. Traditionally, wav
 
 Extracting the information of time and number of photons hitting will provide more detailed information of light transmit model in detector and will finally enhance the performance of event reconstruction, even particle identification. 
 
-A toy MC has been developed to demonstrate the time resolution improve induced by detailed waveform analysis. We assume the time profile of the liquid scintillator is an exponential function convoluted by a gaussian function caused by the transit time spread of PMT\cite{li_separation_2016}, with the form in the formula \eqref{eq:time-pro}. 
+A toy MC has been developed to demonstrate the time resolution improve induced by detailed waveform analysis. We assume the time profile of the liquid scintillator is an exponential function convoluted by a gaussian function\cite{li_separation_2016} caused by the transit time spread of PMT, with the form in the formula \eqref{eq:time-pro}. 
 
 \begin{equation}
     f(t) = \frac{1}{\tau}e^{-\frac{t - t_{0}}{\tau}} \otimes \mathcal{N}(\sigma)
     \label{eq:time-pro}
 \end{equation}
+
+The number of PE ($N_{pe}$) in a waveform is sampled from a Poisson distribution with expectation $\mu$. We used Maximum Likelihood Estimation (MLE) to estimate $t_{0}$ in formula\eqref{eq:time-pro}, which is the rise time of the time profile. The typical combination of decay time ($\tau$) and transit time spread ($\sigma$) are listed in figure (see figure~\ref{fig:reso-diff}). For every PE expectation $\mu$, a sample set (size $N=10,000$) is generated to estimate the time resolution $\delta$, which is the residual ($\Delta t_{0}$) distribution spread. 
+
+The result of the toy MC shows in figure~\ref{fig:reso-diff}, where $\delta_{1st}$ and $\delta_{all}$ are time resolution when using the first PE and all PE, respectively.  Error bars are too thin to be seen. It is distinct that the time resolution is smaller when reconstructing rise time using all PE. 
 
 \begin{minipage}{1.0\textwidth}
 \begin{figure}[H]    
@@ -36,5 +40,5 @@ Therefore PMT waveform analysis is necessary when we pursue completely usage of 
     \item $N_{pos}$ - Total number of hittime in a DAQ window
     \item $W_{d}$ - Wasserstein distance
 \end{itemize}
-The $t$ and $t_{H}$ we defined here is discrete value in 1 DAQ window (from 0 to 1029ns, step size is 1ns in Jinping 1ton prototype DAQ system). 
+The $t$ and $t_{H}$ we defined here is discrete value in 1 DAQ window (from 0 to 1029ns, step size is 1ns in Jinping 1ton prototype DAQ system). Therefore $N_{pos}$ is not equal to $N_{pe}$ ($N_{pe} \geq N_{pos}$). 
 % section Introduction (end)

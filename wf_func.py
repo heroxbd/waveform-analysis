@@ -18,8 +18,6 @@ from JPwaptool import JPwaptool
 import h5py
 from scipy.interpolate import interp1d
 
-# plt.style.use('ggplot')
-# plt.style.use('seaborn')
 plt.style.use('classic')
 plt.rcParams['savefig.dpi'] = 100
 plt.rcParams['figure.dpi'] = 100
