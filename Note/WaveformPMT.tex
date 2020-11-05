@@ -7,7 +7,7 @@ Timing resolution is determined by PMT and waveform analysis. Typical PMT respon
 \begin{minipage}[b]{.5\textwidth}
 \begin{figure}[H]
     \centering
-    \resizebox{\textwidth}{!}{\input{figures/spe04.pgf}}
+    \resizebox{\textwidth}{!}{\input{figures/spe.pgf}}
     \caption{\label{fig:spe} SPE response of PMT}
 \end{figure}
 \end{minipage}
@@ -20,24 +20,26 @@ Timing resolution is determined by PMT and waveform analysis. Typical PMT respon
 \end{minipage}
 \end{figure}
 
-Most of the time, when handling PMT waveform we record the first $t_{H}$ according to $v_{th}$ and $Q$. One waveform is converted to a pair of numbers. More detailed information of the waveform (see figure~\ref{fig:tradi}) was lost. The intention this work is extracting information of all hits in 1 DAQ window including $t_{H}$ \& $q_{r}(t_{H})$ or $n_{r}(t_{H})$ (see figure~\ref{fig:new}). 
+% Most of the time, when handling PMT waveform we record the first $t_{H}$ according to $v_{th}$ and $Q$. One waveform is converted to a pair of numbers. More detailed information of the waveform (see figure~\ref{fig:tradi}) was lost. The intention this work is extracting information of all hits in 1 DAQ window including $t_{H}$ \& $q_{r}(t_{H})$ or $n_{r}(t_{H})$ (see figure~\ref{fig:new}). 
 
-\begin{figure}[H]
-\begin{minipage}[b]{.5\textwidth}
-\begin{figure}[H]
-    \centering
-    \resizebox{\textwidth}{!}{\input{figures/previous.pgf}}
-    \caption{\label{fig:tradi} Traditional Recorded Waveform}
-\end{figure}
-\end{minipage}
-\begin{minipage}[b]{.5\textwidth}
-\begin{figure}[H]
-    \centering
-    \resizebox{\textwidth}{!}{\input{figures/goal.pgf}}
-    \caption{\label{fig:new} New Goal Recorded Waveform}
-\end{figure}
-\end{minipage}
-\end{figure}
+% \begin{figure}[H]
+% \begin{minipage}[b]{.5\textwidth}
+% \begin{figure}[H]
+%     \centering
+%     \resizebox{\textwidth}{!}{\input{figures/previous.pgf}}
+%     \caption{\label{fig:tradi} Traditional Recorded Waveform}
+% \end{figure}
+% \end{minipage}
+% \begin{minipage}[b]{.5\textwidth}
+% \begin{figure}[H]
+%     \centering
+%     \resizebox{\textwidth}{!}{\input{figures/goal.pgf}}
+%     \caption{\label{fig:new} New Goal Recorded Waveform}
+% \end{figure}
+% \end{minipage}
+% \end{figure}
+
+Most of the time, when handling PMT waveform we record the first $t_{H}$ according to $v_{th}$ and $Q$. One waveform is converted to a pair of numbers. More detailed information of the waveform was lost. The intention this work is extracting information of all hits in 1 DAQ window including $t_{H}$ \& $q_{r}(t_{H})$ or $n_{r}(t_{H})$. 
 
 Charge is the integration of waveform component which induced by SPE. SPE induced charge can be a wide distribution, rather than a single value. Therefore reconstructing $n_{r}(t_{H})$ is difficult than reconstructing $q_{r}(t_{H})$. 
 

@@ -22,19 +22,37 @@ Before taking deep look into the methods, input and output need to be defined. A
 The histogram of $N_{pe}$ and data structure show in figure (see figure~\ref{fig:penum}). 
 
 \begin{figure}[H]
-\begin{minipage}[b]{.51\textwidth}
+\begin{minipage}[b]{.6\textwidth}
 \begin{figure}[H]
     \centering
-    \resizebox{\textwidth}{!}{\input{figures/penum.pgf}}
-    \caption{\label{fig:penum} $N_{pe}$ Histogram}
+    \resizebox{\textwidth}{!}{\input{figures/pepos.pgf}}
+    \caption{\label{fig:penum} $N_{pos}$ Histogram}
 \end{figure}
 \end{minipage}
-\begin{minipage}[b]{.49\textwidth}
-\begin{figure}[H]
+\begin{minipage}[b]{.4\textwidth}
+\begin{table}[H]
     \centering
-    \resizebox{\textwidth}{!}{\input{figures/dataframe.pgf}}
+    \begin{adjustbox}{width=\textwidth}
+    \begin{tabular}{r|r|r|r}
+        \hline
+        EventID & ChannelID & HitTime & Charge \\ \hline
+        1       & 4         & 271     & 256.23 \\ \hline
+        1       & 4         & 272     & 70.78  \\ \hline
+        1       & 4         & 276     & 150.14 \\ \hline
+        1       & 4         & 278     & 148.26 \\ \hline
+        1       & 4         & 283     & 262.02 \\ \hline
+        1       & 4         & 284     & 90.74  \\ \hline
+        1       & 4         & 285     & 166.08 \\ \hline
+        1       & 4         & 287     & 90.57  \\ \hline
+        1       & 4         & 290     & 52.15  \\ \hline
+        1       & 4         & 290     & 102.82 \\ \hline
+        1       & 4         & 293     & 224.37 \\ \hline
+        1       & 4         & 301     & 78.9   \\ \hline
+        1       & 4	        & 306	  & 138.40 \\ \hline
+    \end{tabular}
+    \end{adjustbox}
     \caption{\label{fig:set} Data Structure}
-\end{figure}
+\end{table}
 \end{minipage}
 \end{figure}
 
@@ -76,7 +94,7 @@ Lucy-Richardson deconvolution is a non linear iteration method, to calculate the
 
 In $t$-th Lucy iteration, the calculation shows in \eqref{eq:lucy-inter} where $v^{*}_{spe}$ is flipped $v_{spe}$. 
 \begin{align}
-    q_{r}^{(0)} &= \frac{v_{w}}{\int v_{spe}} \\
+    q_{r}^{(0)} &= \frac{v_{w}}{\sum v_{spe}} \\
     q_{r}^{(n)} &= q_{r}^{(n-1)} \cdot \left(\frac{v_{w}}{q_{r}^{(n-1)} \otimes v_{spe}} \otimes v^{*}_{spe}\right) \label{eq:lucy-inter}
 \end{align}
 
@@ -108,17 +126,17 @@ The figure \ref{fig:fitting} shows one of the fitting result. We can see the ori
     \caption{\label{fig:fitting} Fitting Demo, W-dist = 2.26}
 \end{figure}
 
-The overall result of W-dist shows in figure (see figure~\ref{fig:fitting-hist}\&\ref{fig:fitting-npos}). The error bar shows 10 to 90 percentile of Wasserstein distance distribution. 
+The result reconstructing $q_{r}$ when $N_{pos}=4$ shows in figure. (see figure~\ref{fig:fitting-hist}) The overall result of W-dist reconstructing $q_{r}$ shows in figure (see figure~\ref{fig:fitting-npos}). The error bar shows 10 to 90 percentile of Wasserstein distance distribution. 
 
 \begin{figure}[H]
-\begin{minipage}[b]{.5\textwidth}
+\begin{minipage}[t]{.5\textwidth}
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/xiaopeipchargehist.pgf}}
-    \caption{\label{fig:fitting-hist} $W_{d}$ Histogram when fitting $q_{r}$ (95\% counts)}
+    \caption{\label{fig:fitting-hist} $W_{d}$ Histogram when fitting $q_{r}$ (95\% counts, $N_{pos}=4$)}
 \end{figure}
 \end{minipage}
-\begin{minipage}[b]{.5\textwidth}
+\begin{minipage}[t]{.5\textwidth}
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/xiaopeipchargestats.pgf}}
@@ -160,17 +178,20 @@ To cope with sparsity in value-based processing, we have introduced a reconstruc
 A direct implementation of judgement metrics into loss function is often difficult. To deal with sparsity and encourage time accuracy, we established the loss function on the cumulative distribution functions (CDF) of normalized outputs. The form of cumulative sums could build a connection between sequence prediction and its previous values, making optimization through history possible. Moreover, the first Wasserstein distance between two 1D distributions is equivalent to the norm-1 difference of two corresponding CDFs. The optimal transport amount described by this metric is a reliable measurement standard to all distribution differences, including cases in our application.
 
 \begin{figure}[H]
-\begin{minipage}[b]{.3\textwidth}
+\begin{minipage}[b]{.4\textwidth}
 \begin{figure}[H]
-    \centering
-    \includegraphics[width=0.63\textwidth]{figures/model.png}
+    \begin{center}
+    \begin{adjustbox}{width=0.6\textwidth}
+        \input{model}
+    \end{adjustbox}
+    \end{center}
     \caption{\label{fig:struct} CNN Structure}
 \end{figure}
 \end{minipage}
-\begin{minipage}[b]{.7\textwidth}
+\begin{minipage}[b]{.6\textwidth}
 \begin{figure}[H]
     \centering
-    \resizebox{0.7\textwidth}{!}{\input{figures/epoch.pgf}}
+    \resizebox{\textwidth}{!}{\input{figures/epoch.pgf}}
     \caption{\label{fig:loss} Loss variation during training}
 \end{figure}
 \end{minipage}
@@ -179,21 +200,21 @@ A direct implementation of judgement metrics into loss function is often difficu
 \subsubsection{Result}
 In the training process, we trained CNN for each PMT channel. The loss which is Wasserstein distance during training show in figure \ref{fig:loss}. 
 
-The result shows that CNN is the best for reconstruction of $q_{r}(t_{H})$ and $n_{r}(t_{H})$. The error bar shows 10 to 90 percentile of Wasserstein distance distribution. 
+The result reconstructing $q_{r}$ when $N_{pos}=4$ shows in figure. (see figure~\ref{fig:cnn-hist}) The overall result of W-dist reconstructing $q_{r}$ shows in figure (see figure~\ref{fig:cnn-npos}). The result shows that CNN is the best for reconstruction of $q_{r}(t_{H})$ and $n_{r}(t_{H})$. The error bar shows 10 to 90 percentile of Wasserstein distance distribution. 
 
 \begin{figure}[H]
-\begin{minipage}[b]{.5\textwidth}
+\begin{minipage}[t]{.5\textwidth}
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/takarachargehist.pgf}}
-    \caption{$W_{d}$ Histogram when CNN $q_{r}$ (95\% counts)}
+    \caption{\label{fig:cnn-hist} $W_{d}$ Histogram when CNN $q_{r}$ (95\% counts, $N_{pos}=4$)}
 \end{figure}
 \end{minipage}
-\begin{minipage}[b]{.5\textwidth}
+\begin{minipage}[t]{.5\textwidth}
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/takarachargestats.pgf}}
-    \caption{$W_{d}$ vs $N_{pos}$ when CNN $q_{r}$}
+    \caption{\label{fig:cnn-npos}$W_{d}$ vs $N_{pos}$ when CNN $q_{r}$}
 \end{figure}
 \end{minipage}
 \end{figure}
