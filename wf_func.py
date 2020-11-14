@@ -204,7 +204,7 @@ def demo(pet, pwe, tth, spe_pre, leng, wave, cid, mode, full=False, fold='Note/f
     print('PEnum is {}'.format(penum))
     pf0 = np.zeros(leng); pf1 = np.zeros(leng)
     if mode == 'PEnum':
-        tru_pet = tth['RiseTime']
+        tru_pet = tth['HitPosInWindow']
         t, w = np.unique(tru_pet, return_counts=True)
         pf0[t] = w
         pf1[pet] = pwe
@@ -214,19 +214,19 @@ def demo(pet, pwe, tth, spe_pre, leng, wave, cid, mode, full=False, fold='Note/f
         edist = np.abs(Q - q) * scipy.stats.poisson.pmf(Q, Q)
         mode = 'penum'
     elif mode == 'Charge':
-        t = tth['RiseTime']; w = tth[mode]
+        t = tth['HitPosInWindow']; w = tth[mode]
         tu = np.unique(t)
-        cu = np.array([np.sum(w[tth['RiseTime'] == i]) for i in tu])
+        cu = np.array([np.sum(w[tth['HitPosInWindow'] == i]) for i in tu])
         pf0[tu] = cu / spe_pre['spe'].sum()
         pf1[pet] = pwe / spe_pre['spe'].sum()
         ylabel = '$Charge/\mathrm{mV}\cdot\mathrm{ns}$'
         distd = '(W/ns,C/mV*ns)'; distl = 'cdiff'
         edist = pwe.sum() - w.sum()
         mode = 'charge'
-    print('truth RiseTime = {}, Weight = {}'.format(t, w))
+    print('truth HitPosInWindow = {}, Weight = {}'.format(t, w))
     wave0 = np.convolve(spe_pre['spe'], pf0, 'full')[:leng]
     print('truth Resi-norm = {}'.format(np.linalg.norm(wave-wave0)))
-    print('RiseTime = {}, Weight = {}'.format(pet, pwe))
+    print('HitPosInWindow = {}, Weight = {}'.format(pet, pwe))
     wdist = scipy.stats.wasserstein_distance(t, pet, u_weights=w, v_weights=pwe)
     print('wdist = {},'.format(wdist)+distl+' = {}'.format(edist))
     wave1 = np.convolve(spe_pre['spe'], pf1, 'full')[:leng]
@@ -276,8 +276,8 @@ def demo(pet, pwe, tth, spe_pre, leng, wave, cid, mode, full=False, fold='Note/f
     ax3.legend(loc=1)
     ax3.grid()
     if ext != 'pgf':
-        fig.suptitle('eid={},cid={},'.format(tth['EventID'][0], tth['ChannelID'][0])+distd+'-dist={:.2f},{:.2f}'.format(wdist, edist), y=0.95)
-    fig.savefig(fold + '/demoe{}c{}.'.format(tth['EventID'][0], tth['ChannelID'][0]) + ext)
+        fig.suptitle('eid={},cid={},'.format(tth['TriggerNo'][0], tth['ChannelID'][0])+distd+'-dist={:.2f},{:.2f}'.format(wdist, edist), y=0.95)
+    fig.savefig(fold + '/demoe{}c{}.'.format(tth['TriggerNo'][0], tth['ChannelID'][0]) + ext)
     fig.clf()
     plt.close(fig)
 

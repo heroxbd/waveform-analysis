@@ -17,12 +17,12 @@ a = args.a
 b = args.b
 
 with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
-    Tr = ipt['GroundTruth']
+    Tr = ipt['SimTriggerInfo']['PEList']
     Wf = ipt['Waveform']
     Chnum = len(np.unique(Wf['ChannelID']))
-    Wf_num = Wf['EventID'] * Chnum + Wf['ChannelID']
+    Wf_num = Wf['TriggerNo'] * Chnum + Wf['ChannelID']
     Wf_num = Wf_num - Wf_num[0]
-    Tr_num = Tr['EventID'] * Chnum + Tr['ChannelID']
+    Tr_num = Tr['TriggerNo'] * Chnum + Tr['ChannelID']
     Tr_num = Tr_num - Tr_num[0]
     if b > len(Wf_num):
         print('b exceeded Waveform_num which is {}'.format(len(Wf_num)))
@@ -43,5 +43,7 @@ with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
         wf = Wf[np.logical_and(Wf_num >= Na, Wf_num < Nb)]
         tr = Tr[np.logical_and(Tr_num >= Na, Tr_num < Nb)]
 with h5py.File(fopt, 'w') as opt:
-    opt.create_dataset('GroundTruth', data=tr, compression='gzip')
-    opt.create_dataset('Waveform', data=wf, compression='gzip')
+    sti = opt.create_group('SimTriggerInfo')
+    sti.create_dataset('PEList', data=tr, compression='gzip')
+    reo = opt.create_group('Readout')
+    reo.create_dataset('Waveform', data=wf, compression='gzip')

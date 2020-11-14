@@ -28,18 +28,18 @@ import wf_func as wff
 def Make_Time_Vector(GroundTruth, Waveforms_and_info, mode) :
     GroundTruth[GroundTruth['Charge'] > 0]
     i = 0
-    Wave_EventID = Waveforms_and_info['EventID'].to_numpy()
-    Truth_EventID = GroundTruth['EventID'].to_numpy(); nt = len(Truth_EventID)
-    RiseTime = GroundTruth['RiseTime'].to_numpy()
+    Wave_TriggerNo = Waveforms_and_info['TriggerNo'].to_numpy()
+    Truth_TriggerNo = GroundTruth['TriggerNo'].to_numpy(); nt = len(Truth_TriggerNo)
+    HitPosInWindow = GroundTruth['HitPosInWindow'].to_numpy()
     if mode == 'Charge':
         Time_Series = np.zeros((len(Waveforms_and_info), WindowSize), dtype=np.float64)
         Mode = GroundTruth[mode].to_numpy()
     elif mode == 'PEnum':
         Time_Series = np.zeros((len(Waveforms_and_info), WindowSize), dtype=np.uint8)
-        Mode = np.ones(len(RiseTime), dtype=np.float64)
+        Mode = np.ones(len(HitPosInWindow), dtype=np.float64)
     for j in range(len(Waveforms_and_info)) :
-        while i < nt and Wave_EventID[j] == Truth_EventID[i] :
-            Time_Series[j][RiseTime[i]] = Time_Series[j][RiseTime[i]] + max(Mode[i], 0)
+        while i < nt and Wave_TriggerNo[j] == Truth_TriggerNo[i] :
+            Time_Series[j][HitPosInWindow[i]] = Time_Series[j][HitPosInWindow[i]] + max(Mode[i], 0)
             i = i + 1
     return Time_Series
 
@@ -48,12 +48,12 @@ def TableToDataFrame(Array) :
 
 def Read_Data(sliceNo, filename, Wave_startentry, Wave_endentry, Truth_startentry, Truth_endentry) :
     h5file = tables.open_file(filename, 'r')
-    WaveformTable = h5file.root.Waveform
-    GroundTruthTable = h5file.root.GroundTruth
+    WaveformTable = h5file.root.Readout.Waveform
+    GroundTruthTable = h5file.root.SimTriggerInfo.GroundTruth
     print('Reading File ' + filename)
     Waveforms_and_info = WaveformTable[Wave_startentry:Wave_endentry]
     GroundTruth = GroundTruthTable[Truth_startentry:Truth_endentry]
-    GroundTruth = GroundTruth[np.logical_and(GroundTruth['RiseTime'] >= 0, GroundTruth['RiseTime'] < WindowSize)]
+    GroundTruth = GroundTruth[np.logical_and(GroundTruth['HitPosInWindow'] >= 0, GroundTruth['HitPosInWindow'] < WindowSize)]
     h5file.close()
     return (sliceNo, {'Waveform': TableToDataFrame(Waveforms_and_info), 'GroundTruth': TableToDataFrame(GroundTruth)})
 
@@ -85,10 +85,10 @@ start = time()
 for filename in files :
     h5file = tables.open_file(filename, 'r')
     if filename == files[0]:
-        origin_dtype = h5file.root.Waveform.dtype
+        origin_dtype = h5file.root.Readout.Waveform.dtype
         WindowSize = origin_dtype['Waveform'].shape[0]
-    Waveform_Len = len(h5file.root.Waveform)
-    GroundTruth_Len = len(h5file.root.GroundTruth)
+    Waveform_Len = len(h5file.root.Readout.Waveform)
+    GroundTruth_Len = len(h5file.root.SimTriggerInfo.GroundTruth)
     slices = np.append(np.arange(0, Waveform_Len, 150000), Waveform_Len)
     Truth_slices = (GroundTruth_Len / Waveform_Len * slices).astype(np.int)
     for i in range(len(slices) - 1) :

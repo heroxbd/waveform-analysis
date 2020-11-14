@@ -55,22 +55,22 @@ def generate_standard(h5_path, single_pe_path):
     num = 0
 
     with h5py.File(h5_path[0], 'r', libver='latest', swmr=True) as ztrfile:
-        Gt = ztrfile['GroundTruth'][:]
-        Wf = ztrfile['Waveform'][:]
-    Gt = np.sort(Gt, kind='stable', order=['EventID', 'ChannelID'])
-    Wf = np.sort(Wf, kind='stable', order=['EventID', 'ChannelID'])
-    Chnum = len(np.unique(Gt['ChannelID']))
-    e_gt, i_gt = np.unique(Gt['EventID']*Chnum + Gt['ChannelID'], return_index=True)
+        Gt = ztrfile['SimTriggerInfo']['PEList'][:]
+        Wf = ztrfile['Readout']['Waveform'][:]
+    Gt = np.sort(Gt, kind='stable', order=['TriggerNo', 'PMTId'])
+    Wf = np.sort(Wf, kind='stable', order=['TriggerNo', 'ChannelID'])
+    Chnum = len(np.unique(Gt['PMTId']))
+    e_gt, i_gt = np.unique(Gt['TriggerNo']*Chnum + Gt['PMTId'], return_index=True)
     i_gt = np.append(i_gt, len(Gt))
-    e_wf, i_wf = np.unique(Wf['EventID']*Chnum + Wf['ChannelID'], return_index=True)
+    e_wf, i_wf = np.unique(Wf['TriggerNo']*Chnum + Wf['ChannelID'], return_index=True)
     Wf = Wf[np.isin(e_wf, e_gt)]
-    e_wf, i_wf = np.unique(Wf['EventID']*Chnum + Wf['ChannelID'], return_index=True)
+    e_wf, i_wf = np.unique(Wf['TriggerNo']*Chnum + Wf['ChannelID'], return_index=True)
     assert len(e_wf) ==  len(e_gt), 'Incomplete Dataset'
     leng = len(Wf[0]['Waveform'])
     p = 0
     stream = JPwaptool(leng, 150, 600, 7, 15)
     for p in tqdm(range(len(e_wf))):
-        pt = np.sort(Gt[i_gt[p]:i_gt[p+1]]['RiseTime']).astype(np.int)
+        pt = np.sort(Gt[i_gt[p]:i_gt[p+1]]['HitPosInWindow']).astype(np.int)
         if len(pt) == 1:
             ps = pt
         else:
@@ -101,7 +101,7 @@ def generate_standard(h5_path, single_pe_path):
     stddt = np.zeros(N * 10, dtype=npstddt); stddt['PedWave'] = np.nan
     start = 0
     for p in tqdm(range(len(e_wf))):
-        pt = np.sort(Gt[i_gt[p]:i_gt[p+1]]['RiseTime']).astype(np.int)
+        pt = np.sort(Gt[i_gt[p]:i_gt[p+1]]['HitPosInWindow']).astype(np.int)
         c = np.concatenate(([np.arange(i, i+L) for i in pt]))
         c = np.unique(np.clip(c, 0, leng))
         c = panel[np.logical_not(np.isin(panel, c))]

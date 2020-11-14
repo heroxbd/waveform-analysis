@@ -38,7 +38,7 @@ import wf_func as wff
 
 def Read_Data(startentry, endentry) :
     RawDataFile = tables.open_file(filename, 'r')
-    WaveformTable = RawDataFile.root.Waveform
+    WaveformTable = RawDataFile.root.Readout.Waveform
     stream = JPwaptool(WindowSize, 150, 600, 7, 15)
     Waveforms_and_info = WaveformTable[startentry:endentry]
     Shifted_Waves_and_info = np.empty(Waveforms_and_info.shape, dtype=gpufloat_dtype)
@@ -54,8 +54,8 @@ def Read_Data(startentry, endentry) :
 
 # Loading Data
 RawDataFile = tables.open_file(filename, 'r')
-origin_dtype = RawDataFile.root.Waveform.dtype
-Total_entries = len(RawDataFile.root.Waveform)
+origin_dtype = RawDataFile.root.Readout.Waveform.dtype
+Total_entries = len(RawDataFile.root.Waveform.Readout)
 RawDataFile.close()
 WindowSize = origin_dtype['Waveform'].shape[0]
 gpufloat_dtype = np.dtype([(name, np.dtype('float32') if name == 'Waveform' else origin_dtype[name].base, origin_dtype[name].shape) for name in origin_dtype.names])
@@ -91,8 +91,8 @@ def Forward(channelid) :
     SPECharge = spe_pre[channelid]['spe'].sum()
     Data_of_this_channel = Channel_Grouped_Waveform.get_group(channelid)
     Shifted_Wave = np.vstack(Data_of_this_channel['Waveform'])
-    EventIDs = np.array(Data_of_this_channel['EventID'])
-    RiseTimes = np.empty(0, dtype=np.int16)
+    TriggerNos = np.array(Data_of_this_channel['TriggerNo'])
+    HitPosInWindows = np.empty(0, dtype=np.int16)
     PEmeasure = np.empty(0, dtype=np.float32)
     EventData = np.empty(0, dtype=np.int64)
     slices = np.append(np.arange(0, len(Shifted_Wave), BATCHSIZE), len(Shifted_Wave))
@@ -104,27 +104,27 @@ def Forward(channelid) :
         sumPrediction = np.sum(Prediction, axis=1)
         sumPrediction = np.where(sumPrediction > 1e-4, sumPrediction, 1e-4)
         Prediction = Prediction / sumPrediction[:, None] * Total[:, None]
-        RiseTime = Prediction > filter_limit
-        pe_numbers = RiseTime.sum(axis=1)
+        HitPosInWindow = Prediction > filter_limit
+        pe_numbers = HitPosInWindow.sum(axis=1)
         no_pe_found = pe_numbers == 0
         if no_pe_found.any() :
             guessed_risetime = np.around(inputs[no_pe_found].argmax(axis=1) - spe_pre[channelid]['peak_c'])
             guessed_risetime = np.where(guessed_risetime > 0, guessed_risetime, 0)
-            RiseTime[no_pe_found, guessed_risetime] = True
+            HitPosInWindow[no_pe_found, guessed_risetime] = True
             Prediction[no_pe_found, guessed_risetime] = 1
             pe_numbers[no_pe_found] = 1
         Prediction = np.where(Prediction > filter_limit, Prediction, 0)
         Prediction = Prediction / np.sum(Prediction, axis=1)[:, None] * Total[:, None]
         if mode == 'Charge':
             Prediction = Prediction * SPECharge
-        Prediction = Prediction[RiseTime]
+        Prediction = Prediction[HitPosInWindow]
         PEmeasure = np.append(PEmeasure, Prediction)
-        TimeMatrix = np.repeat(Timeline, len(RiseTime), axis=0)[RiseTime]
-        RiseTimes = np.append(RiseTimes, TimeMatrix)
-        EventData = np.append(EventData, np.repeat(EventIDs[slices[i]:slices[i + 1]], pe_numbers))
+        TimeMatrix = np.repeat(Timeline, len(HitPosInWindow), axis=0)[HitPosInWindow]
+        HitPosInWindows = np.append(HitPosInWindows, TimeMatrix)
+        EventData = np.append(EventData, np.repeat(TriggerNos[slices[i]:slices[i + 1]], pe_numbers))
         ChannelData = np.empty(EventData.shape, dtype=np.int16)
         ChannelData.fill(channelid)
-    return pd.DataFrame({'RiseTime': RiseTimes, mode: PEmeasure, 'EventID': EventData, 'ChannelID': ChannelData})
+    return pd.DataFrame({'HitPosInWindow': HitPosInWindows, mode: PEmeasure, 'TriggerNo': EventData, 'ChannelID': ChannelData})
 
 tic = time.time()
 cpu_tic = time.process_time()
@@ -132,7 +132,7 @@ Result = []
 for ch in tqdm(channelid_set, desc='Predict for each channel') :
     Result.append(Forward(ch))
 Result = pd.concat(Result)
-Result = Result.sort_values(by=['EventID', 'ChannelID'])
+Result = Result.sort_values(by=['TriggerNo', 'ChannelID'])
 Result = Result.to_records(index=False)
 print('Prediction generated, real time {0:.4f}s, cpu time {1:.4f}s'.format(time.time() - tic, time.process_time() - cpu_tic))
 

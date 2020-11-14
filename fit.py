@@ -8,12 +8,12 @@ import math
 import argparse
 import pickle
 from functools import partial
-import jax
-import jax.numpy as jnp
-from jax import random
-import numpyro
-import numpyro.distributions as dist
-from numpyro.infer import MCMC, NUTS
+# import jax
+# import jax.numpy as jnp
+# from jax import random
+# import numpyro
+# import numpyro.distributions as dist
+# from numpyro.infer import MCMC, NUTS
 from multiprocessing import Pool, cpu_count
 from tqdm import tqdm
 from JPwaptool import JPwaptool
@@ -68,7 +68,7 @@ def inferencing(a, b):
     nuts_kernel_collect = {}
     mcmc_collect = {}
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
-        ent = ipt['Waveform']
+        ent = ipt['Readout']['Waveform']
         leng = len(ent[0]['Waveform'])
         stream = JPwaptool(leng, 150, 600, 7, 15)
         dt = np.zeros((b - a) * (leng//5), dtype=opdt)
@@ -105,21 +105,21 @@ def inferencing(a, b):
                 pos_r = t if t[0] >= 0 else np.array([0])
             lenpf = len(pf)
             end = start + lenpf
-            dti['RiseTime'][start:end] = pos_r.astype(np.uint16)
+            dti['HitPosInWindow'][start:end] = pos_r.astype(np.uint16)
             if mode == 'PEnum':
                 dt[mode][start:end] = pf.astype(np.float16)
             elif mode == 'Charge':
                 dt[mode][start:end] = pf.astype(np.float16) * np.sum(spe[cid])
-            dt['EventID'][start:end] = ent[i]['EventID']
+            dt['TriggerNo'][start:end] = ent[i]['TriggerNo']
             dt['ChannelID'][start:end] = ent[i]['ChannelID']
             start = end
     dt = dt[dt[mode] > 0]
-    dt = np.sort(dt, kind='stable', order=['EventID', 'ChannelID'])
+    dt = np.sort(dt, kind='stable', order=['TriggerNo', 'ChannelID'])
     return dt
 
 def fitting(a, b):
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
-        ent = ipt['Waveform'][:]
+        ent = ipt['Readout']['Waveform'][:]
         leng = len(ent[0]['Waveform'])
         stream = JPwaptool(leng, 150, 600, 7, 15)
         dt = np.zeros((b - a) * leng, dtype=opdt)
@@ -147,26 +147,26 @@ def fitting(a, b):
 
             lenpf = len(pwe)
             end = start + lenpf
-            dt['RiseTime'][start:end] = pet
+            dt['HitPosInWindow'][start:end] = pet
             if mode == 'PEnum':
                 dt[mode][start:end] = pwe
             elif mode == 'Charge':
                 pwe = pwe / pwe.sum() * np.abs(wave.sum())
                 dt[mode][start:end] = pwe
-            dt['EventID'][start:end] = ent[i]['EventID']
+            dt['TriggerNo'][start:end] = ent[i]['TriggerNo']
             dt['ChannelID'][start:end] = ent[i]['ChannelID']
             start = end
     dt = dt[dt[mode] > 0]
-    dt = np.sort(dt, kind='stable', order=['EventID', 'ChannelID'])
+    dt = np.sort(dt, kind='stable', order=['TriggerNo', 'ChannelID'])
     return dt
 
 spe_pre = wff.read_model(reference[0])
 # stanmodel = pickle.load(open(reference[1], 'rb'))
-opdt = np.dtype([('EventID', np.uint32), ('ChannelID', np.uint32), ('RiseTime', np.uint16), (mode, np.float64)])
+opdt = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('HitPosInWindow', np.uint16), (mode, np.float64)])
 with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
-    l = len(ipt['Waveform'])
+    l = len(ipt['Readout']['Waveform'])
     print('{} waveforms will be computed'.format(l))
-    leng = len(ipt['Waveform'][0]['Waveform'])
+    leng = len(ipt['Readout']['Waveform'][0]['Waveform'])
     assert leng >= len(spe_pre[0]['spe']), 'Single PE too long which is {}'.format(len(spe_pre[0]['spe']))
 chunk = l // Ncpu + 1
 slices = np.vstack((np.arange(0, l, chunk), np.append(np.arange(chunk, l, chunk), l))).T.astype(np.int).tolist()
@@ -180,10 +180,10 @@ with Pool(min(Ncpu, cpu_count())) as pool:
         select_result = pool.starmap(fitting, slices)
 # select_result = fitting(0, l)
 result = np.hstack(select_result)
-result = np.sort(result, kind='stable', order=['EventID', 'ChannelID'])
+result = np.sort(result, kind='stable', order=['TriggerNo', 'ChannelID'])
 print('Prediction generated, real time {0:.4f}s, cpu time {1:.4f}s'.format(time.time() - tic, time.process_time() - cpu_tic))
 with h5py.File(fopt, 'w') as opt:
-    dset = opt.create_dataset('Answer', data=result, compression='gzip')
+    dset = opt.create_dataset('AnswerWF', data=result, compression='gzip')
     dset.attrs['Method'] = method
     print('The output file path is {}'.format(fopt))
 print('Finished! Consuming {0:.2f}s in total, cpu time {1:.2f}s.'.format(time.time() - global_start, time.process_time() - cpu_global_start))
