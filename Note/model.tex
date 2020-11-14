@@ -1,0 +1,25 @@
+\tikzstyle{block} = [rectangle, rounded corners, minimum width=2cm, minimum height=1cm, text centered, draw=black]
+\tikzstyle{arrow} = [thick, ->, >=stealth]
+\begin{tikzpicture}[node distance=2cm]
+    \node (0) [block] {$1\times1029$};
+    \node (1) [block, below of=0] {$25\times1029$};
+    \node (2) [block, below of=1] {$20\times1029$};
+    \node (3) [block, below of=2] {$15\times1029$};
+    \node (4) [block, below of=3] {$10\times1029$};
+    \node (5) [block, below of=4] {$1\times1029$};
+    \draw [arrow] (0) -- node [midway](0to1) {} (1);
+    \draw [arrow] (1) -- node [midway](1to2) {} (2);
+    \draw [arrow] (2) -- node [midway](2to3) {} (3);
+    \draw [arrow] (3) -- node [midway](3to4) {} (4);
+    \draw [arrow] (4) -- node [midway](4to5) {} (5);
+    \node (a) [block, right of=0to1, xshift=1.2cm] {kernel=$21$};
+    \node (b) [block, right of=1to2, xshift=1.2cm] {kernel=$17$};
+    \node (c) [block, right of=2to3, xshift=1.2cm] {kernel=$13$};
+    \node (d) [block, right of=3to4, xshift=1.2cm] {kernel=$9$};
+    \node (e) [block, right of=4to5, xshift=1.2cm] {kernel=$1$};
+    \draw [arrow] (a) -- (0to1) {};
+    \draw [arrow] (b) -- (1to2) {};
+    \draw [arrow] (c) -- (2to3) {};
+    \draw [arrow] (d) -- (3to4) {};
+    \draw [arrow] (e) -- (4to5) {};
+\end{tikzpicture}
