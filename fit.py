@@ -27,18 +27,16 @@ Demo = False
 psr = argparse.ArgumentParser()
 psr.add_argument('-o', dest='opt', type=str, help='output file')
 psr.add_argument('ipt', type=str, help='input file')
-psr.add_argument('--mod', type=str, help='mode of weight', choices=['PEnum', 'Charge'])
 psr.add_argument('--met', type=str, help='fitting method')
 psr.add_argument('--ref', type=str, nargs='+', help='reference file')
+psr.add_argument('-N', '--Ncpu', dest='Ncpu', type=int, default=1)
 psr.add_argument('--demo', dest='demo', action='store_true', help='demo bool', default=False)
 args = psr.parse_args()
 
 fipt = args.ipt
 fopt = args.opt
 reference = args.ref
-mode = args.mod
 method = args.met
-Ncpu = 50
 if args.demo:
     Demo = True
 
@@ -106,14 +104,11 @@ def inferencing(a, b):
             lenpf = len(pf)
             end = start + lenpf
             dti['HitPosInWindow'][start:end] = pos_r.astype(np.uint16)
-            if mode == 'PEnum':
-                dt[mode][start:end] = pf.astype(np.float16)
-            elif mode == 'Charge':
-                dt[mode][start:end] = pf.astype(np.float16) * np.sum(spe[cid])
+            dt['Charge'][start:end] = pf.astype(np.float16) * np.sum(spe[cid])
             dt['TriggerNo'][start:end] = ent[i]['TriggerNo']
             dt['ChannelID'][start:end] = ent[i]['ChannelID']
             start = end
-    dt = dt[dt[mode] > 0]
+    dt = dt[dt['Charge'] > 0]
     dt = np.sort(dt, kind='stable', order=['TriggerNo', 'ChannelID'])
     return dt
 
@@ -148,32 +143,32 @@ def fitting(a, b):
             lenpf = len(pwe)
             end = start + lenpf
             dt['HitPosInWindow'][start:end] = pet
-            if mode == 'PEnum':
-                dt[mode][start:end] = pwe
-            elif mode == 'Charge':
-                pwe = pwe / pwe.sum() * np.abs(wave.sum())
-                dt[mode][start:end] = pwe
+            pwe = pwe / pwe.sum() * np.abs(wave.sum())
+            dt['Charge'][start:end] = pwe
             dt['TriggerNo'][start:end] = ent[i]['TriggerNo']
             dt['ChannelID'][start:end] = ent[i]['ChannelID']
             start = end
-    dt = dt[dt[mode] > 0]
+    dt = dt[dt['Charge'] > 0]
     dt = np.sort(dt, kind='stable', order=['TriggerNo', 'ChannelID'])
     return dt
 
 spe_pre = wff.read_model(reference[0])
 # stanmodel = pickle.load(open(reference[1], 'rb'))
-opdt = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('HitPosInWindow', np.uint16), (mode, np.float64)])
+opdt = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('HitPosInWindow', np.uint16), ('Charge', np.float64)])
 with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
     l = len(ipt['Readout']['Waveform'])
     print('{} waveforms will be computed'.format(l))
     leng = len(ipt['Readout']['Waveform'][0]['Waveform'])
     assert leng >= len(spe_pre[0]['spe']), 'Single PE too long which is {}'.format(len(spe_pre[0]['spe']))
-chunk = l // Ncpu + 1
-slices = np.vstack((np.arange(0, l, chunk), np.append(np.arange(chunk, l, chunk), l))).T.astype(np.int).tolist()
+if args.Ncpu == 1:
+    slices = [[0, l]]
+else:
+    chunk = l // args.Ncpu + 1
+    slices = np.vstack((np.arange(0, l, chunk), np.append(np.arange(chunk, l, chunk), l))).T.astype(np.int).tolist()
 print('Initialization finished, real time {0:.4f}s, cpu time {1:.4f}s'.format(time.time() - global_start, time.process_time() - cpu_global_start))
 tic = time.time()
 cpu_tic = time.process_time()
-with Pool(min(Ncpu, cpu_count())) as pool:
+with Pool(min(args.Ncpu, cpu_count())) as pool:
     if method == 'mcmc':
         select_result = pool.starmap(inferencing, slices)
     else:

@@ -14,7 +14,6 @@ import wf_func as wff
 psr = argparse.ArgumentParser()
 psr.add_argument('--ref', dest='ref', help='reference file', nargs='+')
 psr.add_argument('ipt', help='input file')
-psr.add_argument('--mod', type=str, help='mode of weight', choices=['PEnum', 'Charge'])
 psr.add_argument('-N', dest='Ncpu', type=int, help='cpu number', default=50)
 psr.add_argument('-o', dest='opt', help='output file')
 psr.add_argument('-p', dest='print', action='store_false', help='print bool', default=True)
@@ -27,44 +26,28 @@ fref = args.ref[0]
 fipt = args.ipt
 fopt = args.opt
 Ncpu = args.Ncpu
-mode = args.mod
-if mode == 'PEnum':
-    extradist = 'pdist'
-    pecount = 'TotalPEnum'
-elif mode == 'Charge':
-    extradist = 'chargediff'
-    pecount = 'TotalPEpos'
 
 def wpdist(a, b):
-    dt = np.zeros(b - a, dtype=opdt); dt[extradist] = np.nan
+    dt = np.zeros(b - a, dtype=opdt); dt['chargediff'] = np.nan
     stream = JPwaptool(len(df_wav[0]['Waveform']), 100, 600)
     for i, c in zip(range(a, b), range(b - a)):
         cid = df_wav[i_wav[i]]['ChannelID']
         stream.Calculate(df_wav[i_wav[i]]['Waveform'])
         wave = (df_wav[i_wav[i]]['Waveform'] - stream.ChannelInfo.Pedestal) * spe_pre[cid]['epulse']
         
-        wl = df_sub[i_sub[i]:i_sub[i+1]][mode]
+        wl = df_sub[i_sub[i]:i_sub[i+1]]['Charge']
         pet_sub = df_sub[i_sub[i]:i_sub[i+1]]['HitPosInWindow']
         pf_s = np.zeros(leng); pf_s[pet_sub] = wl
         wave1 = np.convolve(spe_pre[cid]['spe'], pf_s, 'full')[:leng]
-        if mode == 'PEnum':
-            pet0, pwe0 = np.unique(np.around(df_ans[i_ans[i]:i_ans[i+1]]['HitPosInWindow']).astype(np.int), return_counts=True)
-            t = pet0; w = pwe0
-            pf0 = np.zeros(leng); pf0[pet0] = pwe0
-            wave0 = np.convolve(spe_pre[cid]['spe'], pf0, 'full')[:leng]
-            Q = i_ans[i+1]-i_ans[i]; q = np.sum(wl)
-            dt[extradist][c] = np.abs(Q - q) * scipy.stats.poisson.pmf(Q, Q)
-            dt[pecount][c] = Q
-        elif mode == 'Charge':
-            t = np.around(df_ans[i_ans[i]:i_ans[i+1]]['HitPosInWindow']).astype(np.int)
-            w = df_ans[i_ans[i]:i_ans[i+1]][mode]
-            t = t[w>0]; w = w[w>0]
-            pet0 = np.unique(t); pwe0 = np.array([np.sum(w[t == i]) for i in pet0])
-            pf0 = np.zeros(leng); pf0[pet0] = pwe0
-            wave0 = np.convolve(spe_pre[cid]['spe'], pf0, 'full')[:leng] / np.sum(spe_pre[cid]['spe'])
-            wave1 = wave1 / np.sum(spe_pre[cid]['spe'])
-            dt[extradist][c] = np.sum(wl) - np.sum(w)
-            dt[pecount][c] = len(pet0)
+        t = np.around(df_ans[i_ans[i]:i_ans[i+1]]['HitPosInWindow']).astype(np.int)
+        w = df_ans[i_ans[i]:i_ans[i+1]]['Charge']
+        t = t[w>0]; w = w[w>0]
+        pet0 = np.unique(t); pwe0 = np.array([np.sum(w[t == i]) for i in pet0])
+        pf0 = np.zeros(leng); pf0[pet0] = pwe0
+        wave0 = np.convolve(spe_pre[cid]['spe'], pf0, 'full')[:leng] / np.sum(spe_pre[cid]['spe'])
+        wave1 = wave1 / np.sum(spe_pre[cid]['spe'])
+        dt['chargediff'][c] = np.sum(wl) - np.sum(w)
+        dt['TotalPEpos'][c] = len(pet0)
 
         dt['wdist'][c] = scipy.stats.wasserstein_distance(t, pet_sub, u_weights=w, v_weights=wl)
         dt['TriggerNo'][c] = df_wav[i_wav[i]]['TriggerNo']
@@ -88,7 +71,7 @@ e_ans = df_ans['TriggerNo']*Chnum + df_ans['PMTId']
 e_ans, i_ans = np.unique(e_ans, return_index=True)
 i_ans = np.append(i_ans, len(df_ans))
 
-opdt = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), (pecount, np.uint16), ('wdist', np.float64), (extradist, np.float64), ('RSS', np.float64), ('RSS_recon', np.float64), ('RSS_truth', np.float64)])
+opdt = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('TotalPEpos', np.uint16), ('wdist', np.float64), ('chargediff', np.float64), ('RSS', np.float64), ('RSS_recon', np.float64), ('RSS_truth', np.float64)])
 leng = len(df_wav[0]['Waveform'])
 
 e_wav = df_wav['TriggerNo']*Chnum + df_wav['ChannelID']; df_wav = df_wav[np.isin(e_wav, e_ans)]

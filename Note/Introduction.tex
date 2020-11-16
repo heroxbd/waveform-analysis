@@ -1,5 +1,4 @@
 \section{Introduction} % (fold)
-\label{sec:Introduction}
 PMT is involved in many neutrino and dark matter experiments. Traditionally, waveform within a period of time is integrated when the voltage exceed a certain threshold to obtain charge, such as Borexino\cite{lagomarsino_gateless_1999}, SNO\cite{dunger_event_2019} and XMASS\cite{abe_xmass_2013}. Meanwhile the first hittime of each PMT is also recorded. Other experiment employed some simple programs including Fourier deconvolution to extract charge and hittime for each photoelectron, such as Daya Bay\cite{huang_flash_2018}, KamLAND\cite{the_kamland_collaboration_production_2010}, JUNO\cite{zhang_comparison_2019} and XENON1T\cite{aprile_xenon1t_2019}. The efforts exerted on waveform analysis in these experiments is limited by amount of stored data and computational efficiency. 
 
 Extracting the information of time and number of photons hitting will provide more detailed information of light transmit model in detector and will finally enhance the performance of event reconstruction, even particle identification. 
@@ -17,7 +16,7 @@ The result of the toy MC shows in figure~\ref{fig:reso-diff}, where $\delta_{1st
 
 \begin{figure}[H]
     \centering
-    \scalebox{0.35}{\input{figures/vs-deltasub.pgf}}
+    \scalebox{0.35}{\input{figures/vs-deltadiv.pgf}}
     \caption{\label{fig:reso-diff} Time resolution improved of waveform analysis}
 \end{figure}
 
@@ -26,17 +25,52 @@ Therefore PMT waveform analysis is necessary when we pursue completely usage of 
 \paragraph{Notations}
 \begin{itemize}
     \item $t$ - Time of waveform
-    \item $t_{H}$ - Hittime, time of PE hitting first dynode
     \item $v_{w}(t)$ - Pedestal reduced origin waveform voltage
     \item $v_{spe}(t)$ - Single-photoelectron (SPE) response
     \item $v_{th}$ - Voltage threshold
-    \item $q_{r}(t_{H})$ - Reconstructed charge
-    \item $n_{r}(t_{H})$ - Reconstructed number of PE (\#PE)
+    \item $q_{r}(t)$ - Reconstructed charge
+    \item $n_{r}(t)$ - Reconstructed number of PE (\#PE)
     \item $v_{r}(t)$ - Reconstructed waveform
     \item $Q$ - Total Charge in a DAQ window
     \item $N_{pe}$ - Total PE number in a DAQ window
     \item $N_{pos}$ - Total number of hittime in a DAQ window
     \item $W_{d}$ - Wasserstein distance
 \end{itemize}
-The $t$ and $t_{H}$ we defined here is discrete value in 1 DAQ window (from 0 to 1029ns, step size is 1ns in Jinping 1ton prototype DAQ system). Therefore $N_{pos}$ is not equal to $N_{pe}$ ($N_{pe} \geq N_{pos}$). 
+The $t$ we defined here is discrete value in 1 DAQ window (from 0 to 1029ns, step size is 1ns in Jinping 1ton prototype DAQ system). Therefore $N_{pos}$ is not equal to $N_{pe}$ ($N_{pe} \geq N_{pos}$). 
+
+PMT is a device which is highly sensitive to even single photon. Therefore, PMT is widely used in neutrino experiments based on liquid and dark matter experiment. In neutrino experiments, liquid scintillator emits light after excited by candidate particles and charged particles emit Cherenkov light in liquid. Timing resolution is crucial in neutrino event reconstruction. 
+
+Timing resolution is determined by PMT and waveform analysis. Typical PMT response includes 3 individual processes: PE conversion happened on photocathode. Electron collection by the first dynode. And amplification of electrons between dynodes. So 1 photon incoming has a certain probability to be observed via PMT voltage (See figure~\ref{fig:spe}). But if photons hit the PMT continually, the PE response will pile-up (see figure~\ref{fig:pile}) and the waveform analysis will be difficult. Pile-up will significantly worsen timing resolution. 
+
+\begin{figure}[H]
+\begin{minipage}[b]{.5\textwidth}
+\begin{figure}[H]
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/spe.pgf}}
+    \caption{\label{fig:spe} SPE response of PMT}
+\end{figure}
+\end{minipage}
+\begin{minipage}[b]{.5\textwidth}
+\begin{figure}[H]
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/wave.pgf}}
+    \caption{\label{fig:pile} Pile-up in waveform}
+\end{figure}
+\end{minipage}
+\end{figure}
+
+Most of the time, when handling PMT waveform we record the first $t$ of PE arrival according to $v_{th}$ and $Q$. One waveform is converted to a pair of numbers. More detailed information of the waveform was lost. The intention this work is extracting information of all hits in 1 DAQ window including $t$ \& $q_{r}(t)$. 
+
+Charge is the integration of waveform component which induced by SPE. SPE induced charge can be a wide distribution, rather than a single value. 
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{figures/chargehist.png}
+    \caption{\label{fig:charge} Distribution of Charge}
+\end{figure}
+
+Jinping Neutrino Experiment is located at China Jinping Underground Laboratory in the interior of China. CJPL has an overburden of 2400m which provides an extremely low cosmic muon flux environment. Additionally CJPL is far from nuclear reactor which provides a low reactor neutrino flux. CJPL is an ideal site of low background physics research. 
+
+There is an ongoing 1ton prototype in CJPL and next a hundred ton magnitude detector will be built and an 5000 tons detector will be built in the future for Jinping Neutrino Experiment. 
+
 % section Introduction (end)

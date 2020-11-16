@@ -59,7 +59,7 @@ else :
 
 print('Reading Data...')
 WaveData = PreFile.root.Waveform[0:max_set_number]
-PETData = PreFile.root[mode+'Spectrum'][0:max_set_number]
+PETData = PreFile.root['ChargeSpectrum'][0:max_set_number]
 WindowSize = len(WaveData[0])
 spe_pre = wff.read_model(reference)
 spe = np.concatenate([spe_pre[ChannelID]['spe'], np.zeros(WindowSize - len(spe_pre[ChannelID]['spe']))])

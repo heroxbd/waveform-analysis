@@ -5,7 +5,6 @@ psr = argparse.ArgumentParser()
 psr.add_argument('ipt', help='input file')
 psr.add_argument('-o', dest='opt', help='output')
 psr.add_argument('-N', dest='NetDir', help='Network directory')
-psr.add_argument('--mod', type=str, help='mode of weight', choices=['PEnum', 'Charge'])
 psr.add_argument('--met', type=str, help='method')
 psr.add_argument('--ref', type=str, nargs='+', help='reference file')
 psr.add_argument('-B', '--batchsize', dest='BAT', type=int, default=15000)
@@ -18,7 +17,6 @@ BATCHSIZE = args.BAT
 Device = args.Device
 reference = args.ref
 method = args.met
-mode = args.mod
 
 import time
 global_start = time.time()
@@ -115,8 +113,7 @@ def Forward(channelid) :
             pe_numbers[no_pe_found] = 1
         Prediction = np.where(Prediction > filter_limit, Prediction, 0)
         Prediction = Prediction / np.sum(Prediction, axis=1)[:, None] * Total[:, None]
-        if mode == 'Charge':
-            Prediction = Prediction * SPECharge
+        Prediction = Prediction * SPECharge
         Prediction = Prediction[HitPosInWindow]
         PEmeasure = np.append(PEmeasure, Prediction)
         TimeMatrix = np.repeat(Timeline, len(HitPosInWindow), axis=0)[HitPosInWindow]
@@ -124,7 +121,7 @@ def Forward(channelid) :
         EventData = np.append(EventData, np.repeat(TriggerNos[slices[i]:slices[i + 1]], pe_numbers))
         ChannelData = np.empty(EventData.shape, dtype=np.int16)
         ChannelData.fill(channelid)
-    return pd.DataFrame({'HitPosInWindow': HitPosInWindows, mode: PEmeasure, 'TriggerNo': EventData, 'ChannelID': ChannelData})
+    return pd.DataFrame({'HitPosInWindow': HitPosInWindows, 'Charge': PEmeasure, 'TriggerNo': EventData, 'ChannelID': ChannelData})
 
 tic = time.time()
 cpu_tic = time.process_time()

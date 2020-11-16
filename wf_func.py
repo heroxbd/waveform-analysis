@@ -199,30 +199,18 @@ def snip_baseline(waveform, itera=20):
     w = np.power(np.exp(np.exp(v) - 1) - 1, 2) - 1 + wm
     return w
 
-def demo(pet, pwe, tth, spe_pre, leng, wave, cid, mode, full=False, fold='Note/figures', ext='pgf'):
+def demo(pet, pwe, tth, spe_pre, leng, wave, cid, full=False, fold='Note/figures', ext='pgf'):
     penum = len(tth)
     print('PEnum is {}'.format(penum))
     pf0 = np.zeros(leng); pf1 = np.zeros(leng)
-    if mode == 'PEnum':
-        tru_pet = tth['HitPosInWindow']
-        t, w = np.unique(tru_pet, return_counts=True)
-        pf0[t] = w
-        pf1[pet] = pwe
-        ylabel = '$PEnum/\mathrm{1}$'
-        distd = '(W/ns,P/1)'; distl = 'pdist'
-        Q = penum; q = np.sum(pwe)
-        edist = np.abs(Q - q) * scipy.stats.poisson.pmf(Q, Q)
-        mode = 'penum'
-    elif mode == 'Charge':
-        t = tth['HitPosInWindow']; w = tth[mode]
-        tu = np.unique(t)
-        cu = np.array([np.sum(w[tth['HitPosInWindow'] == i]) for i in tu])
-        pf0[tu] = cu / spe_pre['spe'].sum()
-        pf1[pet] = pwe / spe_pre['spe'].sum()
-        ylabel = '$Charge/\mathrm{mV}\cdot\mathrm{ns}$'
-        distd = '(W/ns,C/mV*ns)'; distl = 'cdiff'
-        edist = pwe.sum() - w.sum()
-        mode = 'charge'
+    t = tth['HitPosInWindow']; w = tth['Charge']
+    tu = np.unique(t)
+    cu = np.array([np.sum(w[tth['HitPosInWindow'] == i]) for i in tu])
+    pf0[tu] = cu / spe_pre['spe'].sum()
+    pf1[pet] = pwe / spe_pre['spe'].sum()
+    ylabel = '$Charge/\mathrm{mV}\cdot\mathrm{ns}$'
+    distd = '(W/ns,C/mV*ns)'; distl = 'cdiff'
+    edist = pwe.sum() - w.sum()
     print('truth HitPosInWindow = {}, Weight = {}'.format(t, w))
     wave0 = np.convolve(spe_pre['spe'], pf0, 'full')[:leng]
     print('truth Resi-norm = {}'.format(np.linalg.norm(wave-wave0)))
@@ -249,7 +237,7 @@ def demo(pet, pwe, tth, spe_pre, leng, wave, cid, mode, full=False, fold='Note/f
     else:
         ax0.set_xlim(max(t.min()-50, 0), min(t.max()+150, leng))
     ax1 = fig.add_axes((.1, .5, .85, .2))
-    ax1.vlines(tu, 0, cu, color='g', label='truth '+mode)
+    ax1.vlines(tu, 0, cu, color='g', label='truth Charge')
     ax1.set_ylabel(ylabel)
     ax1.set_xticklabels([])
     ax1.set_xlim(ax0.get_xlim())
@@ -258,7 +246,7 @@ def demo(pet, pwe, tth, spe_pre, leng, wave, cid, mode, full=False, fold='Note/f
     ax1.legend(loc=1)
     ax1.grid()
     ax2 = fig.add_axes((.1, .7, .85, .2))
-    ax2.vlines(pet, 0, pwe, color='y', label='recon '+mode)
+    ax2.vlines(pet, 0, pwe, color='y', label='recon Charge')
     ax2.set_ylabel(ylabel)
     ax2.set_xticklabels([])
     ax2.set_xlim(ax0.get_xlim())
