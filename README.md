@@ -1,6 +1,6 @@
 # waveform-analysis
 
-## Methods:pill:
+## Methods:
 
 + tara DL
 + xuyu DL
@@ -20,8 +20,7 @@ For each method:
 + record & save average w&p-dist of each Answer respect to corresponding training h5 file
 
 ## Makefile argument:
-+ set: jinp / juno
-+ method: takara / xiaopeip / lucyddm / mcmc
-+ mode: PEnum / Charge
-+ rseq: the fileno to be extracted
++ method: takara / xiaopeip / lucyddm
 + chunk: the fileno for test
++ iptfold: path of input h5 files
++ optfold: path of output h5 files

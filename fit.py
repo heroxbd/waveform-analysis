@@ -29,7 +29,7 @@ psr.add_argument('-o', dest='opt', type=str, help='output file')
 psr.add_argument('ipt', type=str, help='input file')
 psr.add_argument('--met', type=str, help='fitting method')
 psr.add_argument('--ref', type=str, nargs='+', help='reference file')
-psr.add_argument('-N', '--Ncpu', dest='Ncpu', type=int, default=1)
+psr.add_argument('-N', '--Ncpu', dest='Ncpu', type=int, default=50)
 psr.add_argument('--demo', dest='demo', action='store_true', help='demo bool', default=False)
 args = psr.parse_args()
 
@@ -129,7 +129,7 @@ def fitting(a, b):
 #                 wave = wave - ped
                 pet, pwe = wff.xiaopeip(wave, spe_pre[ent[i]['ChannelID']])
             elif method == 'lucyddm':
-                pet, pwe = wff.lucyddm(wave, spe_pre[ent[i]['ChannelID']])
+                pet, pwe = wff.lucyddm(wave, spe_pre[ent[i]['ChannelID']]['spe'])
             elif method == 'threshold':
                 pet, pwe = wff.threshold(wave, spe_pre[ent[i]['ChannelID']])
             elif method == 'fftrans':

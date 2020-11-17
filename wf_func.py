@@ -2,6 +2,7 @@
 
 import os
 import math
+
 import numpy as np
 np.set_printoptions(suppress=True)
 import scipy
@@ -17,6 +18,7 @@ from mpl_axes_aligner import align
 from JPwaptool import JPwaptool
 import h5py
 from scipy.interpolate import interp1d
+import numba
 
 plt.style.use('classic')
 plt.rcParams['savefig.dpi'] = 100
@@ -105,6 +107,7 @@ def rm_frag(lowp):
         lowp = np.concatenate((t), axis=0)
     return lowp
 
+# @numba.jit(nopython=True)
 def lucyddm(waveform, spe_pre, iterations=100):
     '''Lucy deconvolution
     Parameters
@@ -123,19 +126,17 @@ def lucyddm(waveform, spe_pre, iterations=100):
     .. [1] https://en.wikipedia.org/wiki/Richardson%E2%80%93Lucy_deconvolution
     .. [2] https://github.com/scikit-image/scikit-image/blob/master/skimage/restoration/deconvolution.py#L329
     '''
-    moveDelta = 9
-    spe = np.append(np.zeros(len(spe_pre['spe']) - 2 * moveDelta - 1), np.abs(spe_pre['spe']))
+    spe = np.append(np.zeros(len(spe_pre) - 2 * 9 - 1), np.abs(spe_pre))
     waveform = np.where(waveform < 0, 0.0001, waveform)
-    waveform = waveform.astype(np.float)
-    spe = spe.astype(np.float)
     waveform = waveform / np.sum(spe)
-    wave_deconv = np.array(waveform)
+    wave_deconv = waveform.copy()
     spe_mirror = spe[::-1]
     for _ in range(iterations):
-        relative_blur = waveform / convolve(wave_deconv, spe, mode='same')
-        wave_deconv *= convolve(relative_blur, spe_mirror, mode='same')
-        # there is no need to set the bound if the spe and the wave are all none negative 
-    return np.arange(0, len(waveform)-moveDelta), wave_deconv[moveDelta:]
+        # relative_blur = waveform / np.convolve(wave_deconv, spe)[np.floor((len(spe)-1)/2):-np.ceil((len(spe)-1)/2)]
+        # wave_deconv *= np.convolve(relative_blur, spe_mirror)[np.floor((len(spe)-1)/2):-np.ceil((len(spe)-1)/2)]
+        relative_blur = waveform / np.convolve(wave_deconv, spe, mode='same')
+        wave_deconv *= np.convolve(relative_blur, spe_mirror, mode='same')
+    return np.arange(0, len(waveform) - 9), wave_deconv[9:]
 
 def waveformfft(wave, spe_pre):
     length = len(wave)

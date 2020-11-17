@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 
+import argparse
+
 import numpy as np
 import h5py
-import argparse
 
 psr = argparse.ArgumentParser()
 psr.add_argument('-o', dest='opt', help='output file')
@@ -18,11 +19,11 @@ b = args.b
 
 with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
     Tr = ipt['SimTriggerInfo']['PEList']
-    Wf = ipt['Waveform']
+    Wf = ipt['Readout']['Waveform']
     Chnum = len(np.unique(Wf['ChannelID']))
     Wf_num = Wf['TriggerNo'] * Chnum + Wf['ChannelID']
     Wf_num = Wf_num - Wf_num[0]
-    Tr_num = Tr['TriggerNo'] * Chnum + Tr['ChannelID']
+    Tr_num = Tr['TriggerNo'] * Chnum + Tr['PMTId']
     Tr_num = Tr_num - Tr_num[0]
     if b > len(Wf_num):
         print('b exceeded Waveform_num which is {}'.format(len(Wf_num)))
