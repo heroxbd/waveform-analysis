@@ -6,7 +6,7 @@ ifdef chunk
 endif
 charge:=$(patsubst $(iptfold)/%.h5,$(optfold)/%.h5,$(raw))
 dist:=$(patsubst $(iptfold)/%.h5,$(method)/dist/%.h5,$(raw))
-record:=$(patsubst $(iptfold)/%.h5,$(method)/reco/%.csv,$(raw))
+reco:=$(patsubst $(iptfold)/%.h5,$(method)/reco/%.csv,$(raw))
 hist:=$(patsubst $(iptfold)/%.h5,$(method)/hist/%.pdf,$(raw))
 ifeq ($(method), takara)
     predict:=nn
@@ -21,11 +21,11 @@ Nets:=$(channelN:%=$(optfold)/CNN/Nets/Channel%.torch_net)
 
 sub : $(charge)
 
-test : $(hist) $(record)
+test : $(hist) $(reco)
 define fit
 $(optfold)/%.h5 : $(iptfold)/%.h5 spe.h5
 	@mkdir -p $$(dir $$@)
-	export OMP_NUM_THREADS=2 && python3 fit.py $$< --met $(method) -N 100 --ref $$(wordlist 2,3,$$^) -o $$@ > $$@.log 2>&1
+	export OMP_NUM_THREADS=2 && python3 fit.py $$< --met $(method) -N 50 --ref $$(wordlist 2,3,$$^) -o $$@ > $$@.log 2>&1
 endef
 
 define nn
@@ -65,7 +65,7 @@ $(optfold)/CNN/.PreProcess : $(raw) spe.h5
 $(iptfold)/$(chunk)x.h5 : $(iptfold)/$(chunk).h5
 	python3 cut_data.py $^ -o $@ -a -1 -b 10000
 
-spe.h5 : /srv/waveform-analysis/ztraining-0.h5
+spe.h5 : /mnt/stage/douwei/Simulation/1t_root/point_axis/1t_+0.000_x.h5
 	python3 spe_get.py $^ -o $@ --num 500000 --len 80
 
 model.pkl :

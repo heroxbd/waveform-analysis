@@ -2,23 +2,26 @@
 
 import sys
 import re
-import numpy as np
-import h5py
+import time
 import math
 import argparse
 import pickle
 from functools import partial
+from multiprocessing import Pool, cpu_count
+
+import numpy as np
+import h5py
 # import jax
 # import jax.numpy as jnp
 # from jax import random
 # import numpyro
 # import numpyro.distributions as dist
 # from numpyro.infer import MCMC, NUTS
-from multiprocessing import Pool, cpu_count
 from tqdm import tqdm
+
 from JPwaptool import JPwaptool
 import wf_func as wff
-import time
+
 global_start = time.time()
 cpu_global_start = time.process_time()
 
@@ -129,7 +132,7 @@ def fitting(a, b):
 #                 wave = wave - ped
                 pet, pwe = wff.xiaopeip(wave, spe_pre[ent[i]['ChannelID']])
             elif method == 'lucyddm':
-                pet, pwe = wff.lucyddm(wave, spe_pre[ent[i]['ChannelID']]['spe'])
+                pet, pwe = wff.lucyddm(wave, spe_pre[ent[i]['ChannelID']]['spe'], iterations=50)
             elif method == 'threshold':
                 pet, pwe = wff.threshold(wave, spe_pre[ent[i]['ChannelID']])
             elif method == 'fftrans':

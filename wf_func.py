@@ -107,7 +107,6 @@ def rm_frag(lowp):
         lowp = np.concatenate((t), axis=0)
     return lowp
 
-# @numba.jit(nopython=True)
 def lucyddm(waveform, spe_pre, iterations=100):
     '''Lucy deconvolution
     Parameters
@@ -132,8 +131,6 @@ def lucyddm(waveform, spe_pre, iterations=100):
     wave_deconv = waveform.copy()
     spe_mirror = spe[::-1]
     for _ in range(iterations):
-        # relative_blur = waveform / np.convolve(wave_deconv, spe)[np.floor((len(spe)-1)/2):-np.ceil((len(spe)-1)/2)]
-        # wave_deconv *= np.convolve(relative_blur, spe_mirror)[np.floor((len(spe)-1)/2):-np.ceil((len(spe)-1)/2)]
         relative_blur = waveform / np.convolve(wave_deconv, spe, mode='same')
         wave_deconv *= np.convolve(relative_blur, spe_mirror, mode='same')
     return np.arange(0, len(waveform) - 9), wave_deconv[9:]
@@ -177,7 +174,8 @@ def read_model(spe_path):
         ax.grid()
         ax.set_xlabel(r'$Time/\mathrm{ns}$')
         ax.set_ylabel(r'$Voltage/\mathrm{mV}$')
-        fig.savefig('Note/figures/pmtspe.pgf')
+        # fig.savefig('Note/figures/pmtspe.pgf')
+        # fig.savefig('Note/figures/pmtspe.pdf')
         plt.close()
     return spe_pre
 
