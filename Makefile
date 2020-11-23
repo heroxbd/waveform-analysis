@@ -65,7 +65,7 @@ $(optfold)/CNN/.PreProcess : $(raw) spe.h5
 
 $(iptfold)/a.h5 :
 	@mkdir -p $(dir $@)
-	python3 toySim.py --mu 5.0 -o $@ > $@.log 2>&1
+	python3 toySim.py --mu 5.0 -N 1000000 -o $@ > $@.log 2>&1
 
 spe.h5 : sim ;
 

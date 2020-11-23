@@ -8,7 +8,6 @@ import scipy.stats
 import itertools as it
 import argparse
 from multiprocessing import Pool, cpu_count
-from JPwaptool import JPwaptool
 import wf_func as wff
 
 psr = argparse.ArgumentParser()
@@ -29,11 +28,9 @@ Ncpu = args.Ncpu
 
 def wpdist(a, b):
     dt = np.zeros(b - a, dtype=opdt); dt['chargediff'] = np.nan
-    stream = JPwaptool(len(df_wav[0]['Waveform']), 100, 600)
     for i, c in zip(range(a, b), range(b - a)):
         cid = df_wav[i_wav[i]]['ChannelID']
-        stream.Calculate(df_wav[i_wav[i]]['Waveform'])
-        wave = (df_wav[i_wav[i]]['Waveform'] - stream.ChannelInfo.Pedestal) * spe_pre[cid]['epulse']
+        wave = df_wav[i_wav[i]]['Waveform'].astype(np.float) * spe_pre[cid]['epulse']
         
         wl = df_sub[i_sub[i]:i_sub[i+1]]['Charge']
         pet_sub = df_sub[i_sub[i]:i_sub[i+1]]['HitPosInWindow']

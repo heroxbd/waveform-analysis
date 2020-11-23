@@ -55,7 +55,7 @@ class JPwaptool:
         try:
             histogram[t] = c
         except:
-            print(data.min(). data.max())
+            print(np.min(data), np.max(data))
 
         most_ADC = np.argmax(histogram)
         most_ADC_statistic = histogram[most_ADC]

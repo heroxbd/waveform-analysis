@@ -34,4 +34,4 @@ for foo in tqdm(filelist):
         paths = ['RunHeader', 'SimTriggerInfo/PEList', 'SimTriggerInfo/TruthList', 'SimTruth/SimTruth', 'SimTruth/DepositEnergy', 'SimTruth/PrimaryParticle', 'Readout/TriggerInfo', 'Readout/Waveform']
         for path in paths:
             combinef(path, ipt, ipt_1)
-    os.remove(foo_1)
+    # os.remove(foo_1)

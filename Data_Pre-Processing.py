@@ -2,6 +2,18 @@
 
 import os
 import argparse
+from multiprocessing import Pool, cpu_count
+from time import time
+global_start = time()
+
+import numpy as np
+import tables
+import h5py
+import numba
+import pandas as pd
+
+import wf_func as wff
+
 psr = argparse.ArgumentParser()
 psr.add_argument('ipt', help='input file direction & prefix')
 psr.add_argument('-o', '--outputdir', dest='opt', help='output_dir')
@@ -12,18 +24,6 @@ reference = args.ref
 filedir, prefix = os.path.split(args.ipt)
 files = os.listdir(filedir)
 files = [filedir+'/'+fi for fi in files if prefix in fi and not os.path.isdir(fi)]
-
-from time import time
-global_start = time()
-
-import numpy as np
-import tables
-import h5py
-import numba
-from multiprocessing import Pool, cpu_count
-import pandas as pd
-from JPwaptool import JPwaptool
-import wf_func as wff
 
 def Make_Time_Vector(GroundTruth, Waveforms_and_info, mode) :
     GroundTruth[GroundTruth['Charge'] > 0]
@@ -58,15 +58,13 @@ def Read_Data(sliceNo, filename, Wave_startentry, Wave_endentry, Truth_startentr
     return (sliceNo, {'Waveform': TableToDataFrame(Waveforms_and_info), 'GroundTruth': TableToDataFrame(GroundTruth)})
 
 def PreProcess(channelid) :
-    stream = JPwaptool(WindowSize, 150, 600, 7, 15)
     print('PreProcessing channel {:02d}'.format(channelid))
     Waves_of_this_channel = Grouped_Waves.get_group(channelid)
     Truth_of_this_channel = Grouped_Truth.get_group(channelid)
     Origin_Waves = np.vstack(Waves_of_this_channel['Waveform'].to_numpy())
     Shifted_Waves = np.empty((len(Origin_Waves), WindowSize), dtype=np.float32)
     for i in range(len(Origin_Waves)) :
-        stream.Calculate(Origin_Waves[i])
-        Shifted_Waves[i] = (Origin_Waves[i] - stream.ChannelInfo.Pedestal) * spe_pre[channelid]['epulse']
+        Shifted_Waves[i] = Origin_Waves[i].astype(np.float) * spe_pre[channelid]['epulse']
 
     PEnumSpectrum = Make_Time_Vector(Truth_of_this_channel, Waves_of_this_channel, 'PEnum')
     ChargeSpectrum = Make_Time_Vector(Truth_of_this_channel, Waves_of_this_channel, 'Charge')

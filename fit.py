@@ -10,6 +10,7 @@ from functools import partial
 from multiprocessing import Pool, cpu_count
 
 import numpy as np
+# np.seterr(all='raise')
 import h5py
 # import jax
 # import jax.numpy as jnp
@@ -71,14 +72,12 @@ def inferencing(a, b):
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
         ent = ipt['Readout']['Waveform']
         leng = len(ent[0]['Waveform'])
-        stream = JPwaptool(leng, 150, 600, 7, 15)
         dt = np.zeros((b - a) * (leng//5), dtype=opdt)
         start = 0
         end = 0
         for i in range(a, b):
             cid = ent[i]['ChannelID']
-            stream.Calculate(ent[i]['Waveform'])
-            wave = (ent[i]['Waveform'] - stream.ChannelInfo.Pedestal) * spe_pre[cid]['epulse']
+            wave = ent[i]['Waveform'].astype(np.float) * spe_pre[ent[i]['ChannelID']]['epulse']
             pos = np.argwhere(wave[spe_pre[cid]['peak_c'] + 2:] > spe_pre[cid]['thres']).flatten()
             pf = wave[pos]/(spe_pre[cid]['spe'].sum())
             flag = 1
@@ -124,8 +123,7 @@ def fitting(a, b):
         start = 0
         end = 0
         for i in range(a, b):
-            stream.Calculate(ent[i]['Waveform'])
-            wave = (ent[i]['Waveform'] - stream.ChannelInfo.Pedestal) * spe_pre[ent[i]['ChannelID']]['epulse']
+            wave = ent[i]['Waveform'].astype(np.float) * spe_pre[ent[i]['ChannelID']]['epulse']
 
             if method == 'xiaopeip':
 #                 pet, pwe, ped = wff.xiaopeip(wave, spe_pre[ent[i]['ChannelID']])
@@ -138,6 +136,8 @@ def fitting(a, b):
             elif method == 'fftrans':
                 pet, pwe = wff.waveformfft(wave, spe_pre[ent[i]['ChannelID']])
             elif method == 'findpeak':
+                stream.Calculate(ent[i]['Waveform'] + 10)
+                wave = (ent[i]['Waveform'] + 10 - stream.ChannelInfo.Pedestal) * spe_pre[ent[i]['ChannelID']]['epulse']
                 pet = np.array(stream.ChannelInfo.PeakLoc) - spe_pre[ent[i]['ChannelID']]['peak_c']
                 pwe = np.array(stream.ChannelInfo.PeakAmp) / spe_pre[ent[i]['ChannelID']]['spe'].max()
                 pwe = pwe[pet >= 0]; pet = pet[pet >= 0]
@@ -171,12 +171,12 @@ else:
 print('Initialization finished, real time {0:.4f}s, cpu time {1:.4f}s'.format(time.time() - global_start, time.process_time() - cpu_global_start))
 tic = time.time()
 cpu_tic = time.process_time()
+fitting(0, 1000)
 with Pool(min(args.Ncpu, cpu_count())) as pool:
     if method == 'mcmc':
         select_result = pool.starmap(inferencing, slices)
     else:
         select_result = pool.starmap(fitting, slices)
-# select_result = fitting(0, l)
 result = np.hstack(select_result)
 result = np.sort(result, kind='stable', order=['TriggerNo', 'ChannelID'])
 print('Prediction generated, real time {0:.4f}s, cpu time {1:.4f}s'.format(time.time() - tic, time.process_time() - cpu_tic))

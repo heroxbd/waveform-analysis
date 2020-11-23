@@ -8,8 +8,8 @@ do
     then
         if ! echo "${list[@]}" | grep -w "${foo%.*}.h5" &>/dev/null
         then
-            echo ${foo%.*}.h5
-            /home/xdc/root2hdf5/C++/build/ConvertSimData ${foo} ${foo%.*}.h5
+            echo ../point_axish5/${foo%.*}.h5
+            /home/xdc/root2hdf5/C++/build/ConvertSimData ${foo} ../point_axish5/${foo%.*}.h5
         fi
     fi
 done

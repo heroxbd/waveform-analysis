@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 import h5py
 import argparse
 import itertools as it
-from JPwaptool import JPwaptool
 import wf_func as wff
 
 psr = argparse.ArgumentParser()
@@ -68,7 +67,6 @@ def generate_standard(h5_path, single_pe_path):
     assert len(e_wf) ==  len(e_gt), 'Incomplete Dataset'
     leng = len(Wf[0]['Waveform'])
     p = 0
-    stream = JPwaptool(leng, 150, 600, 7, 15)
     for p in tqdm(range(len(e_wf))):
         pt = np.sort(Gt[i_gt[p]:i_gt[p+1]]['HitPosInWindow']).astype(np.int)
         if len(pt) == 1:
@@ -79,8 +77,7 @@ def generate_standard(h5_path, single_pe_path):
             ps = pt[(dpta > L) & (dptb > L)]#long distance to other spe in both forepart & backpart
         ps = ps[(ps >= 0) & (ps < leng - L)]
         if ps.shape[0] != 0:
-            stream.Calculate(Wf[i_wf[p]]['Waveform'])
-            wave = Wf[i_wf[p]]['Waveform'] - stream.ChannelInfo.Pedestal
+            wave = Wf[i_wf[p]]['Waveform'].astype(np.float)
             for k in range(len(ps)):
                 dt[num]['ChannelID'] = Wf[i_wf[p]]['ChannelID']
                 dt[num]['speWf'] = wave[ps[k]:ps[k]+L]
@@ -105,8 +102,7 @@ def generate_standard(h5_path, single_pe_path):
         c = np.concatenate(([np.arange(i, i+L) for i in pt]))
         c = np.unique(np.clip(c, 0, leng))
         c = panel[np.logical_not(np.isin(panel, c))]
-        stream.Calculate(Wf[i_wf[p]]['Waveform'])
-        wave = Wf[i_wf[p]]['Waveform'] - stream.ChannelInfo.Pedestal
+        wave = Wf[i_wf[p]]['Waveform'].astype(np.float)
         end = start + len(c)
         stddt[start:min(end, N * 10)]['ChannelID'] = Wf[i_wf[p]]['ChannelID']
         stddt[start:min(end, N * 10)]['PedWave'] = wave[c][:min(len(c), N * 10 - start)]

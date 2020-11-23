@@ -15,7 +15,6 @@ matplotlib.use('pgf')
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from mpl_axes_aligner import align
-from JPwaptool import JPwaptool
 import h5py
 from scipy.interpolate import interp1d
 import numba
@@ -126,8 +125,8 @@ def lucyddm(waveform, spe_pre, iterations=100):
     .. [2] https://github.com/scikit-image/scikit-image/blob/master/skimage/restoration/deconvolution.py#L329
     '''
     spe = np.append(np.zeros(len(spe_pre) - 2 * 9 - 1), np.abs(spe_pre))
-    waveform = np.where(waveform < 0, 1e-6, waveform)
-    # spe = np.where(spe < 0, 1e-6, spe)
+    waveform = np.where(waveform <= 0, 1e-6, waveform)
+    spe = np.where(spe <= 0, 1e-6, spe)
     waveform = waveform / np.sum(spe)
     wave_deconv = waveform.copy()
     spe_mirror = spe[::-1]
@@ -226,10 +225,9 @@ def convolve_exp_norm(x, tau, sigma):
     return y
 
 def spe(t, tau, sigma, A):
-    s = np.zeros_like(t)
+    s = np.zeros_like(t).astype(np.float)
     t0 = t[t > np.finfo(np.float64).tiny]
     s[t > np.finfo(np.float64).tiny] = A * np.exp(-1 / 2 * (np.log(t0 / tau) * np.log(t0 / tau) / sigma / sigma))
-    # s = np.where(t > np.finfo(t.dtype).tiny, A * np.exp(-1 / 2 * (np.log(t) * np.log(t) / np.log(tau) / np.log(tau) / sigma / sigma)), 0)
     return s
 
 def charge(n, gmu, gsigma=40):

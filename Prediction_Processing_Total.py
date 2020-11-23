@@ -25,7 +25,6 @@ import numpy as np
 import tables
 import pandas as pd
 from tqdm import tqdm
-from JPwaptool import JPwaptool
 import h5py
 
 import torch
@@ -37,7 +36,6 @@ import wf_func as wff
 def Read_Data(startentry, endentry) :
     RawDataFile = tables.open_file(filename, 'r')
     WaveformTable = RawDataFile.root.Readout.Waveform
-    stream = JPwaptool(WindowSize, 150, 600, 7, 15)
     Waveforms_and_info = WaveformTable[startentry:endentry]
     Shifted_Waves_and_info = np.empty(Waveforms_and_info.shape, dtype=gpufloat_dtype)
     for name in origin_dtype.names :
@@ -45,8 +43,7 @@ def Read_Data(startentry, endentry) :
             Shifted_Waves_and_info[name] = Waveforms_and_info[name]
     for i in range(len(Waveforms_and_info)) :
         channelid = Waveforms_and_info[i]['ChannelID']
-        stream.Calculate(Waveforms_and_info[i]['Waveform'])
-        Shifted_Waves_and_info[i]['Waveform'] = (Waveforms_and_info[i]['Waveform'] - stream.ChannelInfo.Pedestal) * spe_pre[channelid]['epulse']
+        Shifted_Waves_and_info[i]['Waveform'] = Waveforms_and_info[i]['Waveform'].astype(np.float) * spe_pre[channelid]['epulse']
     RawDataFile.close()
     return pd.DataFrame({name: list(Shifted_Waves_and_info[name]) for name in gpufloat_dtype.names})
 
