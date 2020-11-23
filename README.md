@@ -24,3 +24,4 @@ For each method:
 + chunk: the fileno for test
 + iptfold: path of input h5 files
 + optfold: path of output h5 files
+# GRID-cat
