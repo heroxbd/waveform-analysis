@@ -52,7 +52,10 @@ class JPwaptool:
     def GetThreMask(self, data):
         histogram = np.zeros(self.WindowSize+1, dtype=np.int)
         t, c = np.unique(data, return_counts=True)
-        histogram[t] = c
+        try:
+            histogram[t] = c
+        except:
+            print(data.min(). data.max())
 
         most_ADC = np.argmax(histogram)
         most_ADC_statistic = histogram[most_ADC]
@@ -226,7 +229,7 @@ class JPwaptool:
         return peakList
     
     def Calculate(self, data):
-        data = data.astype(np.int32)
+        # data = data.astype(np.int32)
         self.GetThreMask(data)
         self.Dynamic_ExpandMask()
         self.GetPedinfo(data)
@@ -244,6 +247,10 @@ class JPwaptool:
             item = np.argmin(data)
             self.ChannelInfo.PeakLoc = np.append(self.ChannelInfo.PeakLoc, item)
             self.ChannelInfo.PeakAmp = np.append(self.ChannelInfo.PeakAmp, self.ChannelInfo.Pedestal - data[item])
+        """
+        Adapted to toySim
+        """
+        # self.ChannelInfo.Pedestal = 0
         return
     
     def FastCalculate(self, data):
@@ -252,4 +259,8 @@ class JPwaptool:
         self.Dynamic_ExpandMask()
         self.GetPedinfo(data)
         self.ChannelInfo.Charge = self.GetCharge(data)
+        """
+        Adapted to toySim
+        """
+        # self.ChannelInfo.Pedestal = 0
         return

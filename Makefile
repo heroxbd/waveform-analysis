@@ -1,9 +1,7 @@
 SHELL:=bash
-channelN:=$(shell seq -f '%02g' 0 29)
-raw:=$(wildcard $(iptfold)/*.h5)
-ifdef chunk
-    raw:=$(iptfold)/$(chunk)x.h5
-endif
+# channelN:=$(shell seq -f '%02g' 0 29)
+channelN:=$(shell seq -f '%02g' 0 0)
+raw:=$(iptfold)/a.h5
 charge:=$(patsubst $(iptfold)/%.h5,$(optfold)/%.h5,$(raw))
 dist:=$(patsubst $(iptfold)/%.h5,$(method)/dist/%.h5,$(raw))
 reco:=$(patsubst $(iptfold)/%.h5,$(method)/reco/%.csv,$(raw))
@@ -22,6 +20,9 @@ Nets:=$(channelN:%=$(optfold)/CNN/Nets/Channel%.torch_net)
 sub : $(charge)
 
 test : $(hist) $(reco)
+
+sim : $(raw)
+
 define fit
 $(optfold)/%.h5 : $(iptfold)/%.h5 spe.h5
 	@mkdir -p $$(dir $$@)
@@ -62,11 +63,11 @@ $(optfold)/CNN/.PreProcess : $(raw) spe.h5
 	python3 -u Data_Pre-Processing.py $(optfold)/ -o $(optfold)/CNN/PreProcess/Pre_Channel --ref $(word $(words $^), $^) > $(optfold)/CNN/PreProcess/PreProcess.log 2>&1
 	@touch $@
 
-$(iptfold)/$(chunk)x.h5 : $(iptfold)/$(chunk).h5
-	python3 cut_data.py $^ -o $@ -a -1 -b 10000
+$(iptfold)/a.h5 :
+	@mkdir -p $(dir $@)
+	python3 toySim.py --mu 5.0 -o $@ > $@.log 2>&1
 
-spe.h5 : /mnt/stage/douwei/Simulation/1t_root/point_axis/1t_+0.000_x.h5
-	python3 spe_get.py $^ -o $@ --num 500000 --len 80
+spe.h5 : sim ;
 
 model.pkl :
 	python3 model.py $@

@@ -66,7 +66,6 @@ def PreProcess(channelid) :
     Shifted_Waves = np.empty((len(Origin_Waves), WindowSize), dtype=np.float32)
     for i in range(len(Origin_Waves)) :
         stream.Calculate(Origin_Waves[i])
-        wave = (Origin_Waves[i] - stream.ChannelInfo.Pedestal) * spe_pre[channelid]['epulse']
         Shifted_Waves[i] = (Origin_Waves[i] - stream.ChannelInfo.Pedestal) * spe_pre[channelid]['epulse']
 
     PEnumSpectrum = Make_Time_Vector(Truth_of_this_channel, Waves_of_this_channel, 'PEnum')

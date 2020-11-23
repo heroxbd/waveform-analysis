@@ -126,7 +126,8 @@ def lucyddm(waveform, spe_pre, iterations=100):
     .. [2] https://github.com/scikit-image/scikit-image/blob/master/skimage/restoration/deconvolution.py#L329
     '''
     spe = np.append(np.zeros(len(spe_pre) - 2 * 9 - 1), np.abs(spe_pre))
-    waveform = np.where(waveform < 0, 0.0001, waveform)
+    waveform = np.where(waveform < 0, 1e-6, waveform)
+    # spe = np.where(spe < 0, 1e-6, spe)
     waveform = waveform / np.sum(spe)
     wave_deconv = waveform.copy()
     spe_mirror = spe[::-1]
@@ -197,6 +198,43 @@ def snip_baseline(waveform, itera=20):
         v[i:N-i] = np.minimum(v[i:N-i], (v[:N-2*i] + v[2*i:])/2)
     w = np.power(np.exp(np.exp(v) - 1) - 1, 2) - 1 + wm
     return w
+
+def glow(n, tau):
+    return np.random.exponential(tau, size=n)
+
+def transit(n, sigma):
+    return np.random.normal(0, sigma, size=n)
+
+def time(n, tau, sigma):
+    if tau == 0:
+        return np.sort(transit(n, sigma))
+    elif sigma == 0:
+        return np.sort(glow(n, tau))
+    else:
+        return np.sort(glow(n, tau) + transit(n, sigma))
+
+def convolve_exp_norm(x, tau, sigma):
+    if sigma == 0.:
+        y = np.where(x >= 0., 1/tau * np.exp(-x/tau), 0.)
+    elif tau == 0.:
+        y = norm.pdf(x, loc=0, scale=sigma)
+    else:
+        alpha = 1/tau
+        co = alpha/2. * np.exp(alpha*alpha*sigma*sigma/2.)
+        x_erf = (alpha*sigma*sigma - x)/(np.sqrt(2.)*sigma)
+        y = co * np.exp(-alpha*x) * (1. - special.erf(x_erf))
+    return y
+
+def spe(t, tau, sigma, A):
+    s = np.zeros_like(t)
+    t0 = t[t > np.finfo(np.float64).tiny]
+    s[t > np.finfo(np.float64).tiny] = A * np.exp(-1 / 2 * (np.log(t0 / tau) * np.log(t0 / tau) / sigma / sigma))
+    # s = np.where(t > np.finfo(t.dtype).tiny, A * np.exp(-1 / 2 * (np.log(t) * np.log(t) / np.log(tau) / np.log(tau) / sigma / sigma)), 0)
+    return s
+
+def charge(n, gmu, gsigma=40):
+    gsigma = 40.
+    return np.random.normal(gmu, gsigma, size=n)
 
 def demo(pet, pwe, tth, spe_pre, leng, wave, cid, full=False, fold='Note/figures', ext='pgf'):
     penum = len(tth)
