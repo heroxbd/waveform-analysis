@@ -23,11 +23,9 @@ def start_time(a0, a1, mode):
     stime = np.empty(a1 - a0)
     for i in range(a1 - a0):
         if mode == 'charge':
-            logL = lambda t0 : -1 * np.sum(np.log(np.clip(wff.convolve_exp_norm(charge[i_cha[i]:i_cha[i+1]]['HitPosInWindow'] - t0, args.tau, args.sigma), 
-                                                      np.finfo(np.float).tiny, np.inf)) * charge[i_cha[i]:i_cha[i+1]]['Charge'])
+            logL = lambda t0 : -1 * np.sum(np.log(np.clip(wff.convolve_exp_norm(charge[i_cha[i]:i_cha[i+1]]['HitPosInWindow'] - t0, args.tau, args.sigma), np.finfo(np.float).tiny, np.inf)) * charge[i_cha[i]:i_cha[i+1]]['Charge'])
         elif mode == 'all':
-            logL = lambda t0 : -1 * np.sum(np.log(np.clip(wff.convolve_exp_norm(pelist[i_cha[i]:i_cha[i+1]]['HitPosInWindow'] - t0, args.tau, args.sigma), 
-                                                      np.finfo(np.float).tiny, np.inf)))
+            logL = lambda t0 : -1 * np.sum(np.log(np.clip(wff.convolve_exp_norm(pelist[i_cha[i]:i_cha[i+1]]['HitPosInWindow'] - t0, args.tau, args.sigma), np.finfo(np.float).tiny, np.inf)))
         if args.sigma == 0.:
             stime[i] = optimize.minimize(logL, x0=np.min(charge[i_cha[i]:i_cha[i+1]]['HitPosInWindow']), method='SLSQP')['x']
         else:
