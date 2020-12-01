@@ -7,8 +7,10 @@ import numpy as np
 np.set_printoptions(suppress=True)
 import scipy
 import scipy.stats
+from scipy.stats import poisson, uniform, norm
 from scipy.fftpack import fft, ifft
 from scipy import optimize as opti
+import scipy.special as special
 from scipy.signal import convolve
 import matplotlib
 matplotlib.use('pgf')
@@ -174,8 +176,8 @@ def read_model(spe_path):
         ax.grid()
         ax.set_xlabel(r'$Time/\mathrm{ns}$')
         ax.set_ylabel(r'$Voltage/\mathrm{mV}$')
-        # fig.savefig('Note/figures/pmtspe.pgf')
-        # fig.savefig('Note/figures/pmtspe.pdf')
+        fig.savefig('Note/figures/pmtspe.pgf')
+        fig.savefig('Note/figures/pmtspe.pdf')
         plt.close()
     return spe_pre
 
@@ -232,13 +234,15 @@ def spe(t, tau, sigma, A):
 
 def charge(n, gmu, gsigma=40):
     gsigma = 40.
-    return np.random.normal(gmu, gsigma, size=n)
+    chargesam = norm.ppf(1 - uniform.rvs(scale=1-norm.cdf(0, loc=gmu, scale=gsigma), size=n), loc=gmu, scale=gsigma)
+    return chargesam
 
 def demo(pet, pwe, tth, spe_pre, leng, wave, cid, full=False, fold='Note/figures', ext='pgf'):
     penum = len(tth)
     print('PEnum is {}'.format(penum))
     pf0 = np.zeros(leng); pf1 = np.zeros(leng)
-    t = tth['HitPosInWindow']; w = tth['Charge']
+    t = tth['HitPosInWindow']
+    w = tth['Charge']
     tu = np.unique(t)
     cu = np.array([np.sum(w[tth['HitPosInWindow'] == i]) for i in tu])
     pf0[tu] = cu / spe_pre['spe'].sum()

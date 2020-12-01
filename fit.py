@@ -20,7 +20,6 @@ import h5py
 # from numpyro.infer import MCMC, NUTS
 from tqdm import tqdm
 
-from JPwaptool import JPwaptool
 import wf_func as wff
 
 global_start = time.time()
@@ -110,7 +109,7 @@ def inferencing(a, b):
             dt['TriggerNo'][start:end] = ent[i]['TriggerNo']
             dt['ChannelID'][start:end] = ent[i]['ChannelID']
             start = end
-    dt = dt[dt['Charge'] > 0]
+    dt = dt[:end]
     dt = np.sort(dt, kind='stable', order=['TriggerNo', 'ChannelID'])
     return dt
 
@@ -118,7 +117,6 @@ def fitting(a, b):
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
         ent = ipt['Readout']['Waveform'][:]
         leng = len(ent[0]['Waveform'])
-        stream = JPwaptool(leng, 150, 600, 7, 15)
         dt = np.zeros((b - a) * leng, dtype=opdt)
         start = 0
         end = 0
@@ -136,22 +134,22 @@ def fitting(a, b):
             elif method == 'fftrans':
                 pet, pwe = wff.waveformfft(wave, spe_pre[ent[i]['ChannelID']])
             elif method == 'findpeak':
-                stream.Calculate(ent[i]['Waveform'] + 10)
-                wave = (ent[i]['Waveform'] + 10 - stream.ChannelInfo.Pedestal) * spe_pre[ent[i]['ChannelID']]['epulse']
-                pet = np.array(stream.ChannelInfo.PeakLoc) - spe_pre[ent[i]['ChannelID']]['peak_c']
-                pwe = np.array(stream.ChannelInfo.PeakAmp) / spe_pre[ent[i]['ChannelID']]['spe'].max()
+                pet = 0
+                pwe = 0
                 pwe = pwe[pet >= 0]; pet = pet[pet >= 0]
+                if len(pwe) == 0:
+                    pwe = np.array([1]); pet = np.array([0])
             pet, pwe = wff.clip(pet, pwe, Thres)
 
             lenpf = len(pwe)
             end = start + lenpf
             dt['HitPosInWindow'][start:end] = pet
-            pwe = pwe / pwe.sum() * np.abs(wave.sum())
+            pwe = pwe / pwe.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
             dt['Charge'][start:end] = pwe
             dt['TriggerNo'][start:end] = ent[i]['TriggerNo']
             dt['ChannelID'][start:end] = ent[i]['ChannelID']
             start = end
-    dt = dt[dt['Charge'] > 0]
+    dt = dt[:end]
     dt = np.sort(dt, kind='stable', order=['TriggerNo', 'ChannelID'])
     return dt
 
@@ -171,7 +169,6 @@ else:
 print('Initialization finished, real time {0:.4f}s, cpu time {1:.4f}s'.format(time.time() - global_start, time.process_time() - cpu_global_start))
 tic = time.time()
 cpu_tic = time.process_time()
-fitting(0, 1000)
 with Pool(min(args.Ncpu, cpu_count())) as pool:
     if method == 'mcmc':
         select_result = pool.starmap(inferencing, slices)

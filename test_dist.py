@@ -15,11 +15,7 @@ psr.add_argument('--ref', dest='ref', help='reference file', nargs='+')
 psr.add_argument('ipt', help='input file')
 psr.add_argument('-N', dest='Ncpu', type=int, help='cpu number', default=50)
 psr.add_argument('-o', dest='opt', help='output file')
-psr.add_argument('-p', dest='print', action='store_false', help='print bool', default=True)
 args = psr.parse_args()
-
-if args.print:
-    sys.stdout = None
 
 fref = args.ref[0]
 fipt = args.ipt

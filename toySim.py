@@ -14,7 +14,7 @@ import scipy.special as special
 import scipy.integrate as integrate
 import scipy.optimize as optimize
 import scipy.interpolate as interpolate
-from scipy.stats import rv_continuous, poisson, uniform, norm, chi2
+from scipy.stats import poisson, uniform, norm, chi2
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
@@ -25,15 +25,15 @@ psr.add_argument('-o', dest='opt', type=str, help='output file')
 psr.add_argument('--Ncpu', dest='Ncpu', type=int, default=50)
 psr.add_argument('-N', dest='N', type=int, default=1e5)
 psr.add_argument('--mu', dest='mu', type=float, help='expectation of number of pe')
+psr.add_argument('--tau', dest='tau', type=float, help='time profile decay time')
+psr.add_argument('--sigma', dest='sigma', type=float, help='TTS')
 psr.add_argument('--noi', dest='noi', action='store_true', help='noise bool', default=False)
 args = psr.parse_args()
-
-mu = args.mu
 
 Ncpu = 100
 window = 1029
 
-spe_pre = wff.read_model('../jinping/waveform/spe.h5')
+spe_pre = wff.read_model('../jinping/data/spe.h5')
 spe = spe_pre[0]['spe']
 t = np.arange(len(spe)).astype(np.float)
 p = optimize.curve_fit(wff.spe, t[:20], spe[:20], p0=[3., .5, 20.])
@@ -52,6 +52,19 @@ ax.set_ylabel(r'$Voltage/\mathrm{mV}$')
 ax.legend()
 fig.savefig('Note/figures/spe.pgf')
 fig.savefig('Note/figures/spe.pdf')
+plt.close()
+
+fig = plt.figure()
+t = np.arange(-int(args.sigma), int(5 * args.tau), 0.1)
+gs = gridspec.GridSpec(1, 1, figure=fig, left=0.15, right=0.85, top=0.95, bottom=0.15, wspace=0.4, hspace=0.5)
+ax = fig.add_subplot(gs[0, 0])
+ax.plot(t, wff.convolve_exp_norm(t, args.tau, args.sigma), label='Time Profile')
+ax.set_xlabel(r'$t/\mathrm{ns}$')
+ax.grid()
+ax.set_ylabel(r'$PDF$')
+ax.legend()
+fig.savefig('Note/figures/profile.pgf')
+fig.savefig('Note/figures/profile.pdf')
 plt.close()
 
 np.random.seed(0)
@@ -86,7 +99,7 @@ chunk = args.N // args.Ncpu + 1
 slices = np.vstack((np.arange(0, args.N, chunk), np.append(np.arange(chunk, args.N, chunk), args.N))).T.astype(np.int).tolist()
 
 with Pool(min(Ncpu, cpu_count())) as pool:
-    result = pool.starmap(partial(sampling, mu=mu, tau=40., sigma=6.), slices)
+    result = pool.starmap(partial(sampling, mu=args.mu, tau=args.tau, sigma=args.sigma), slices)
 
 t0 = np.hstack([result[i][0] for i in range(len(result))])
 samples = np.hstack([result[i][1] for i in range(len(result))])
@@ -103,7 +116,10 @@ assert not np.all(np.isnan(waves['Waveform']))
 with h5py.File(args.opt, 'w') as opt:
     opt.create_dataset('SimTruth/T', data=t0, compression='gzip', compression_opts=4)
     opt.create_dataset('SimTriggerInfo/PEList', data=samples, compression='gzip', compression_opts=4)
-    opt.create_dataset('Readout/Waveform', data=waves, compression='gzip', compression_opts=4)
+    dset = opt.create_dataset('Readout/Waveform', data=waves, compression='gzip', compression_opts=4)
+    dset.attrs['mu'] = args.mu
+    dset.attrs['tau'] = args.tau
+    dset.attrs['sigma'] = args.sigma
 print(args.opt + ' saved, l =', int(np.sum(v)))
 
 with h5py.File('spe.h5', 'w') as spp:
