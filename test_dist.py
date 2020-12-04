@@ -21,23 +21,26 @@ fref = args.ref[0]
 fipt = args.ipt
 fopt = args.opt
 Ncpu = args.Ncpu
+window = 1029
 
 def wpdist(a, b):
     dt = np.zeros(b - a, dtype=opdt); dt['chargediff'] = np.nan
+    pan = np.arange(window)
     for i, c in zip(range(a, b), range(b - a)):
         cid = df_wav[i_wav[i]]['ChannelID']
+        p = spe_pre[cid]['parameters']
         wave = df_wav[i_wav[i]]['Waveform'].astype(np.float) * spe_pre[cid]['epulse']
         
         wl = df_sub[i_sub[i]:i_sub[i+1]]['Charge']
         pet_sub = df_sub[i_sub[i]:i_sub[i+1]]['HitPosInWindow']
         pf_s = np.zeros(leng); pf_s[pet_sub] = wl
         wave1 = np.convolve(spe_pre[cid]['spe'], pf_s, 'full')[:leng]
-        t = np.around(df_ans[i_ans[i]:i_ans[i+1]]['HitPosInWindow']).astype(np.int)
+        t = df_ans[i_ans[i]:i_ans[i+1]]['HitPosInWindow']
         w = df_ans[i_ans[i]:i_ans[i+1]]['Charge']
-        t = t[w>0]; w = w[w>0]
-        pet0 = np.unique(t); pwe0 = np.array([np.sum(w[t == i]) for i in pet0])
-        pf0 = np.zeros(leng); pf0[pet0] = pwe0
-        wave0 = np.convolve(spe_pre[cid]['spe'], pf0, 'full')[:leng] / np.sum(spe_pre[cid]['spe'])
+        pet0 = np.unique(t)
+        pwe0 = np.array([np.sum(w[t == j]) for j in pet0])
+        wave0 = np.sum([np.where(pan > pet0[j], wff.spe(pan - pet0[j], tau=p[0], sigma=p[1], A=p[2]) * pwe0[j], 0) for j in range(len(pet0))], axis=0)
+        wave0 = wave0 / np.sum(spe_pre[cid]['spe'])
         wave1 = wave1 / np.sum(spe_pre[cid]['spe'])
         dt['chargediff'][c] = np.sum(wl) - np.sum(w)
         dt['TotalPEpos'][c] = len(pet0)
@@ -77,6 +80,7 @@ assert len(e_ans) ==  len(e_wav) and len(e_ans) == len(e_sub), 'Incomplete Submi
 
 l = len(e_sub); chunk = l // Ncpu + 1
 slices = np.vstack((np.arange(0, l, chunk), np.append(np.arange(chunk, l, chunk), l))).T.astype(np.int).tolist()
+wpdist(0, 100)
 with Pool(min(Ncpu, cpu_count())) as pool:
     result = pool.starmap(wpdist, slices)
 dt = np.hstack(result)

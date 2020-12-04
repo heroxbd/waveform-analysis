@@ -161,6 +161,10 @@ def read_model(spe_path):
         epulse = speFile['SinglePE'].attrs['Epulse']
         spe = speFile['SinglePE'].attrs['SpePositive']
         thres = speFile['SinglePE'].attrs['Thres']
+        if 'parameters' in list(speFile['SinglePE'].attrs.keys()):
+            p = speFile['SinglePE'].attrs['parameters']
+        else:
+            p = [None,] * len(spe)
         spe_pre = {}
         fig = plt.figure()
         # fig.tight_layout()
@@ -170,7 +174,7 @@ def read_model(spe_path):
             peak_c = np.argmax(spe[i]); t = np.argwhere(spe[i][peak_c:] < 0.1).flatten()[0] + peak_c
             mar_l = np.sum(spe[i][:peak_c] < thres[i])
             mar_r = np.sum(spe[i][peak_c:t] < thres[i])
-            spe_pre_i = {'spe':spe[i], 'epulse':epulse, 'peak_c':peak_c, 'mar_l':mar_l, 'mar_r':mar_r, 'thres':thres[i]}
+            spe_pre_i = {'spe':spe[i], 'epulse':epulse, 'peak_c':peak_c, 'mar_l':mar_l, 'mar_r':mar_r, 'thres':thres[i], 'parameters':p[i]}
             spe_pre.update({cid[i]:spe_pre_i})
             ax.plot(spe_pre[cid[i]]['spe'])
         ax.grid()

@@ -41,7 +41,7 @@ $(eval $(call $(predict)))
 
 result/$(method)/solu/%.h5 : result/$(method)/char/%.h5 waveform/%.h5
 	@mkdir -p $(dir $@)
-	python3 toyRec.py $< --ref $(word 2,$^) --tau 40 --sigma 0 -o $@ > $@.log 2>&1
+	python3 toyRec.py $< --ref $(word 2,$^) --tau 40 --sigma 6 -o $@ > $@.log 2>&1
 
 result/$(method)/reco/%.csv : result/$(method)/dist/%.h5 waveform/%.h5 result/$(method)/solu/%.h5
 	@mkdir -p $(dir $@)
@@ -73,9 +73,13 @@ result/$(method)/char/.PreProcess : $(raw) spe.h5
 waveform/mu%.h5 :
 	@rm -f spe.h5
 	@mkdir -p $(dir $@)
-	python3 toySim.py --mu $* --tau 40 --sigma 0 -N 100000 -o $@ > $@.log 2>&1
+	python3 toySim.py --mu $* --tau 40 --sigma 6 --noi -N 100000 -o $@ > $@.log 2>&1
 
 spe.h5 : sim ;
+
+clean :
+	pushd waveform; rm -r ./* ; popd
+	pushd result; rm -r ./* ; popd
 
 model.pkl :
 	python3 model.py $@

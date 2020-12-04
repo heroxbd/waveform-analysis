@@ -69,7 +69,7 @@ def inferencing(a, b):
     nuts_kernel_collect = {}
     mcmc_collect = {}
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
-        ent = ipt['Readout']['Waveform']
+        ent = ipt['Readout/Waveform']
         leng = len(ent[0]['Waveform'])
         dt = np.zeros((b - a) * (leng//5), dtype=opdt)
         start = 0
@@ -115,7 +115,7 @@ def inferencing(a, b):
 
 def fitting(a, b):
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
-        ent = ipt['Readout']['Waveform'][:]
+        ent = ipt['Readout/Waveform'][:]
         leng = len(ent[0]['Waveform'])
         dt = np.zeros((b - a) * leng, dtype=opdt)
         start = 0
@@ -157,9 +157,9 @@ spe_pre = wff.read_model(reference[0])
 # stanmodel = pickle.load(open(reference[1], 'rb'))
 opdt = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('HitPosInWindow', np.uint16), ('Charge', np.float64)])
 with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
-    l = len(ipt['Readout']['Waveform'])
+    l = len(ipt['Readout/Waveform'])
     print('{} waveforms will be computed'.format(l))
-    leng = len(ipt['Readout']['Waveform'][0]['Waveform'])
+    leng = len(ipt['Readout/Waveform'][0]['Waveform'])
     assert leng >= len(spe_pre[0]['spe']), 'Single PE too long which is {}'.format(len(spe_pre[0]['spe']))
 if args.Ncpu == 1:
     slices = [[0, l]]
