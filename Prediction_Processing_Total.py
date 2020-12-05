@@ -58,38 +58,39 @@ def ReadBaseline(filename) :
 
 
 def Read_Data(rawfilename, bslfilename) :
-    RawDataFile = tables.open_file(rawfilename, 'r')
-    WaveformTable = RawDataFile.root.Readout.Waveform
-    Waveforms_and_info = WaveformTable[:]
-    Shifted_Waves_and_info = np.empty(Waveforms_and_info.shape, dtype=gpufloat_dtype)
-    for name in origin_dtype.names :
-        if name != 'Waveform' :
-            Shifted_Waves_and_info[name] = Waveforms_and_info[name]
+    RawDataFile = uproot4.open(rawfilename)
+    ChannelId = RawDataFile["Readout"]["ChannelId"].array()
+    TriggerNo = RawDataFile["Readout"]["TriggerNo"].array()
+    nchannels = ak.num(ChannelId)
+    TriggerNo = np.array(TriggerNo).repeat(nchannels)
+    ChannelId = np.array(ak.flatten(ChannelId))
+    global nwaves
+    nwaves = len(ChannelId)
+    Waveform = ak.flatten(RawDataFile["Readout"]["Waveform"].array())
+    global WindowSize
+    WindowSize = int(len(Waveform) / nwaves)
+    Waveform = np.array(Waveform).reshape((nwaves, WindowSize))
+    gpufloat_dtype = np.dtype([("TriggerNo", np.int64), ("ChannelID", np.int16), ("Waveform", np.float32, WindowSize)])
+    Shifted_Waves_and_info = np.empty(nwaves, dtype=gpufloat_dtype)
+    Shifted_Waves_and_info["TriggerNo"] = TriggerNo
+    Shifted_Waves_and_info["ChannelID"] = ChannelId
 
     Pedestal = ReadBaseline(bslfilename)
-    for i in range(len(Waveforms_and_info)) :
-        Shifted_Waves_and_info[i]['Waveform'] = Pedestal[i] - Waveforms_and_info[i]['Waveform'].astype(np.float)
+    for i in range(nwaves) :
+        Shifted_Waves_and_info[i]['Waveform'] = Pedestal[i] - Waveform[i].astype(np.float)
     RawDataFile.close()
     return pd.DataFrame({name: list(Shifted_Waves_and_info[name]) for name in gpufloat_dtype.names})
 
 
 # Loading Data
-RawDataFile = tables.open_file(rawfilename, 'r')
-origin_dtype = RawDataFile.root.Readout.Waveform.dtype
-Total_entries = len(RawDataFile.root.Readout.Waveform)
-RawDataFile.close()
-WindowSize = origin_dtype['Waveform'].shape[0]
-gpufloat_dtype = np.dtype([(name, np.dtype('float32') if name == 'Waveform' else origin_dtype[name].base, origin_dtype[name].shape) for name in origin_dtype.names])
 print('Initialization finished, real time {0:.4f}s, cpu time {1:.4f}s'.format(time.time() - global_start, time.process_time() - cpu_global_start))
-print('Processing {} entries'.format(Total_entries))
 
 N = 10
 tic = time.time()
 cpu_tic = time.process_time()
-slices = np.append(np.arange(0, Total_entries, int(np.ceil(Total_entries / N))), Total_entries)
-ranges = list(zip(slices[0:-1], slices[1:]))
 Waveforms_and_info = Read_Data(rawfilename, bslfilename)
 print('Data Loaded, consuming {0:.4f}s using {1} threads, cpu time {2:.4f}s'.format(time.time() - tic, N, time.process_time() - cpu_tic))
+print('Processing {} waves'.format(nwaves))
 
 channelid_set = set(Waveforms_and_info['ChannelID'])
 Channel_Grouped_Waveform = Waveforms_and_info.groupby(by='ChannelID')
@@ -111,7 +112,7 @@ GainTable = np.loadtxt(gaintablefile, skiprows=0, usecols=2)
 
 def Forward(channelid) :
     SPECharge = GainTable[channelid]
-    filter_limit = 0.05 * SPECharge
+    filter_limit = 0.01 * SPECharge
     Data_of_this_channel = Channel_Grouped_Waveform.get_group(channelid)
     Shifted_Wave = np.vstack(Data_of_this_channel['Waveform'])
     TriggerNos = np.array(Data_of_this_channel['TriggerNo'])
@@ -134,12 +135,11 @@ def Forward(channelid) :
         pe_numbers = HitPosInWindow.sum(axis=1)
         no_pe_found = pe_numbers == 0
         if no_pe_found.any() :
-            guessed_risetime = inputs[no_pe_found].argmax(axis=1) - 2 #  arbitary parameter :2
+            guessed_risetime = inputs[no_pe_found].argmax(axis=1) - 2  # arbitary parameter :2
             HitPosInWindow[no_pe_found, guessed_risetime] = True
+            Prediction[no_pe_found, guessed_risetime] = 1
             pe_numbers[no_pe_found] = 1
-        Prediction = np.where(Prediction > filter_limit, Prediction, 0)
         Prediction = Prediction / np.sum(Prediction, axis=1)[:, None] * Total[:, None]
-        Prediction = Prediction * SPECharge
         Prediction = Prediction[HitPosInWindow]
         PEmeasure = np.append(PEmeasure, Prediction)
         TimeMatrix = np.repeat(Timeline, len(HitPosInWindow), axis=0)[HitPosInWindow]
