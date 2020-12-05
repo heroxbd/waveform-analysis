@@ -29,12 +29,16 @@ import tables
 import pandas as pd
 from tqdm import tqdm
 import h5py
-import uproot4
+import uproot
 import awkward1 as ak
 
 import torch
 from torch import nn
 torch.no_grad()
+
+from multiprocessing import Pool, cpu_count
+from IPython import embed
+
 
 if torch.cuda.is_available() and not args.cuda:
     print("WARNING: You have a CUDA device, so you should probably run with --cuda")
@@ -47,53 +51,57 @@ elif not torch.cuda.is_available() and args.cuda:
 else :
     Device = 'cpu'
 
-from multiprocessing import Pool, cpu_count
-from IPython import embed
-
 
 def ReadBaseline(filename) :
-    f = uproot4.open(filename)
+    f = uproot.open(filename)
     Ped = ak.flatten(f["SimpleAnalysis"]["ChannelInfo.Pedestal"].array())
     return Ped
 
 
-def Read_Data(rawfilename, bslfilename) :
-    RawDataFile = uproot4.open(rawfilename)
+def Read_Data(fileno) :
+    raw_filename = rawfilename + "/{}.root".format(fileno)
+    bsl_filename = bslfilename + "/{}.root".format(fileno)
+    RawDataFile = uproot.open(raw_filename)
     ChannelId = RawDataFile["Readout"]["ChannelId"].array()
     TriggerNo = RawDataFile["Readout"]["TriggerNo"].array()
     nchannels = ak.num(ChannelId)
     TriggerNo = np.array(TriggerNo).repeat(nchannels)
     ChannelId = np.array(ak.flatten(ChannelId))
-    global nwaves
     nwaves = len(ChannelId)
-    Waveform = ak.flatten(RawDataFile["Readout"]["Waveform"].array())
-    global WindowSize
+    Waveform = RawDataFile["Readout"]["Waveform"].array(flatten=True)
     WindowSize = int(len(Waveform) / nwaves)
     Waveform = np.array(Waveform).reshape((nwaves, WindowSize))
-    waveform_dtype = np.dtype([("TriggerNo", np.int64), ("ChannelID", np.int16), ("Pedestal", np.float32), ("Waveform", np.int16, WindowSize)])
+    waveform_dtype = np.dtype([("TriggerNo", np.int64), ("ChannelID", np.int16), ("FileNo", np.int32), ("Pedestal", np.float32), ("Waveform", np.int16, WindowSize)])
     Waves_and_info = np.empty(nwaves, dtype=waveform_dtype)
     Valid_Channels = ChannelId < 30
     Waves_and_info["TriggerNo"] = TriggerNo[Valid_Channels]
     Waves_and_info["ChannelID"] = ChannelId[Valid_Channels]
     Waves_and_info["Waveform"] = Waveform[Valid_Channels]
-    Waves_and_info["Pedestal"] = ReadBaseline(bslfilename)
+    Waves_and_info["Pedestal"] = ReadBaseline(bsl_filename)
+    Waves_and_info["FileNo"] = fileno
+    print(rawfilename + " " + bslfilename + " {}".format(fileno))
 
     wave_dict = {"Waveform" : list(Waves_and_info["Waveform"])}
     for name in waveform_dtype.names :
         if name != "Waveform" : wave_dict.update({name : Waves_and_info[name]})
-    df = pd.DataFrame(wave_dict)
-    return df
+    return pd.DataFrame(wave_dict)
 
 
 # Loading Data
 print('Initialization finished, real time {0:.4f}s, cpu time {1:.4f}s'.format(time.time() - global_start, time.process_time() - cpu_global_start))
 
-N = 10
+N = 3
 tic = time.time()
 cpu_tic = time.process_time()
-Waveforms_and_info = Read_Data(rawfilename, bslfilename)
+# files = [(rawfilename + "/{}.root".format(i), bslfilename + "/{}.root".format(i), i) for i in range(3)]
+with Pool(min(N, cpu_count())) as pool :
+    Waveforms_and_info = pd.concat(pool.map(Read_Data, range(3)))
+# Waveforms_and_info = pd.concat([Read_Data(rawfilename + "/{}.root".format(i), bslfilename + "/{}.root".format(i), i) for i in range(3)])
+
+# Waveforms_and_info = Read_Data(rawfilename, bslfilename)
 print('Data Loaded, consuming {0:.4f}s using {1} threads, cpu time {2:.4f}s'.format(time.time() - tic, N, time.process_time() - cpu_tic))
-print('Processing {} waves'.format(nwaves))
+print('Processing {} waves'.format(len(Waveforms_and_info)))
+WindowSize = len(Waveforms_and_info["Waveform"][0:1][0])
 
 channelid_set = set(Waveforms_and_info['ChannelID'])
 Channel_Grouped_Waveform = Waveforms_and_info.groupby(by='ChannelID')
@@ -104,7 +112,8 @@ nets = dict([])
 for channelid in tqdm(channelid_set, desc='Loading Nets of each channel') :
     nets[channelid] = torch.load(NetDir + '/{:02d}.net'.format(channelid))
     if Device == 'cuda' :
-        nets[channelid] = nn.DataParallel(nets[channelid], range(torch.cuda.device_count()))
+        nets[channelid] = nn.DataParallel(nets[channelid], range(1))
+        # nets[channelid] = nn.DataParallel(nets[channelid], range(torch.cuda.device_count()))
 
 print('Net Loaded, consuming {0:.4f}s'.format(time.time() - tic))
 
@@ -120,9 +129,11 @@ def Forward(channelid) :
     Wave = np.vstack(Data_of_this_channel['Waveform'])
     Peds = np.array(Data_of_this_channel['Pedestal'])[:, None]
     TriggerNos = np.array(Data_of_this_channel['TriggerNo'])
+    FileNos = np.array(Data_of_this_channel['FileNo'])
     HitPosInWindows = np.empty(0, dtype=np.int16)
     PEmeasure = np.empty(0, dtype=np.float32)
     EventData = np.empty(0, dtype=np.int64)
+    FileNoData = np.empty(0, dtype=np.int32)
     slices = np.append(np.arange(0, len(Wave), BATCHSIZE), len(Wave))
     for i in range(len(slices) - 1) :
         inputs = Peds[slices[i]:slices[i + 1]] - Wave[slices[i]:slices[i + 1]]
@@ -149,9 +160,10 @@ def Forward(channelid) :
         TimeMatrix = np.repeat(Timeline, len(HitPosInWindow), axis=0)[HitPosInWindow]
         HitPosInWindows = np.append(HitPosInWindows, TimeMatrix)
         EventData = np.append(EventData, np.repeat(TriggerNos[slices[i]:slices[i + 1]], pe_numbers))
+        FileNoData = np.append(FileNoData, np.repeat(FileNos[slices[i]:slices[i + 1]], pe_numbers))
         ChannelData = np.empty(EventData.shape, dtype=np.int16)
         ChannelData.fill(channelid)
-    return pd.DataFrame({'HitPosInWindow': HitPosInWindows, 'Charge': PEmeasure, 'TriggerNo': EventData, 'ChannelID': ChannelData})
+    return pd.DataFrame({'HitPosInWindow': HitPosInWindows, 'Charge': PEmeasure, 'TriggerNo': EventData, 'ChannelID': ChannelData, 'FileNo': FileNoData})
 
 
 tic = time.time()
@@ -160,13 +172,21 @@ Result = []
 for ch in tqdm(channelid_set, desc='Predict for each channel') :
     Result.append(Forward(ch))
 Result = pd.concat(Result)
-Result = Result.sort_values(by=['TriggerNo', 'ChannelID'])
-Result = Result.to_records(index=False)
-print('Prediction generated, real time {0:.4f}s, cpu time {1:.4f}s'.format(time.time() - tic, time.process_time() - cpu_tic))
+Result = Result.sort_values(by=['FileNo', 'TriggerNo', 'ChannelID'])
+Grouped_Result = Result.groupby(by='FileNo')
 
-with h5py.File(output, 'w') as opt:
-    dset = opt.create_dataset('Answer', data=Result, compression='gzip')
-    dset.attrs['Method'] = method
-    print('The output file path is {}'.format(output))
+
+def WriteData(fileno) :
+    Result = Grouped_Result.get_group(fileno)
+    Result = Result.to_records(index=False)
+    with h5py.File(output + "/{}.h5".format(fileno), 'w') as opt:
+        dset = opt.create_dataset('Answer', data=Result, compression='gzip')
+        dset.attrs['Method'] = method
+        print('The output file path is {}'.format(output))
+
+
+with Pool(N) as pool :
+    pool.map(WriteData, range(3))
+print('Prediction generated, real time {0:.4f}s, cpu time {1:.4f}s'.format(time.time() - tic, time.process_time() - cpu_tic))
 
 print('Finished! Consuming {0:.2f}s in total, cpu time {1:.2f}s.'.format(time.time() - global_start, time.process_time() - cpu_global_start))
