@@ -30,3 +30,6 @@ output
 *.log
 dataset
 *.pkl
+net*
+*.txt
+test

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import os
@@ -9,28 +10,31 @@ global_start = time()
 import numpy as np
 import tables
 import h5py
-import numba
 import pandas as pd
-
-import wf_func as wff
+import uproot4
+import awkward1 as ak
+from IPython import embed
 
 psr = argparse.ArgumentParser()
-psr.add_argument('ipt', help='input file direction & prefix')
+psr.add_argument('ipt', help='input rawdata file')
+psr.add_argument('bsl', help='input baseline file')
 psr.add_argument('-o', '--outputdir', dest='opt', help='output_dir')
-psr.add_argument('--ref', type=str, nargs='+', help='reference file')
 args = psr.parse_args()
 SavePath = args.opt
-reference = args.ref
-filedir, prefix = os.path.split(args.ipt)
-files = os.listdir(filedir)
-files = [filedir+'/'+fi for fi in files if prefix in fi and not os.path.isdir(fi)]
+rawfilename = args.ipt
+bslfilename = args.bsl
+
+with tables.open_file(rawfilename, 'r') as h5file :
+    WindowSize = len(h5file.root.Readout.Waveform[0]["Waveform"])
+
 
 def Make_Time_Vector(GroundTruth, Waveforms_and_info, mode) :
     GroundTruth[GroundTruth['Charge'] > 0]
     i = 0
     Wave_TriggerNo = Waveforms_and_info['TriggerNo'].to_numpy()
-    Truth_TriggerNo = GroundTruth['TriggerNo'].to_numpy(); nt = len(Truth_TriggerNo)
-    HitPosInWindow = GroundTruth['HitPosInWindow'].to_numpy()
+    Truth_TriggerNo = GroundTruth['EventID'].to_numpy()
+    nt = len(Truth_TriggerNo)
+    HitPosInWindow = GroundTruth['RiseTime'].to_numpy()
     if mode == 'Charge':
         Time_Series = np.zeros((len(Waveforms_and_info), WindowSize), dtype=np.float64)
         Mode = GroundTruth[mode].to_numpy()
@@ -39,32 +43,45 @@ def Make_Time_Vector(GroundTruth, Waveforms_and_info, mode) :
         Mode = np.ones(len(HitPosInWindow), dtype=np.float64)
     for j in range(len(Waveforms_and_info)) :
         while i < nt and Wave_TriggerNo[j] == Truth_TriggerNo[i] :
-            Time_Series[j][HitPosInWindow[i]] = Time_Series[j][HitPosInWindow[i]] + max(Mode[i], 0)
+            Time_Series[j][int(round(HitPosInWindow[i]))] = Time_Series[j][int(round(HitPosInWindow[i]))] + max(Mode[i], 0)
             i = i + 1
     return Time_Series
+
 
 def TableToDataFrame(Array) :
     return(pd.DataFrame({name: list(Array[name]) for name in Array.dtype.names}))
 
-def Read_Data(sliceNo, filename, Wave_startentry, Wave_endentry, Truth_startentry, Truth_endentry) :
+
+def Read_Data(filename) :
     h5file = tables.open_file(filename, 'r')
     WaveformTable = h5file.root.Readout.Waveform
-    GroundTruthTable = h5file.root.SimTriggerInfo.GroundTruth
+    GroundTruthTable = h5file.root.SimTriggerInfo.PEList
     print('Reading File ' + filename)
-    Waveforms_and_info = WaveformTable[Wave_startentry:Wave_endentry]
-    GroundTruth = GroundTruthTable[Truth_startentry:Truth_endentry]
-    GroundTruth = GroundTruth[np.logical_and(GroundTruth['HitPosInWindow'] >= 0, GroundTruth['HitPosInWindow'] < WindowSize)]
+    Waveforms_and_info = WaveformTable[:]
+    GroundTruth = GroundTruthTable[:]
+    GroundTruth = GroundTruth[np.logical_and(GroundTruth['RiseTime'] >= 0, GroundTruth['RiseTime'] < WindowSize)]
     h5file.close()
-    return (sliceNo, {'Waveform': TableToDataFrame(Waveforms_and_info), 'GroundTruth': TableToDataFrame(GroundTruth)})
+    return {'Waveform': TableToDataFrame(Waveforms_and_info), 'GroundTruth': TableToDataFrame(GroundTruth)}
+
+
+def ReadBaseline(filename) :
+    f = uproot4.open(filename)
+    Ped = ak.flatten(f["SimpleAnalysis"]["ChannelInfo.Pedestal"].array())
+    CID = ak.flatten(f["SimpleAnalysis"]["ChannelInfo.ChannelId"].array())
+    Cha = ak.flatten(f["SimpleAnalysis"]["ChannelInfo.Charge"].array())
+    return pd.DataFrame({"ChannelID": CID, "Pedestal": Ped, "Charge": Cha})
+
 
 def PreProcess(channelid) :
     print('PreProcessing channel {:02d}'.format(channelid))
     Waves_of_this_channel = Grouped_Waves.get_group(channelid)
     Truth_of_this_channel = Grouped_Truth.get_group(channelid)
+    Bslne_of_this_channel = Grouped_Bslne.get_group(channelid)
+    Baselines = np.vstack(Bslne_of_this_channel['Pedestal'].to_numpy())
     Origin_Waves = np.vstack(Waves_of_this_channel['Waveform'].to_numpy())
     Shifted_Waves = np.empty((len(Origin_Waves), WindowSize), dtype=np.float32)
     for i in range(len(Origin_Waves)) :
-        Shifted_Waves[i] = Origin_Waves[i].astype(np.float) * spe_pre[channelid]['epulse']
+        Shifted_Waves[i] = Baselines[i] - Origin_Waves[i]
 
     PEnumSpectrum = Make_Time_Vector(Truth_of_this_channel, Waves_of_this_channel, 'PEnum')
     ChargeSpectrum = Make_Time_Vector(Truth_of_this_channel, Waves_of_this_channel, 'Charge')
@@ -74,33 +91,21 @@ def PreProcess(channelid) :
         opt.create_dataset('ChargeSpectrum', data=ChargeSpectrum, compression='gzip')
     return
 
+
 print('training data pre-processing savepath is {}'.format(os.path.dirname(SavePath)))
-spe_pre = wff.read_model(reference[0])
 sliceNo = 0
 trainfile_list = []  # index sliceNo; value: number of waveforms to be readed
 start = time()
-for filename in files :
-    h5file = tables.open_file(filename, 'r')
-    if filename == files[0]:
-        origin_dtype = h5file.root.Readout.Waveform.dtype
-        WindowSize = origin_dtype['Waveform'].shape[0]
-    Waveform_Len = len(h5file.root.Readout.Waveform)
-    GroundTruth_Len = len(h5file.root.SimTriggerInfo.GroundTruth)
-    slices = np.append(np.arange(0, Waveform_Len, 150000), Waveform_Len)
-    Truth_slices = (GroundTruth_Len / Waveform_Len * slices).astype(np.int)
-    for i in range(len(slices) - 1) :
-        trainfile_list.append((sliceNo, filename, slices[i], slices[i + 1], Truth_slices[i], Truth_slices[i + 1]))
-        sliceNo = sliceNo + 1
-    h5file.close()
 print('Initialization Finished, consuming {:.5f}s.'.format(time() - start))
-with Pool(min(len(trainfile_list), cpu_count())) as pool :
-    Reading_Result = dict(pool.starmap(Read_Data, trainfile_list))
-Waveforms_and_info = pd.concat([Reading_Result[i]['Waveform'] for i in range(len(trainfile_list))])
-GroundTruth = pd.concat([Reading_Result[i]['GroundTruth'] for i in range(len(trainfile_list))])
+Reading_Result = Read_Data(rawfilename)
+Waveforms_and_info = Reading_Result["Waveform"]
+GroundTruth = Reading_Result['GroundTruth']
+Baseline = ReadBaseline(bslfilename)
 print('Data Loaded, consuming {:.5f}s'.format(time() - start))
 
 Grouped_Waves = Waveforms_and_info.groupby(by='ChannelID')
 Grouped_Truth = GroundTruth.groupby(by='ChannelID')
+Grouped_Bslne = Baseline.groupby(by='ChannelID')
 
 channelid_list = np.unique(Waveforms_and_info['ChannelID'].to_numpy())
 

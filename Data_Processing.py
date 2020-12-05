@@ -32,11 +32,11 @@ from torch import optim
 from torch.autograd import Variable
 import time
 import tables
-import wf_func as wff
 import pytorch_stats_loss as stats_loss
 
 # detecting cuda device and wait in line
-device = torch.device(ChannelID % 2)
+device = 0
+# device = torch.device(ChannelID % 2)
 torch.cuda.init()
 torch.cuda.empty_cache()
 # Make Saving_Directory
@@ -61,12 +61,6 @@ print('Reading Data...')
 WaveData = PreFile.root.Waveform[0:max_set_number]
 PETData = PreFile.root['ChargeSpectrum'][0:max_set_number]
 WindowSize = len(WaveData[0])
-spe_pre = wff.read_model(reference)
-spe = np.concatenate([spe_pre[ChannelID]['spe'], np.zeros(WindowSize - len(spe_pre[ChannelID]['spe']))])
-if mode == 'Charge':
-    spe = spe / np.sum(spe)
-mnecpu = spe[np.mod(np.arange(WindowSize).reshape(WindowSize, 1) - np.arange(WindowSize).reshape(1, WindowSize), WindowSize)]
-mne = torch.from_numpy(mnecpu.T).float().to(device=device)
 print('Data_loaded')
 
 # Splitting_Data
@@ -88,6 +82,7 @@ test_data = Data.TensorDataset(torch.from_numpy(Wave_test).float().to(device=dev
 
 test_loader = Data.DataLoader(dataset=test_data, batch_size=BATCHSIZE, shuffle=False, pin_memory=False)
 
+
 def testing(test_loader, met='wdist') :
     batch_result = 0
     batch_count = 0
@@ -106,13 +101,10 @@ def testing(test_loader, met='wdist') :
             # Wdist loss
             if met == 'wdist':
                 cost = stats.wasserstein_distance(np.arange(WindowSize), np.arange(WindowSize), output_vec, label_vec)
-            elif met == 'l2':
-#                 cost = np.sum(np.power(np.matmul(mnecpu, output_vec) - np.matmul(mnecpu, label_vec), 2)) / (np.sum(output_vec * label_vec > 0) + 1e-3)
-                cost = np.linalg.norm(np.matmul(mnecpu, output_vec) - np.matmul(mnecpu, label_vec), ord=2)
-#                 cost = np.linalg.norm(np.matmul(mnecpu, output_vec) - label_vec, ord=2)
             batch_result += cost
         batch_count += 1
     return batch_result / (BATCHSIZE * batch_count)
+
 
 # Neural Networks
 from CNN_Module import Net_1
@@ -123,16 +115,10 @@ trial_loader = Data.DataLoader(dataset=trial_data, batch_size=BATCHSIZE, shuffle
 
 if os.path.exists(Model) :
     net = torch.load(Model, map_location=device)
-    loss = testing(trial_loader)
     lr = 5e-4
 else :
-    loss = 10000
-    while(loss > 100):
-        net = Net_1().to(device)
-        loss = testing(trial_loader, met='wdist')
-        print('Trying initial parameters with loss={:.2f}'.format(loss))
+    net = Net_1().to(device)
     lr = 5e-3
-print('Initial loss={}'.format(loss))
 print('Sum of parameters: {:.4f}'.format(sum(parm.numel() for parm in net.parameters())))
 # optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9) #0.001
 optimizer = optim.Adam(net.parameters(), lr=lr)
