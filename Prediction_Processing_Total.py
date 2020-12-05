@@ -70,16 +70,19 @@ def Read_Data(rawfilename, bslfilename) :
     global WindowSize
     WindowSize = int(len(Waveform) / nwaves)
     Waveform = np.array(Waveform).reshape((nwaves, WindowSize))
-    gpufloat_dtype = np.dtype([("TriggerNo", np.int64), ("ChannelID", np.int16), ("Waveform", np.float32, WindowSize)])
-    Shifted_Waves_and_info = np.empty(nwaves, dtype=gpufloat_dtype)
-    Shifted_Waves_and_info["TriggerNo"] = TriggerNo
-    Shifted_Waves_and_info["ChannelID"] = ChannelId
+    waveform_dtype = np.dtype([("TriggerNo", np.int64), ("ChannelID", np.int16), ("Pedestal", np.float32), ("Waveform", np.int16, WindowSize)])
+    Waves_and_info = np.empty(nwaves, dtype=waveform_dtype)
+    Valid_Channels = ChannelId < 30
+    Waves_and_info["TriggerNo"] = TriggerNo[Valid_Channels]
+    Waves_and_info["ChannelID"] = ChannelId[Valid_Channels]
+    Waves_and_info["Waveform"] = Waveform[Valid_Channels]
+    Waves_and_info["Pedestal"] = ReadBaseline(bslfilename)
 
-    Pedestal = ReadBaseline(bslfilename)
-    for i in range(nwaves) :
-        Shifted_Waves_and_info[i]['Waveform'] = Pedestal[i] - Waveform[i].astype(np.float)
-    RawDataFile.close()
-    return pd.DataFrame({name: list(Shifted_Waves_and_info[name]) for name in gpufloat_dtype.names})
+    wave_dict = {"Waveform" : list(Waves_and_info["Waveform"])}
+    for name in waveform_dtype.names :
+        if name != "Waveform" : wave_dict.update({name : Waves_and_info[name]})
+    df = pd.DataFrame(wave_dict)
+    return df
 
 
 # Loading Data
@@ -114,14 +117,15 @@ def Forward(channelid) :
     SPECharge = GainTable[channelid]
     filter_limit = 0.01 * SPECharge
     Data_of_this_channel = Channel_Grouped_Waveform.get_group(channelid)
-    Shifted_Wave = np.vstack(Data_of_this_channel['Waveform'])
+    Wave = np.vstack(Data_of_this_channel['Waveform'])
+    Peds = np.array(Data_of_this_channel['Pedestal'])[:, None]
     TriggerNos = np.array(Data_of_this_channel['TriggerNo'])
     HitPosInWindows = np.empty(0, dtype=np.int16)
     PEmeasure = np.empty(0, dtype=np.float32)
     EventData = np.empty(0, dtype=np.int64)
-    slices = np.append(np.arange(0, len(Shifted_Wave), BATCHSIZE), len(Shifted_Wave))
+    slices = np.append(np.arange(0, len(Wave), BATCHSIZE), len(Wave))
     for i in range(len(slices) - 1) :
-        inputs = Shifted_Wave[slices[i]:slices[i + 1]]
+        inputs = Peds[slices[i]:slices[i + 1]] - Wave[slices[i]:slices[i + 1]]
         Total = np.abs(np.sum(inputs, axis=1))
         Total = np.where(Total > 1e-4, Total, 1e-4)
         if Device == 'cuda' :
