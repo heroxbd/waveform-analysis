@@ -134,8 +134,8 @@ def Forward(channelid) :
             Prediction = nets[channelid].forward(torch.from_numpy(inputs)).data.numpy()
         sumPrediction = np.sum(Prediction, axis=1)
         sumPrediction = np.where(sumPrediction > 1e-4, sumPrediction, 1e-4)
-        Prediction = Prediction / sumPrediction[:, None]
         HitPosInWindow = Prediction > filter_limit
+        Prediction = Prediction / sumPrediction[:, None]
         pe_numbers = HitPosInWindow.sum(axis=1)
         no_pe_found = pe_numbers == 0
         if no_pe_found.any() :
