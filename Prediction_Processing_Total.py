@@ -112,7 +112,7 @@ nets = dict([])
 for channelid in tqdm(channelid_set, desc='Loading Nets of each channel') :
     nets[channelid] = torch.load(NetDir + '/{:02d}.net'.format(channelid))
     if Device == 'cuda' :
-        nets[channelid] = nn.DataParallel(nets[channelid], range(1))
+        nets[channelid] = nn.DataParallel(nets[channelid], range(torch.cuda.device_count()))
         # nets[channelid] = nn.DataParallel(nets[channelid], range(torch.cuda.device_count()))
 
 print('Net Loaded, consuming {0:.4f}s'.format(time.time() - tic))
