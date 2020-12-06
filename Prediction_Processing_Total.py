@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# memory tracking
 
 import argparse
 psr = argparse.ArgumentParser()
@@ -201,13 +202,18 @@ for i in range(len(SLICES) - 1):
             dset = opt.create_dataset('Answer', data=Result, compression='gzip')
             dset.attrs['Method'] = method
             print('The output file path is {}'.format(optpath))
+            opt.close()
 
     tic = time.time()
     cpu_tic = time.process_time()
     with Pool(N) as pool :
         pool.map(WriteData, FILENOS)
+    if(i == 20) : embed()
+    del Result
+    del Waveforms_and_info
     gc.collect()
     print('output written, real time {0:.4f}s, cpu time {1:.4f}s'.format(time.time() - tic, time.process_time() - cpu_tic))
+    if(i == 20) : embed()
 
 
 print('Finished! Consuming {0:.2f}s in total, cpu time {1:.2f}s.'.format(time.time() - global_start, time.process_time() - cpu_global_start))
