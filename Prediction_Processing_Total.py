@@ -32,6 +32,7 @@ from tqdm import tqdm
 import h5py
 import uproot
 import awkward1 as ak
+import gc
 
 import torch
 from torch import nn
@@ -64,14 +65,13 @@ print('Initialization finished, real time {0:.4f}s, cpu time {1:.4f}s'.format(ti
 tic = time.time()
 nets = dict([])
 for channelid in tqdm(range(30), desc='Loading Nets of each channel') :
-    nets[channelid] = torch.load(NetDir + '/{:02d}.net'.format(channelid))
-    if Device != 'cpu' :
-        nets[channelid] = nn.DataParallel(nets[channelid], [Device])
+    nets[channelid] = torch.load(NetDir + '/{:02d}.net'.format(channelid), map_location=Device)
 
 
 def ReadBaseline(filename) :
     f = uproot.open(filename)
     Ped = ak.flatten(f["SimpleAnalysis"]["ChannelInfo.Pedestal"].array())
+    f.close()
     return Ped
 
 
@@ -88,7 +88,7 @@ def Read_Data(fileno) :
     Waveform = RawDataFile["Readout"]["Waveform"].array(flatten=True)
     WindowSize = int(len(Waveform) / nwaves)
     Waveform = np.array(Waveform).reshape((nwaves, WindowSize))
-    waveform_dtype = np.dtype([("TriggerNo", np.int64), ("ChannelID", np.int16), ("FileNo", np.int32), ("Pedestal", np.float32), ("Waveform", np.int16, WindowSize)])
+    waveform_dtype = np.dtype([("TriggerNo", np.uint32), ("ChannelID", np.uint32), ("FileNo", np.int32), ("Pedestal", np.float32), ("Waveform", np.int16, WindowSize)])
     Waves_and_info = np.empty(nwaves, dtype=waveform_dtype)
     Valid_Channels = ChannelId < 30
     Waves_and_info["TriggerNo"] = TriggerNo[Valid_Channels]
@@ -101,19 +101,21 @@ def Read_Data(fileno) :
     wave_dict = {"Waveform" : list(Waves_and_info["Waveform"])}
     for name in waveform_dtype.names :
         if name != "Waveform" : wave_dict.update({name : Waves_and_info[name]})
+    RawDataFile.close()
     return pd.DataFrame(wave_dict)
 
 
 N = 3
 pools = []
 WaveReader = []
+PEWriter = []
 SLICES = np.append(np.arange(0, len(filenos), N), len(filenos))
 NEXT_FILENOS = filenos[SLICES[0]:SLICES[1]]
 pools.append(Pool(min(N, cpu_count())))
 WaveReader.append(pools[0].map_async(Read_Data, NEXT_FILENOS))
 for i in range(len(SLICES) - 1):
     FILENOS = filenos[SLICES[i]:SLICES[i + 1]]
-    if i != len(SLICES - 1) :
+    if i != len(SLICES) - 1 :
         NEXT_FILENOS = filenos[SLICES[i + 1]:SLICES[i + 2]]
         pools.append(Pool(min(N, cpu_count())))
         WaveReader.append(pools[i].map_async(Read_Data, NEXT_FILENOS))
@@ -125,6 +127,7 @@ for i in range(len(SLICES) - 1):
     # Waveforms_and_info = Read_Data(rawfilename, bslfilename)
     WaveReader[i].wait()
     Waveforms_and_info = pd.concat(WaveReader[i].get())
+    pools[i].close()
     print('Data Loaded, consuming {0:.4f}s using {1} threads, cpu time {2:.4f}s'.format(time.time() - tic, N, time.process_time() - cpu_tic))
     print('Processing {} waves'.format(len(Waveforms_and_info)))
     WindowSize = len(Waveforms_and_info["Waveform"][0:1][0])
@@ -134,7 +137,7 @@ for i in range(len(SLICES) - 1):
     print('Net Loaded, consuming {0:.4f}s'.format(time.time() - tic))
 
     filter_limit = 0.05
-    Timeline = np.arange(WindowSize).reshape(1, WindowSize)
+    Timeline = np.arange(WindowSize, dtype=np.int16).reshape(1, WindowSize)
     GainTable = np.loadtxt(gaintablefile, skiprows=0, usecols=2)
 
     def Forward(channelid) :
@@ -146,16 +149,16 @@ for i in range(len(SLICES) - 1):
         TriggerNos = np.array(Data_of_this_channel['TriggerNo'])
         FileNos = np.array(Data_of_this_channel['FileNo'])
         HitPosInWindows = np.empty(0, dtype=np.int16)
-        PEmeasure = np.empty(0, dtype=np.float32)
-        EventData = np.empty(0, dtype=np.int64)
+        PEmeasure = np.empty(0, dtype=np.float64)
+        EventData = np.empty(0, dtype=np.uint32)
         FileNoData = np.empty(0, dtype=np.int32)
         slices = np.append(np.arange(0, len(Wave), BATCHSIZE), len(Wave))
         for i in range(len(slices) - 1) :
             inputs = Peds[slices[i]:slices[i + 1]] - Wave[slices[i]:slices[i + 1]]
             Total = np.abs(np.sum(inputs, axis=1))
             Total = np.where(Total > 1e-4, Total, 1e-4)
-            if Device != 'cuda' :
-                Prediction = nets[channelid].forward(torch.from_numpy(inputs).cuda()).data.cpu().numpy()
+            if Device != 'cpu' :
+                Prediction = nets[channelid].forward(torch.from_numpy(inputs).to(Device)).data.cpu().numpy()
             else :
                 Prediction = nets[channelid].forward(torch.from_numpy(inputs)).data.numpy()
             sumPrediction = np.sum(Prediction, axis=1)
@@ -176,7 +179,7 @@ for i in range(len(SLICES) - 1):
             HitPosInWindows = np.append(HitPosInWindows, TimeMatrix)
             EventData = np.append(EventData, np.repeat(TriggerNos[slices[i]:slices[i + 1]], pe_numbers))
             FileNoData = np.append(FileNoData, np.repeat(FileNos[slices[i]:slices[i + 1]], pe_numbers))
-            ChannelData = np.empty(EventData.shape, dtype=np.int16)
+            ChannelData = np.empty(EventData.shape, dtype=np.uint32)
             ChannelData.fill(channelid)
         return pd.DataFrame({'HitPosInWindow': HitPosInWindows, 'Charge': PEmeasure, 'TriggerNo': EventData, 'ChannelID': ChannelData, 'FileNo': FileNoData})
 
@@ -186,19 +189,25 @@ for i in range(len(SLICES) - 1):
     for ch in tqdm(range(30), desc='Predict for each channel') :
         Result.append(Forward(ch))
     Result = pd.concat(Result)
-    Result = Result.sort_values(by=['FileNo', 'TriggerNo', 'ChannelID'])
+    Result = Result.sort_values(by=['TriggerNo', 'ChannelID'])
     Grouped_Result = Result.groupby(by='FileNo')
+    print('Prediction generated, real time {0:.4f}s, cpu time {1:.4f}s'.format(time.time() - tic, time.process_time() - cpu_tic))
 
     def WriteData(fileno) :
+        optpath = output + "/{}.h5".format(fileno)
         Result = Grouped_Result.get_group(fileno)
         Result = Result.to_records(index=False)
-        with h5py.File(output + "/{}.h5".format(fileno), 'w') as opt:
+        with h5py.File(optpath, 'w') as opt:
             dset = opt.create_dataset('Answer', data=Result, compression='gzip')
             dset.attrs['Method'] = method
-            print('The output file path is {}'.format(output))
+            print('The output file path is {}'.format(optpath))
 
+    tic = time.time()
+    cpu_tic = time.process_time()
     with Pool(N) as pool :
         pool.map(WriteData, FILENOS)
-    print('Prediction generated, real time {0:.4f}s, cpu time {1:.4f}s'.format(time.time() - tic, time.process_time() - cpu_tic))
+    gc.collect()
+    print('output written, real time {0:.4f}s, cpu time {1:.4f}s'.format(time.time() - tic, time.process_time() - cpu_tic))
+
 
 print('Finished! Consuming {0:.2f}s in total, cpu time {1:.2f}s.'.format(time.time() - global_start, time.process_time() - cpu_global_start))
