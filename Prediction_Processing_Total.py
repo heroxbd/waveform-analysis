@@ -104,19 +104,27 @@ def Read_Data(fileno) :
     return pd.DataFrame(wave_dict)
 
 
-N = 10
+N = 3
+pools = []
+WaveReader = []
 SLICES = np.append(np.arange(0, len(filenos), N), len(filenos))
+NEXT_FILENOS = filenos[SLICES[0]:SLICES[1]]
+pools.append(Pool(min(N, cpu_count())))
+WaveReader.append(pools[0].map_async(Read_Data, NEXT_FILENOS))
 for i in range(len(SLICES) - 1):
     FILENOS = filenos[SLICES[i]:SLICES[i + 1]]
+    if i != len(SLICES - 1) :
+        NEXT_FILENOS = filenos[SLICES[i + 1]:SLICES[i + 2]]
+        pools.append(Pool(min(N, cpu_count())))
+        WaveReader.append(pools[i].map_async(Read_Data, NEXT_FILENOS))
     # Loading Data
     tic = time.time()
     cpu_tic = time.process_time()
     # files = [(rawfilename + "/{}.root".format(i), bslfilename + "/{}.root".format(i), i) for i in range(3)]
-    with Pool(min(N, cpu_count())) as pool :
-        Waveforms_and_info = pd.concat(pool.map(Read_Data, FILENOS))
-    # Waveforms_and_info = pd.concat([Read_Data(rawfilename + "/{}.root".format(i), bslfilename + "/{}.root".format(i), i) for i in range(3)])
 
     # Waveforms_and_info = Read_Data(rawfilename, bslfilename)
+    WaveReader[i].wait()
+    Waveforms_and_info = pd.concat(WaveReader[i].get())
     print('Data Loaded, consuming {0:.4f}s using {1} threads, cpu time {2:.4f}s'.format(time.time() - tic, N, time.process_time() - cpu_tic))
     print('Processing {} waves'.format(len(Waveforms_and_info)))
     WindowSize = len(Waveforms_and_info["Waveform"][0:1][0])
