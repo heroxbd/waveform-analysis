@@ -27,20 +27,16 @@ import time
 global_start = time.time()
 cpu_global_start = time.process_time()
 import numpy as np
-import tables
 import pandas as pd
 from tqdm import tqdm
 import h5py
 import uproot
 import awkward1 as ak
-import gc
 
 import torch
-from torch import nn
 torch.no_grad()
 
 from multiprocessing import Pool, cpu_count
-from IPython import embed
 
 
 if torch.cuda.is_available() and Device == 'cpu':
@@ -118,7 +114,7 @@ def WriteData(fileno, Grouped_Result) :
 
 
 GainTable = np.loadtxt(gaintablefile, skiprows=0, usecols=2)
-N = 3
+N = min(3, cpu_count())
 SLICES = np.append(np.arange(0, len(filenos), N), len(filenos))
 tic = time.time()
 cpu_tic = time.process_time()
