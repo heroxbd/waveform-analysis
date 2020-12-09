@@ -94,7 +94,6 @@ def Read_Data(fileno) :
     Waves_and_info["Waveform"] = Waveform[Valid_Channels]
     Waves_and_info["Pedestal"] = ReadBaseline(bsl_filename)
     Waves_and_info["FileNo"] = fileno
-    print(rawfilename + " " + bslfilename + " {}".format(fileno))
 
     wave_dict = {"Waveform" : list(Waves_and_info["Waveform"])}
     for name in waveform_dtype.names :
@@ -110,7 +109,6 @@ def WriteData(fileno, Grouped_Result) :
     with h5py.File(optpath, 'w') as opt:
         dset = opt.create_dataset('Answer', data=Result, compression='gzip')
         dset.attrs['Method'] = method
-        print('The output file path is {}'.format(optpath))
 
 
 GainTable = np.loadtxt(gaintablefile, skiprows=0, usecols=2)
