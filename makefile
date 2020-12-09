@@ -1,3 +1,13 @@
+cids=$(shell seq -f %02g 0 29)
+
+targets=$(cids:%=net%/.trained)
+
+net%/.trained : /srv/JP/wave_analysis/PreProcess/%.h5
+	mkdir -p $(dir $@)
+	python3.8 -u Data_Processing.py /srv/JP/wave_analysis/PreProcess/$*.h5 -o charge $(dir $@) --mod Charge -n $* > $(dir $@)train.log 2>&1 
+	touch $@
+
+all : $(targets)
 runNos=$(shell cat TargetList.txt)
 
 define Analysis
