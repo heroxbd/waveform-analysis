@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import sys
+print(sys.version)
 
 import os
 import re
@@ -178,14 +180,3 @@ np.savez(testing_record_name, testing_result)
 training_record.close()
 testing_record.close()
 PreFile.close()
-
-fileSet = os.listdir(SavePath)
-matchrule = re.compile(r'_epoch(\d+)_loss(\d+(\.\d*)?|\.\d+)')
-NetLoss_reciprocal = []
-for filename in fileSet :
-    if '_epoch' in filename : NetLoss_reciprocal.append(1 / float(matchrule.match(filename)[2]))
-    else : NetLoss_reciprocal.append(0)
-net_name = fileSet[NetLoss_reciprocal.index(max(NetLoss_reciprocal))]
-modelpath = '../' + SavePath.split('/')[-2] + '/' + net_name
-
-os.system('ln -snf ' + modelpath + ' ' + Model)
