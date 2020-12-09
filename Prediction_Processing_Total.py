@@ -190,7 +190,7 @@ for i in range(len(SLICES) - 1):
         pool_write.starmap(WriteData, [(fn, Grouped_Result) for fn in FILENOS])
         print('output written, real time {0:.4f}s, cpu time {1:.4f}s'.format(time.time() - tic, time.process_time() - cpu_tic))
 
-        if i < (len(SLICES) - 1) :
+        if i < (len(SLICES) - 2) :
             tic = time.time()
             cpu_tic = time.process_time()
             WaveReader.wait()
