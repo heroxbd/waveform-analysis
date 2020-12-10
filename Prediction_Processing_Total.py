@@ -30,7 +30,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 import h5py
-import uproot
+import uproot3 as uproot
 import awkward1 as ak
 
 import torch
@@ -87,8 +87,8 @@ def Read_Data(fileno) :
     WindowSize = int(len(Waveform) / nwaves)
     Waveform = np.array(Waveform).reshape((nwaves, WindowSize))
     waveform_dtype = np.dtype([("TriggerNo", np.uint32), ("ChannelID", np.uint32), ("FileNo", np.int32), ("Pedestal", np.float32), ("Waveform", np.int16, WindowSize)])
-    Waves_and_info = np.empty(nwaves, dtype=waveform_dtype)
     Valid_Channels = ChannelId < 30
+    Waves_and_info = np.empty((Valid_Channels).sum(), dtype=waveform_dtype)
     Waves_and_info["TriggerNo"] = TriggerNo[Valid_Channels]
     Waves_and_info["ChannelID"] = ChannelId[Valid_Channels]
     Waves_and_info["Waveform"] = Waveform[Valid_Channels]
