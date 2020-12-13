@@ -107,7 +107,7 @@ def WriteData(fileno, Grouped_Result) :
     Result = Grouped_Result.get_group(fileno)
     Result = Result.to_records(index=False)
     with h5py.File(optpath, 'w') as opt:
-        dset = opt.create_dataset('Answer', data=Result, compression='gzip')
+        dset = opt.create_dataset('AnswerWF', data=Result, compression='gzip')
         dset.attrs['Method'] = method
 
 
