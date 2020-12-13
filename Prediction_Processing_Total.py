@@ -135,7 +135,11 @@ for i in range(len(SLICES) - 1):
         def Forward(channelid) :
             SPECharge = GainTable[channelid]
             filter_limit = 0.01 * SPECharge
-            Data_of_this_channel = Channel_Grouped_Waveform.get_group(channelid)
+            try : 
+                Data_of_this_channel = Channel_Grouped_Waveform.get_group(channelid)
+            except KeyError :
+                print("Warning: channel {0} not found in file {1}!".format(channelid, FILENOS))
+                return None
             Wave = np.vstack(Data_of_this_channel['Waveform'])
             Peds = np.array(Data_of_this_channel['Pedestal'])[:, None]
             TriggerNos = np.array(Data_of_this_channel['TriggerNo'])
