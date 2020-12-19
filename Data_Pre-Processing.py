@@ -23,14 +23,13 @@ SavePath = args.opt
 reference = args.ref
 filedir, prefix = os.path.split(args.ipt)
 files = os.listdir(filedir)
-files = [filedir+'/'+fi for fi in files if prefix in fi and not os.path.isdir(fi)]
+files = [filedir+'/'+fi for fi in files if prefix in fi and not os.path.isdir(fi) and '.h5' == fi[-3:] ]
 
 def Make_Time_Vector(GroundTruth, Waveforms_and_info, mode) :
-    GroundTruth[GroundTruth['Charge'] > 0]
     i = 0
     Wave_TriggerNo = Waveforms_and_info['TriggerNo'].to_numpy()
     Truth_TriggerNo = GroundTruth['TriggerNo'].to_numpy(); nt = len(Truth_TriggerNo)
-    HitPosInWindow = GroundTruth['HitPosInWindow'].to_numpy()
+    HitPosInWindow = np.around(GroundTruth['HitPosInWindow'].to_numpy()).astype(np.int)
     if mode == 'Charge':
         Time_Series = np.zeros((len(Waveforms_and_info), WindowSize), dtype=np.float64)
         Mode = GroundTruth[mode].to_numpy()
@@ -39,7 +38,7 @@ def Make_Time_Vector(GroundTruth, Waveforms_and_info, mode) :
         Mode = np.ones(len(HitPosInWindow), dtype=np.float64)
     for j in range(len(Waveforms_and_info)) :
         while i < nt and Wave_TriggerNo[j] == Truth_TriggerNo[i] :
-            Time_Series[j][HitPosInWindow[i]] = Time_Series[j][HitPosInWindow[i]] + max(Mode[i], 0)
+            Time_Series[j][HitPosInWindow[i]] = Time_Series[j][HitPosInWindow[i]] + Mode[i]
             i = i + 1
     return Time_Series
 
@@ -49,7 +48,7 @@ def TableToDataFrame(Array) :
 def Read_Data(sliceNo, filename, Wave_startentry, Wave_endentry, Truth_startentry, Truth_endentry) :
     h5file = tables.open_file(filename, 'r')
     WaveformTable = h5file.root.Readout.Waveform
-    GroundTruthTable = h5file.root.SimTriggerInfo.GroundTruth
+    GroundTruthTable = h5file.root.SimTriggerInfo.PEList
     print('Reading File ' + filename)
     Waveforms_and_info = WaveformTable[Wave_startentry:Wave_endentry]
     GroundTruth = GroundTruthTable[Truth_startentry:Truth_endentry]
@@ -82,10 +81,9 @@ start = time()
 for filename in files :
     h5file = tables.open_file(filename, 'r')
     if filename == files[0]:
-        origin_dtype = h5file.root.Readout.Waveform.dtype
-        WindowSize = origin_dtype['Waveform'].shape[0]
+        WindowSize = len(h5file.root.Readout.Waveform[0]['Waveform'])
     Waveform_Len = len(h5file.root.Readout.Waveform)
-    GroundTruth_Len = len(h5file.root.SimTriggerInfo.GroundTruth)
+    GroundTruth_Len = len(h5file.root.SimTriggerInfo.PEList)
     slices = np.append(np.arange(0, Waveform_Len, 150000), Waveform_Len)
     Truth_slices = (GroundTruth_Len / Waveform_Len * slices).astype(np.int)
     for i in range(len(slices) - 1) :
@@ -100,7 +98,7 @@ GroundTruth = pd.concat([Reading_Result[i]['GroundTruth'] for i in range(len(tra
 print('Data Loaded, consuming {:.5f}s'.format(time() - start))
 
 Grouped_Waves = Waveforms_and_info.groupby(by='ChannelID')
-Grouped_Truth = GroundTruth.groupby(by='ChannelID')
+Grouped_Truth = GroundTruth.groupby(by='PMTId')
 
 channelid_list = np.unique(Waveforms_and_info['ChannelID'].to_numpy())
 

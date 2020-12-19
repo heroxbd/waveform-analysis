@@ -6,7 +6,6 @@ import argparse
 psr = argparse.ArgumentParser()
 psr.add_argument('ipt', help='input file prefix')
 psr.add_argument('-o', '--output', dest='opt', nargs='+', help='output')
-psr.add_argument('--mod', type=str, dest='mod', help='mode of weight', choices=['PEnum', 'Charge'])
 psr.add_argument('--ref', type=str, dest='ref', help='reference file')
 psr.add_argument('-n', '--channelid', dest='cid', type=int)
 psr.add_argument('-m', '--maxsetnumber', dest='msn', type=int, default=0)
@@ -15,7 +14,6 @@ args = psr.parse_args()
 
 Model = args.opt[0]
 SavePath = args.opt[1]
-mode = args.mod
 reference = args.ref
 ChannelID = args.cid
 filename = args.ipt
@@ -63,8 +61,7 @@ PETData = PreFile.root['ChargeSpectrum'][0:max_set_number]
 WindowSize = len(WaveData[0])
 spe_pre = wff.read_model(reference)
 spe = np.concatenate([spe_pre[ChannelID]['spe'], np.zeros(WindowSize - len(spe_pre[ChannelID]['spe']))])
-if mode == 'Charge':
-    spe = spe / np.sum(spe)
+spe = spe / np.sum(spe)
 mnecpu = spe[np.mod(np.arange(WindowSize).reshape(WindowSize, 1) - np.arange(WindowSize).reshape(1, WindowSize), WindowSize)]
 mne = torch.from_numpy(mnecpu.T).float().to(device=device)
 print('Data_loaded')
@@ -165,8 +162,7 @@ for epoch in range(49):  # loop over the dataset multiple times
         running_loss += loss.data.item()
 
         if (i + 1) % checking_period == 0:    # print every 2000 mini-batches
-            print('[%d, %5d] running_loss: %.3f' %
-                  (epoch + 1, i + 1, running_loss / checking_period))
+            print('[%d, %5d] running_loss: %.3f' % (epoch + 1, i + 1, running_loss / checking_period))
             training_record.write('%.3f ' % ((running_loss / checking_period)))
             training_result.append((running_loss / checking_period))
             running_loss = 0.0

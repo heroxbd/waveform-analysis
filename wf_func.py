@@ -35,7 +35,7 @@ plt.rcParams['axes.unicode_minus'] = False
 def xiaopeip(wave, spe_pre, eta=0):
     l = len(wave)
     flag = 1
-    lowp = np.argwhere(wave > spe_pre['thres']).flatten()
+    lowp = np.argwhere(wave > 5 * spe_pre['std']).flatten()
 #     lowp = rm_frag(lowp)
     if len(lowp) != 0:
         fitp = np.arange(lowp.min() - spe_pre['mar_l'], lowp.max() + spe_pre['mar_r'])
@@ -147,7 +147,7 @@ def waveformfft(wave, spe_pre):
     return np.arange(length), recon[:length]
 
 def threshold(wave, spe_pre):
-    pet = np.argwhere(wave[spe_pre['peak_c']:] > spe_pre['thres'] * 2).flatten()
+    pet = np.argwhere(wave[spe_pre['peak_c']:] > spe_pre['std'] * 5).flatten()
     pwe = wave[spe_pre['peak_c']:][pet]
     pwe = pwe / pwe.sum() * np.abs(wave.sum()) / spe_pre['spe'].sum()
     if len(pet) == 0:
@@ -160,7 +160,7 @@ def read_model(spe_path):
         cid = speFile['SinglePE'].attrs['ChannelID']
         epulse = speFile['SinglePE'].attrs['Epulse']
         spe = speFile['SinglePE'].attrs['SpePositive']
-        thres = speFile['SinglePE'].attrs['Thres']
+        std = speFile['SinglePE'].attrs['Std']
         if 'parameters' in list(speFile['SinglePE'].attrs.keys()):
             p = speFile['SinglePE'].attrs['parameters']
         else:
@@ -172,9 +172,9 @@ def read_model(spe_path):
         ax = fig.add_subplot(gs[0, 0])
         for i in range(len(spe)):
             peak_c = np.argmax(spe[i]); t = np.argwhere(spe[i][peak_c:] < 0.1).flatten()[0] + peak_c
-            mar_l = np.sum(spe[i][:peak_c] < thres[i])
-            mar_r = np.sum(spe[i][peak_c:t] < thres[i])
-            spe_pre_i = {'spe':spe[i], 'epulse':epulse, 'peak_c':peak_c, 'mar_l':mar_l, 'mar_r':mar_r, 'thres':thres[i], 'parameters':p[i]}
+            mar_l = np.sum(spe[i][:peak_c] < 5 * std[i])
+            mar_r = np.sum(spe[i][peak_c:t] < 5 * std[i])
+            spe_pre_i = {'spe':spe[i], 'epulse':epulse, 'peak_c':peak_c, 'mar_l':mar_l, 'mar_r':mar_r, 'std':std[i], 'parameters':p[i]}
             spe_pre.update({cid[i]:spe_pre_i})
             ax.plot(spe_pre[cid[i]]['spe'])
         ax.grid()
@@ -270,7 +270,7 @@ def demo(pet, pwe, tth, spe_pre, leng, wave, cid, full=False, fold='Note/figures
     ax0.plot(wave0, c='k', label='truth wave')
     ax0.plot(wave1, c='C1', label='recon wave')
     ax0.set_ylabel('$Voltage/\mathrm{mV}$')
-    ax0.hlines(spe_pre['thres'], 0, 1029, color='c', label='threshold')
+    ax0.hlines(5 * spe_pre['std'], 0, 1029, color='c', label='threshold')
     ax0.set_xticklabels([])
     ax0.set_ylim(min(wave)-5, max(wave)+5)
     ax0.legend(loc=1)

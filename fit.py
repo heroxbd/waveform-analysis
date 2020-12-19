@@ -77,7 +77,7 @@ def inferencing(a, b):
         for i in range(a, b):
             cid = ent[i]['ChannelID']
             wave = ent[i]['Waveform'].astype(np.float) * spe_pre[ent[i]['ChannelID']]['epulse']
-            pos = np.argwhere(wave[spe_pre[cid]['peak_c'] + 2:] > spe_pre[cid]['thres']).flatten()
+            pos = np.argwhere(wave[spe_pre[cid]['peak_c'] + 2:] > 5 * spe_pre[cid]['std']).flatten()
             pf = wave[pos]/(spe_pre[cid]['spe'].sum())
             flag = 1
             if len(pos) == 0:

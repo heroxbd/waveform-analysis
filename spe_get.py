@@ -41,11 +41,11 @@ def mean(dt):
 
 def pre_analysis(spemean, stddt):
     Chnum = np.unique(stddt['ChannelID'])
-    thres = np.zeros(len(Chnum))
+    std = np.zeros(len(Chnum))
     for i in range(len(Chnum)):
         stddt_cid = stddt[stddt['ChannelID']==Chnum[i]]['PedWave']
-        thres[i] = 5 * np.std(stddt_cid, ddof=-1)
-    spe_pre = {'spe':spemean, 'thres':thres}
+        std[i] = np.std(stddt_cid, ddof=-1)
+    spe_pre = {'spe':spemean, 'std':std}
     return spe_pre
 
 def generate_standard(h5_path, single_pe_path):
@@ -64,7 +64,8 @@ def generate_standard(h5_path, single_pe_path):
     e_wf, i_wf = np.unique(Wf['TriggerNo']*Chnum + Wf['ChannelID'], return_index=True)
     Wf = Wf[np.isin(e_wf, e_gt)]
     e_wf, i_wf = np.unique(Wf['TriggerNo']*Chnum + Wf['ChannelID'], return_index=True)
-    assert len(e_wf) ==  len(e_gt), 'Incomplete Dataset'
+    i_wf = np.append(i_wf, len(Wf))
+    assert len(e_wf) == len(e_gt), 'Incomplete Dataset'
     leng = len(Wf[0]['Waveform'])
     p = 0
     for p in tqdm(range(len(e_wf))):
@@ -117,7 +118,7 @@ def generate_standard(h5_path, single_pe_path):
         dset = spp.create_dataset('SinglePE', data=dt)
         dset.attrs['SpePositive'] = spe_pre['spe']
         dset.attrs['Epulse'] = epulse
-        dset.attrs['Thres'] = spe_pre['thres']
+        dset.attrs['Std'] = spe_pre['std']
         dset.attrs['ChannelID'] = cid
 
 if not os.path.exists(single_pe_path):

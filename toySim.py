@@ -37,7 +37,6 @@ spe_pre = wff.read_model('../jinping/data/spe.h5')
 spe = spe_pre[0]['spe']
 t = np.arange(len(spe)).astype(np.float)
 p = optimize.curve_fit(wff.spe, t[:20], spe[:20], p0=[3., .5, 20.])
-assert np.all(np.abs(p[0] - [ 7.51400673,  0.34119668, 22.37903948]) < 1e6)
 gmu = sum(wff.spe(t, p[0][0], p[0][1], p[0][2]))
 fig = plt.figure()
 # fig.tight_layout()
@@ -78,7 +77,7 @@ def sampling(a0, a1, mu, tau, sigma):
     for i in range(a1 - a0):
         wave = np.sum([np.where(pan > sams[i][j, 0], wff.spe(pan - sams[i][j, 0], tau=p[0][0], sigma=p[0][1], A=p[0][2]) * sams[i][j, 1] / gmu, 0) for j in range(len(sams[i]))], axis=0)
         if args.noi:
-            wave = wave + np.random.normal(0, spe_pre[0]['thres']/3, size=window)
+            wave = wave + np.random.normal(0, spe_pre[0]['std'], size=window)
         waves[i]['Waveform'] = np.around(wave).astype(np.int16)
     tdtp = np.dtype([('TriggerNo', np.uint32), ('T0', np.float64)])
     t = np.empty(a1 - a0).astype(tdtp)
@@ -125,7 +124,7 @@ with h5py.File('spe.h5', 'w') as spp:
     dset = spp.create_dataset('SinglePE', data=[])
     dset.attrs['SpePositive'] = wff.spe(np.arange(len(spe)), p[0][0], p[0][1], p[0][2])[np.newaxis, ...]
     dset.attrs['Epulse'] = 1
-    dset.attrs['Thres'] = [spe_pre[0]['thres']]
+    dset.attrs['Std'] = [spe_pre[0]['std']]
     dset.attrs['ChannelID'] = [0]
     dset.attrs['parameters'] = [p[0]]
 print('spe.h5 saved')

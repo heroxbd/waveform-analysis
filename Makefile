@@ -1,6 +1,7 @@
 SHELL:=bash
 channelN:=$(shell seq -f '%02g' 0 0)
 mu:=$(shell seq -f '%02g' 5 5 5)
+method=lucyddm
 raw:=$(mu:%=waveform/mu%.h5)
 char:=$(patsubst waveform/%.h5,result/$(method)/char/%.h5,$(raw))
 solu:=$(patsubst waveform/%.h5,result/$(method)/solu/%.h5,$(raw))
@@ -67,7 +68,7 @@ $(PreData) : result/$(method)/char/.PreProcess
 
 result/$(method)/char/.PreProcess : $(raw) spe.h5
 	@mkdir -p result/$(method)/char/PreProcess
-	python3 -u Data_Pre-Processing.py result/$(method)/char/ -o result/$(method)/char/PreProcess/Pre_Channel --ref $(word $(words $^), $^) > result/$(method)/char/PreProcess/PreProcess.log 2>&1
+	python3 -u Data_Pre-Processing.py waveform/ -o result/$(method)/char/PreProcess/Pre_Channel --ref $(word $(words $^), $^) > result/$(method)/char/PreProcess/PreProcess.log 2>&1
 	@touch $@
 
 waveform/mu%.h5 :
