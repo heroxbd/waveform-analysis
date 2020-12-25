@@ -41,7 +41,7 @@ def deltatime(N):
 spe_pre = wff.read_model('spe.h5')
 with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as ipt, h5py.File(args.ref, 'r', libver='latest', swmr=True) as ref:
     pelist = ref['SimTriggerInfo/PEList'][:]
-    charge = ipt['AnswerWF'][:]
+    charge = ipt['photoelectron'][:]
 pelist = np.sort(pelist, kind='stable', order=['TriggerNo', 'PMTId', 'HitPosInWindow'])
 Chnum = len(np.unique(charge['ChannelID']))
 charge = np.sort(charge, kind='stable', order=['TriggerNo', 'ChannelID', 'HitPosInWindow'])
@@ -72,5 +72,5 @@ with Pool(min(args.Ncpu, cpu_count())) as pool:
 ts['tscharge'] = np.hstack(result)
 
 with h5py.File(args.opt, 'w') as opt:
-    dset = opt.create_dataset('AnswerTS', data=ts, compression='gzip')
+    dset = opt.create_dataset('risetime', data=ts, compression='gzip')
     print('The output file path is {}'.format(args.opt))

@@ -158,7 +158,7 @@ plt.close(fig)
 
 with h5py.File(args.ref[0], 'r', libver='latest', swmr=True) as wavef, h5py.File(args.ref[1], 'r', libver='latest', swmr=True) as soluf:
     start = wavef['SimTruth/T'][:]
-    time = soluf['AnswerTS'][:]
+    time = soluf['risetime'][:]
 
 fig = plt.figure()
 gs = gridspec.GridSpec(2, 2, figure=fig, left=0.1, right=0.95, top=0.9, bottom=0.1, wspace=0.2, hspace=0.3)

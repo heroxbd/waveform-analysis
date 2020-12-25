@@ -1,20 +1,10 @@
 \section{Performance} % (fold)
-A summary of all methods is plotted in \ref{fig:chargesummary} and \ref{fig:penumsummary}. Figure~\ref{fig:chargesummary} is reconstruction of $q_{r}$. Figure~\ref{fig:penumsummary} is reconstruction of $n_{r}$. The errorbar shows 10 to 90 percentile of Wasserstein distance distribution. 
-\begin{figure}[H]
-\begin{minipage}[b]{.5\textwidth}
-\begin{figure}[H]
-    \centering
-    \resizebox{\textwidth}{!}{\input{figures/summarycharge.pgf}}
-    \caption{\label{fig:chargesummary} $W_{d}$ of methods, error bar 10--90 percentile ($q_{r}$)}
-\end{figure}
-\end{minipage}
-\begin{minipage}[b]{.5\textwidth}
+A summary of all methods is plotted in \ref{fig:chargesummary} which is reconstruction performance of $q_{r}$. The errorbar shows 10 to 90 percentile of Wasserstein distance distribution. 
+
 \begin{figure}[H]
     \centering
-    \resizebox{\textwidth}{!}{\input{figures/summarypenum.pgf}}
-    \caption{\label{fig:penumsummary} $W_{d}$ of methods, error bar 10--90 percentile ($n_{r}$)}
-\end{figure}
-\end{minipage}
+    \scalebox{0.35}{\input{figures/summarycharge.pgf}}
+    \caption{\label{fig:chargesummary} $W_{d}$ of methods, error bar 5--95 percentile ($q_{r}$)}
 \end{figure}
 
 The efficiency of CNN fitting and Lucy deconvolution method show in table~\ref{fig:efficiency}. The CNN is faster than Lucy deconvolution, and much faster than fitting. 
@@ -28,15 +18,9 @@ The efficiency of CNN fitting and Lucy deconvolution method show in table~\ref{f
         \hline
         CNN & Charge & 6.0s (GPU) \\
         \hline
-        CNN & \#PE & 6.0s (GPU)\\
-        \hline
         Fitting & Charge & 2000s (CPU) \\
         \hline
-        Fitting & \#PE & 2000s (CPU) \\
-        \hline
         LucyDDM & Charge & 24s (CPU) \\
-        \hline
-        LucyDDM & \#PE & 24s (CPU) \\
         \hline
     \end{tabular}
 \end{table}

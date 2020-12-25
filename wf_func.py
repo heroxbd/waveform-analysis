@@ -12,6 +12,7 @@ from scipy.fftpack import fft, ifft
 from scipy import optimize as opti
 import scipy.special as special
 from scipy.signal import convolve
+from scipy.signal import savgol_filter
 import matplotlib
 matplotlib.use('pgf')
 import matplotlib.pyplot as plt
@@ -155,6 +156,19 @@ def threshold(wave, spe_pre):
         pwe = np.array([1])
     return pet, pwe
 
+def findpeak(wave, spe_pre):
+    w = savgol_filter(wave, 11, 2)
+    dpta = np.where(np.diff(w, prepend=w[0]) > 0, 1, -1)
+    dpta = np.diff(dpta, prepend=dpta[0])
+    petr = np.argwhere((w > spe_pre['std'] * 5) & (dpta < 0)).flatten() - spe_pre['peak_c']
+    pet = petr[petr >= 0]
+    pwe = wave[pet + spe_pre['peak_c']]
+    pwe = pwe / np.sum(pwe) * np.abs(np.sum(wave)) / np.sum(spe_pre['spe'])
+    if len(pet) == 0:
+        pet = np.array([np.argmax(wave[spe_pre['peak_c']:])])
+        pwe = np.array([1])
+    return pet, pwe
+
 def read_model(spe_path):
     with h5py.File(spe_path, 'r', libver='latest', swmr=True) as speFile:
         cid = speFile['SinglePE'].attrs['ChannelID']
@@ -244,12 +258,16 @@ def charge(n, gmu, gsigma=40):
 def demo(pet, pwe, tth, spe_pre, leng, wave, cid, full=False, fold='Note/figures', ext='pgf'):
     penum = len(tth)
     print('PEnum is {}'.format(penum))
-    pf0 = np.zeros(leng); pf1 = np.zeros(leng)
+    pf0 = np.zeros(leng)
+    pf1 = np.zeros(leng)
     t = tth['HitPosInWindow']
     w = tth['Charge']
     tu = np.unique(t)
     cu = np.array([np.sum(w[tth['HitPosInWindow'] == i]) for i in tu])
-    pf0[tu] = cu / spe_pre['spe'].sum()
+    tuint = np.around(tu).astype(np.int)
+    for i in range(len(tuint)):
+        pf0[i] = pf0[i] + cu[i]
+    pf0 = pf0 / spe_pre['spe'].sum()
     pf1[pet] = pwe / spe_pre['spe'].sum()
     ylabel = '$Charge/\mathrm{mV}\cdot\mathrm{ns}$'
     distd = '(W/ns,C/mV*ns)'; distl = 'cdiff'
@@ -259,7 +277,7 @@ def demo(pet, pwe, tth, spe_pre, leng, wave, cid, full=False, fold='Note/figures
     print('truth Resi-norm = {}'.format(np.linalg.norm(wave-wave0)))
     print('HitPosInWindow = {}, Weight = {}'.format(pet, pwe))
     wdist = scipy.stats.wasserstein_distance(t, pet, u_weights=w, v_weights=pwe)
-    print('wdist = {},'.format(wdist)+distl+' = {}'.format(edist))
+    print('wdist = {}, '.format(wdist)+distl+' = {}'.format(edist))
     wave1 = np.convolve(spe_pre['spe'], pf1, 'full')[:leng]
     print('Resi-norm = {}'.format(np.linalg.norm(wave-wave1)))
 
@@ -307,8 +325,9 @@ def demo(pet, pwe, tth, spe_pre, leng, wave, cid, full=False, fold='Note/figures
     ax3.legend(loc=1)
     ax3.grid()
     if ext != 'pgf':
-        fig.suptitle('eid={},cid={},'.format(tth['TriggerNo'][0], tth['ChannelID'][0])+distd+'-dist={:.2f},{:.2f}'.format(wdist, edist), y=0.95)
-    fig.savefig(fold + '/demoe{}c{}.'.format(tth['TriggerNo'][0], tth['ChannelID'][0]) + ext)
+        fig.suptitle('eid={},cid={},'.format(tth['TriggerNo'][0], tth['PMTId'][0])+distd+'-dist={:.2f},{:.2f}'.format(wdist, edist), y=0.95)
+    fig.savefig(fold + '/demoe{}c{}.'.format(tth['TriggerNo'][0], tth['PMTId'][0]) + ext)
+    fig.savefig(fold + '/demoe{}c{}.'.format(tth['TriggerNo'][0], tth['PMTId'][0]) + 'pdf')
     fig.clf()
     plt.close(fig)
 
@@ -321,6 +340,7 @@ def demo(pet, pwe, tth, spe_pre, leng, wave, cid, full=False, fold='Note/figures
     ax.set_xlabel('$t/\mathrm{ns}$')
     ax.set_ylabel('$Voltage/\mathrm{mV}$')
     fig.savefig(fold + '/spe{:02d}.'.format(cid) + ext)
+    fig.savefig(fold + '/spe{:02d}.'.format(cid) + '.pdf')
     fig.clf()
     plt.close(fig)
     return

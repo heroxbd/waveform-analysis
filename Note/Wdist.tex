@@ -33,9 +33,9 @@ But these distances have certain shortcomings. They cannot compare discrete dist
 
 Wasserstein distance can overcome these difficulty. Wasserstein distance between $\mu$ and $\nu$ as the minimal effort to transport mass from distribution $\mu$ to $\nu$. Further the mass moves, more the effort we need to give. The transport plan is described by $\gamma(x, y)$. $d(x,y)^{p}$ in the formula~\eqref{eq:w-dist-def} is the Borel measure on Polish spaces\cite{villani_2009}. There is a minimum function in the functional space of $\gamma(x, y)$, whose corresponding $W_{p}(\mu ,\nu)$ is the Wasserstein distance between $\mu$ and $\nu$. 
 
-In practice, the loss (Wasserstein distance, abbreviated as W-dist) we used in numerical calculation is defined here. We first calculate subtraction of the cumulative distribution function (CDF) of A and the CDF of B. Then take the sum (or integral) of absolute value of the subtraction. That is the L1 distance of cumulative distribution function of A \& B. It is proved that the distance we define here is equivalent to Wasserstein distance. 
+In practice, the loss (Wasserstein distance, abbreviated as W-dist) we used in numerical calculation is defined here. We first calculate subtraction of the cumulative distribution function (CDF) of A, $F_{A}$, and the CDF of B, $F_{B}$. Then take the sum (or integral) of absolute value of the subtraction. That is the L1 distance of cumulative distribution function of A \& B. It is proved that the distance we define here is equivalent to Wasserstein distance. 
 
 \begin{equation}
-    W_{d}=\sum_t|\mathrm{CDF}_A(t) - \mathrm{CDF}_B(t)|
+    W_{d}=\sum_t|F_{A}(t) - F_{B}(t)|
 \end{equation}
 % section Wasserstein-distance and Poisson-distance (end)

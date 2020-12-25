@@ -59,8 +59,8 @@ spe_pre = wff.read_model(args.ref[1])
 with h5py.File(fref, 'r', libver='latest', swmr=True) as ref, h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
     df_ans = ref['SimTriggerInfo']['PEList'][:]
     df_wav = ref['Readout']['Waveform'][:]
-    df_sub = ipt['AnswerWF'][:]
-    method = ipt['AnswerWF'].attrs['Method']
+    df_sub = ipt['photoelectron'][:]
+    method = ipt['photoelectron'].attrs['Method']
 df_ans = np.sort(df_ans, kind='stable', order=['TriggerNo', 'PMTId'])
 df_sub = np.sort(df_sub, kind='stable', order=['TriggerNo', 'ChannelID'])
 df_wav = np.sort(df_wav, kind='stable', order=['TriggerNo', 'ChannelID'])

@@ -134,11 +134,7 @@ def fitting(a, b):
             elif method == 'fftrans':
                 pet, pwe = wff.waveformfft(wave, spe_pre[ent[i]['ChannelID']])
             elif method == 'findpeak':
-                pet = 0
-                pwe = 0
-                pwe = pwe[pet >= 0]; pet = pet[pet >= 0]
-                if len(pwe) == 0:
-                    pwe = np.array([1]); pet = np.array([0])
+                pet, pwe = wff.findpeak(wave, spe_pre[ent[i]['ChannelID']])
             pet, pwe = wff.clip(pet, pwe, Thres)
 
             lenpf = len(pwe)
@@ -178,7 +174,7 @@ result = np.hstack(select_result)
 result = np.sort(result, kind='stable', order=['TriggerNo', 'ChannelID'])
 print('Prediction generated, real time {0:.4f}s, cpu time {1:.4f}s'.format(time.time() - tic, time.process_time() - cpu_tic))
 with h5py.File(fopt, 'w') as opt:
-    dset = opt.create_dataset('AnswerWF', data=result, compression='gzip')
+    dset = opt.create_dataset('photoelectron', data=result, compression='gzip')
     dset.attrs['Method'] = method
     print('The output file path is {}'.format(fopt))
 print('Finished! Consuming {0:.2f}s in total, cpu time {1:.2f}s.'.format(time.time() - global_start, time.process_time() - cpu_global_start))

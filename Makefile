@@ -1,6 +1,6 @@
 SHELL:=bash
 channelN:=$(shell seq -f '%02g' 0 0)
-mu:=$(shell seq -f '%02g' 5 5 5)
+mu:=$(shell seq -f '%02g' 5 5 15)
 method=lucyddm
 raw:=$(mu:%=waveform/mu%.h5)
 char:=$(patsubst waveform/%.h5,result/$(method)/char/%.h5,$(raw))
@@ -60,7 +60,7 @@ result/$(method)/char/Nets/Channel%.torch_net : result/$(method)/char/Channel%/.
 
 result/$(method)/char/Channel%/.Training_finished : result/$(method)/char/PreProcess/Pre_Channel%.h5 spe.h5
 	@mkdir -p $(dir $@)
-	@mkdir -p result/$(method)/char
+	@mkdir -p result/$(method)/char/Nets/
 	python3 -u Data_Processing.py $< -n $* -B 64 --ref $(word $(words $^), $^) -o result/$(method)/char/Nets/Channel$*.torch_net $(dir $@) > $(dir $@)Train.log 2>&1
 	@touch $@
 

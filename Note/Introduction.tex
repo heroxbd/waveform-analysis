@@ -10,9 +10,9 @@ A toy MC has been developed to demonstrate the time resolution improve induced b
     \label{eq:time-pro}
 \end{equation}
 
-The number of PE ($N_{pe}$) in a waveform is sampled from a Poisson distribution with expectation $\mu$. We used Maximum Likelihood Estimation (MLE) to estimate $t_{0}$ in formula\eqref{eq:time-pro}, which is the rise time of the time profile. The typical combination of decay time ($\tau$) and transit time spread ($\sigma$) are listed in figure (see figure~\ref{fig:reso-diff}). For every PE expectation $\mu$, a sample set (size $N=10,000$) is generated to estimate the time resolution $\delta$, which is the residual ($\Delta t_{0}$) distribution spread. 
+The total number of PE in a DAQ window (in a single waveform), $N_{pe}$, is sampled from a Poisson distribution with expectation $\mu$. Then the charge and hittime is sampled from the time profile of the liquid scintillator. We used Maximum Likelihood Estimation (MLE) to estimate $t_{0}$ in formula\eqref{eq:time-pro}, which is the rise time of the time profile. The typical combination of decay time ($\tau$) and transit time spread ($\sigma$) are listed in figure (see figure~\ref{fig:reso-diff}). For every PE expectation $\mu$, a sample set (size $N=10,000$) is generated to estimate the time resolution $\delta$, which is the residual ($\Delta t_{0}$) distribution spread. 
 
-The result of the toy MC shows in figure~\ref{fig:reso-diff}, where $\delta_{1st}$ and $\delta_{all}$ are time resolution when using the first PE and all PE, respectively.  Error bars are too thin to be seen. It is distinct that the time resolution is smaller when reconstructing rise time using all PE. 
+The result of the toy MC shows in figure~\ref{fig:reso-diff}, where $\delta_{1st}$ and $\delta_{all}$ are time resolution when using the first PE and all PE, respectively. Error bars are too thin to be seen. It is distinct that the time resolution is smaller when reconstructing rise time using all PE. 
 
 \begin{figure}[H]
     \centering
@@ -22,21 +22,7 @@ The result of the toy MC shows in figure~\ref{fig:reso-diff}, where $\delta_{1st
 
 Therefore PMT waveform analysis is necessary when we pursue completely usage of PMT output. 
 
-\paragraph{Notations}
-\begin{itemize}
-    \item $t$ - Time of waveform
-    \item $v_{w}(t)$ - Pedestal reduced origin waveform voltage
-    \item $v_{spe}(t)$ - Single-photoelectron (SPE) response
-    \item $v_{th}$ - Voltage threshold
-    \item $q_{r}(t)$ - Reconstructed charge
-    \item $n_{r}(t)$ - Reconstructed number of PE (\#PE)
-    \item $v_{r}(t)$ - Reconstructed waveform
-    \item $Q$ - Total Charge in a DAQ window
-    \item $N_{pe}$ - Total PE number in a DAQ window
-    \item $N_{pos}$ - Total number of hittime in a DAQ window
-    \item $W_{d}$ - Wasserstein distance
-\end{itemize}
-The $t$ we defined here is discrete value in 1 DAQ window (from 0 to 1029ns, step size is 1ns in Jinping 1ton prototype DAQ system). Therefore $N_{pos}$ is not equal to $N_{pe}$ ($N_{pe} \geq N_{pos}$). 
+The Time of waveform, $t$, we defined here is discrete value in 1 DAQ window (from 0 to 1029ns, step size is 1ns in Jinping 1ton prototype DAQ system). Therefore total number of hittime in a DAQ window, $N_{pos}$, is not equal to $N_{pe}$ ($N_{pe} \geq N_{pos}$). 
 
 PMT is a device which is highly sensitive to even single photon. Therefore, PMT is widely used in neutrino experiments based on liquid and dark matter experiment. In neutrino experiments, liquid scintillator emits light after excited by candidate particles and charged particles emit Cherenkov light in liquid. Timing resolution is crucial in neutrino event reconstruction. 
 
@@ -59,7 +45,7 @@ Timing resolution is determined by PMT and waveform analysis. Typical PMT respon
 \end{minipage}
 \end{figure}
 
-Most of the time, when handling PMT waveform we record the first $t$ of PE arrival according to $v_{th}$ and $Q$. One waveform is converted to a pair of numbers. More detailed information of the waveform was lost. The intention this work is extracting information of all hits in 1 DAQ window including $t$ \& $q_{r}(t)$. 
+Most of the time, when handling PMT waveform we record the first $t$ of PE arrival according to threshold of voltage, $v_{th}$, and total Charge in a DAQ window, $Q$. One waveform is converted to a pair of numbers. More detailed information of the waveform was lost. The intention this work is extracting information of all hits in 1 DAQ window including $t$ \& reconstructed charge, $q_{r}(t)$. 
 
 Charge is the integration of waveform component which induced by SPE. SPE induced charge can be a wide distribution, rather than a single value. 
 
