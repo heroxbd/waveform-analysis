@@ -6,7 +6,7 @@ from multiprocessing import Pool, cpu_count
 
 import h5py
 import numpy as np
-import scipy.optimize as optimize
+import scipy.optimize as opti
 
 import wf_func as wff
 
@@ -26,10 +26,10 @@ def start_time(a0, a1, mode):
         b = [np.clip(hittime[0] - (Tau + 3 * Sigma), 0, np.inf), hittime[-1] + 3 * Sigma]
         if mode == 'charge':
             logL = lambda t0 : -1 * np.sum(np.log(np.clip(wff.convolve_exp_norm(hittime - t0, Tau, Sigma), np.finfo(np.float).tiny, np.inf)) * charge[i_cha[i]:i_cha[i+1]]['Charge'])
-            stime[i - a0] = optimize.minimize_scalar(logL, bounds=b).x
+            stime[i - a0] = opti.fmin_l_bfgs_b(logL, [b[0]], approx_grad=True, bounds=[b], maxfun=500000)[0]
         elif mode == 'all':
             logL = lambda t0 : -1 * np.sum(np.log(np.clip(wff.convolve_exp_norm(pelist[i_pel[i]:i_pel[i+1]]['HitPosInWindow'] - t0, Tau, Sigma), np.finfo(np.float).tiny, np.inf)))
-            stime[i - a0] = optimize.minimize_scalar(logL, bounds=b).x
+            stime[i - a0] = opti.fmin_l_bfgs_b(logL, [b[0]], approx_grad=True, bounds=[b], maxfun=500000)[0]
     return stime
 
 spe_pre = wff.read_model('spe.h5')

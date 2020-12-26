@@ -1,8 +1,8 @@
 SHELL:=bash
 channelN:=$(shell seq -f '%02g' 0 0)
 mu:=$(shell seq -f '%04.1f' 0.5 0.5 5 && seq -f '%04.1f' 6 1 10 && seq -f '%04.1f' 15 5 30)
-tau:=$(shell seq -f '%02g' 5 5 10)
-sigma:=$(shell seq -f '%04.1f' 0.5 0.5 1)
+tau:=$(shell seq -f '%02g' 0 10 40)
+sigma:=$(shell seq -f '%04.1f' 0 1 10)
 erg:=$(shell for i in $(mu); do for j in $(tau); do for k in $(sigma); do echo $${i}-$${j}-$${k}; done; done; done)
 method=lucyddm
 raw:=$(erg:%=waveform/%.h5)
