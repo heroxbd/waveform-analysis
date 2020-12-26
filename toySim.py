@@ -10,8 +10,6 @@ from tqdm import tqdm
 from tqdm import trange
 import numpy as np
 # np.seterr(all='raise')
-import scipy.special as special
-import scipy.integrate as integrate
 import scipy.optimize as optimize
 import scipy.interpolate as interpolate
 from scipy.stats import poisson, uniform, norm, chi2
@@ -35,38 +33,9 @@ Mu = float(mtslist[0])
 Tau = float(mtslist[1])
 Sigma = float(mtslist[2])
 
-spe_pre = wff.read_model('../jinping/data/spe.h5')
-spe = spe_pre[0]['spe']
-t = np.arange(len(spe)).astype(np.float)
-p = optimize.curve_fit(wff.spe, t[:20], spe[:20], p0=[3., .5, 20.])
-gmu = sum(wff.spe(t, p[0][0], p[0][1], p[0][2]))
-fig = plt.figure()
-# fig.tight_layout()
-gs = gridspec.GridSpec(1, 1, figure=fig, left=0.15, right=0.85, top=0.95, bottom=0.15, wspace=0.4, hspace=0.5)
-ax = fig.add_subplot(gs[0, 0])
-t = np.arange(0, 100, 0.1)
-ax.plot(t, wff.spe(t, p[0][0], p[0][1], p[0][2]), color='b', label='Single PE response')
-ax.set_xlabel(r'$t/\mathrm{ns}$')
-ax.grid()
-ax.set_xlim(0, 80)
-ax.set_ylabel(r'$Voltage/\mathrm{mV}$')
-ax.legend()
-fig.savefig('Note/figures/spe.pgf')
-fig.savefig('Note/figures/spe.pdf')
-plt.close()
-
-fig = plt.figure()
-t = np.arange(-int(Sigma), int(5 * Tau), 0.1)
-gs = gridspec.GridSpec(1, 1, figure=fig, left=0.15, right=0.85, top=0.95, bottom=0.15, wspace=0.4, hspace=0.5)
-ax = fig.add_subplot(gs[0, 0])
-ax.plot(t, wff.convolve_exp_norm(t, Tau, Sigma), label='Time Profile')
-ax.set_xlabel(r'$t/\mathrm{ns}$')
-ax.grid()
-ax.set_ylabel(r'$PDF$')
-ax.legend()
-fig.savefig('Note/figures/profile.pgf')
-fig.savefig('Note/figures/profile.pdf')
-plt.close()
+p = [8., 0.5, 24.]
+gmu = 160.
+std = 1.
 
 def sampling(a0, a1, mu, tau, sigma):
     np.random.seed(a0)
@@ -77,9 +46,9 @@ def sampling(a0, a1, mu, tau, sigma):
     waves = np.empty(a1 - a0).astype(wdtp)
     pan = np.arange(window)
     for i in range(a1 - a0):
-        wave = np.sum([np.where(pan > sams[i][j, 0], wff.spe(pan - sams[i][j, 0], tau=p[0][0], sigma=p[0][1], A=p[0][2]) * sams[i][j, 1] / gmu, 0) for j in range(len(sams[i]))], axis=0)
+        wave = np.sum([np.where(pan > sams[i][j, 0], wff.spe(pan - sams[i][j, 0], tau=p[0], sigma=p[1], A=p[2]) * sams[i][j, 1] / gmu, 0) for j in range(len(sams[i]))], axis=0)
         if args.noi:
-            wave = wave + np.random.normal(0, spe_pre[0]['std'], size=window)
+            wave = wave + np.random.normal(0, std, size=window)
         waves[i]['Waveform'] = np.around(wave).astype(np.int16)
     tdtp = np.dtype([('TriggerNo', np.uint32), ('T0', np.float64)])
     t = np.empty(a1 - a0).astype(tdtp)
@@ -124,9 +93,9 @@ print(args.opt + ' saved, l =', int(np.sum(v)))
 
 with h5py.File('spe.h5', 'w') as spp:
     dset = spp.create_dataset('SinglePE', data=[])
-    dset.attrs['SpePositive'] = wff.spe(np.arange(len(spe)), p[0][0], p[0][1], p[0][2])[np.newaxis, ...]
+    dset.attrs['SpePositive'] = wff.spe(np.arange(80), p[0], p[1], p[2])[np.newaxis, ...]
     dset.attrs['Epulse'] = 1
-    dset.attrs['Std'] = [spe_pre[0]['std']]
+    dset.attrs['Std'] = [std]
     dset.attrs['ChannelID'] = [0]
-    dset.attrs['parameters'] = [p[0]]
+    dset.attrs['parameters'] = [p]
 print('spe.h5 saved')

@@ -255,7 +255,7 @@ def charge(n, gmu, gsigma=40):
     chargesam = norm.ppf(1 - uniform.rvs(scale=1-norm.cdf(0, loc=gmu, scale=gsigma), size=n), loc=gmu, scale=gsigma)
     return chargesam
 
-def demo(pet, pwe, tth, spe_pre, leng, wave, cid, full=False, fold='Note/figures', ext='pgf'):
+def demo(pet, pwe, tth, spe_pre, leng, wave, cid, full=False, fold='Note/figures', ext='.pgf'):
     penum = len(tth)
     print('PEnum is {}'.format(penum))
     pf0 = np.zeros(leng)
@@ -326,8 +326,8 @@ def demo(pet, pwe, tth, spe_pre, leng, wave, cid, full=False, fold='Note/figures
     ax3.grid()
     if ext != 'pgf':
         fig.suptitle('eid={},cid={},'.format(tth['TriggerNo'][0], tth['PMTId'][0])+distd+'-dist={:.2f},{:.2f}'.format(wdist, edist), y=0.95)
-    fig.savefig(fold + '/demoe{}c{}.'.format(tth['TriggerNo'][0], tth['PMTId'][0]) + ext)
-    fig.savefig(fold + '/demoe{}c{}.'.format(tth['TriggerNo'][0], tth['PMTId'][0]) + 'pdf')
+    fig.savefig(fold + '/demoe{}c{}'.format(tth['TriggerNo'][0], tth['PMTId'][0]) + ext)
+    fig.savefig(fold + '/demoe{}c{}'.format(tth['TriggerNo'][0], tth['PMTId'][0]) + '.pdf')
     fig.clf()
     plt.close(fig)
 
