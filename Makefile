@@ -1,8 +1,11 @@
 SHELL:=bash
 channelN:=$(shell seq -f '%02g' 0 0)
-mu:=$(shell seq -f '%02g' 5 5 15)
+mu:=$(shell seq -f '%04.1f' 0.2 0.2 20)
+tau:=$(shell seq -f '%02g' 5 5 50)
+sigma:=$(shell seq -f '%04.1f' 0.5 0.5 10)
+erg:=$(shell for i in $(mu); do for j in $(tau); do for k in $(sigma); do echo $${i}-$${j}-$${k}; done; done; done)
 method=lucyddm
-raw:=$(mu:%=waveform/mu%.h5)
+raw:=$(erg:%=waveform/%.h5)
 char:=$(patsubst waveform/%.h5,result/$(method)/char/%.h5,$(raw))
 solu:=$(patsubst waveform/%.h5,result/$(method)/solu/%.h5,$(raw))
 dist:=$(patsubst waveform/%.h5,result/$(method)/dist/%.h5,$(raw))
@@ -40,10 +43,6 @@ result/$(method)/char/%.h5 : waveform/%.h5 spe.h5 $(Nets)
 endef
 $(eval $(call $(predict)))
 
-result/$(method)/solu/%.h5 : result/$(method)/char/%.h5 waveform/%.h5
-	@mkdir -p $(dir $@)
-	python3 toyRec.py $< --ref $(word 2,$^) --tau 40 --sigma 6 -o $@ > $@.log 2>&1
-
 result/$(method)/reco/%.csv : result/$(method)/dist/%.h5 waveform/%.h5 result/$(method)/solu/%.h5
 	@mkdir -p $(dir $@)
 	python3 csv_dist.py $< --ref $(wordlist 2,3,$^) -o $@ > $@.log 2>&1
@@ -53,6 +52,9 @@ result/$(method)/hist/%.pdf : result/$(method)/dist/%.h5 waveform/%.h5 result/$(
 result/$(method)/dist/%.h5 : waveform/%.h5 result/$(method)/char/%.h5 spe.h5
 	@mkdir -p $(dir $@)
 	python3 test_dist.py $(word 2,$^) --ref $< $(word 3,$^) -o $@ > $@.log 2>&1
+result/$(method)/solu/%.h5 : result/$(method)/char/%.h5 waveform/%.h5
+	@mkdir -p $(dir $@)
+	python3 toyRec.py $< --ref $(word 2,$^) -o $@ > $@.log 2>&1
 
 model : $(Nets)
 
@@ -71,10 +73,10 @@ result/$(method)/char/.PreProcess : $(raw) spe.h5
 	python3 -u Data_Pre-Processing.py waveform/ -o result/$(method)/char/PreProcess/Pre_Channel --ref $(word $(words $^), $^) > result/$(method)/char/PreProcess/PreProcess.log 2>&1
 	@touch $@
 
-waveform/mu%.h5 :
+waveform/%.h5 :
 	@rm -f spe.h5
 	@mkdir -p $(dir $@)
-	python3 toySim.py --mu $* --tau 40 --sigma 6 --noi -N 100000 -o $@ > $@.log 2>&1
+	python3 toySim.py --mts $* --noi -N 100000 -o $@ > $@.log 2>&1
 
 spe.h5 : sim ;
 

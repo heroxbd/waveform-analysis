@@ -157,6 +157,9 @@ with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
     print('{} waveforms will be computed'.format(l))
     leng = len(ipt['Readout/Waveform'][0]['Waveform'])
     assert leng >= len(spe_pre[0]['spe']), 'Single PE too long which is {}'.format(len(spe_pre[0]['spe']))
+    Mu = ipt['Readout/Waveform'].attrs['mu']
+    Tau = ipt['Readout/Waveform'].attrs['tau']
+    Sigma = ipt['Readout/Waveform'].attrs['sigma']
 if args.Ncpu == 1:
     slices = [[0, l]]
 else:
@@ -176,5 +179,8 @@ print('Prediction generated, real time {0:.4f}s, cpu time {1:.4f}s'.format(time.
 with h5py.File(fopt, 'w') as opt:
     dset = opt.create_dataset('photoelectron', data=result, compression='gzip')
     dset.attrs['Method'] = method
+    dset.attrs['mu'] = Mu
+    dset.attrs['tau'] = Tau
+    dset.attrs['sigma'] = Sigma
     print('The output file path is {}'.format(fopt))
 print('Finished! Consuming {0:.2f}s in total, cpu time {1:.2f}s.'.format(time.time() - global_start, time.process_time() - cpu_global_start))
