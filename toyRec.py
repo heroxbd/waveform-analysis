@@ -23,17 +23,14 @@ def start_time(a0, a1, mode):
     stime = np.empty(a1 - a0)
     for i in range(a0, a1):
         hittime = charge[i_cha[i]:i_cha[i+1]]['HitPosInWindow'].astype(np.float)
+        b = [np.clip(hittime[0] - (Tau + 3 * Sigma), 0, np.inf), hittime[-1] + 3 * Sigma]
         if mode == 'charge':
             logL = lambda t0 : -1 * np.sum(np.log(np.clip(wff.convolve_exp_norm(hittime - t0, Tau, Sigma), np.finfo(np.float).tiny, np.inf)) * charge[i_cha[i]:i_cha[i+1]]['Charge'])
-            stime[i - a0] = optimize.minimize_scalar(logL, bounds=[hittime[0] - (Tau + 3 * Sigma), hittime[-1] + 3 * Sigma]).x
+            stime[i - a0] = optimize.minimize_scalar(logL, bounds=b).x
         elif mode == 'all':
             logL = lambda t0 : -1 * np.sum(np.log(np.clip(wff.convolve_exp_norm(pelist[i_pel[i]:i_pel[i+1]]['HitPosInWindow'] - t0, Tau, Sigma), np.finfo(np.float).tiny, np.inf)))
-            stime[i - a0] = optimize.minimize_scalar(logL, bounds=[hittime[0] - (Tau + Sigma), hittime[-1] + Sigma]).x
+            stime[i - a0] = optimize.minimize_scalar(logL, bounds=b).x
     return stime
-
-def deltatime(N):
-    
-    return deltat, deltat0
 
 spe_pre = wff.read_model('spe.h5')
 with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as ipt, h5py.File(args.ref, 'r', libver='latest', swmr=True) as ref:
@@ -54,7 +51,7 @@ N = len(i_cha)
 i_cha = np.append(i_cha, len(charge))
 assert np.all(e_cha == e_pel), 'File not match!'
 
-sdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('tsfirsttruth', np.float64), ('tsfirstcharge', np.float64), ('tsall', np.float64), ('tscharge', np.float64)])
+sdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('tsfirsttruth', np.float64), ('tsfirstcharge', np.float64), ('tstruth', np.float64), ('tscharge', np.float64)])
 ts = np.zeros(N, dtype=sdtp)
 ts['TriggerNo'] = np.unique(pelist['TriggerNo'])
 ts['ChannelID'] = np.unique(pelist['PMTId'])
@@ -65,7 +62,7 @@ chunk = N // args.Ncpu + 1
 slices = np.vstack((np.arange(0, N, chunk), np.append(np.arange(chunk, N, chunk), N))).T.astype(np.int).tolist()
 with Pool(min(args.Ncpu, cpu_count())) as pool:
     result = pool.starmap(partial(start_time, mode='all'), slices)
-ts['tsall'] = np.hstack(result)
+ts['tstruth'] = np.hstack(result)
 with Pool(min(args.Ncpu, cpu_count())) as pool:
     result = pool.starmap(partial(start_time, mode='charge'), slices)
 ts['tscharge'] = np.hstack(result)

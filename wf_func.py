@@ -241,7 +241,7 @@ def convolve_exp_norm(x, tau, sigma):
         alpha = 1/tau
         co = alpha/2. * np.exp(alpha*alpha*sigma*sigma/2.)
         x_erf = (alpha*sigma*sigma - x)/(np.sqrt(2.)*sigma)
-        y = co * np.exp(-alpha*x) * (1. - special.erf(x_erf))
+        y = co * (1. - special.erf(x_erf)) * np.exp(-alpha*x)
     return y
 
 def spe(t, tau, sigma, A):

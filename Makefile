@@ -1,8 +1,8 @@
 SHELL:=bash
 channelN:=$(shell seq -f '%02g' 0 0)
-mu:=$(shell seq -f '%04.1f' 0.2 0.2 20)
-tau:=$(shell seq -f '%02g' 5 5 50)
-sigma:=$(shell seq -f '%04.1f' 0.5 0.5 10)
+mu:=$(shell seq -f '%04.1f' 0.5 0.5 5 && seq -f '%04.1f' 6 1 10 && seq -f '%04.1f' 15 5 30)
+tau:=$(shell seq -f '%02g' 5 5 10)
+sigma:=$(shell seq -f '%04.1f' 0.5 0.5 1)
 erg:=$(shell for i in $(mu); do for j in $(tau); do for k in $(sigma); do echo $${i}-$${j}-$${k}; done; done; done)
 method=lucyddm
 raw:=$(erg:%=waveform/%.h5)
@@ -22,7 +22,9 @@ Nets:=$(channelN:%=result/$(method)/char/Nets/Channel%.torch_net)
 
 .PHONY : all
 
-all : sub test sim
+all : sub test sim vs
+
+vs : result/$(method)/solu/vs.pdf
 
 sub : $(char) $(solu)
 
@@ -55,6 +57,9 @@ result/$(method)/dist/%.h5 : waveform/%.h5 result/$(method)/char/%.h5 spe.h5
 result/$(method)/solu/%.h5 : result/$(method)/char/%.h5 waveform/%.h5
 	@mkdir -p $(dir $@)
 	python3 toyRec.py $< --ref $(word 2,$^) -o $@ > $@.log 2>&1
+result/$(method)/solu/vs.pdf : $(solu)
+	@mkdir -p $(dir $@)
+	python3 vs.py --folder result/$(method)/solu waveform -o $@ > $@.log 2>&1
 
 model : $(Nets)
 
