@@ -203,32 +203,3 @@ pdf.savefig(fig)
 plt.close(fig)
 
 pdf.close()
-
-# alpha = 0.95
-    
-# fig = plt.figure()
-# fig.tight_layout()
-# gs = gridspec.GridSpec(1, 1, figure=fig, left=0.15, right=0.95, top=0.85, bottom=0.1, wspace=0.18, hspace=0.35)
-
-# keys = list(para.keys())
-# ax = fig.add_subplot(gs[0, 0])
-# for k in range(len(keys)):
-#     key = keys[k]
-#     yerr1st = np.vstack([result[key]['Std1st']-np.sqrt(np.power(result[key]['Std1st'],2)*N/chi2.ppf(1-alpha/2, N)), np.sqrt(np.power(result[key]['Std1st'],2)*N/chi2.ppf(alpha/2, N))-result[key]['Std1st']])
-#     yerrall = np.vstack([result[key]['Stdall']-np.sqrt(np.power(result[key]['Stdall'],2)*N/chi2.ppf(1-alpha/2, N)), np.sqrt(np.power(result[key]['Stdall'],2)*N/chi2.ppf(alpha/2, N))-result[key]['Stdall']])
-#     yerr = np.vstack([result[key]['Stdall'] / result[key]['Std1st'] - (result[key]['Stdall'] - yerrall[0]) / (result[key]['Std1st'] + yerr1st[1]), 
-#                       (result[key]['Stdall'] + yerrall[1]) / (result[key]['Std1st'] - yerr1st[0]) - result[key]['Stdall'] / result[key]['Std1st']])
-#     ax.errorbar(Mu, result[key]['Stdall'] / result[key]['Std1st'], yerr=yerr, label=r'$\frac{\delta_{1st}}{\delta_{all}}$', marker='^')
-#     ax.set_ylim(0.9, 1.01)
-#     ax.hlines(1, xmin=Mu[0], xmax=Mu[-1], color='k')
-#     ax.set_xlabel(r'$\mu$')
-#     ax.set_ylabel(r'$\delta_{all}-\delta_{1st}/\mathrm{ns}$')
-#     ax.set_title(r'$\tau=${:.01f}'.format(para[key]['tau']) + r'$\mathrm{ns}\ $' + 
-#                  r'$\sigma=${:.01f}'.format(para[key]['sigma']) + r'$\mathrm{ns}\ $' + 
-#                  r'$\mathrm{N}=$' + '{0:.1E}\n'.format(N))
-#     ax.grid()
-#     if k == 0:
-#         ax.legend(loc='lower right')
-# fig.savefig('Note/figures/vs-deltasub.pgf')
-# fig.savefig('Note/figures/vs-deltasub.pdf')
-# plt.close()

@@ -12,6 +12,7 @@ from functools import partial
 import h5py
 import numpy as np
 from scipy import stats
+from scipy.stats import chi2
 from tqdm import tqdm
 import matplotlib
 matplotlib.use('pgf')
@@ -33,7 +34,6 @@ stype = np.dtype([('mu', np.float), ('tau', np.float), ('sigma', np.float), ('n'
 mts = np.zeros(len(numbers), dtype=stype)
 mts['mu'] = np.array([i[0] for i in numbers])
 mts['tau'] = np.array([i[1] for i in numbers])
-mts['sigma'] = np.array([i[2] for i in numbers])
 mts['sigma'] = np.array([i[2] for i in numbers])
 mts['n'] = np.arange(len(numbers))
 mts = np.sort(mts, kind='stable', order=['mu', 'tau', 'sigma'])
@@ -87,7 +87,11 @@ for sigma, i in zip([3, 6], [0, 1]):
     for tau, j in zip([0, 20, 40], [0, 1, 2]):
         ax = fig.add_subplot(gs[j, i])
         stdlist = mts[(mts['tau'] == tau) & (mts['sigma'] == sigma)]
-        ax.plot(stdlist['mu'], stdlist['stdtruth'] / stdlist['stdfirsttruth'], label=r'$\frac{\delta_{all}}{\delta_{1stall}}$', marker='^')
+        alpha = 0.05
+        yerr1st = np.vstack([stdlist['stdfirsttruth']-np.sqrt(np.power(stdlist['stdfirsttruth'],2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(stdlist['stdfirsttruth'],2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-stdlist['stdfirsttruth']])
+        yerrall = np.vstack([stdlist['stdtruth']-np.sqrt(np.power(stdlist['stdtruth'],2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(stdlist['stdtruth'],2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-stdlist['stdtruth']])
+        yerr = np.vstack([stdlist['stdtruth'] / stdlist['stdfirsttruth'] - (stdlist['stdtruth'] - yerrall[0]) / (stdlist['stdfirsttruth'] + yerr1st[1]), (stdlist['stdtruth'] + yerrall[1]) / (stdlist['stdfirsttruth'] - yerr1st[0]) - stdlist['stdtruth'] / stdlist['stdfirsttruth']])
+        ax.errorbar(stdlist['mu'], stdlist['stdtruth'] / stdlist['stdfirsttruth'], yerr=yerr, label=r'$\frac{\delta_{all}}{\delta_{1stall}}$', marker='^')
         ax.set_xlabel(r'$\mu$')
         ax.set_ylabel(r'$\delta/\mathrm{{ns}}$')
         ax.set_title(fr'$\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$')
