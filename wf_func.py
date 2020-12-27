@@ -324,7 +324,7 @@ def demo(pet, pwe, tth, spe_pre, leng, wave, cid, full=False, fold='Note/figures
     ax3.set_yticks(np.linspace(-dh, dh, int(2*dh//5+1)))
     ax3.legend(loc=1)
     ax3.grid()
-    if ext != 'pgf':
+    if ext != '.pgf':
         fig.suptitle('eid={},cid={},'.format(tth['TriggerNo'][0], tth['PMTId'][0])+distd+'-dist={:.2f},{:.2f}'.format(wdist, edist), y=0.95)
     fig.savefig(fold + '/demoe{}c{}'.format(tth['TriggerNo'][0], tth['PMTId'][0]) + ext)
     fig.savefig(fold + '/demoe{}c{}'.format(tth['TriggerNo'][0], tth['PMTId'][0]) + '.pdf')
@@ -339,8 +339,8 @@ def demo(pet, pwe, tth, spe_pre, leng, wave, cid, full=False, fold='Note/figures
     ax.grid()
     ax.set_xlabel('$t/\mathrm{ns}$')
     ax.set_ylabel('$Voltage/\mathrm{mV}$')
-    fig.savefig(fold + '/spe{:02d}.'.format(cid) + ext)
-    fig.savefig(fold + '/spe{:02d}.'.format(cid) + '.pdf')
+    fig.savefig(fold + '/spe{:02d}'.format(cid) + ext)
+    fig.savefig(fold + '/spe{:02d}'.format(cid) + '.pdf')
     fig.clf()
     plt.close(fig)
     return

@@ -35,7 +35,7 @@ sim : $(raw)
 define fit
 result/$(method)/char/%.h5 : waveform/%.h5 spe.h5
 	@mkdir -p $$(dir $$@)
-	OMP_NUM_THREADS=2 python3 fit.py $$< --met $(method) -N 50 --ref $$(wordlist 2,3,$$^) -o $$@ > $$@.log 2>&1
+	OMP_NUM_THREADS=2 python3 fit.py $$< --met $(method) -N 100 --ref $$(wordlist 2,3,$$^) -o $$@ > $$@.log 2>&1
 endef
 
 define nn
