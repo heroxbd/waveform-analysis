@@ -81,21 +81,19 @@ for i in range(len(tausigma)):
     draw(tau, sigma, pdf)
 pdf.close()
 
-fig = plt.figure()
-gs = gridspec.GridSpec(1, 1, figure=fig, left=0.15, right=0.95, top=0.9, bottom=0.1, wspace=0.2, hspace=0.3)
-ax = fig.add_subplot(gs[0, 0])
-for tau, sigma in zip([10.], [3.]):
-    stdlist = mts[(mts['tau'] == tau) & (mts['sigma'] == sigma)]
-    ax.plot(stdlist['mu'], stdlist['stdtruth'], label=r'$\delta_{all}$', marker='^')
-    ax.plot(stdlist['mu'], stdlist['stdcharge'], label=r'$\delta_{tru}$', marker='^')
-    ax.plot(stdlist['mu'], stdlist['stdfirsttruth'], label=r'$\delta_{1stall}$', marker='^')
-    ax.plot(stdlist['mu'], stdlist['stdfirstcharge'], label=r'$\delta_{1sttru}$', marker='^')
-ax.set_xlabel(r'$\mu$')
-ax.set_ylabel(r'$\delta/\mathrm{{ns}}$')
-ax.set_title(fr'$\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$')
-ax.set_ylim(dlow, dhigh)
-ax.grid()
-ax.legend().set_zorder(1)
+fig = plt.figure(figsize=(8, 12))
+gs = gridspec.GridSpec(3, 2, figure=fig, left=0.1, right=0.95, top=0.95, bottom=0.05, wspace=0.2, hspace=0.3)
+for sigma, i in zip([3, 6], [0, 1]):
+    for tau, j in zip([0, 20, 40], [0, 1, 2]):
+        ax = fig.add_subplot(gs[j, i])
+        stdlist = mts[(mts['tau'] == tau) & (mts['sigma'] == sigma)]
+        ax.plot(stdlist['mu'], stdlist['stdtruth'] / stdlist['stdfirsttruth'], label=r'$\frac{\delta_{all}}{\delta_{1stall}}$', marker='^')
+        ax.set_xlabel(r'$\mu$')
+        ax.set_ylabel(r'$\delta/\mathrm{{ns}}$')
+        ax.set_title(fr'$\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$')
+        ax.set_ylim(0.3, 1)
+        ax.grid()
+        ax.legend().set_zorder(1)
 fig.savefig('Note/figures/vs-deltadiv.pgf')
 fig.savefig('Note/figures/vs-deltadiv.pdf')
 plt.close(fig)
