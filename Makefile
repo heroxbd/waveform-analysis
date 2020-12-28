@@ -17,7 +17,7 @@ else
     predict:=fit
 endif
 
-PreData:=$(channelN:%=result/$(method)/char/PreProcess/Pre_Channel%.h5)
+PreData:=$(channelN:%=result/$(method)/PreProcess/Pre_Channel%.h5)
 Nets:=$(channelN:%=result/$(method)/char/Nets/Channel%.torch_net)
 
 .PHONY : all
@@ -65,7 +65,7 @@ model : $(Nets)
 
 result/$(method)/char/Nets/Channel%.torch_net : result/$(method)/char/Channel%/.Training_finished ;
 
-result/$(method)/char/Channel%/.Training_finished : result/$(method)/char/PreProcess/Pre_Channel%.h5 spe.h5
+result/$(method)/char/Channel%/.Training_finished : result/$(method)/PreProcess/Pre_Channel%.h5 spe.h5
 	@mkdir -p $(dir $@)
 	@mkdir -p result/$(method)/char/Nets/
 	python3 -u Data_Processing.py $< -n $* -B 64 --ref $(word $(words $^), $^) -o result/$(method)/char/Nets/Channel$*.torch_net $(dir $@) > $(dir $@)Train.log 2>&1
@@ -74,8 +74,8 @@ result/$(method)/char/Channel%/.Training_finished : result/$(method)/char/PrePro
 $(PreData) : result/$(method)/char/.PreProcess
 
 result/$(method)/char/.PreProcess : $(raw) spe.h5
-	@mkdir -p result/$(method)/char/PreProcess
-	python3 -u Data_Pre-Processing.py waveform/ -o result/$(method)/char/PreProcess/Pre_Channel --ref $(word $(words $^), $^) > result/$(method)/char/PreProcess/PreProcess.log 2>&1
+	@mkdir -p result/$(method)/PreProcess
+	python3 -u Data_Pre-Processing.py waveform/ -o result/$(method)/PreProcess/Pre_Channel --ref $(word $(words $^), $^) > result/$(method)/PreProcess/PreProcess.log 2>&1
 	@touch $@
 
 waveform/%.h5 :

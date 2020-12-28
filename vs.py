@@ -28,7 +28,7 @@ psr.add_argument('--folder', nargs='+', type=str, help='folder of solution file'
 args = psr.parse_args()
 
 filelist = os.listdir(args.folder[0])
-filelist = [f for f in filelist if f[0] != '.' and not 'log' in f]
+filelist = [f for f in filelist if f[0] != '.' and os.path.splitext(f)[-1] == '.h5']
 numbers = [[float(i) for i in f[:-3].split('-')] for f in filelist]
 stype = np.dtype([('mu', np.float), ('tau', np.float), ('sigma', np.float), ('n', np.uint), ('stdtruth', np.float), ('stdcharge', np.float), ('stdfirsttruth', np.float), ('stdfirstcharge', np.float), ('N', np.uint)])
 mts = np.zeros(len(numbers), dtype=stype)
