@@ -49,7 +49,7 @@ A threshold $v_{th}$ is settled with respect to noise in simulation data. In wav
 Third method is Fourier deconvolution. First we extract enough single-photoelectron (SPE) response, $v_{spe}(t)$, from simulation data in fitting method. We suppose the average of these $v_{w}$ is the $v_{spe}$. Assuming that the waveform is the convolution of $v_{spe}$ and $q_{r}(t)$, the Fast Fourier transform (FFT) of $v_{w}$ and $v_{spe}$ are computed. A rectangular filter, $f$, is added. Then compute the inverse FFT of the quotient, which is between filtered FFT of $v_{w}$ and FFT of $v_{spe}$. 
 
 \begin{itemize}
-    \item $q_{r}(t) = \mathcal{F}^{-1}\{f[\frac{\mathcal{F}(v_{w})}{\mathcal{F}(v_{spe})}]\}$
+    \item $q_{r}(t) = \mathcal{F}^{-1}\{\frac{f[\mathcal{F}(v_{w})]}{\mathcal{F}(v_{spe})}\}$
 \end{itemize}
 
 The demonstration here shows a result with W-dist = 1.63ns. 

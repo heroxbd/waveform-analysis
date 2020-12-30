@@ -93,7 +93,7 @@ for sigma, i in zip([3, 6], [0, 1]):
         yerr = np.vstack([stdlist['stdtruth'] / stdlist['stdfirsttruth'] - (stdlist['stdtruth'] - yerrall[0]) / (stdlist['stdfirsttruth'] + yerr1st[1]), (stdlist['stdtruth'] + yerrall[1]) / (stdlist['stdfirsttruth'] - yerr1st[0]) - stdlist['stdtruth'] / stdlist['stdfirsttruth']])
         ax.errorbar(stdlist['mu'], stdlist['stdtruth'] / stdlist['stdfirsttruth'], yerr=yerr, label=r'$\frac{\delta_{all}}{\delta_{1stall}}$', marker='^')
         ax.set_xlabel(r'$\mu$')
-        ax.set_ylabel(r'$\delta/\mathrm{{ns}}$')
+        ax.set_ylabel(r'$\mathrm{ratio}$')
         ax.set_title(fr'$\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$')
         ax.set_ylim(0.3, 1)
         ax.grid()

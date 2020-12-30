@@ -57,6 +57,11 @@ gpufloat_dtype = np.dtype([(name, np.dtype('float32') if name == 'Waveform' else
 print('Initialization finished, real time {0:.4f}s, cpu time {1:.4f}s'.format(time.time() - global_start, time.process_time() - cpu_global_start))
 print('Processing {} entries'.format(Total_entries))
 
+with h5py.File(filename, 'r', libver='latest', swmr=True) as ipt:
+    Mu = ipt['Readout/Waveform'].attrs['mu']
+    Tau = ipt['Readout/Waveform'].attrs['tau']
+    Sigma = ipt['Readout/Waveform'].attrs['sigma']
+
 N = 10
 tic = time.time()
 cpu_tic = time.process_time()
@@ -133,6 +138,9 @@ print('Prediction generated, real time {0:.4f}s, cpu time {1:.4f}s'.format(time.
 with h5py.File(output, 'w') as opt:
     dset = opt.create_dataset('photoelectron', data=Result, compression='gzip')
     dset.attrs['Method'] = method
+    dset.attrs['mu'] = Mu
+    dset.attrs['tau'] = Tau
+    dset.attrs['sigma'] = Sigma
     print('The output file path is {}'.format(output))
 
 print('Finished! Consuming {0:.2f}s in total, cpu time {1:.2f}s.'.format(time.time() - global_start, time.process_time() - cpu_global_start))

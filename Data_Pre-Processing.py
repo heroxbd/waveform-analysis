@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import random
 import argparse
 from multiprocessing import Pool, cpu_count
 from time import time
@@ -23,7 +24,7 @@ SavePath = args.opt
 reference = args.ref
 filedir, prefix = os.path.split(args.ipt)
 files = os.listdir(filedir)
-files = [filedir+'/'+fi for fi in files if prefix in fi and not os.path.isdir(fi) and '.h5' == fi[-3:] ]
+files = [filedir+'/'+fi for fi in files if prefix in fi and not os.path.isdir(fi) and '.h5' == fi[-3:]]
 
 def Make_Time_Vector(GroundTruth, Waveforms_and_info, mode) :
     i = 0
@@ -78,13 +79,19 @@ spe_pre = wff.read_model(reference[0])
 sliceNo = 0
 trainfile_list = []  # index sliceNo; value: number of waveforms to be readed
 start = time()
+h5file = tables.open_file(files[0], 'r')
+twfnum = len(h5file.root.Readout.Waveform)
+h5file.close()
+random.seed(0)
+files = random.sample(files, int(1e6/twfnum))
+files.sort()
 for filename in files :
     h5file = tables.open_file(filename, 'r')
     if filename == files[0]:
         WindowSize = len(h5file.root.Readout.Waveform[0]['Waveform'])
     Waveform_Len = len(h5file.root.Readout.Waveform)
     GroundTruth_Len = len(h5file.root.SimTriggerInfo.PEList)
-    slices = np.append(np.arange(0, Waveform_Len, 150000), Waveform_Len)
+    slices = np.append(np.arange(0, Waveform_Len, 10000), Waveform_Len)
     Truth_slices = (GroundTruth_Len / Waveform_Len * slices).astype(np.int)
     for i in range(len(slices) - 1) :
         trainfile_list.append((sliceNo, filename, slices[i], slices[i + 1], Truth_slices[i], Truth_slices[i + 1]))

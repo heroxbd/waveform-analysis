@@ -22,13 +22,13 @@ Nets:=$(channelN:%=result/$(method)/char/Nets/Channel%.torch_net)
 
 .PHONY : all
 
-all : sub test sim vs
+all : sim sub test vs
 
 vs : result/$(method)/solu/vs.pdf
 
-sub : $(char) $(solu)
-
 test : $(hist) $(reco)
+
+sub : $(char) $(solu) $(dist)
 
 sim : $(raw)
 
@@ -71,9 +71,9 @@ result/$(method)/char/Channel%/.Training_finished : result/$(method)/PreProcess/
 	python3 -u Data_Processing.py $< -n $* -B 64 --ref $(word $(words $^), $^) -o result/$(method)/char/Nets/Channel$*.torch_net $(dir $@) > $(dir $@)Train.log 2>&1
 	@touch $@
 
-$(PreData) : result/$(method)/char/.PreProcess
+$(PreData) : result/$(method)/.PreProcess
 
-result/$(method)/char/.PreProcess : $(raw) spe.h5
+result/$(method)/.PreProcess : $(raw) spe.h5
 	@mkdir -p result/$(method)/PreProcess
 	python3 -u Data_Pre-Processing.py waveform/ -o result/$(method)/PreProcess/Pre_Channel --ref $(word $(words $^), $^) > result/$(method)/PreProcess/PreProcess.log 2>&1
 	@touch $@
@@ -81,7 +81,7 @@ result/$(method)/char/.PreProcess : $(raw) spe.h5
 waveform/%.h5 :
 	@rm -f spe.h5
 	@mkdir -p $(dir $@)
-	python3 toySim.py --mts $* --noi -N 100000 -o $@ > $@.log 2>&1
+	python3 toySim.py --mts $* --noi -N 10000 -o $@ > $@.log 2>&1
 
 spe.h5 : sim ;
 
