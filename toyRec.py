@@ -18,14 +18,23 @@ psr.add_argument('--ref', type=str, help='reference file')
 args = psr.parse_args()
 
 window = 1029
+npe = 10
+gmu = 160.
+
+def probcharhitt(t0, hitt, char):
+    prob = np.sum([wff.probcharge(char, i, gmu=gmu) * np.power(wff.convolve_exp_norm(hitt - t0, Tau, Sigma), i) for i in range(1, npe)]) / np.sum([wff.probcharge(char, i, gmu=gmu) for i in range(1, npe)])
+    return prob
+
+probch = np.vectorize(probcharhitt, excluded=['t0'])
 
 def start_time(a0, a1, mode):
     stime = np.empty(a1 - a0)
     for i in range(a0, a1):
-        hittime = charge[i_cha[i]:i_cha[i+1]]['HitPosInWindow'].astype(np.float)
-        b = [np.clip(hittime[0] - (Tau + 3 * Sigma), 0, np.inf), hittime[-1] + 3 * Sigma]
+        hitt = charge[i_cha[i]:i_cha[i+1]]['HitPosInWindow'].astype(np.float)
+        char = charge[i_cha[i]:i_cha[i+1]]['Charge']
+        b = [np.clip(hitt[0] - (Tau + 3 * Sigma), 0, np.inf), hitt[-1] + 3 * Sigma]
         if mode == 'charge':
-            logL = lambda t0 : -1 * np.sum(np.log(np.clip(wff.convolve_exp_norm(hittime - t0, Tau, Sigma), np.finfo(np.float).tiny, np.inf)) * charge[i_cha[i]:i_cha[i+1]]['Charge'])
+            logL = lambda t0 : -1 * np.sum(np.log(np.clip(probch(t0, hitt, char), np.finfo(np.float).tiny, np.inf)))
             stime[i - a0] = opti.fmin_l_bfgs_b(logL, [b[0]], approx_grad=True, bounds=[b], maxfun=500000)[0]
         elif mode == 'all':
             logL = lambda t0 : -1 * np.sum(np.log(np.clip(wff.convolve_exp_norm(pelist[i_pel[i]:i_pel[i+1]]['HitPosInWindow'] - t0, Tau, Sigma), np.finfo(np.float).tiny, np.inf)))

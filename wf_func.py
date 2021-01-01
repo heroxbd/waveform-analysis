@@ -255,6 +255,12 @@ def charge(n, gmu, gsigma=40):
     chargesam = norm.ppf(1 - uniform.rvs(scale=1-norm.cdf(0, loc=gmu, scale=gsigma), size=n), loc=gmu, scale=gsigma)
     return chargesam
 
+def probcharge(charge, n, gmu, gsigma=40):
+    gmu = gmu * n
+    gsigma = gsigma * np.sqrt(n)
+    prob = norm.pdf(charge, loc=gmu, scale=gsigma) / (1 - norm.cdf(0, loc=gmu, scale=gsigma))
+    return prob
+
 def demo(pet, pwe, tth, spe_pre, leng, wave, cid, full=False, fold='Note/figures', ext='.pgf'):
     penum = len(tth)
     print('PEnum is {}'.format(penum))
