@@ -5,9 +5,8 @@ import sys
 import re
 import time
 import math
+import csv
 import argparse
-import pickle
-from functools import partial
 
 import h5py
 import numpy as np
@@ -25,7 +24,15 @@ import matplotlib.gridspec as gridspec
 psr = argparse.ArgumentParser()
 psr.add_argument('-o', dest='opt', type=str, help='output file')
 psr.add_argument('--folder', nargs='+', type=str, help='folder of solution file')
+psr.add_argument('--conf', type=str, help='configuration of tau & sigma')
 args = psr.parse_args()
+
+with open(args.conf) as f:
+    f_csv = csv.reader(f, delimiter=' ')
+    Tau = next(f_csv)
+    Tau = [int(i) for i in Tau]
+    Sigma = next(f_csv)
+    Sigma = [int(i) for i in Sigma]
 
 filelist = os.listdir(args.folder[0])
 filelist = [f for f in filelist if f[0] != '.' and os.path.splitext(f)[-1] == '.h5']
@@ -83,8 +90,8 @@ pdf.close()
 
 fig = plt.figure(figsize=(8, 12))
 gs = gridspec.GridSpec(3, 2, figure=fig, left=0.1, right=0.95, top=0.95, bottom=0.05, wspace=0.2, hspace=0.3)
-for sigma, i in zip([3, 6], [0, 1]):
-    for tau, j in zip([0, 20, 40], [0, 1, 2]):
+for sigma, i in zip(Sigma, [0, 1]):
+    for tau, j in zip(Tau, [0, 1, 2]):
         ax = fig.add_subplot(gs[j, i])
         stdlist = mts[(mts['tau'] == tau) & (mts['sigma'] == sigma)]
         alpha = 0.05
@@ -97,7 +104,7 @@ for sigma, i in zip([3, 6], [0, 1]):
         ax.set_title(fr'$\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$')
         ax.set_ylim(0.3, 1)
         ax.grid()
-        ax.legend().set_zorder(1)
+        ax.legend(loc='lower left').set_zorder(1)
 fig.savefig('Note/figures/vs-deltadiv.pgf')
 fig.savefig('Note/figures/vs-deltadiv.pdf')
 plt.close(fig)

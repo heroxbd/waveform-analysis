@@ -1,9 +1,14 @@
 SHELL:=bash
 channelN:=$(shell seq -f '%02g' 0 0)
-mu:=$(shell seq -f '%04.1f' 0.5 0.5 5 && seq -f '%04.1f' 6 1 10 && seq -f '%04.1f' 15 5 30)
-tau:=$(shell seq -f '%02g' 0 10 40)
-sigma:=$(shell seq -f '%04.1f' 0 1 10)
-erg:=$(shell for i in $(mu); do for j in $(tau); do for k in $(sigma); do echo $${i}-$${j}-$${k}; done; done; done)
+mu:=$(shell seq -f '%02g' 1 1 5 && seq -f '%02g' 6 2 10 && seq -f '%02g' 15 5 30)
+tau:=$(shell seq -f '%02g' 0 20 100)
+sigma:=$(shell seq -f '%02g' 0 5 15)
+
+tau:=$(shell awk -F',' 'NR == 1 { print $1 }' rc.csv)
+sigma:=$(shell awk -F',' 'NR == 2 { print $1 }' rc.csv)
+
+erg:=$(filter-out %-00-00,$(shell for i in $(mu); do for j in $(tau); do for k in $(sigma); do echo $${i}-$${j}-$${k}; done; done; done))
+# erg:=05-40-10
 method=lucyddm
 raw:=$(erg:%=waveform/%.h5)
 char:=$(patsubst waveform/%.h5,result/$(method)/char/%.h5,$(raw))
@@ -57,9 +62,9 @@ result/$(method)/dist/%.h5 : waveform/%.h5 result/$(method)/char/%.h5 spe.h5
 result/$(method)/solu/%.h5 : result/$(method)/char/%.h5 waveform/%.h5
 	@mkdir -p $(dir $@)
 	python3 toyRec.py $< --ref $(word 2,$^) -o $@ > $@.log 2>&1
-result/$(method)/solu/vs.pdf : $(solu)
+result/$(method)/solu/vs.pdf : $(solu) rc.csv
 	@mkdir -p $(dir $@)
-	python3 vs.py --folder result/$(method)/solu waveform -o $@ > $@.log 2>&1
+	python3 vs.py --folder result/$(method)/solu waveform --conf $(word $(words $^), $^) -o $@ > $@.log 2>&1
 
 model : $(Nets)
 

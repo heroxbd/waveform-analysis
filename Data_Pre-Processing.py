@@ -83,7 +83,7 @@ h5file = tables.open_file(files[0], 'r')
 twfnum = len(h5file.root.Readout.Waveform)
 h5file.close()
 random.seed(0)
-files = random.sample(files, int(1e6/twfnum))
+files = random.sample(files, min(int(1e6/twfnum), len(files)))
 files.sort()
 for filename in files :
     h5file = tables.open_file(filename, 'r')

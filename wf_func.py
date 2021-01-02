@@ -233,10 +233,10 @@ def time(n, tau, sigma):
         return np.sort(glow(n, tau) + transit(n, sigma))
 
 def convolve_exp_norm(x, tau, sigma):
-    if sigma == 0.:
-        y = np.where(x >= 0., 1/tau * np.exp(-x/tau), 0.)
-    elif tau == 0.:
+    if tau == 0.:
         y = norm.pdf(x, loc=0, scale=sigma)
+    elif sigma == 0.:
+        y = np.where(x >= 0., 1/tau * np.exp(-x/tau), 0.)
     else:
         alpha = 1/tau
         co = alpha/2. * np.exp(alpha*alpha*sigma*sigma/2.)

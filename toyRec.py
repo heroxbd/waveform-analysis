@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import time
 import argparse
 from functools import partial
 from multiprocessing import Pool, cpu_count
@@ -13,9 +14,12 @@ import wf_func as wff
 psr = argparse.ArgumentParser()
 psr.add_argument('-o', dest='opt', type=str, help='output file')
 psr.add_argument('ipt', type=str, help='input file')
-psr.add_argument('--Ncpu', dest='Ncpu', type=int, default=60)
+psr.add_argument('--Ncpu', dest='Ncpu', type=int, default=100)
 psr.add_argument('--ref', type=str, help='reference file')
 args = psr.parse_args()
+
+global_start = time.time()
+cpu_global_start = time.process_time()
 
 window = 1029
 npe = 10
@@ -79,3 +83,5 @@ ts['tscharge'] = np.hstack(result)
 with h5py.File(args.opt, 'w') as opt:
     dset = opt.create_dataset('risetime', data=ts, compression='gzip')
     print('The output file path is {}'.format(args.opt))
+
+print('Finished! Consuming {0:.2f}s in total, cpu time {1:.2f}s.'.format(time.time() - global_start, time.process_time() - cpu_global_start))
