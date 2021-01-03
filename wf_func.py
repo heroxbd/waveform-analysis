@@ -142,7 +142,7 @@ def waveformfft(wave, spe_pre):
     length = len(wave)
     spefft = fft(spe_pre['spe'], 2*length)
     wavef = fft(wave, 2*length)
-    wavef[(length-int(length*0.7)):(length+int(length*0.7))] = 0
+    wavef[(length-int(length*0.8)):(length+int(length*0.8))] = 0
     signalf = np.true_divide(wavef, spefft)
     recon = np.real(ifft(signalf, 2*length))
     return np.arange(length), recon[:length]
