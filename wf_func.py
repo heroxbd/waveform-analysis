@@ -271,7 +271,7 @@ def demo(pet, pwe, tth, spe_pre, leng, wave, cid, full=False, fold='Note/figures
     tu = np.unique(t)
     cu = np.array([np.sum(w[tth['HitPosInWindow'] == i]) for i in tu])
     tuint = np.around(tu).astype(np.int)
-    for i in range(len(tuint)):
+    for i in tu:
         pf0[i] = pf0[i] + cu[i]
     pf0 = pf0 / spe_pre['spe'].sum()
     pf1[pet] = pwe / spe_pre['spe'].sum()
@@ -292,7 +292,7 @@ def demo(pet, pwe, tth, spe_pre, leng, wave, cid, full=False, fold='Note/figures
     ax0 = fig.add_axes((.1, .2, .85, .3))
     ax0.plot(wave, c='b', label='origin wave')
     ax0.plot(wave0, c='k', label='truth wave')
-    ax0.plot(wave1, c='C1', label='recon wave')
+    ax0.plot(wave1, c='g', label='recon wave')
     ax0.set_ylabel('$Voltage/\mathrm{mV}$')
     ax0.hlines(5 * spe_pre['std'], 0, 1029, color='c', label='threshold')
     ax0.set_xticklabels([])
@@ -304,7 +304,7 @@ def demo(pet, pwe, tth, spe_pre, leng, wave, cid, full=False, fold='Note/figures
     else:
         ax0.set_xlim(max(t.min()-50, 0), min(t.max()+150, leng))
     ax1 = fig.add_axes((.1, .5, .85, .2))
-    ax1.vlines(tu, 0, cu, color='g', label='truth Charge')
+    ax1.vlines(tu, 0, cu, color='k', label='truth Charge')
     ax1.set_ylabel(ylabel)
     ax1.set_xticklabels([])
     ax1.set_xlim(ax0.get_xlim())
@@ -313,7 +313,7 @@ def demo(pet, pwe, tth, spe_pre, leng, wave, cid, full=False, fold='Note/figures
     ax1.legend(loc=1)
     ax1.grid()
     ax2 = fig.add_axes((.1, .7, .85, .2))
-    ax2.vlines(pet, 0, pwe, color='y', label='recon Charge')
+    ax2.vlines(pet, 0, pwe, color='g', label='recon Charge')
     ax2.set_ylabel(ylabel)
     ax2.set_xticklabels([])
     ax2.set_xlim(ax0.get_xlim())

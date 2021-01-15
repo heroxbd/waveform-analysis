@@ -85,6 +85,7 @@ h5file.close()
 random.seed(0)
 files = random.sample(files, min(int(1e6/twfnum), len(files)))
 files.sort()
+print('Used files are: ', files)
 for filename in files :
     h5file = tables.open_file(filename, 'r')
     if filename == files[0]:

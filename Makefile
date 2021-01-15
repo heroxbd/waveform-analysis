@@ -19,7 +19,11 @@ hist:=$(patsubst waveform/%.h5,result/$(method)/hist/%.pdf,$(raw))
 ifeq ($(method), takara)
     predict:=nn
 else
+ifeq ($(method), mcmcrec)
+	predict:=mcmcrec
+else
     predict:=fit
+endif
 endif
 
 PreData:=$(channelN:%=result/$(method)/PreProcess/Pre_Channel%.h5)
@@ -27,15 +31,19 @@ Nets:=$(channelN:%=result/$(method)/char/Nets/Channel%.torch_net)
 
 .PHONY : all
 
-all : sim sub test vs
+all : solu vs
 
 vs : result/$(method)/solu/vs.pdf
 
 test : $(hist) $(reco)
 
-sub : $(char) $(solu) $(dist)
+solu : $(solu)
 
-sim : $(raw)
+define mcmcrec
+result/$(method)/solu/%.h5 : waveform/%.h5 spe.h5
+	@mkdir -p $$(dir $$@)
+	python3 toyRecMCMC.py $$< --met $(method) -N 100 --ref $$(word 2,$$^) -o $$@ > $$@.log 2>&1
+endef
 
 define fit
 result/$(method)/char/%.h5 : waveform/%.h5 spe.h5
@@ -92,7 +100,7 @@ spe.h5 : sim ;
 
 clean :
 	pushd waveform; rm -r ./* ; popd
-	pushd result; rm -r ./* ; popd
+	pushd result/$(method); rm -r ./* ; popd
 
 model.pkl :
 	python3 model.py $@

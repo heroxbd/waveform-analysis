@@ -43,7 +43,7 @@ method = args.met
 if args.demo:
     Demo = True
 
-Thres = 0.1
+Thres = 10.0
 warmup = 200
 samples = 1000
 E = 0.0
@@ -135,7 +135,7 @@ def fitting(a, b):
                 pet, pwe = wff.waveformfft(wave, spe_pre[ent[i]['ChannelID']])
             elif method == 'findpeak':
                 pet, pwe = wff.findpeak(wave, spe_pre[ent[i]['ChannelID']])
-            pet, pwe = wff.clip(pet, pwe, Thres)
+            pet, pwe = wff.clip(pet, pwe, Thres / np.sum(spe_pre[ent[i]['ChannelID']]['spe']))
 
             lenpf = len(pwe)
             end = start + lenpf

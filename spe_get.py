@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 import h5py
 import argparse
 import itertools as it
-import wf_func as wff
 
 psr = argparse.ArgumentParser()
 psr.add_argument('ipt', nargs='+', help='input file')
