@@ -30,7 +30,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 import h5py
-import uproot3 as uproot
+import uproot
 import awkward1 as ak
 
 import torch
@@ -135,7 +135,7 @@ for i in range(len(SLICES) - 1):
         def Forward(channelid) :
             SPECharge = GainTable[channelid]
             filter_limit = 0.01 * SPECharge
-            try : 
+            try :
                 Data_of_this_channel = Channel_Grouped_Waveform.get_group(channelid)
             except KeyError :
                 print("Warning: channel {0} not found in file {1}!".format(channelid, FILENOS))
