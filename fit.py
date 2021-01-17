@@ -12,12 +12,12 @@ from multiprocessing import Pool, cpu_count
 import numpy as np
 # np.seterr(all='raise')
 import h5py
-# import jax
-# import jax.numpy as jnp
-# from jax import random
-# import numpyro
-# import numpyro.distributions as dist
-# from numpyro.infer import MCMC, NUTS
+import jax
+import jax.numpy as jnp
+from jax import random
+import numpyro
+import numpyro.distributions as dist
+from numpyro.infer import MCMC, NUTS
 from tqdm import tqdm
 
 import wf_func as wff
@@ -61,8 +61,6 @@ def model(wave, mne, n, eta=E):
     return y
 
 def inferencing(a, b):
-    spe = np.vstack([np.concatenate((spe_pre[i]['spe'], np.zeros(leng - len(spe_pre[i]['spe'])))) for i in spe_pre.keys()])
-
     rng_key = random.PRNGKey(0)
     rng_key, rng_key_ = random.split(rng_key)
     model_collect = {}
@@ -71,6 +69,7 @@ def inferencing(a, b):
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
         ent = ipt['Readout/Waveform']
         leng = len(ent[0]['Waveform'])
+        spe = np.vstack([np.concatenate((spe_pre[i]['spe'], np.zeros(leng - len(spe_pre[i]['spe'])))) for i in spe_pre.keys()])
         dt = np.zeros((b - a) * (leng//5), dtype=opdt)
         start = 0
         end = 0
@@ -94,8 +93,8 @@ def inferencing(a, b):
                 mcmc_collect[len(pos)].run(rng_key, wave=jnp.array(wave), mne=jnp.array(mne))
                 # pf = np.mean(np.array(mcmc_collect[len(pos)].get_samples()['penum']), axis=0)
                 pf = lasso_select(np.array(mcmc_collect[len(pos)].get_samples()['penum']), wave, mne)
-                pos_r = pos[pf > Thres]
-                pf = pf[pf > Thres]
+                pos_r = pos[pf > Thres / np.sum(spe_pre[cid]['spe'])]
+                pf = pf[pf > Thres / np.sum(spe_pre[cid]['spe'])]
                 if len(pos_r) == 0:
                     flag = 0
             if flag == 0:
@@ -105,7 +104,7 @@ def inferencing(a, b):
             lenpf = len(pf)
             end = start + lenpf
             dti['HitPosInWindow'][start:end] = pos_r.astype(np.uint16)
-            dt['Charge'][start:end] = pf.astype(np.float16) * np.sum(spe[cid])
+            dt['Charge'][start:end] = pf.astype(np.float16) / pf.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
             dt['TriggerNo'][start:end] = ent[i]['TriggerNo']
             dt['ChannelID'][start:end] = ent[i]['ChannelID']
             start = end
