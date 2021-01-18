@@ -20,12 +20,6 @@ import pyro
 import pyro.distributions as dist
 from pyro.infer.mcmc.api import MCMC
 from pyro.infer.mcmc import NUTS
-import jax
-import jax.numpy as jnp
-from jax import random
-import numpyro
-import numpyro.distributions as dist
-from numpyro.infer import MCMC, NUTS
 import matplotlib.pyplot as plt
 
 import wf_func as wff
@@ -69,46 +63,26 @@ p = [8., 0.5, 24.]
 p[2] = p[2] * gmu / np.sum(wff.spe(np.arange(window), tau=p[0], sigma=p[1], A=p[2]))
 std = 1.
 
-def start_time_numpyro(a0, a1):
-    rng_key = random.PRNGKey(0)
-    rng_key, rng_key_ = random.split(rng_key)
-    stime = np.empty(a1 - a0)
-    tlist = jnp.arange(window)
-    def model(y):
-        n = 2
-        t0 = numpyro.sample('t0', dist.Uniform(50., 550.))
-        tb = numpyro.sample('tb', dist.Normal(jnp.ones(n) * t0, scale=Sigma))
-        if Tau != 0:
-            ta = numpyro.sample('ta', dist.Exponential(rate=jnp.ones(n) * 1/Tau))
-            t = ta + tb
-        else:
-            t = tb
-        A = numpyro.sample('A', dist.LogNormal(jnp.ones(n) * lgmu, scale=lgsigma))
-        obs = numpyro.sample('obs', dist.Normal(0, scale=std), obs=y-jnp.sum(p[2] * jnp.exp(-1 / 2 * jnp.power((jnp.log(((tlist - t[:, None] + jnp.abs(tlist - t[:, None]))/2) / p[0]) / p[1]), 2)) * A[:, None] / gmu, axis=0))
-        return obs
-    nuts_kernel = NUTS(model, adapt_step_size=True)
-    mcmc = MCMC(nuts_kernel, num_warmup=2000, num_samples=2000, num_chains=1)
-    for i in range(a0, a1):
-        mcmc.run(rng_key, y=jnp.array(ent[i]['Waveform']))
-        stime[i] = np.mean(np.array(mcmc.get_samples()['t0']))
-        mcmc.print_summary()
-    return stime
-
 def start_time(a0, a1):
     stime = np.empty(a1 - a0)
     tlist = torch.arange(window)
+
+    t_auto = tlist[:, None] - tlist
+    # amplitude to voltage converter
+    AV = p[2] * torch.exp(-1 / 2 * torch.pow((torch.log(((t_auto + torch.abs(t_auto))/2) / p[0]) / p[1]), 2))
     def model(y):
-        n = 2
-        t0 = pyro.sample('t0', dist.Uniform(50., 550.))
-        tb = pyro.sample('tb', dist.Normal(torch.ones(n) * t0, scale=Sigma))
-        if Tau != 0:
-            ta = pyro.sample('ta', dist.Exponential(rate=torch.ones(n) * 1/Tau))
-            t = ta + tb
-        else:
-            t = tb
-        A = pyro.sample('A', dist.LogNormal(torch.ones(n) * lgmu, scale=lgsigma))
-        wave = torch.sum(p[2] * torch.exp(-1 / 2 * torch.pow((torch.log(((tlist - t[:, None] + torch.abs(tlist - t[:, None]))/2) / p[0]) / p[1]), 2)) * A[:, None] / gmu, axis=0)
-        obs = pyro.sample('obs', dist.Normal(wave, scale=std), obs=y)
+        t0 = pyro.sample('t0', dist.Uniform(0., window))
+        light_curve = pyro.distributions.Normal(t0, scale=Sigma)
+        pl = torch.exp(light_curve.log_prob(tlist)) * Mu
+
+        with pyro.plate("charges", window):
+            A = pyro.sample('A', dist.MixtureSameFamily(
+                dist.Categorical(torch.stack((1 - pl, pl)).T),
+                dist.Normal(torch.tensor((0., 1.)).expand(window, 2), torch.tensor((1/32, 1/4)).expand(window, 2))
+            ))
+
+        with pyro.plate("observations", window):
+            obs = pyro.sample('obs', dist.Normal(torch.matmul(AV, A), scale=std), obs=y)
         return obs
     nuts_kernel = NUTS(model, jit_compile=False)
     mcmc = MCMC(nuts_kernel, num_samples=2000, warmup_steps=2000, num_chains=1)
@@ -143,7 +117,6 @@ ts['tsfirstcharge'] = np.full(N, np.nan)
 
 chunk = N // args.Ncpu + 1
 slices = np.vstack((np.arange(0, N, chunk), np.append(np.arange(chunk, N, chunk), N))).T.astype(np.int).tolist()
-start_time_numpyro(0, 10)
 start_time(0, 10)
 with Pool(min(args.Ncpu, cpu_count())) as pool:
     result = pool.starmap(partial(start_time, mode='all'), slices)
