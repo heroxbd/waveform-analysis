@@ -57,10 +57,10 @@ with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
 
 gmu = 160.
 gsigma = 40.
-lgmu = np.log(gmu) - 0.5 * np.log(1 + gsigma**2 / gmu**2)
-lgsigma = np.log(1 + gsigma**2 / gmu**2)
 p = [8., 0.5, 24.]
 p[2] = p[2] * gmu / np.sum(wff.spe(np.arange(window), tau=p[0], sigma=p[1], A=p[2]))
+Alpha = 1 / Tau
+Co = Alpha / 2. * np.exp(Alpha * Alpha * Sigma * Sigma / 2.)
 std = 1.
 
 def start_time(a0, a1):
@@ -69,25 +69,25 @@ def start_time(a0, a1):
 
     t_auto = tlist[:, None] - tlist
     # amplitude to voltage converter
-    AV = p[2] * torch.exp(-1 / 2 * torch.pow((torch.log(((t_auto + torch.abs(t_auto))/2) / p[0]) / p[1]), 2))
-    def model(y):
+    AV = p[2] * torch.exp(-1 / 2 * torch.pow((torch.log((t_auto + torch.abs(t_auto)) * (1 / p[0] / 2)) * (1 / p[1])), 2))
+    def model(y, mu):
         t0 = pyro.sample('t0', dist.Uniform(0., window))
-        light_curve = pyro.distributions.Normal(t0, scale=Sigma)
-        pl = torch.exp(light_curve.log_prob(tlist)) * Mu
+        pl = Co * (1. - torch.erf((Alpha * Sigma * Sigma - (tlist - t0)) / (np.sqrt(2.) * Sigma))) * torch.exp(-Alpha * (tlist - t0)) * mu
 
-        with pyro.plate("charges", window):
+        with pyro.plate('charges', window):
             A = pyro.sample('A', dist.MixtureSameFamily(
                 dist.Categorical(torch.stack((1 - pl, pl)).T),
-                dist.Normal(torch.tensor((0., 1.)).expand(window, 2), torch.tensor((1/32, 1/4)).expand(window, 2))
+                dist.Normal(torch.tensor((0., 1.)).expand(window, 2), torch.tensor((1/1e3, 1/4)).expand(window, 2))
             ))
 
         with pyro.plate("observations", window):
-            obs = pyro.sample('obs', dist.Normal(torch.matmul(AV, A), scale=std), obs=y)
+            obs = pyro.sample('obs', dist.Normal(0, scale=std), obs=y-torch.matmul(AV, A))
         return obs
-    nuts_kernel = NUTS(model, jit_compile=False)
-    mcmc = MCMC(nuts_kernel, num_samples=2000, warmup_steps=2000, num_chains=1)
     for i in range(a0, a1):
-        mcmc.run(torch.from_numpy(ent[i]['Waveform']).float())
+        wave = ent[i]['Waveform']
+        nuts_kernel = NUTS(partial(model, mu=np.sum(wave) / gmu), jit_compile=False)
+        mcmc = MCMC(nuts_kernel, num_samples=2000, warmup_steps=1000, num_chains=1)
+        mcmc.run(torch.from_numpy(wave).float())
         stime[i] = np.mean(mcmc.get_samples()['t0'].numpy())
         mcmc.summary()
     return stime
