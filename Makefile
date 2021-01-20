@@ -39,6 +39,8 @@ test : $(hist) $(reco)
 
 solu : $(solu)
 
+sim : $(sim)
+
 define mcmcrec
 result/$(method)/solu/%.h5 : waveform/%.h5 spe.h5
 	@mkdir -p $$(dir $$@)
