@@ -43,7 +43,7 @@ fopt = args.opt
 reference = args.ref
 method = args.met
 
-use_cuda = False
+use_cuda = True
 
 if use_cuda:
     device = torch.device(0)
@@ -70,8 +70,9 @@ gsigma = 40.
 eta = gsigma / gmu
 p = [8., 0.5, 24.]
 p[2] = (p[2] * gmu / np.sum(wff.spe(np.arange(window), tau=p[0], sigma=p[1], A=p[2]))).item()
-Alpha = 1 / Tau
-Co = (Alpha / 2. * np.exp(Alpha * Alpha * Sigma * Sigma / 2.)).item()
+if Tau != 0:
+    Alpha = 1 / Tau
+    Co = (Alpha / 2. * np.exp(Alpha * Alpha * Sigma * Sigma / 2.)).item()
 std = 1.
 
 def start_time(a0, a1):
@@ -86,7 +87,11 @@ def start_time(a0, a1):
     wsigma = torch.tensor(std).to(device)
     def model(y, mu):
         t0 = pyro.sample('t0', dist.Uniform(torch.tensor(0.).to(device), torch.tensor(float(window)).to(device))).to(device)
-        pl = (Co * (1. - torch.erf((Alpha * Sigma * Sigma - (tlist - t0)) / (math.sqrt(2.) * Sigma))) * torch.exp(-Alpha * (tlist - t0)) * mu).to(device)
+        if Tau == 0:
+            light_curve = pyro.distributions.Normal(t0, scale=Sigma)
+            pl = (torch.exp(light_curve.log_prob(tlist)) * mu).to(device)
+        else:
+            pl = (Co * (1. - torch.erf((Alpha * Sigma * Sigma - (tlist - t0)) / (math.sqrt(2.) * Sigma))) * torch.exp(-Alpha * (tlist - t0)) * mu).to(device)
 
         with pyro.plate('charges', window):
             A = pyro.sample('A', dist.MixtureSameFamily(
