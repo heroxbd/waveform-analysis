@@ -10,12 +10,12 @@ sigma:=$(shell awk -F',' 'NR == 2 { print $1 }' rc.csv)
 erg:=$(filter-out %-00-00,$(shell for i in $(mu); do for j in $(tau); do for k in $(sigma); do echo $${i}-$${j}-$${k}; done; done; done))
 # erg:=05-40-10
 method=lucyddm
-raw:=$(erg:%=waveform/%.h5)
-char:=$(patsubst waveform/%.h5,result/$(method)/char/%.h5,$(raw))
-solu:=$(patsubst waveform/%.h5,result/$(method)/solu/%.h5,$(raw))
-dist:=$(patsubst waveform/%.h5,result/$(method)/dist/%.h5,$(raw))
-reco:=$(patsubst waveform/%.h5,result/$(method)/reco/%.csv,$(raw))
-hist:=$(patsubst waveform/%.h5,result/$(method)/hist/%.pdf,$(raw))
+sim:=$(erg:%=waveform/%.h5)
+char:=$(patsubst waveform/%.h5,result/$(method)/char/%.h5,$(sim))
+solu:=$(patsubst waveform/%.h5,result/$(method)/solu/%.h5,$(sim))
+dist:=$(patsubst waveform/%.h5,result/$(method)/dist/%.h5,$(sim))
+reco:=$(patsubst waveform/%.h5,result/$(method)/reco/%.csv,$(sim))
+hist:=$(patsubst waveform/%.h5,result/$(method)/hist/%.pdf,$(sim))
 ifeq ($(method), takara)
     predict:=nn
 else
@@ -86,7 +86,7 @@ result/$(method)/char/Channel%/.Training_finished : result/$(method)/PreProcess/
 
 $(PreData) : result/$(method)/.PreProcess
 
-result/$(method)/.PreProcess : $(raw) spe.h5
+result/$(method)/.PreProcess : $(sim) spe.h5
 	@mkdir -p result/$(method)/PreProcess
 	python3 -u Data_Pre-Processing.py waveform/ -o result/$(method)/PreProcess/Pre_Channel --ref $(word $(words $^), $^) > result/$(method)/PreProcess/PreProcess.log 2>&1
 	@touch $@
@@ -96,7 +96,7 @@ waveform/%.h5 :
 	@mkdir -p $(dir $@)
 	python3 toySim.py --mts $* --noi -N 10000 -o $@ > $@.log 2>&1
 
-spe.h5 : sim ;
+spe.h5 : $(sim) ;
 
 clean :
 	pushd waveform; rm -r ./* ; popd
