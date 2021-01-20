@@ -43,9 +43,14 @@ fopt = args.opt
 reference = args.ref
 method = args.met
 
-device = torch.device(0)
-torch.cuda.init()
-torch.cuda.empty_cache()
+use_cuda = False
+
+if use_cuda:
+    device = torch.device(0)
+    torch.cuda.init()
+    torch.cuda.empty_cache()
+else:
+    device = torch.device('cpu')
 
 spe_pre = wff.read_model(reference[0])
 with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
@@ -69,60 +74,31 @@ Alpha = 1 / Tau
 Co = (Alpha / 2. * np.exp(Alpha * Alpha * Sigma * Sigma / 2.)).item()
 std = 1.
 
-def start_time_gpu(a0, a1):
-    stime = np.empty(a1 - a0)
-    tlist = torch.arange(window).to(device=device)
-    t_auto = (tlist[:, None] - tlist).to(device=device)
-    # amplitude to voltage converter
-    AV = (p[2] * torch.exp(-1 / 2 * torch.pow((torch.log((t_auto + torch.abs(t_auto)) * (1 / p[0] / 2)) * (1 / p[1])), 2))).to(device=device)
-    Amu = torch.tensor((0., 1.)).expand(window, 2).to(device=device)
-    Asigma = torch.tensor((1/1e3, eta)).expand(window, 2).to(device=device)
-    wmu = torch.tensor(0.).to(device=device)
-    wsigma = torch.tensor(std).to(device=device)
-    def model(y, mu):
-        t0 = pyro.sample('t0', dist.Uniform(torch.tensor(0.).to(device=device), torch.tensor(float(window)).to(device=device))).to(device=device)
-        pl = (Co * (1. - torch.erf((Alpha * Sigma * Sigma - (tlist - t0)) / (math.sqrt(2.) * Sigma))) * torch.exp(-Alpha * (tlist - t0)) * mu).to(device=device)
-
-        with pyro.plate('charges', window):
-            A = pyro.sample('A', dist.MixtureSameFamily(
-                dist.Categorical(torch.stack((1 - pl, pl)).T.to(device=device)),
-                dist.Normal(Amu, Asigma)
-            ))
-
-        with pyro.plate('observations', window):
-            obs = pyro.sample('obs', dist.Normal(wmu, scale=wsigma), obs=y-torch.matmul(AV, A)).to(device=device)
-        return obs
-    for i in range(a0, a1):
-        wave = torch.from_numpy(ent[i]['Waveform'].astype(np.float32)).to(device=device)
-        nuts_kernel = NUTS(partial(model, mu=1 / gmu * torch.sum(wave)), jit_compile=False)
-        mcmc = MCMC(nuts_kernel, num_samples=2000, warmup_steps=1000, num_chains=1)
-        mcmc.run(wave)
-        stime[i] = np.mean(mcmc.get_samples()['t0'].numpy())
-    return stime
-
 def start_time(a0, a1):
     stime = np.empty(a1 - a0)
-    tlist = torch.arange(window)
-    t_auto = (tlist[:, None] - tlist)
+    tlist = torch.arange(window).to(device)
+    t_auto = (tlist[:, None] - tlist).to(device)
     # amplitude to voltage converter
-    AV = (p[2] * torch.exp(-1 / 2 * torch.pow((torch.log((t_auto + torch.abs(t_auto)) * (1 / p[0] / 2)) * (1 / p[1])), 2)))
-    Amu = torch.tensor((0., 1.)).expand(window, 2)
-    Asigma = torch.tensor((1/1e3, eta)).expand(window, 2)
+    AV = (p[2] * torch.exp(-1 / 2 * torch.pow((torch.log((t_auto + torch.abs(t_auto)) * (1 / p[0] / 2)) * (1 / p[1])), 2))).to(device)
+    Amu = torch.tensor((0., 1.)).expand(window, 2).to(device)
+    Asigma = torch.tensor((1/1e3, eta)).expand(window, 2).to(device)
+    wmu = torch.tensor(0.).to(device)
+    wsigma = torch.tensor(std).to(device)
     def model(y, mu):
-        t0 = pyro.sample('t0', dist.Uniform(0, window))
-        pl = Co * (1. - torch.erf((Alpha * Sigma * Sigma - (tlist - t0)) / (math.sqrt(2.) * Sigma))) * torch.exp(-Alpha * (tlist - t0)) * mu
+        t0 = pyro.sample('t0', dist.Uniform(torch.tensor(0.).to(device), torch.tensor(float(window)).to(device))).to(device)
+        pl = (Co * (1. - torch.erf((Alpha * Sigma * Sigma - (tlist - t0)) / (math.sqrt(2.) * Sigma))) * torch.exp(-Alpha * (tlist - t0)) * mu).to(device)
 
         with pyro.plate('charges', window):
             A = pyro.sample('A', dist.MixtureSameFamily(
-                dist.Categorical(torch.stack((1 - pl, pl)).T),
+                dist.Categorical(torch.stack((1 - pl, pl)).T.to(device)),
                 dist.Normal(Amu, Asigma)
             ))
 
         with pyro.plate('observations', window):
-            obs = pyro.sample('obs', dist.Normal(0., scale=std), obs=y-torch.matmul(AV, A))
+            obs = pyro.sample('obs', dist.Normal(wmu, scale=wsigma), obs=y-torch.matmul(AV, A)).to(device)
         return obs
     for i in range(a0, a1):
-        wave = torch.from_numpy(ent[i]['Waveform'].astype(np.float32))
+        wave = torch.from_numpy(ent[i]['Waveform'].astype(np.float32)).to(device)
         nuts_kernel = NUTS(partial(model, mu=1 / gmu * torch.sum(wave)), jit_compile=False)
         mcmc = MCMC(nuts_kernel, num_samples=2000, warmup_steps=1000, num_chains=1)
         mcmc.run(wave)
