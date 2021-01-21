@@ -20,7 +20,7 @@ import torch.distributions.constraints as constraints
 import pyro
 import pyro.distributions as dist
 from pyro.infer.mcmc.api import MCMC
-from pyro.infer.mcmc import NUTS
+from pyro.infer.mcmc import NUTS, HMC
 import matplotlib.pyplot as plt
 
 import wf_func as wff
@@ -43,7 +43,7 @@ fopt = args.opt
 reference = args.ref
 method = args.met
 
-use_cuda = True
+use_cuda = False
 
 if use_cuda:
     device = torch.device(0)
@@ -82,22 +82,23 @@ def start_time(a0, a1):
     # amplitude to voltage converter
     AV = (p[2] * torch.exp(-1 / 2 * torch.pow((torch.log((t_auto + torch.abs(t_auto)) * (1 / p[0] / 2)) * (1 / p[1])), 2))).to(device)
     Amu = torch.tensor((0., 1.)).expand(window, 2).to(device)
-    Asigma = torch.tensor((1/1e3, eta)).expand(window, 2).to(device)
+    Asigma = torch.tensor((std / gsigma, eta)).expand(window, 2).to(device)
     wmu = torch.tensor(0.).to(device)
     wsigma = torch.tensor(std).to(device)
+    left = torch.tensor(0.).to(device)
+    right = torch.tensor(float(window)).to(device)
     def model(y, mu):
-        t0 = pyro.sample('t0', dist.Uniform(torch.tensor(0.).to(device), torch.tensor(float(window)).to(device))).to(device)
+        t0 = pyro.sample('t0', dist.Uniform(left, right)).to(device)
         if Tau == 0:
-            light_curve = pyro.distributions.Normal(t0, scale=Sigma)
+            light_curve = dist.Normal(t0, scale=Sigma)
             pl = (torch.exp(light_curve.log_prob(tlist)) * mu).to(device)
         else:
             pl = (Co * (1. - torch.erf((Alpha * Sigma * Sigma - (tlist - t0)) / (math.sqrt(2.) * Sigma))) * torch.exp(-Alpha * (tlist - t0)) * mu).to(device)
 
-        with pyro.plate('charges', window):
-            A = pyro.sample('A', dist.MixtureSameFamily(
-                dist.Categorical(torch.stack((1 - pl, pl)).T.to(device)),
-                dist.Normal(Amu, Asigma)
-            ))
+        A = pyro.sample('A', dist.MixtureSameFamily(
+            dist.Categorical(torch.stack((1 - pl, pl)).T.to(device)),
+            dist.Normal(Amu, Asigma)
+        ))
 
         with pyro.plate('observations', window):
             obs = pyro.sample('obs', dist.Normal(wmu, scale=wsigma), obs=y-torch.matmul(AV, A)).to(device)
@@ -105,9 +106,9 @@ def start_time(a0, a1):
     for i in range(a0, a1):
         wave = torch.from_numpy(ent[i]['Waveform'].astype(np.float32)).to(device)
         nuts_kernel = NUTS(partial(model, mu=1 / gmu * torch.sum(wave)), jit_compile=False)
-        mcmc = MCMC(nuts_kernel, num_samples=2000, warmup_steps=1000, num_chains=1)
+        mcmc = MCMC(nuts_kernel, num_samples=1000, warmup_steps=500, num_chains=1)
         mcmc.run(wave)
-        stime[i] = np.mean(mcmc.get_samples()['t0'].numpy())
+        stime[i] = np.mean(mcmc.get_samples()['t0'].cpu().numpy())
     return stime
 
 if args.Ncpu == 1:
@@ -135,7 +136,7 @@ ts['tsfirstcharge'] = np.full(N, np.nan)
 
 chunk = N // args.Ncpu + 1
 slices = np.vstack((np.arange(0, N, chunk), np.append(np.arange(chunk, N, chunk), N))).T.astype(np.int).tolist()
-start_time(0, 10)
+start_time(0, 1)
 with Pool(min(args.Ncpu, cpu_count())) as pool:
     result = pool.starmap(partial(start_time, mode='all'), slices)
 
