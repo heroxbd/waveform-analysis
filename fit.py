@@ -149,7 +149,6 @@ def fitting(a, b):
     return dt
 
 spe_pre = wff.read_model(reference[0])
-# stanmodel = pickle.load(open(reference[1], 'rb'))
 opdt = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('HitPosInWindow', np.uint16), ('Charge', np.float64)])
 with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
     l = len(ipt['Readout/Waveform'])

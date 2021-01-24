@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import os
 import sys
 import re
 import time
@@ -16,9 +17,15 @@ import pandas as pd
 from tqdm import tqdm
 import torch
 torch.manual_seed(0)
+# torch.autograd.set_detect_anomaly(True)
 import torch.distributions.constraints as constraints
+from torch.distributions.utils import broadcast_all
 import pyro
 import pyro.distributions as dist
+from torch.distributions.exp_family import ExponentialFamily
+from pyro.distributions.torch import Normal
+from pyro.distributions.torch_distribution import TorchDistribution
+from pyro.distributions.torch_distribution import TorchDistributionMixin
 from pyro.infer.mcmc.api import MCMC
 from pyro.infer.mcmc import NUTS, HMC
 import matplotlib.pyplot as plt
@@ -67,13 +74,49 @@ with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
 
 gmu = 160.
 gsigma = 40.
-eta = gsigma / gmu
 p = [8., 0.5, 24.]
 p[2] = (p[2] * gmu / np.sum(wff.spe(np.arange(window), tau=p[0], sigma=p[1], A=p[2]))).item()
 if Tau != 0:
     Alpha = 1 / Tau
     Co = (Alpha / 2. * np.exp(Alpha * Alpha * Sigma * Sigma / 2.)).item()
 std = 1.
+
+class mNormal(ExponentialFamily, TorchDistribution):
+    has_rsample = True
+    support = constraints.real
+    def __init__(self, pl, s, mu, sigma, validate_args=None):
+        self.pl, self.s, self.mu, self.sigma = broadcast_all(pl + torch.finfo(pl.dtype).tiny, s, mu, sigma)
+        batch_shape = self.pl.size()
+        # self.a = 1 / (2 * self.s ** 2) - 1 / (2 * self.sigma ** 2)
+        # self.b = self.mu / (self.sigma ** 2)
+        # self.c = -self.mu ** 2 / (2 * self.sigma ** 2) + torch.log(self.pl * self.s / (1 - self.pl) / self.sigma)
+        # self.intersect = ((-self.b + torch.sqrt(self.b ** 2 - 4 * self.a * self.c)) / (2 * self.a)).detach()
+        self.intersect = torch.ones(self.pl.shape, dtype=self.pl.dtype, device=self.pl.device).detach() * 0.1
+        self.norm0 = Normal(loc=torch.zeros(self.pl.shape, dtype=self.pl.dtype, device=self.pl.device), scale=self.s)
+        self.norm1 = Normal(loc=self.mu, scale=self.sigma)
+        # self.rpl = 1 - (1 - self.pl) * self.norm0.cdf(self.intersect)
+        self.rpl = self.pl
+        super(mNormal, self).__init__(batch_shape, validate_args=validate_args)
+
+    # def sample(self, sample_shape=torch.Size()):
+    #     shape = self._extended_shape(sample_shape)
+    #     m = dist.Bernoulli(self.pl)
+    #     mix = m.sample()
+    #     with torch.no_grad():
+    #         return torch.where(mix > 0., torch.normal(self.mu.expand(shape), self.sigma.expand(shape)), torch.normal(torch.zeros(shape), self.s.expand(shape)))
+    
+    def sample(self, sample_shape=torch.Size()):
+        shape = self._extended_shape(sample_shape)
+        with torch.no_grad():
+            return self.rsample(sample_shape=shape)
+    
+    def rsample(self, sample_shape=torch.Size()):
+        shape = self._extended_shape(sample_shape)
+        u = torch.rand(shape, dtype=self.pl.dtype, device=self.pl.device)
+        return torch.where(u < 1 - self.rpl, self.s * torch.erfinv(2 * self.norm0.cdf(self.intersect) / (1 - self.rpl) * u - 1) * math.sqrt(2), self.mu + self.sigma * torch.erfinv(2 * (self.norm1.cdf(self.intersect) - 1) / (-self.rpl) * (u - 1) + 1) * math.sqrt(2))
+
+    def log_prob(self, value):
+        return torch.where(value < self.intersect, (1 - self.pl).log() + self.norm0.log_prob(value), self.pl.log() + self.norm1.log_prob(value))
 
 def start_time(a0, a1):
     stime = np.empty(a1 - a0)
@@ -82,7 +125,7 @@ def start_time(a0, a1):
     # amplitude to voltage converter
     AV = (p[2] * torch.exp(-1 / 2 * torch.pow((torch.log((t_auto + torch.abs(t_auto)) * (1 / p[0] / 2)) * (1 / p[1])), 2))).to(device)
     Amu = torch.tensor((0., 1.)).expand(window, 2).to(device)
-    Asigma = torch.tensor((std / gsigma, eta)).expand(window, 2).to(device)
+    Asigma = torch.tensor((std / gsigma, gsigma / gmu)).expand(window, 2).to(device)
     wmu = torch.tensor(0.).to(device)
     wsigma = torch.tensor(std).to(device)
     left = torch.tensor(0.).to(device)
@@ -99,6 +142,7 @@ def start_time(a0, a1):
             dist.Categorical(torch.stack((1 - pl, pl)).T.to(device)),
             dist.Normal(Amu, Asigma)
         ))
+        # A = pyro.sample('A', mNormal(pl, torch.tensor(std / gsigma).to(device), torch.tensor(1.).to(device), torch.tensor(gsigma / gmu).to(device)))
 
         with pyro.plate('observations', window):
             obs = pyro.sample('obs', dist.Normal(wmu, scale=wsigma), obs=y-torch.matmul(AV, A)).to(device)
@@ -116,6 +160,10 @@ if args.Ncpu == 1:
 else:
     chunk = N // args.Ncpu + 1
     slices = np.vstack((np.arange(0, N, chunk), np.append(np.arange(chunk, N, chunk), N))).T.astype(np.int).tolist()
+if not os.path.exists('stanmodel.pkl'):
+    os.system('python3 stanmodel.py')
+stanmodel = pickle.load(open('stanmodel.pkl', 'rb'))
+
 print('Initialization finished, real time {0:.4f}s, cpu time {1:.4f}s'.format(time.time() - global_start, time.process_time() - cpu_global_start))
 tic = time.time()
 cpu_tic = time.process_time()
@@ -138,7 +186,7 @@ chunk = N // args.Ncpu + 1
 slices = np.vstack((np.arange(0, N, chunk), np.append(np.arange(chunk, N, chunk), N))).T.astype(np.int).tolist()
 start_time(0, 1)
 with Pool(min(args.Ncpu, cpu_count())) as pool:
-    result = pool.starmap(partial(start_time, mode='all'), slices)
+    result = pool.starmap(partial(start_time), slices)
 
 ts = np.hstack(result)
 ts = np.sort(ts, kind='stable', order=['TriggerNo', 'ChannelID'])
