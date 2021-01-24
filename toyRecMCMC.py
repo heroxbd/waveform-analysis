@@ -29,6 +29,7 @@ from pyro.distributions.torch_distribution import TorchDistributionMixin
 from pyro.infer.mcmc.api import MCMC
 from pyro.infer.mcmc import NUTS, HMC
 import matplotlib.pyplot as plt
+import pystan
 
 import wf_func as wff
 
@@ -118,7 +119,7 @@ class mNormal(ExponentialFamily, TorchDistribution):
     def log_prob(self, value):
         return torch.where(value < self.intersect, (1 - self.pl).log() + self.norm0.log_prob(value), self.pl.log() + self.norm1.log_prob(value))
 
-def start_time(a0, a1):
+def time_pyro(a0, a1):
     stime = np.empty(a1 - a0)
     tlist = torch.arange(window).to(device)
     t_auto = (tlist[:, None] - tlist).to(device)
@@ -155,6 +156,20 @@ def start_time(a0, a1):
         stime[i] = np.mean(mcmc.get_samples()['t0'].cpu().numpy())
     return stime
 
+def time_stan(a0, a1):
+    stime = np.empty(a1 - a0)
+    tlist = np.arange(window)
+    t_auto = tlist[:, None] - tlist
+    AV = p[2] * np.exp(-1 / 2 * np.power((np.log((t_auto + np.abs(t_auto)) * (1 / p[0] / 2)) * (1 / p[1])), 2))
+    for i in range(a0, a1):
+        wave = ent[i]['Waveform']
+        mu = np.sum(wave) / gmu
+        fit = stanmodel.sampling(data=dict(N=window, Tau=Tau, Sigma=Sigma, mu=mu, s=std / gsigma, sigma=gsigma / gmu, std=std, AV=AV, w=wave), warmup=500, iter=1500, seed=0)
+        pystan.check_hmc_diagnostics(fit)
+        fit.to_dataframe()
+        stime[i] = np.mean(fit['t0'])
+    return stime
+
 if args.Ncpu == 1:
     slices = [[0, N]]
 else:
@@ -184,9 +199,10 @@ ts['tsfirstcharge'] = np.full(N, np.nan)
 
 chunk = N // args.Ncpu + 1
 slices = np.vstack((np.arange(0, N, chunk), np.append(np.arange(chunk, N, chunk), N))).T.astype(np.int).tolist()
-start_time(0, 1)
+# time_pyro(0, 1)
+time_stan(0, 1)
 with Pool(min(args.Ncpu, cpu_count())) as pool:
-    result = pool.starmap(partial(start_time), slices)
+    result = pool.starmap(partial(time_pyro), slices)
 
 ts = np.hstack(result)
 ts = np.sort(ts, kind='stable', order=['TriggerNo', 'ChannelID'])
