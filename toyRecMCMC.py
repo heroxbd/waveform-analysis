@@ -18,12 +18,11 @@ from tqdm import tqdm
 import torch
 torch.manual_seed(0)
 # torch.autograd.set_detect_anomaly(True)
-import torch.distributions.constraints as constraints
-from torch.distributions.utils import broadcast_all
 import pyro
-import pyro.distributions as dist
-from pyro.infer.mcmc.api import MCMC
-from pyro.infer.mcmc import NUTS, HMC
+import jax
+import jax.numpy as jnp
+import numpyro
+from jax import lax
 import matplotlib.pyplot as plt
 import pystan
 
@@ -75,7 +74,7 @@ p = [8., 0.5, 24.]
 p[2] = (p[2] * gmu / np.sum(wff.spe(np.arange(window), tau=p[0], sigma=p[1], A=p[2]))).item()
 if Tau != 0:
     Alpha = 1 / Tau
-    Co = (Alpha / 2. * np.exp(Alpha * Alpha * Sigma * Sigma / 2.)).item()
+    Co = (Alpha / 2. * np.exp(Alpha ** 2 * Sigma ** 2 / 2.)).item()
 std = 1.
 
 def time_pyro(a0, a1):
@@ -91,27 +90,77 @@ def time_pyro(a0, a1):
     left = torch.tensor(0.).to(device)
     right = torch.tensor(float(window)).to(device)
     def model(y, mu):
-        t0 = pyro.sample('t0', dist.Uniform(left, right)).to(device)
+        t0 = pyro.sample('t0', pyro.distributions.Uniform(left, right)).to(device)
         if Tau == 0:
-            light_curve = dist.Normal(t0, scale=Sigma)
+            light_curve = pyro.distributions.Normal(t0, scale=Sigma)
             pl = (torch.exp(light_curve.log_prob(tlist)) * mu).to(device)
         else:
-            pl = (Co * (1. - torch.erf((Alpha * Sigma * Sigma - (tlist - t0)) / (math.sqrt(2.) * Sigma))) * torch.exp(-Alpha * (tlist - t0)) * mu).to(device)
+            pl = (Co * (1. - torch.erf((Alpha * Sigma ** 2 - (tlist - t0)) / (math.sqrt(2.) * Sigma))) * torch.exp(-Alpha * (tlist - t0)) * mu).to(device)
 
-        A = pyro.sample('A', dist.MixtureSameFamily(
-            dist.Categorical(torch.stack((1 - pl, pl)).T.to(device)),
-            dist.Normal(Amu, Asigma)
+        A = pyro.sample('A', pyro.distributions.MixtureSameFamily(
+            pyro.distributions.Categorical(torch.stack((1 - pl, pl)).T.to(device)),
+            pyro.distributions.Normal(Amu, Asigma)
         ))
 
         with pyro.plate('observations', window):
-            obs = pyro.sample('obs', dist.Normal(wmu, scale=wsigma), obs=y-torch.matmul(AV, A)).to(device)
+            obs = pyro.sample('obs', pyro.distributions.Normal(wmu, scale=wsigma), obs=y-torch.matmul(AV, A)).to(device)
         return obs
     for i in range(a0, a1):
         wave = torch.from_numpy(ent[i]['Waveform'].astype(np.float32)).to(device)
-        nuts_kernel = NUTS(partial(model, mu=1 / gmu * torch.sum(wave)), jit_compile=False)
-        mcmc = MCMC(nuts_kernel, num_samples=1000, warmup_steps=500, num_chains=1)
-        mcmc.run(wave)
-        stime[i] = np.mean(mcmc.get_samples()['t0'].cpu().numpy())
+        nuts_kernel = pyro.infer.mcmc.NUTS(partial(model, mu=1 / gmu * torch.sum(wave)), jit_compile=False)
+        mcmc = pyro.infer.mcmc.api.MCMC(nuts_kernel, num_samples=1000, warmup_steps=500, num_chains=1)
+        mcmc.run(y=wave)
+        stime[i - a0] = np.mean(mcmc.get_samples()['t0'].cpu().numpy())
+    return stime
+
+class mNormal(numpyro.distributions.distribution.Distribution):
+    support = numpyro.distributions.constraints.real
+
+    def __init__(self, pl, s, mu, sigma, validate_args=None):
+        self.pl, self.s, self.mu, self.sigma = numpyro.distributions.util.promote_shapes(pl, s, mu, sigma)
+        super(mNormal, self).__init__(batch_shape=jnp.shape(pl), validate_args=validate_args)
+
+    def sample(self, key, sample_shape=()):
+        assert numpyro.distributions.util.is_prng_key(key)
+        keym, key0, key1 = jax.random.split(rng_key, 3)
+        shape = sample_shape + self.batch_shape + self.event_shape
+        mix = jax.random.bernoulli(keym, self.pl, shape=shape)
+        eps0 = jax.random.normal(key0, shape=shape) * self.s
+        eps1 = self.mu + jax.random.normal(key1, shape=shape) * self.sigma
+        return jnp.where(mix > 0., eps1, eps0)
+    
+    def log_prob(self, value):
+        prob0 = numpyro.distributions.Normal(0., self.s).log_prob(value)
+        prob1 = numpyro.distributions.Normal(self.mu, self.sigma).log_prob(value)
+        return jnp.log(jnp.clip((1 - self.pl) * jnp.exp(prob0) + self.pl * jnp.exp(prob1), 1e-6, 1-1e-6))
+
+def time_numpyro(a0, a1):
+    rng_key = jax.random.PRNGKey(0)
+    rng_key, rng_key_ = jax.random.split(rng_key)
+    stime = np.empty(a1 - a0)
+    tlist = jnp.arange(window)
+    t_auto = tlist[:, None] - tlist
+    # amplitude to voltage converter
+    AV = p[2] * jnp.exp(-1 / 2 * jnp.power((jnp.log((t_auto + jnp.abs(t_auto)) * (1 / p[0] / 2)) * (1 / p[1])), 2))
+    def model(y, mu):
+        t0 = numpyro.sample('t0', numpyro.distributions.Uniform(0., float(window)))
+        if Tau == 0:
+            light_curve = numpyro.distributions.Normal(t0, scale=Sigma)
+            pl = jnp.exp(light_curve.log_prob(tlist)) * mu
+        else:
+            pl = Co * (1. - jax.scipy.special.erf((Alpha * Sigma ** 2 - (tlist - t0)) / (math.sqrt(2.) * Sigma))) * jnp.exp(-Alpha * (tlist - t0)) * mu
+
+        A = numpyro.sample('A', mNormal(pl, std / gsigma, 1., gsigma / gmu))
+
+        with numpyro.plate('observations', window):
+            obs = numpyro.sample('obs', numpyro.distributions.Normal(0., scale=std), obs=y-jnp.matmul(AV, A))
+        return obs
+    nuts_kernel = numpyro.infer.NUTS(model, adapt_step_size=True)
+    mcmc = numpyro.infer.MCMC(nuts_kernel, num_samples=1000, num_warmup=500, jit_model_args=True)
+    for i in range(a0, a1):
+        wave = jnp.array(ent[i]['Waveform'].astype(np.float32))
+        mcmc.run(rng_key, y=wave, mu=1 / gmu * jnp.sum(wave))
+        stime[i - a0] = np.mean(np.array(mcmc.get_samples()['t0']))
     return stime
 
 def time_stan(a0, a1):
@@ -123,9 +172,9 @@ def time_stan(a0, a1):
         wave = ent[i]['Waveform']
         mu = np.sum(wave) / gmu
         fit = stanmodel.sampling(data=dict(N=window, Tau=Tau, Sigma=Sigma, mu=mu, s=std / gsigma, sigma=gsigma / gmu, std=std, AV=AV, w=wave), warmup=500, iter=1500, seed=0)
-        pystan.check_hmc_diagnostics(fit)
-        fit.to_dataframe()
-        stime[i] = np.mean(fit['t0'])
+        # print(pystan.check_hmc_diagnostics(fit))
+        # print(fit.to_dataframe())
+        stime[i - a0] = np.mean(fit['t0'])
     return stime
 
 if args.Ncpu == 1:
@@ -157,8 +206,10 @@ ts['tsfirstcharge'] = np.full(N, np.nan)
 
 chunk = N // args.Ncpu + 1
 slices = np.vstack((np.arange(0, N, chunk), np.append(np.arange(chunk, N, chunk), N))).T.astype(np.int).tolist()
-# time_pyro(0, 1)
-time_stan(0, 1)
+# time_pyro(4, 10)
+time_numpyro(4, 10)
+# time_stan(4, 10)
+# time_pymc(4, 10)
 with Pool(min(args.Ncpu, cpu_count())) as pool:
     result = pool.starmap(partial(time_pyro), slices)
 
