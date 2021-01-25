@@ -132,7 +132,7 @@ class mNormal(numpyro.distributions.distribution.Distribution):
     def log_prob(self, value):
         prob0 = numpyro.distributions.Normal(0., self.s).log_prob(value)
         prob1 = numpyro.distributions.Normal(self.mu, self.sigma).log_prob(value)
-        return jnp.log(jnp.clip((1 - self.pl) * jnp.exp(prob0) + self.pl * jnp.exp(prob1), 1e-6, 1-1e-6))
+        return jnp.log(jnp.clip((1 - self.pl) * jnp.exp(prob0) + self.pl * jnp.exp(prob1), jnp.finfo(jnp.float32).tiny, 1-jnp.finfo(jnp.float32).tiny))
 
 def time_numpyro(a0, a1):
     rng_key = jax.random.PRNGKey(0)
@@ -177,6 +177,17 @@ def time_stan(a0, a1):
         stime[i - a0] = np.mean(fit['t0'])
     return stime
 
+def time_pymc(a0, a1):
+    stime = np.empty(a1 - a0)
+    tlist = np.arange(window)
+    t_auto = tlist[:, None] - tlist
+    AV = p[2] * np.exp(-1 / 2 * np.power((np.log((t_auto + np.abs(t_auto)) * (1 / p[0] / 2)) * (1 / p[1])), 2))
+    for i in range(a0, a1):
+        wave = ent[i]['Waveform']
+        mu = np.sum(wave) / gmu
+        stime[i - a0] = np.mean()
+    return stime
+
 if args.Ncpu == 1:
     slices = [[0, N]]
 else:
@@ -207,9 +218,9 @@ ts['tsfirstcharge'] = np.full(N, np.nan)
 chunk = N // args.Ncpu + 1
 slices = np.vstack((np.arange(0, N, chunk), np.append(np.arange(chunk, N, chunk), N))).T.astype(np.int).tolist()
 # time_pyro(4, 10)
-time_numpyro(4, 10)
+# time_numpyro(4, 10)
 # time_stan(4, 10)
-# time_pymc(4, 10)
+time_pymc(4, 10)
 with Pool(min(args.Ncpu, cpu_count())) as pool:
     result = pool.starmap(partial(time_pyro), slices)
 
