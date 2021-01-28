@@ -29,6 +29,7 @@ import jax.numpy as jnp
 import numpyro
 from jax import lax
 import arviz
+import theano
 import pymc3
 import pystan
 import matplotlib.pyplot as plt
@@ -153,7 +154,7 @@ def time_numpyro(a0, a1):
     # amplitude to voltage converter
     AV = p[2] * jnp.exp(-1 / 2 * jnp.power((jnp.log((t_auto + jnp.abs(t_auto)) * (1 / p[0] / 2)) * (1 / p[1])), 2))
     def model(y, mu):
-        t0 = numpyro.sample('t0', numpyro.distributions.Uniform(0., float(window)))
+        t0 = numpyro.sample('t0', numpyro.distributions.Uniform(100., 500.))
         if Tau == 0:
             light_curve = numpyro.distributions.Normal(t0, scale=Sigma)
             pl = numpyro.primitives.deterministic('pl', jnp.exp(light_curve.log_prob(tlist)) * mu + jnp.finfo(jnp.float32).resolution)
@@ -164,7 +165,7 @@ def time_numpyro(a0, a1):
             obs = numpyro.sample('obs', numpyro.distributions.Normal(jnp.matmul(AV, A), scale=std), obs=y)
         return obs
     nuts_kernel = numpyro.infer.NUTS(model, adapt_step_size=True)
-    mcmc = numpyro.infer.MCMC(nuts_kernel, num_samples=1000, num_warmup=500, num_chains=1, jit_model_args=True)
+    mcmc = numpyro.infer.MCMC(nuts_kernel, num_samples=1000, num_warmup=500, num_chains=2, jit_model_args=True)
     for i in range(a0, a1):
         cid = ent[i]['ChannelID']
         wave = jnp.array(ent[i]['Waveform'].astype(np.float32))
@@ -172,9 +173,10 @@ def time_numpyro(a0, a1):
         A = jnp.hstack([jnp.where(wave > spe_pre[cid]['std'] * 5, wave, 0)[spe_pre[cid]['mar_l']:], jnp.zeros(spe_pre[cid]['mar_l'])])
         A = A / jnp.sum(A) * mu
         t0 = jnp.clip(jnp.argmax(wave) * spe_pre[cid]['epulse'] - spe_pre[cid]['mar_l'], 0, window).astype(jnp.float32)
-        potential = lambda z: numpyro.infer.util.potential_energy(model=model, model_args=(wave, mu), model_kwargs={}, params=z)
-        initp = init(z={'t0':t0, 'A':A}, potential_energy=potential({'t0':t0, 'A':A}), z_grad=jax.grad(potential)({'t0':t0, 'A':A}))
-        mcmc.run(rng_key, y=wave, mu=mu, init_params=initp)
+        # potential = lambda z: numpyro.infer.util.potential_energy(model=model, model_args=(wave, mu), model_kwargs={}, params=z)
+        # initp = init(z={'t0':t0, 'A':A}, potential_energy=potential({'t0':t0, 'A':A}), z_grad=jax.grad(potential)({'t0':t0, 'A':A}))
+        mcmc.run(rng_key, y=wave, mu=mu)
+        # mcmc.run(rng_key, y=wave, mu=mu, init_params=initp)
         stime[i - a0] = np.mean(np.array(mcmc.get_samples()['t0']))
         print(stime[i - a0] - start[i]['T0'])
     return stime
@@ -195,31 +197,37 @@ def time_stan(a0, a1):
 
 def time_pymc(a0, a1):
     stime = np.empty(a1 - a0)
-    window = 60
     tlist = np.arange(window)
     t_auto = tlist[:, None] - tlist
     AV = p[2] * np.exp(-1 / 2 * np.power((np.log((t_auto + np.abs(t_auto)) * (1 / p[0] / 2)) * (1 / p[1])), 2))
-    one = np.array([0., 1.])
-    sigma = np.array([std / gsigma, gsigma / gmu])
+    one = np.repeat(np.array([[0., 1.]]), window, axis=0)
+    sigma = np.repeat(np.array([[std / gsigma, gsigma / gmu]]), window, axis=0)
     def model(y, mu):
         with pymc3.Model() as mix01:
             t0 = pymc3.Uniform('t0', lower=0., upper=float(window))
             if Tau == 0:
                 pl = 1 / (Sigma * np.sqrt(2 * np.pi)) * np.exp(-(tlist - t0) ** 2 / (2 * Sigma**2)) * mu
             else:
-                pl = Co * (1. - pymc3.math.erf((Alpha * Sigma ** 2 - (tlist - t0)) / (np.sqrt(2.) * Sigma))) * np.exp(-Alpha * (tlist - t0)) * mu + 1e-6
+                pl = Co * (1. - pymc3.math.erf((Alpha * Sigma ** 2 - (tlist - t0)) / (np.sqrt(2.) * Sigma))) * np.exp(-Alpha * (tlist - t0)) * mu
             pl = pymc3.math.stack([(1 - pl), pl], axis=1)
-            Ai = [pymc3.NormalMixture('A_{:04d}'.format(i), w=pl[i], mu=one, sigma=sigma) for i in range(window)]
-            A = pymc3.Deterministic('A', pymc3.math.stack(Ai))
+            A = pymc3.NormalMixture('A', w=pl, mu=one, sigma=sigma, shape=(window,))
             obs = pymc3.Normal('obs', mu=0., sigma=std, observed=y-pymc3.math.dot(AV, A))
         return mix01
     for i in range(a0, a1):
-        wave = ent[i]['Waveform'][330:330+window]
+        cid = ent[i]['ChannelID']
+        wave = ent[i]['Waveform']
         mu = np.sum(wave) / gmu
+        A = np.hstack([np.where(wave > spe_pre[cid]['std'] * 5, wave, 0)[spe_pre[cid]['mar_l']:], np.zeros(spe_pre[cid]['mar_l'])])
+        A = A / np.sum(A) * mu
+        t0 = np.clip(np.argmax(wave) * spe_pre[cid]['epulse'] - spe_pre[cid]['mar_l'], 0, window).astype(np.float32) - 10
         with model(wave, mu):
-            trace = pymc3.sample(1000, tune=1000, return_inferencedata=False)
-            t = trace['t0']
-            arviz.summary(trace, kind='stats')
+            try:
+                trace = pymc3.sample(1000, tune=500, start={'t0':t0,'A':A}, chains=2, cores=2, random_seed=0, return_inferencedata=False)
+                t = trace['t0']
+                print(arviz.summary(trace, kind='stats'))
+            except:
+                map_estimate = pymc3.find_MAP()
+                t = map_estimate['t0']
         stime[i - a0] = np.mean(t)
     return stime
 
@@ -253,9 +261,12 @@ ts['tsfirstcharge'] = np.full(N, np.nan)
 chunk = N // args.Ncpu + 1
 slices = np.vstack((np.arange(0, N, chunk), np.append(np.arange(chunk, N, chunk), N))).T.astype(np.int).tolist()
 # time_pyro(4, 10)
-time_numpyro(0, 10)
+# time_numpyro(4, 10)
 # time_stan(4, 10)
-# time_pymc(2, 4)
+time_pymc(7, 10)
+time_gen(4, 10)
+time_edward(4, 10)
+time_nimble(4, 10)
 with Pool(min(args.Ncpu, cpu_count())) as pool:
     result = pool.starmap(partial(time_pyro), slices)
 
