@@ -36,13 +36,14 @@ def start_time(a0, a1, mode):
     for i in range(a0, a1):
         hitt = charge[i_cha[i]:i_cha[i+1]]['HitPosInWindow'].astype(np.float)
         char = charge[i_cha[i]:i_cha[i+1]]['Charge']
-        b = [np.clip(hitt[0] - (Tau + 3 * Sigma), 0, np.inf), hitt[-1] + 3 * Sigma]
+        b = [np.clip(hitt[0] - (Tau + 5 * Sigma), 0, np.inf), hitt[-1] + 5 * Sigma]
+        tlist = np.arange(b[0], b[1])
         if mode == 'charge':
             logL = lambda t0 : -1 * np.sum(np.log(np.clip(probch(t0, hitt, char), np.finfo(np.float).tiny, np.inf)))
-            stime[i - a0] = opti.fmin_l_bfgs_b(logL, [b[0]], approx_grad=True, bounds=[b], maxfun=500000)[0]
         elif mode == 'all':
             logL = lambda t0 : -1 * np.sum(np.log(np.clip(wff.convolve_exp_norm(pelist[i_pel[i]:i_pel[i+1]]['HitPosInWindow'] - t0, Tau, Sigma), np.finfo(np.float).tiny, np.inf)))
-            stime[i - a0] = opti.fmin_l_bfgs_b(logL, [b[0]], approx_grad=True, bounds=[b], maxfun=500000)[0]
+        logLv = np.vectorize(logL)
+        stime[i - a0] = opti.fmin_l_bfgs_b(logL, x0=[tlist[np.argmin(logLv(tlist))]], approx_grad=True, bounds=[b], maxfun=500000)[0]
     return stime
 
 spe_pre = wff.read_model('spe.h5')
