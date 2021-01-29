@@ -25,8 +25,10 @@ torch.manual_seed(0)
 # torch.autograd.set_detect_anomaly(True)
 import pyro
 import jax
+# jax.config.update('jax_enable_x64', True)
 import jax.numpy as jnp
 import numpyro
+# numpyro.set_host_device_count(2)
 from jax import lax
 import arviz
 import theano
@@ -118,6 +120,7 @@ def time_pyro(a0, a1):
         mu=1 / gmu * torch.sum(wave)
         mcmc.run(y=wave, mu=mu)
         stime[i - a0] = np.mean(mcmc.get_samples()['t0'].cpu().numpy())
+        print(stime[i - a0] - start[i]['T0'])
     return stime
 
 class mNormal(numpyro.distributions.distribution.Distribution):
@@ -136,11 +139,10 @@ class mNormal(numpyro.distributions.distribution.Distribution):
 
     @numpyro.distributions.util.validate_sample
     def log_prob(self, value):
-        prob0 = self.norm0.log_prob(value)
-        prob1 = self.norm1.log_prob(value)
-        # return jnp.log(jnp.clip((1 - self.pl) * jnp.exp(prob0) + self.pl * jnp.exp(prob1), jnp.finfo(jnp.float32).tiny, jnp.inf))
-        # return jnp.where(self.pl > jnp.finfo(jnp.float32).resolution, jax.scipy.special.logsumexp(prob, axis=0, b=pl), prob0)
-        prob = jnp.vstack([prob0, prob1])
+        logprob0 = self.norm0.log_prob(value)
+        logprob1 = self.norm1.log_prob(value)
+
+        prob = jnp.vstack([logprob0, logprob1])
         pl = jnp.vstack([(1 - self.pl), self.pl])
         return jax.scipy.special.logsumexp(prob, axis=0, b=pl)
 
@@ -154,7 +156,7 @@ def time_numpyro(a0, a1):
     # amplitude to voltage converter
     AV = p[2] * jnp.exp(-1 / 2 * jnp.power((jnp.log((t_auto + jnp.abs(t_auto)) * (1 / p[0] / 2)) * (1 / p[1])), 2))
     def model(y, mu):
-        t0 = numpyro.sample('t0', numpyro.distributions.Uniform(100., 500.))
+        t0 = numpyro.sample('t0', numpyro.distributions.Uniform(0., 600.))
         if Tau == 0:
             light_curve = numpyro.distributions.Normal(t0, scale=Sigma)
             pl = numpyro.primitives.deterministic('pl', jnp.exp(light_curve.log_prob(tlist)) * mu + jnp.finfo(jnp.float32).resolution)
@@ -165,7 +167,7 @@ def time_numpyro(a0, a1):
             obs = numpyro.sample('obs', numpyro.distributions.Normal(jnp.matmul(AV, A), scale=std), obs=y)
         return obs
     nuts_kernel = numpyro.infer.NUTS(model, adapt_step_size=True)
-    mcmc = numpyro.infer.MCMC(nuts_kernel, num_samples=1000, num_warmup=500, num_chains=2, jit_model_args=True)
+    mcmc = numpyro.infer.MCMC(nuts_kernel, num_samples=1000, num_warmup=500, num_chains=1, jit_model_args=True)
     for i in range(a0, a1):
         cid = ent[i]['ChannelID']
         wave = jnp.array(ent[i]['Waveform'].astype(np.float32))
@@ -193,6 +195,7 @@ def time_stan(a0, a1):
         # print(pystan.check_hmc_diagnostics(fit))
         # print(fit.to_dataframe())
         stime[i - a0] = np.mean(fit['t0'])
+        print(stime[i - a0] - start[i]['T0'])
     return stime
 
 def time_pymc(a0, a1):
@@ -229,6 +232,7 @@ def time_pymc(a0, a1):
                 map_estimate = pymc3.find_MAP()
                 t = map_estimate['t0']
         stime[i - a0] = np.mean(t)
+        print(stime[i - a0] - start[i]['T0'])
     return stime
 
 if args.Ncpu == 1:
@@ -260,13 +264,11 @@ ts['tsfirstcharge'] = np.full(N, np.nan)
 
 chunk = N // args.Ncpu + 1
 slices = np.vstack((np.arange(0, N, chunk), np.append(np.arange(chunk, N, chunk), N))).T.astype(np.int).tolist()
-# time_pyro(4, 10)
-# time_numpyro(4, 10)
-# time_stan(4, 10)
-time_pymc(7, 10)
-time_gen(4, 10)
-time_edward(4, 10)
-time_nimble(4, 10)
+# time_pyro(0, 10)
+time_numpyro(0, 10)
+# time_stan(0, 10)
+time_pymc(0, 10)
+time_edward(0, 10)
 with Pool(min(args.Ncpu, cpu_count())) as pool:
     result = pool.starmap(partial(time_pyro), slices)
 
