@@ -49,7 +49,7 @@ transformed parameters {
         }
 }
 model {
-    t0 ~ uniform(0, N);
+    t0 ~ uniform(0, 600);
     for (n in 1:N) {
         A[n] ~ mnormal(pl[n], s, sigma);
     }

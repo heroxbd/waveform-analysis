@@ -255,6 +255,13 @@ def charge(n, gmu, gsigma=40):
     chargesam = norm.ppf(1 - uniform.rvs(scale=1-norm.cdf(0, loc=gmu, scale=gsigma), size=n), loc=gmu, scale=gsigma)
     return chargesam
 
+def lasso_select(pf_r, wave, mne, E):
+    pf_r = pf_r[np.argmin([loss(pf_r[j], mne, wave, E) for j in range(len(pf_r))])]
+    return pf_r
+
+def loss(x, M, y, eta=0.):
+    return np.power(y - np.matmul(M, x), 2).sum() + eta * x.sum()
+
 def probcharge(charge, n, gmu, gsigma=40):
     gmu = gmu * n
     gsigma = gsigma * np.sqrt(n)

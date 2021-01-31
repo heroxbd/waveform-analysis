@@ -42,9 +42,9 @@ solu : $(solu)
 sim : $(sim)
 
 define mcmcrec
-result/$(method)/solu/%.h5 : waveform/%.h5 spe.h5
-	@mkdir -p $$(dir $$@)
-	python3 toyRecMCMC.py $$< --met $(method) -N 100 --ref $$(word 2,$$^) -o $$@ > $$@.log 2>&1
+result/$(method)/solu/%.h5 result/$(method)/char/%.h5 &: waveform/%.h5 spe.h5
+	@mkdir -p $$(dir result/$(method)/solu/$$*.h5)
+	python3 toyRecMCMC.py $$< --met $(method) -N 100 --ref $$(word 2,$$^) -o result/$(method)/solu/$$*.h5 result/$(method)/char/$$*.h5 > result/$(method)/solu/$$*.h5.log 2>&1
 endef
 
 define fit

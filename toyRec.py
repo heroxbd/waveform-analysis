@@ -36,7 +36,7 @@ def start_time(a0, a1, mode):
     for i in range(a0, a1):
         hitt = charge[i_cha[i]:i_cha[i+1]]['HitPosInWindow'].astype(np.float)
         char = charge[i_cha[i]:i_cha[i+1]]['Charge']
-        b = [np.clip(hitt[0] - (Tau + 5 * Sigma), 0, np.inf), hitt[-1] + 5 * Sigma]
+        b = [0., 600.]
         tlist = np.arange(b[0], b[1])
         if mode == 'charge':
             logL = lambda t0 : -1 * np.sum(np.log(np.clip(probch(t0, hitt, char), np.finfo(np.float).tiny, np.inf)))

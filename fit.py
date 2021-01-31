@@ -43,17 +43,10 @@ method = args.met
 if args.demo:
     Demo = True
 
-Thres = 10.0
+Thres = 0.1
 warmup = 200
 samples = 1000
-E = 0.0
-
-def lasso_select(pf_r, wave, mne):
-    pf_r = pf_r[np.argmin([loss(pf_r[j], mne, wave) for j in range(len(pf_r))])]
-    return pf_r
-
-def loss(x, M, y, eta=E):
-    return np.power(y - np.matmul(M, x), 2).sum() + eta * x.sum()
+E = 0.
 
 def model(wave, mne, n, eta=E):
     pf = numpyro.sample('penum', dist.HalfNormal(jnp.ones(n)))
@@ -66,6 +59,7 @@ def inferencing(a, b):
     model_collect = {}
     nuts_kernel_collect = {}
     mcmc_collect = {}
+    tlist = np.arange(leng)
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
         ent = ipt['Readout/Waveform']
         leng = len(ent[0]['Waveform'])
@@ -77,34 +71,24 @@ def inferencing(a, b):
             cid = ent[i]['ChannelID']
             wave = ent[i]['Waveform'].astype(np.float) * spe_pre[ent[i]['ChannelID']]['epulse']
             pos = np.argwhere(wave[spe_pre[cid]['peak_c'] + 2:] > 5 * spe_pre[cid]['std']).flatten()
-            pf = wave[pos]/(spe_pre[cid]['spe'].sum())
+            pwe = wave[pos]/(spe_pre[cid]['spe'].sum())
             flag = 1
-            if len(pos) == 0:
-                flag = 0
-            else:
-                mne = spe[cid][np.mod(np.arange(leng).reshape(leng, 1) - pos.reshape(1, len(pos)), leng)]
-
+            if len(pos) != 0:
+                mne = spe[cid][np.mod(tlist.reshape(leng, 1) - pos.reshape(1, len(pos)), leng)]
                 # op = stanmodel.sampling(data=dict(m=mne, y=wave, Nf=leng, Np=len(pos)), iter=1000, seed=0)
-                # pf = lasso_select(op['x'], wave, mne)
+                # pwe = lasso_select(op['x'], wave, mne)
                 if not len(pos) in mcmc_collect:
                     model_collect.update({len(pos) : partial(model, n=len(pos), eta=E)})
                     nuts_kernel_collect.update({len(pos) : NUTS(model_collect[len(pos)], step_size=0.01, adapt_step_size=True)})
                     mcmc_collect.update({len(pos) : MCMC(nuts_kernel_collect[len(pos)], num_warmup=warmup, num_samples=samples, num_chains=1, progress_bar=Demo, jit_model_args=True)})
                 mcmc_collect[len(pos)].run(rng_key, wave=jnp.array(wave), mne=jnp.array(mne))
-                # pf = np.mean(np.array(mcmc_collect[len(pos)].get_samples()['penum']), axis=0)
-                pf = lasso_select(np.array(mcmc_collect[len(pos)].get_samples()['penum']), wave, mne)
-                pos_r = pos[pf > Thres / np.sum(spe_pre[cid]['spe'])]
-                pf = pf[pf > Thres / np.sum(spe_pre[cid]['spe'])]
-                if len(pos_r) == 0:
-                    flag = 0
-            if flag == 0:
-                t = np.array([np.argmax(wave)]) - spe_pre[cid]['peak_c']
-                pf = np.array([1])
-                pos_r = t if t[0] >= 0 else np.array([0])
-            lenpf = len(pf)
-            end = start + lenpf
-            dti['HitPosInWindow'][start:end] = pos_r.astype(np.uint16)
-            dt['Charge'][start:end] = pf.astype(np.float16) / pf.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
+                pwe = np.mean(np.array(mcmc_collect[len(pos)].get_samples()['penum']), axis=0)
+                # pwe = lasso_select(np.array(mcmc_collect[len(pos)].get_samples()['penum']), wave, mne)
+            pet, pwe = wff.clip(pet, pwe, Thres)
+            end = start + len(pet)
+            dti['HitPosInWindow'][start:end] = pet
+            pwe = pwe / pwe.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
+            dt['Charge'][start:end] = pwe
             dt['TriggerNo'][start:end] = ent[i]['TriggerNo']
             dt['ChannelID'][start:end] = ent[i]['ChannelID']
             start = end
@@ -134,10 +118,9 @@ def fitting(a, b):
                 pet, pwe = wff.waveformfft(wave, spe_pre[ent[i]['ChannelID']])
             elif method == 'findpeak':
                 pet, pwe = wff.findpeak(wave, spe_pre[ent[i]['ChannelID']])
-            pet, pwe = wff.clip(pet, pwe, Thres / np.sum(spe_pre[ent[i]['ChannelID']]['spe']))
+            pet, pwe = wff.clip(pet, pwe, Thres)
 
-            lenpf = len(pwe)
-            end = start + lenpf
+            end = start + len(pwe)
             dt['HitPosInWindow'][start:end] = pet
             pwe = pwe / pwe.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
             dt['Charge'][start:end] = pwe
