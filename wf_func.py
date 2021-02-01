@@ -268,11 +268,11 @@ def probcharge(charge, n, gmu, gsigma=40):
     prob = norm.pdf(charge, loc=gmu, scale=gsigma) / (1 - norm.cdf(0, loc=gmu, scale=gsigma))
     return prob
 
-def demo(pet, pwe, tth, spe_pre, leng, wave, cid, full=False, fold='Note/figures', ext='.pgf'):
+def demo(pet, pwe, tth, spe_pre, window, wave, cid, full=False, fold='Note/figures', ext='.pgf'):
     penum = len(tth)
     print('PEnum is {}'.format(penum))
-    pf0 = np.zeros(leng)
-    pf1 = np.zeros(leng)
+    pf0 = np.zeros(window)
+    pf1 = np.zeros(window)
     t = tth['HitPosInWindow']
     w = tth['Charge']
     tu = np.unique(t)
@@ -286,12 +286,12 @@ def demo(pet, pwe, tth, spe_pre, leng, wave, cid, full=False, fold='Note/figures
     distd = '(W/ns,C/mV*ns)'; distl = 'cdiff'
     edist = pwe.sum() - w.sum()
     print('truth HitPosInWindow = {}, Weight = {}'.format(t, w))
-    wave0 = np.convolve(spe_pre['spe'], pf0, 'full')[:leng]
+    wave0 = np.convolve(spe_pre['spe'], pf0, 'full')[:window]
     print('truth Resi-norm = {}'.format(np.linalg.norm(wave-wave0)))
     print('HitPosInWindow = {}, Weight = {}'.format(pet, pwe))
     wdist = scipy.stats.wasserstein_distance(t, pet, u_weights=w, v_weights=pwe)
     print('wdist = {}, '.format(wdist)+distl+' = {}'.format(edist))
-    wave1 = np.convolve(spe_pre['spe'], pf1, 'full')[:leng]
+    wave1 = np.convolve(spe_pre['spe'], pf1, 'full')[:window]
     print('Resi-norm = {}'.format(np.linalg.norm(wave-wave1)))
 
     fig = plt.figure(figsize=(10, 10))
@@ -307,9 +307,9 @@ def demo(pet, pwe, tth, spe_pre, leng, wave, cid, full=False, fold='Note/figures
     ax0.legend(loc=1)
     ax0.grid()
     if full:
-        ax0.set_xlim(0, leng)
+        ax0.set_xlim(0, window)
     else:
-        ax0.set_xlim(max(t.min()-50, 0), min(t.max()+150, leng))
+        ax0.set_xlim(max(t.min()-50, 0), min(t.max()+150, window))
     ax1 = fig.add_axes((.1, .5, .85, .2))
     ax1.vlines(tu, 0, cu, color='k', label='truth Charge')
     ax1.set_ylabel(ylabel)
@@ -329,7 +329,7 @@ def demo(pet, pwe, tth, spe_pre, leng, wave, cid, full=False, fold='Note/figures
     ax2.legend(loc=1)
     ax2.grid()
     ax3 = fig.add_axes((.1, .1, .85, .1))
-    ax3.scatter(np.arange(leng), wave1 - wave, c='k', label='residual wave', marker='.')
+    ax3.scatter(np.arange(window), wave1 - wave, c='k', label='residual wave', marker='.')
     ax3.set_xlabel('$t/\mathrm{ns}$')
     ax3.set_ylabel('$Voltage/\mathrm{mV}$')
     ax3.set_xlim(ax0.get_xlim())

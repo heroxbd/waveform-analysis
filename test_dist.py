@@ -21,7 +21,6 @@ fref = args.ref[0]
 fipt = args.ipt
 fopt = args.opt
 Ncpu = args.Ncpu
-window = 1029
 
 def wpdist(a, b):
     dt = np.zeros(b - a, dtype=opdt)
@@ -34,9 +33,9 @@ def wpdist(a, b):
         
         wl = df_sub[i_sub[i]:i_sub[i+1]]['Charge']
         pet_sub = df_sub[i_sub[i]:i_sub[i+1]]['HitPosInWindow']
-        pf_s = np.zeros(leng)
+        pf_s = np.zeros(window)
         pf_s[pet_sub] = wl
-        wave1 = np.convolve(spe_pre[cid]['spe'], pf_s, 'full')[:leng]
+        wave1 = np.convolve(spe_pre[cid]['spe'], pf_s, 'full')[:window]
         t = df_ans[i_ans[i]:i_ans[i+1]]['HitPosInWindow']
         w = df_ans[i_ans[i]:i_ans[i+1]]['Charge']
         pet0 = np.unique(t)
@@ -70,7 +69,7 @@ e_ans, i_ans = np.unique(e_ans, return_index=True)
 i_ans = np.append(i_ans, len(df_ans))
 
 opdt = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('TotalPEpos', np.uint16), ('wdist', np.float64), ('chargediff', np.float64), ('RSS', np.float64), ('RSS_recon', np.float64), ('RSS_truth', np.float64)])
-leng = len(df_wav[0]['Waveform'])
+window = len(df_wav[0]['Waveform'])
 
 e_wav = df_wav['TriggerNo']*Chnum + df_wav['ChannelID']; df_wav = df_wav[np.isin(e_wav, e_ans)]
 e_wav, i_wav = np.unique(df_wav['TriggerNo']*Chnum + df_wav['ChannelID'], return_index=True)

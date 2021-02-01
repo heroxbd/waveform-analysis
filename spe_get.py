@@ -65,7 +65,7 @@ def generate_standard(h5_path, single_pe_path):
     e_wf, i_wf = np.unique(Wf['TriggerNo']*Chnum + Wf['ChannelID'], return_index=True)
     i_wf = np.append(i_wf, len(Wf))
     assert len(e_wf) == len(e_gt), 'Incomplete Dataset'
-    leng = len(Wf[0]['Waveform'])
+    window = len(Wf[0]['Waveform'])
     p = 0
     for p in tqdm(range(len(e_wf))):
         pt = np.sort(Gt[i_gt[p]:i_gt[p+1]]['HitPosInWindow']).astype(np.int)
@@ -75,7 +75,7 @@ def generate_standard(h5_path, single_pe_path):
             dpta = np.diff(pt, prepend=pt[0])
             dptb = np.diff(pt, append=pt[-1])
             ps = pt[(dpta > L) & (dptb > L)]#long distance to other spe in both forepart & backpart
-        ps = ps[(ps >= 0) & (ps < leng - L)]
+        ps = ps[(ps >= 0) & (ps < window - L)]
         if ps.shape[0] != 0:
             wave = Wf[i_wf[p]]['Waveform'].astype(np.float)
             for k in range(len(ps)):
@@ -94,13 +94,13 @@ def generate_standard(h5_path, single_pe_path):
             break
     
     npstddt = np.dtype([('ChannelID', np.uint32), ('PedWave', np.float64)])  # set datatype
-    panel = np.arange(0, leng)
+    panel = np.arange(0, window)
     stddt = np.zeros(N * 10, dtype=npstddt); stddt['PedWave'] = np.nan
     start = 0
     for p in tqdm(range(len(e_wf))):
         pt = np.sort(Gt[i_gt[p]:i_gt[p+1]]['HitPosInWindow']).astype(np.int)
         c = np.concatenate(([np.arange(i, i+L) for i in pt]))
-        c = np.unique(np.clip(c, 0, leng))
+        c = np.unique(np.clip(c, 0, window))
         c = panel[np.logical_not(np.isin(panel, c))]
         wave = Wf[i_wf[p]]['Waveform'].astype(np.float)
         end = start + len(c)

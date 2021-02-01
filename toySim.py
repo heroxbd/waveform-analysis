@@ -92,11 +92,12 @@ with h5py.File(args.opt, 'w') as opt:
     dset.attrs['sigma'] = Sigma
 print(args.opt + ' saved, l =', int(np.sum(v)))
 
-with h5py.File('spe.h5', 'w') as spp:
-    dset = spp.create_dataset('SinglePE', data=[])
-    dset.attrs['SpePositive'] = wff.spe(np.arange(80), p[0], p[1], p[2])[np.newaxis, ...]
-    dset.attrs['Epulse'] = 1
-    dset.attrs['Std'] = [std]
-    dset.attrs['ChannelID'] = [0]
-    dset.attrs['parameters'] = [p]
-print('spe.h5 saved')
+if not os.path.exists('spe.h5'):
+    with h5py.File('spe.h5', 'w') as spp:
+        dset = spp.create_dataset('SinglePE', data=[])
+        dset.attrs['SpePositive'] = wff.spe(np.arange(80), p[0], p[1], p[2])[np.newaxis, ...]
+        dset.attrs['Epulse'] = 1
+        dset.attrs['Std'] = [std]
+        dset.attrs['ChannelID'] = [0]
+        dset.attrs['parameters'] = [p]
+    print('spe.h5 saved')

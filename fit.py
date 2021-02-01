@@ -59,12 +59,11 @@ def inferencing(a, b):
     model_collect = {}
     nuts_kernel_collect = {}
     mcmc_collect = {}
-    tlist = np.arange(leng)
+    tlist = np.arange(window)
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
         ent = ipt['Readout/Waveform']
-        leng = len(ent[0]['Waveform'])
-        spe = np.vstack([np.concatenate((spe_pre[i]['spe'], np.zeros(leng - len(spe_pre[i]['spe'])))) for i in spe_pre.keys()])
-        dt = np.zeros((b - a) * (leng//5), dtype=opdt)
+        spe = np.vstack([np.concatenate((spe_pre[i]['spe'], np.zeros(window - len(spe_pre[i]['spe'])))) for i in spe_pre.keys()])
+        dt = np.zeros((b - a) * (window//5), dtype=opdt)
         start = 0
         end = 0
         for i in range(a, b):
@@ -74,8 +73,8 @@ def inferencing(a, b):
             pwe = wave[pos]/(spe_pre[cid]['spe'].sum())
             flag = 1
             if len(pos) != 0:
-                mne = spe[cid][np.mod(tlist.reshape(leng, 1) - pos.reshape(1, len(pos)), leng)]
-                # op = stanmodel.sampling(data=dict(m=mne, y=wave, Nf=leng, Np=len(pos)), iter=1000, seed=0)
+                mne = spe[cid][np.mod(tlist.reshape(window, 1) - pos.reshape(1, len(pos)), window)]
+                # op = stanmodel.sampling(data=dict(m=mne, y=wave, Nf=window, Np=len(pos)), iter=1000, seed=0)
                 # pwe = lasso_select(op['x'], wave, mne)
                 if not len(pos) in mcmc_collect:
                     model_collect.update({len(pos) : partial(model, n=len(pos), eta=E)})
@@ -99,8 +98,7 @@ def inferencing(a, b):
 def fitting(a, b):
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
         ent = ipt['Readout/Waveform'][:]
-        leng = len(ent[0]['Waveform'])
-        dt = np.zeros((b - a) * leng, dtype=opdt)
+        dt = np.zeros((b - a) * window, dtype=opdt)
         start = 0
         end = 0
         for i in range(a, b):
@@ -136,8 +134,8 @@ opdt = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('HitPosInW
 with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
     l = len(ipt['Readout/Waveform'])
     print('{} waveforms will be computed'.format(l))
-    leng = len(ipt['Readout/Waveform'][0]['Waveform'])
-    assert leng >= len(spe_pre[0]['spe']), 'Single PE too long which is {}'.format(len(spe_pre[0]['spe']))
+    window = len(ipt['Readout/Waveform'][0]['Waveform'])
+    assert window >= len(spe_pre[0]['spe']), 'Single PE too long which is {}'.format(len(spe_pre[0]['spe']))
     Mu = ipt['Readout/Waveform'].attrs['mu']
     Tau = ipt['Readout/Waveform'].attrs['tau']
     Sigma = ipt['Readout/Waveform'].attrs['sigma']

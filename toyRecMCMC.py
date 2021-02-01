@@ -96,6 +96,7 @@ def time_pyro(a0, a1):
     dt = np.zeros((a1 - a0) * Awindow, dtype=opdt)
     start = 0
     end = 0
+    count = 0
     tlist = torch.arange(Awindow).to(device)
     t_auto = (torch.arange(window)[:, None] - tlist).to(device)
     # amplitude to voltage converter
@@ -127,9 +128,10 @@ def time_pyro(a0, a1):
         wave = torch.from_numpy(w.astype(np.float32)).to(device)
         mu=1 / gmu * torch.sum(wave)
         mcmc.run(y=wave, mu=mu)
-        t = mcmc.get_samples()['t0'].cpu().numpy()
+        t0 = mcmc.get_samples()['t0'].cpu().numpy()
         A = mcmc.get_samples()['A'].cpu().numpy()
-        stime[i - a0] = np.mean(t)
+        count = count + 1
+        stime[i - a0] = np.mean(t0)
         pet, pwe = wff.clip(tlist, np.mean(A, axis=0), Thres)
         end = start + len(pwe)
         dt['HitPosInWindow'][start:end] = pet
@@ -140,7 +142,7 @@ def time_pyro(a0, a1):
         start = end
     dt = dt[:end]
     dt = np.sort(dt, kind='stable', order=['TriggerNo', 'ChannelID'])
-    return stime, dt
+    return stime, dt, count
 
 class mNormal(numpyro.distributions.distribution.Distribution):
     arg_constraints = {'pl': numpyro.distributions.constraints.real}
@@ -172,6 +174,7 @@ def time_numpyro(a0, a1):
     dt = np.zeros((a1 - a0) * Awindow, dtype=opdt)
     start = 0
     end = 0
+    count = 0
     tlist = jnp.arange(Awindow)
     t_auto = jnp.arange(window)[:, None] - tlist
     # amplitude to voltage converter
@@ -200,13 +203,18 @@ def time_numpyro(a0, a1):
         A = jnp.hstack([jnp.where(wave[:Awindow] > spe_pre[cid]['std'] * 5, wave[:Awindow], 0)[spe_pre[cid]['mar_l']:], jnp.zeros(spe_pre[cid]['mar_l'])])
         A = A / jnp.sum(A) * mu
         t0 = jnp.clip(jnp.argmax(wave) * spe_pre[cid]['epulse'] - spe_pre[cid]['mar_l'], 0, window).astype(jnp.float32)
-        # potential = lambda z: numpyro.infer.util.potential_energy(model=model, model_args=(wave, mu), model_kwargs={}, params=z)
-        # initp = init(z={'t0':t0, 'A':A}, potential_energy=potential({'t0':t0, 'A':A}), z_grad=jax.grad(potential)({'t0':t0, 'A':A}))
-        mcmc.run(rng_key, y=wave, mu=mu)
-        # mcmc.run(rng_key, y=wave, mu=mu, init_params=initp)
-        t = np.array(mcmc.get_samples()['t0'])
-        A = np.array(mcmc.get_samples()['A'])
-        stime[i - a0] = np.mean(t)
+        try:
+            mcmc.run(rng_key, y=wave, mu=mu)
+            # potential = lambda z: numpyro.infer.util.potential_energy(model=model, model_args=(wave, mu), model_kwargs={}, params=z)
+            # initp = init(z={'t0':t0, 'A':A}, potential_energy=potential({'t0':t0, 'A':A}), z_grad=jax.grad(potential)({'t0':t0, 'A':A}))
+            # mcmc.run(rng_key, y=wave, mu=mu, init_params=initp)
+            t0 = np.array(mcmc.get_samples()['t0'])
+            A = np.array(mcmc.get_samples()['A'])
+            count = count + 1
+        except:
+            t0 = np.array([t0])
+            A = np.array([A])
+        stime[i - a0] = np.mean(t0)
         pet, pwe = wff.clip(tlist, np.mean(A, axis=0), Thres)
         end = start + len(pwe)
         dt['HitPosInWindow'][start:end] = pet
@@ -217,13 +225,14 @@ def time_numpyro(a0, a1):
         start = end
     dt = dt[:end]
     dt = np.sort(dt, kind='stable', order=['TriggerNo', 'ChannelID'])
-    return stime, dt
+    return stime, dt, count
 
 def time_stan(a0, a1):
     stime = np.empty(a1 - a0)
     dt = np.zeros((a1 - a0) * window, dtype=opdt)
     start = 0
     end = 0
+    count = 0
     tlist = np.arange(window)
     t_auto = tlist[:, None] - tlist
     AV = p[2] * np.exp(-1 / 2 * np.power((np.log((t_auto + np.abs(t_auto)) * (1 / p[0] / 2)) * (1 / p[1])), 2))
@@ -233,9 +242,10 @@ def time_stan(a0, a1):
         fit = stanmodel.sampling(data=dict(N=window, Tau=Tau, Sigma=Sigma, mu=mu, s=std / gsigma, sigma=gsigma / gmu, std=std, AV=AV, w=wave), warmup=500, iter=1500, seed=0)
         # print(pystan.check_hmc_diagnostics(fit))
         # print(fit.to_dataframe())
-        t = fit['t0']
+        t0 = fit['t0']
         A = fit['A']
-        stime[i - a0] = np.mean(t)
+        count = count + 1
+        stime[i - a0] = np.mean(t0)
         pet, pwe = wff.clip(tlist, np.mean(A, axis=0), Thres)
         end = start + len(pwe)
         dt['HitPosInWindow'][start:end] = pet
@@ -246,13 +256,14 @@ def time_stan(a0, a1):
         start = end
     dt = dt[:end]
     dt = np.sort(dt, kind='stable', order=['TriggerNo', 'ChannelID'])
-    return stime, dt
+    return stime, dt, count
 
 def time_pymc(a0, a1):
     stime = np.empty(a1 - a0)
     dt = np.zeros((a1 - a0) * Awindow, dtype=opdt)
     start = 0
     end = 0
+    count = 0
     tlist = np.arange(Awindow)
     t_auto = np.arange(window)[:, None] - tlist
     AV = p[2] * np.exp(-1 / 2 * np.power((np.log((t_auto + np.abs(t_auto)) * (1 / p[0] / 2)) * (1 / p[1])), 2))
@@ -280,15 +291,16 @@ def time_pymc(a0, a1):
             try:
                 step = pymc3.NUTS()
                 trace = pymc3.sample(1000, tune=500, start={'t0':t0,'A':A}, step=step, chains=2, cores=2, random_seed=[0, 1], return_inferencedata=False)
-                t = trace['t0']
+                t0 = trace['t0']
                 A = trace['A']
                 pet, pwe = wff.clip(tlist, np.mean(A, axis=0), Thres)
+                count = count + 1
             except:
                 map_estimate = pymc3.find_MAP()
-                t = map_estimate['t0']
+                t0 = map_estimate['t0']
                 A = map_estimate['A']
                 pet, pwe = wff.clip(tlist, A, Thres)
-        stime[i - a0] = np.mean(t)
+        stime[i - a0] = np.mean(t0)
         end = start + len(pwe)
         dt['HitPosInWindow'][start:end] = pet
         pwe = pwe / pwe.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
@@ -298,7 +310,7 @@ def time_pymc(a0, a1):
         start = end
     dt = dt[:end]
     dt = np.sort(dt, kind='stable', order=['TriggerNo', 'ChannelID'])
-    return stime, dt
+    return stime, dt, count
 
 if args.Ncpu == 1:
     slices = [[0, N]]
@@ -335,7 +347,9 @@ with Pool(min(args.Ncpu, cpu_count())) as pool:
 
 ts['tstruth'] = np.hstack([result[i][0] for i in range(len(slices))])
 As = np.hstack([result[i][1] for i in range(len(slices))])
+count = np.sum([result[i][2] for i in range(len(slices))])
 As = np.sort(As, kind='stable', order=['TriggerNo', 'ChannelID'])
+print('Successful MCMC ratio is {:.2%}'.format(count / N))
 print('Prediction generated, real time {0:.4f}s, cpu time {1:.4f}s'.format(time.time() - tic, time.process_time() - cpu_tic))
 
 with h5py.File(fopt[0], 'w') as opt:

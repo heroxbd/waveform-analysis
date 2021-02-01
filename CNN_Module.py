@@ -24,4 +24,3 @@ class Net_1(nn.Module):
         x = F.relu(self.conv5(x))
         x = x.squeeze(1)
         return x
-
