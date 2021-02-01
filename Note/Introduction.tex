@@ -1,64 +1,12 @@
 \section{Introduction} % (fold)
-PMT is involved in many neutrino and dark matter experiments. Traditionally, waveform within a period of time is integrated when the voltage exceed a certain threshold to obtain charge, such as Borexino\cite{lagomarsino_gateless_1999}, SNO\cite{dunger_event_2019} and XMASS\cite{abe_xmass_2013}. Meanwhile the first hittime of each PMT is also recorded. Other experiment employed some simple programs including Fourier deconvolution to extract charge and hittime for each photoelectron, such as Daya Bay\cite{huang_flash_2018}, KamLAND\cite{the_kamland_collaboration_production_2010}, JUNO\cite{zhang_comparison_2019} and XENON1T\cite{aprile_xenon1t_2019}. The efforts exerted on waveform analysis in these experiments is limited by amount of stored data and computational efficiency. 
+\label{sec:introduction}
 
-Extracting the information of time and number of photons hitting will provide more detailed information of light transmit model in detector and will finally enhance the performance of event reconstruction, even particle identification. 
+PMT is a device which is highly sensitive to even single photon which is involved in many neutrino and dark matter experiments based on liquid detectors. In neutrino experiments, liquid scintillator emits light after excited by candidate particles and charged particles emit Cherenkov light in liquid. 
 
-A toy MC has been developed to demonstrate the time resolution improve induced by detailed waveform analysis. We assume the time profile of the liquid scintillator is an exponential function convoluted by a gaussian function\cite{li_separation_2016} caused by the transit time spread of PMT, with the form in the formula \eqref{eq:time-pro}. 
+Traditionally, waveform within a period of time is integrated when the voltage exceed a certain threshold to obtain charge, such as Borexino\cite{lagomarsino_gateless_1999}, SNO\cite{dunger_event_2019} and XMASS\cite{abe_xmass_2013}. Meanwhile the first hittime of each PMT is also recorded. Other experiment employed some simple programs including Fourier deconvolution to extract charge and hittime for each photoelectron, such as Daya Bay\cite{huang_flash_2018}, KamLAND\cite{the_kamland_collaboration_production_2010}, JUNO\cite{zhang_comparison_2019} and XENON1T\cite{aprile_xenon1t_2019}. The efforts exerted on waveform analysis in these experiments is limited by amount of stored data and computational efficiency. 
 
-\begin{equation}
-    f(t) = \frac{1}{\tau}e^{-\frac{t - t_{0}}{\tau}} \otimes \mathcal{N}(\sigma)
-    \label{eq:time-pro}
-\end{equation}
+Extracting the time information and number of photons hitting will provide more detailed information of light transmit process in detector and more explicit model parameters in time profile and will finally enhance the performance of event reconstruction, even particle identification. Timing resolution is determined by PMT and waveform analysis. Therefore PMT waveform analysis is necessary when we pursue completely usage of PMT output. 
 
-The total number of PE in a DAQ window (in a single waveform), $N_{pe}$, is sampled from a Poisson distribution with expectation $\mu$. Then the charge and hittime is sampled from the time profile of the liquid scintillator. We used Maximum Likelihood Estimation (MLE) to estimate $t_{0}$ in formula\eqref{eq:time-pro}, which is the rise time of the time profile. The typical combination of decay time ($\tau$) and transit time spread ($\sigma$) are listed in figure (see figure~\ref{fig:reso-diff}). For every PE expectation $\mu$, a sample set (size $N=10,000$) is generated to estimate the time resolution $\delta$, which is the residual ($\Delta t_{0}$) distribution spread. 
-
-The result of the toy MC shows in figure~\ref{fig:reso-diff}, where $\delta_{1st}$ and $\delta_{all}$ are time resolution when using the first PE and all PE, respectively. Error bars are too thin to be seen. It is distinct that the time resolution is smaller when reconstructing rise time using all PE. 
-
-\begin{figure}[H]
-    \centering
-    \scalebox{0.7}{\input{figures/vs-deltadiv.pgf}}
-    \caption{\label{fig:reso-diff} Time resolution improved of waveform analysis}
-\end{figure}
-
-Therefore PMT waveform analysis is necessary when we pursue completely usage of PMT output. 
-
-The Time of waveform, $t$, we defined here is discrete value in 1 DAQ window (from 0 to 1029ns, step size is 1ns in Jinping 1ton prototype DAQ system). Therefore total number of hittime in a DAQ window, $N_{pos}$, is not equal to $N_{pe}$ ($N_{pe} \geq N_{pos}$). 
-
-PMT is a device which is highly sensitive to even single photon. Therefore, PMT is widely used in neutrino experiments based on liquid and dark matter experiment. In neutrino experiments, liquid scintillator emits light after excited by candidate particles and charged particles emit Cherenkov light in liquid. Timing resolution is crucial in neutrino event reconstruction. 
-
-Timing resolution is determined by PMT and waveform analysis. Typical PMT response includes 3 individual processes: PE conversion happened on photocathode. Electron collection by the first dynode. And amplification of electrons between dynodes. So 1 photon incoming has a certain probability to be observed via PMT voltage (See figure~\ref{fig:spe}). But if photons hit the PMT continually, the PE response will pile-up (see figure~\ref{fig:pile}) and the waveform analysis will be difficult. Pile-up will significantly worsen timing resolution. 
-
-\begin{figure}[H]
-\begin{minipage}[b]{.5\textwidth}
-\begin{figure}[H]
-    \centering
-    \resizebox{\textwidth}{!}{\input{figures/spe.pgf}}
-    \caption{\label{fig:spe} SPE response of PMT}
-\end{figure}
-\end{minipage}
-\begin{minipage}[b]{.5\textwidth}
-\begin{figure}[H]
-    \centering
-    \resizebox{\textwidth}{!}{\input{figures/wave.pgf}}
-    \caption{\label{fig:pile} Pile-up in waveform}
-\end{figure}
-\end{minipage}
-\end{figure}
-
-Most of the time, when handling PMT waveform we record the first $t$ of PE arrival according to threshold of voltage, $v_{th}$, and total Charge in a DAQ window, $Q$. One waveform is converted to a pair of numbers. More detailed information of the waveform was lost. The intention this work is extracting information of all hits in 1 DAQ window including $t$ \& reconstructed charge, $q_{r}(t)$. 
-
-Charge is the integration of waveform component which induced by SPE. SPE induced charge can be a wide distribution, rather than a single value. 
-
-\begin{minipage}[b]{1.\textwidth}
-\begin{figure}[H]
-    \centering
-    \scalebox{0.4}{\input{figures/chargehist.pgf}}
-    \caption{\label{fig:charge} Distribution of Charge}
-\end{figure}
-\end{minipage}
-
-Jinping Neutrino Experiment is located at China Jinping Underground Laboratory in the interior of China. CJPL has an overburden of 2400m which provides an extremely low cosmic muon flux environment. Additionally CJPL is far from nuclear reactor which provides a low reactor neutrino flux. CJPL is an ideal site of low background physics research. 
-
-There is an ongoing 1ton prototype in CJPL and next a hundred ton magnitude detector will be built and an 5000 tons detector will be built in the future for Jinping Neutrino Experiment. 
+This work focus on waveform analysis and precise time resolution. A toy Monte Carlo (toy MC) has been developed to generate simulated waveform data. Several analysis methods has been tested to demonstrate the time resolution improvement. In Section \ref{sec:toyMC}, we discuss the basic physical process in liquid detector including PMT response and the configuration of the toy MC. In Section \ref{sec:algorithm}, we present a survey of waveform analysis methods as well as their performance. In Section \ref{sec:discussion}, we compare these algorithms and discuss their extensibility. 
 
 % section Introduction (end)
