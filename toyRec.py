@@ -79,9 +79,11 @@ slices = np.vstack((np.arange(0, N, chunk), np.append(np.arange(chunk, N, chunk)
 with Pool(min(args.Ncpu, cpu_count())) as pool:
     result = pool.starmap(partial(start_time, mode='all'), slices)
 ts['tstruth'] = np.hstack(result)
+print('Mode all finished, real time {0:.4f}s, cpu time {1:.4f}s until now'.format(time.time() - global_start, time.process_time() - cpu_global_start))
 with Pool(min(args.Ncpu, cpu_count())) as pool:
     result = pool.starmap(partial(start_time, mode='charge'), slices)
 ts['tscharge'] = np.hstack(result)
+print('Mode charge finished, real time {0:.4f}s, cpu time {1:.4f}s until now'.format(time.time() - global_start, time.process_time() - cpu_global_start))
 
 with h5py.File(args.opt, 'w') as opt:
     dset = opt.create_dataset('risetime', data=ts, compression='gzip')

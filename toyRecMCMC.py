@@ -214,6 +214,7 @@ def time_numpyro(a0, a1):
         except:
             t0 = np.array([t0])
             A = np.array([A])
+            print('TriggerNo = {}, ChannelID = {}, i = {}'.format(ent[i]['TriggerNo'], ent[i]['ChannelID'], i))
         stime[i - a0] = np.mean(t0)
         pet, pwe = wff.clip(tlist, np.mean(A, axis=0), Thres)
         end = start + len(pwe)
@@ -300,6 +301,7 @@ def time_pymc(a0, a1):
                 t0 = map_estimate['t0']
                 A = map_estimate['A']
                 pet, pwe = wff.clip(tlist, A, Thres)
+                print('TriggerNo = {}, ChannelID = {}, i = {}'.format(ent[i]['TriggerNo'], ent[i]['ChannelID'], i))
         stime[i - a0] = np.mean(t0)
         end = start + len(pwe)
         dt['HitPosInWindow'][start:end] = pet
