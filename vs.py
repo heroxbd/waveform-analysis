@@ -53,6 +53,7 @@ for i in range(len(mts)):
     sigma = mts[i]['sigma']
     with h5py.File(os.path.join(args.folder[0], f), 'r', libver='latest', swmr=True) as soluf, h5py.File(os.path.join(args.folder[1], f), 'r', libver='latest', swmr=True) as wavef:
         time = soluf['risetime'][:]
+        method = soluf['risetime'].attrs['Method']
         start = wavef['SimTruth/T'][:]
     mts[i]['N'] = len(start)
     mts[i]['stdtruth'] = np.std(time['tstruth'] - start['T0'], ddof=-1)
@@ -88,23 +89,24 @@ for i in range(len(tausigma)):
     draw(tau, sigma, pdf)
 pdf.close()
 
-fig = plt.figure(figsize=(8, 12))
-gs = gridspec.GridSpec(3, 2, figure=fig, left=0.1, right=0.95, top=0.95, bottom=0.05, wspace=0.2, hspace=0.3)
-for sigma, i in zip(Sigma, [0, 1]):
-    for tau, j in zip(Tau, [0, 1, 2]):
-        ax = fig.add_subplot(gs[j, i])
-        stdlist = mts[(mts['tau'] == tau) & (mts['sigma'] == sigma)]
-        alpha = 0.05
-        yerr1st = np.vstack([stdlist['stdfirsttruth']-np.sqrt(np.power(stdlist['stdfirsttruth'],2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(stdlist['stdfirsttruth'],2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-stdlist['stdfirsttruth']])
-        yerrall = np.vstack([stdlist['stdtruth']-np.sqrt(np.power(stdlist['stdtruth'],2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(stdlist['stdtruth'],2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-stdlist['stdtruth']])
-        yerr = np.vstack([stdlist['stdtruth'] / stdlist['stdfirsttruth'] - (stdlist['stdtruth'] - yerrall[0]) / (stdlist['stdfirsttruth'] + yerr1st[1]), (stdlist['stdtruth'] + yerrall[1]) / (stdlist['stdfirsttruth'] - yerr1st[0]) - stdlist['stdtruth'] / stdlist['stdfirsttruth']])
-        ax.errorbar(stdlist['mu'], stdlist['stdtruth'] / stdlist['stdfirsttruth'], yerr=yerr, label=r'$\frac{\delta_{tru}}{\delta_{1sttru}}$', marker='^')
-        ax.set_xlabel(r'$\mu$')
-        ax.set_ylabel(r'$\mathrm{ratio}$')
-        ax.set_title(fr'$\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$')
-        ax.set_ylim(0.3, 1)
-        ax.grid()
-        ax.legend(loc='lower left').set_zorder(1)
-fig.savefig('Note/figures/vs-deltadiv.pgf')
-fig.savefig('Note/figures/vs-deltadiv.pdf')
-plt.close(fig)
+if method == 'lucyddm':
+    fig = plt.figure(figsize=(8, 12))
+    gs = gridspec.GridSpec(3, 2, figure=fig, left=0.1, right=0.95, top=0.95, bottom=0.05, wspace=0.2, hspace=0.3)
+    for sigma, i in zip(Sigma, [0, 1]):
+        for tau, j in zip(Tau, [0, 1, 2]):
+            ax = fig.add_subplot(gs[j, i])
+            stdlist = mts[(mts['tau'] == tau) & (mts['sigma'] == sigma)]
+            alpha = 0.05
+            yerr1st = np.vstack([stdlist['stdfirsttruth']-np.sqrt(np.power(stdlist['stdfirsttruth'],2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(stdlist['stdfirsttruth'],2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-stdlist['stdfirsttruth']])
+            yerrall = np.vstack([stdlist['stdtruth']-np.sqrt(np.power(stdlist['stdtruth'],2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(stdlist['stdtruth'],2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-stdlist['stdtruth']])
+            yerr = np.vstack([stdlist['stdtruth'] / stdlist['stdfirsttruth'] - (stdlist['stdtruth'] - yerrall[0]) / (stdlist['stdfirsttruth'] + yerr1st[1]), (stdlist['stdtruth'] + yerrall[1]) / (stdlist['stdfirsttruth'] - yerr1st[0]) - stdlist['stdtruth'] / stdlist['stdfirsttruth']])
+            ax.errorbar(stdlist['mu'], stdlist['stdtruth'] / stdlist['stdfirsttruth'], yerr=yerr, label=r'$\frac{\delta_{tru}}{\delta_{1sttru}}$', marker='^')
+            ax.set_xlabel(r'$\mu$')
+            ax.set_ylabel(r'$\mathrm{ratio}$')
+            ax.set_title(fr'$\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$')
+            ax.set_ylim(0.3, 1)
+            ax.grid()
+            ax.legend(loc='lower left').set_zorder(1)
+    fig.savefig('Note/figures/vs-deltadiv.pgf')
+    fig.savefig('Note/figures/vs-deltadiv.pdf')
+    plt.close(fig)

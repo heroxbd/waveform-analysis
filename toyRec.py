@@ -50,6 +50,8 @@ spe_pre = wff.read_model('spe.h5')
 with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as ipt, h5py.File(args.ref, 'r', libver='latest', swmr=True) as ref:
     pelist = ref['SimTriggerInfo/PEList'][:]
     charge = ipt['photoelectron'][:]
+    method = ipt['photoelectron'].attrs['Method']
+    Mu = ipt['photoelectron'].attrs['mu']
     Tau = ipt['photoelectron'].attrs['tau']
     Sigma = ipt['photoelectron'].attrs['sigma']
 pelist = np.sort(pelist, kind='stable', order=['TriggerNo', 'PMTId', 'HitPosInWindow'])
@@ -83,6 +85,10 @@ ts['tscharge'] = np.hstack(result)
 
 with h5py.File(args.opt, 'w') as opt:
     dset = opt.create_dataset('risetime', data=ts, compression='gzip')
+    dset.attrs['Method'] = method
+    dset.attrs['mu'] = Mu
+    dset.attrs['tau'] = Tau
+    dset.attrs['sigma'] = Sigma
     print('The output file path is {}'.format(args.opt))
 
 print('Finished! Consuming {0:.2f}s in total, cpu time {1:.2f}s.'.format(time.time() - global_start, time.process_time() - cpu_global_start))

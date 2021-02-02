@@ -60,6 +60,9 @@ with h5py.File(fref, 'r', libver='latest', swmr=True) as ref, h5py.File(fipt, 'r
     df_wav = ref['Readout']['Waveform'][:]
     df_sub = ipt['photoelectron'][:]
     method = ipt['photoelectron'].attrs['Method']
+    Mu = ipt['photoelectron'].attrs['mu']
+    Tau = ipt['photoelectron'].attrs['tau']
+    Sigma = ipt['photoelectron'].attrs['sigma']
 df_ans = np.sort(df_ans, kind='stable', order=['TriggerNo', 'PMTId'])
 df_sub = np.sort(df_sub, kind='stable', order=['TriggerNo', 'ChannelID'])
 df_wav = np.sort(df_wav, kind='stable', order=['TriggerNo', 'ChannelID'])
@@ -87,3 +90,6 @@ dt = np.hstack(result)
 with h5py.File(fopt, 'w') as h5f:
     dset = h5f.create_dataset('Record', data=dt, compression='gzip')
     dset.attrs['Method'] = method
+    dset.attrs['mu'] = Mu
+    dset.attrs['tau'] = Tau
+    dset.attrs['sigma'] = Sigma
