@@ -61,7 +61,7 @@ The single photonelectron response is described as the formula \eqref{eq:dayaspe
     \label{eq:dayaspe}
 \end{equation}
 
-We use Maximum Likelihood Estimation (MLE) to estimate $t_{0}$ in formula\eqref{eq:time-pro}, which is the starting time of the time profile. The difference between truth starting time $t_{0tru}$ and reconstructed starting time $t_{0rec}$ are collected to produce the starting time residual ($\Delta t_{0}=t_{0rec}-t_{0tru}$) distribution. The time resolution $\delta$ is the standard deviation(STD) of the starting time residual distribution. The likelihood defined in MLE is formula \eqref{eq:likelihood}. 
+We use Maximum Likelihood Estimation (MLE) to estimate $t_{0}$ in formula\eqref{eq:time-pro}, which is the starting time of the time profile. The difference between truth starting time $t_{0tru}$ and reconstructed starting time $t_{0rec}$ are collected to produce the starting time residual ($\Delta t_{0}=t_{0rec}-t_{0tru}$) distribution. The time resolution $\delta$ is the standard deviation(STD) of the starting time residual distribution. The likelihood $\mathcal{L}$ defined in MLE is formula \eqref{eq:likelihood}. 
 
 \begin{align}
     \mathcal{L}(t_{0}) &= \Pi_{i=0}^{N_{pe}}\left(\sum_{j=1}^{n}[P_{i}(q_{i},j)(P_{t}(t_{i}))^{j}]\right)
@@ -98,7 +98,7 @@ Before taking deep look into the methods, input and output need to be defined. T
 \end{minipage}
 \end{figure}
 
-The histogram of $N_{pe}$ shows in figure (see figure~\ref{fig:penum}). 
+The histogram of $N_{pe}$ when $\mu=5$ shows in figure (see figure~\ref{fig:penum}). 
 
 \begin{figure}[H]
     \centering

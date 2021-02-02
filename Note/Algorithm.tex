@@ -2,10 +2,15 @@
 \label{sec:algorithm}
 
 \subsection{Figure of Merit: Wasserstein distance}
+
 \input{Wdist}
 
+Waveform analysis algorithms are presented below, separately. It is worth mentioning that the hittime in our waveform analysis results is discrete value (integers in a DAQ window). 
+
 \subsection{Find peak}
-First intuitive method is find peak method. We first smooth the input waveform using Savitzky–Golay filter, find the peak of waveform, then move the peaks leftward. The $\Delta t$ we move is the peak time of $v_{spe}$. The demonstration here shows a result with W-dist = 11.29ns. 
+\label{sec:findpeak}
+
+First intuitive method is the find peak method. We first smooth the input waveform using Savitzky–Golay filter to alleviate the obstruction of electron noise. Then we find the peak of the smoothed waveform and move the peaks leftward. The shifted voltage is now promotional to reconstructed charge $q_{rec}(t)$ related with corresponding hittime. The leftward distance we moved, $\Delta t$ is the peak time of SPE response $v_{spe}$, described by formula \eqref{eq:dayaspe}. Finally the charge are normalized to retain the consistency with total charge which is the integration of the waveform. The demonstration here shows a result with W-dist = 11.29ns. 
 
 \begin{figure}[H]
     \centering
@@ -14,7 +19,8 @@ First intuitive method is find peak method. We first smooth the input waveform u
 \end{figure}
 
 \subsection{Waveform shift}
-A threshold $v_{th}$ is settled with respect to noise in simulation data. In waveform shift method, first we locate pedestal reduced origin waveform voltage, $v_{w}(t)$, which exceeds $v_{th}$. Then we shift the exceeding part leftward. The $\Delta t$ we move is the peak time of $v_{spe}$. And treat the normalized exceeding part as $q_{rec}(t)$. The demonstration here shows a result with W-dist = 10.75ns. 
+
+A threshold $v_{th}$ is settled with respect to electronics noise in simulation data. In waveform shift method, first we locate waveform voltage, $v_{w}(t)$, which exceeds $v_{th}$. Then we shift the exceeding part leftward. The $\Delta t$ we move is the same as find peak method in section \ref{sec:findpeak}. Finally we treat the normalized exceeding part as $q_{rec}(t)$. The demonstration here shows a result with W-dist = 10.75ns. 
 
 \begin{figure}[H]
     \centering
@@ -22,12 +28,14 @@ A threshold $v_{th}$ is settled with respect to noise in simulation data. In wav
     \caption{Waveform Shift Method Demo, W-dist = 10.75ns}
 \end{figure}
 
-\subsection{Fourier transform deconvolution}
-Third method is Fourier deconvolution. First we extract enough single-photoelectron (SPE) response, $v_{spe}(t)$, from simulation data in fitting method. We suppose the average of these $v_{w}$ is the $v_{spe}$. Assuming that the waveform is the convolution of $v_{spe}$ and $q_{rec}(t)$, the Fast Fourier transform (FFT) of $v_{w}$ and $v_{spe}$ are computed. A rectangular filter, $f$, is added. Then compute the inverse FFT of the quotient, which is between filtered FFT of $v_{w}$ and FFT of $v_{spe}$. 
+\subsection{Fourier deconvolution}
 
-\begin{itemize}
-    \item $q_{rec}(t) = \mathcal{F}^{-1}\{\frac{f[\mathcal{F}(v_{w})]}{\mathcal{F}(v_{spe})}\}$
-\end{itemize}
+Third method is Fourier transform deconvolution. Assuming that the waveform is the convolution of $v_{spe}$ and $q(t)$, the Fast Fourier transform (FFT) of $v_{w}$ and $v_{spe}$ are computed. A rectangular filter, $f$, is added. Then we compute the inverse FFT of the quotient between filtered FFT of $v_{w}$ and FFT of $v_{spe}$. We pick out positive value from inverse FFT result, and normalize them to obtain $q_{rec}(t)$. The process is shown in formula \eqref{eq:fft}. 
+
+\begin{equation}
+    q_{rec}(t) = \mathcal{F}^{-1}\{\frac{f[\mathcal{F}(v_{w})]}{\mathcal{F}(v_{spe})}\}
+    \label{eq:fft}
+\end{equation}
 
 The demonstration here shows a result with W-dist = 1.63ns. 
 
@@ -38,9 +46,10 @@ The demonstration here shows a result with W-dist = 1.63ns.
 \end{figure}
 
 \subsection{Lucy deconvolution}
-Lucy-Richardson deconvolution is a non linear iteration method, to calculate the deconvolution of signals. Lucy deconvolution has an advantage against Fourier deconvolution which is a constraint that $q_{rec}(t)$ are larger than 0. 
 
-In $t$-th Lucy iteration, the calculation shows in \eqref{eq:lucy-inter} where $v^{*}_{spe}$ is flipped $v_{spe}$. 
+Lucy-Richardson deconvolution is a non linear iteration method, to calculate the deconvolution of signals. It has been used in astronomy \cite{li_richardson-lucy_2019}, image processing and many other fields. Lucy deconvolution has an advantage against Fourier deconvolution which is a constraint that $q_{rec}(t)$ must be larger than 0. 
+
+In $n$-th iteration, the calculation shows in \eqref{eq:lucy-inter} where $v^{*}_{spe}$ is flipped $v_{spe}$. 
 \begin{align}
     q_{rec}^{(0)} &= \frac{v_{w}}{\sum v_{spe}} \\
     q_{rec}^{(n)} &= q_{rec}^{(n-1)} \cdot \left(\frac{v_{w}}{q_{rec}^{(n-1)} \otimes v_{spe}} \otimes v^{*}_{spe}\right) \label{eq:lucy-inter}
@@ -55,19 +64,20 @@ Usually 50 iterations were performed ($n_{max}=50$). The demonstration here show
 \end{figure}
 
 \subsection{Fitting}
-Waveform is the convolution of $v_{spe}$ and $q_{rec}(t)$, using $q_{rec}(t)$ as an example below (see formula~\eqref{eq:wave-con}). 
+
+Waveform is the convolution of $v_{spe}$ and $q_{rec}(t)$ (see formula~\eqref{eq:wave-con}). 
+
 \begin{align}
     v_{w} &= q_{rec} \otimes v_{spe} \label{eq:wave-con} \\
     L &= L(v_{r}(t), v_{w}(t)) = L(q_{rec}(t), v_{spe}, v_{w}(t)) = RSS(v_{w}, q_{rec} \otimes v_{spe}) \label{eq:loss-rss}
 \end{align}
 
-In fitting process, the parameter is $q_{rec}(t)$ in each discrete $t_{w}$. The complete information hided in origin waveform is disturbed by background noise and pile-up. The loss (see formula~\ref{eq:loss-rss}) which is optimized is the Residual sum of squares (RSS) between the origin wave $v_{w}(t)$ and reconstructed wave $v_{r}(t)$ according to the parameters. The parameters will tend to be preciser when the reconstructed wave approaching to the origin wave. 
+In fitting process, the parameter are $q_{rec}(t)$ in each discrete hittime $t$. The complete information hided in origin waveform is disturbed by electronics noise and pile-up. The loss (see formula~\ref{eq:loss-rss}) which we optimize in fitting is the residual sum of squares (RSS) between the origin wave $v_{w}(t)$ and reconstructed wave $v_{r}(t)$ according to the parameters. The parameters will tend to be preciser when the reconstructed wave approaching to the origin wave. 
 
-Fitting program is implemented with Limited-memory BFGS with bound constraint\cite{byrd_limited_1995} (L-BFGS-B). The $q_{rec}$ and $n_{r}$ are constrained to be larger than 0. 
-
-The L-BFGS-B depends on gradient evaluation and its iteration stops when gradient is smaller than a certain tiny value. In some circumstances the fitting result may stuck in local minimum rather than global minimum. An program based on Hamiltonian Monte Carlo (HMC) is developed intending to obtain global minimum. HMC is a efficient Markov Chain Monte Carlo (MCMC) method for achieving samples from a distribution for which direct sampling is difficult\cite{neal_mcmc_2012}. The sample derived by HMC can usually be ergodic in the distribution, so the global minimum will be obtain with large sampling set. But the results are similar with L-BFGS-B and HMC. 
+Fitting program is implemented with Limited-memory BFGS with bound constraint\cite{byrd_limited_1995} (L-BFGS-B). L-BFGS-B has an advantage that the $q_{rec}$ are constrained to be larger than 0. 
 
 The figure \ref{fig:fitting} shows one of the fitting result. We can see the origin waveform $v_{w}$ and reconstructed waveform $v_{r}$ are very similar. The reconstructed and truth $q_{rec}$ are also similar. 
+
 \begin{figure}[H]
     \centering
     \scalebox{0.4}{\input{figures/demoe1c0.pgf}}
@@ -92,6 +102,12 @@ The result reconstructing $q_{rec}$ when $N_{pos}=4$ shows in figure. (see figur
 \end{figure}
 \end{minipage}
 \end{figure}
+
+\subsection{HMC}
+
+The typical variable optimization methods such as L-BFGS-B depends on gradient evaluation and their iteration stops when gradient is smaller than a certain tiny value, following the convention in the field of numerical calculation. In some circumstances the fitting result may stuck in local minimum rather than global minimum. Hamiltonian Monte Carlo method has potential to overcome this difficulty. 
+
+An program based on Hamiltonian Monte Carlo (HMC) is developed intending to obtain global minimum. HMC is a efficient Markov Chain Monte Carlo (MCMC) method for achieving samples from a distribution for which direct sampling is difficult\cite{neal_mcmc_2012}. The sample derived by HMC can usually be ergodic in the distribution, so the global minimum will be obtain with large sampling set. 
 
 \subsection{CNN}
 
