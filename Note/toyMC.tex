@@ -38,25 +38,40 @@ Here we defined the time of waveform, $t_{w}$ is discrete value in a DAQ window 
 
 \subsection{toy Monte Carlo}
 
-Currently there are two successful detector materials: water(heavy water) and liquid scintillator. The time profile of the scintillation light is always described as several components with different decay time and Cherenkov light is always described as $\delta$ function\cite{ludhova_particle_2020}. 
+Currently there are two successful detector materials: water(heavy water) and liquid scintillator. The time profile of the scintillation light is always described as several components with different decay time and Cherenkov light is always described as $\delta$ function \cite{ludhova_particle_2020}. 
 
-In toy MC, we describe the light transmit process using a hypothetical parameterized time profile model. We assume the time profile of the liquid scintillator is an exponential function convoluted by a gaussian function\cite{li_separation_2016} caused by the transit time spread of PMT, with the form in the formula \eqref{eq:time-pro}. 
+In toy MC, we describe the light transmit process using a hypothetical parameterized time profile model. We assume the time profile of the liquid scintillator is an exponential function convoluted by a gaussian function \cite{li_separation_2016} caused by the transit time spread(TTS) of PMT, with the form in the formula \eqref{eq:time-pro} where $\tau$ is the decay time and $\sigma$ is the TTS while $t_{0}$ is the starting time of time profile which is account for the unknown beginning time of light emission. 
 
 \begin{equation}
-    f(t) = \frac{1}{\tau}e^{-\frac{t - t_{0}}{\tau}} \otimes \mathcal{N}(\sigma)
+    P_{t}(t) = \frac{1}{\tau}e^{-\frac{t - t_{0}}{\tau}} \otimes \mathcal{N}(\sigma)
     \label{eq:time-pro}
 \end{equation}
 
-In this formula, $t_{0}$ is the starting time of time profile which is account for the unknown beginning time of light emission. 
-
-The total number of PE in a DAQ window (in a single waveform), $N_{pe}$, is sampled from a Truncated Poisson distribution($N_{pe}=0$ samples are abandoned) with expectation $\mu$. The hittime $t_{t}$ of each PE is sampled from the time profile $f(t)$ of the liquid scintillator. The charge of each PE is sampled from parameterized calibration result, which can be described as truncated normal distribution with probability distribution function. The typical combination of decay time ($\tau$) and transit time spread ($\sigma$) are listed in figure (see figure~\ref{fig:reso-diff}). For every PE expectation $\mu$, a sample set (size $N=10,000$) is generated to estimate the timing resolution $\delta$, which is the residual ($\Delta t_{0}$) distribution spread. 
+Here we discuss the configuration and process of simulation in toy MC. The total number of PE in a DAQ window (in a single waveform), $N_{pe}$, is sampled from a Truncated Poisson distribution($N_{pe}=0$ samples are abandoned) with expectation $\mu$. The hittime $t_{tru}$ of each PE is sampled from the time profile $P_{t}(t)$ of the liquid scintillator. The charge of each PE $q_{tru}$ is sampled from parameterized calibration result, which can be described as truncated normal distribution with probability distribution function \eqref{eq:truncated}. The simulation datasets are combination of hittime $t_{tru}$ and charge of PE $q_{tru}$. 
 
 \begin{equation}
-    f(q) = A\cdot\mathcal{N}(\mu_{q},\sigma_{q}),\,(q>0)
+    P_{q}(q) = A\cdot\mathcal{N}(\mu_{q},\sigma_{q}),\,(q>0)
     \label{eq:truncated}
 \end{equation}
 
-We used Maximum Likelihood Estimation (MLE) to estimate $t_{0}$ in formula\eqref{eq:time-pro}, which is the rise time of the time profile. The result of the toy MC shows in figure~\ref{fig:reso-diff}, where $\delta_{1st}$ and $\delta_{all}$ are timing resolution when using the first PE and all PE, respectively. Error bars are too thin to be seen. It is distinct that the timing resolution is smaller when reconstructing rise time using all PE. 
+The single photonelectron response is described as the formula \eqref{eq:dayaspe} \cite{jetter_pmt_2012}. The typical combination of decay time ($\tau$) and transit time spread ($\sigma$) are listed in figure (see figure~\ref{fig:reso-diff}). For every combination of PE expectation $\mu$, decay time $\tau$ and TTS $\sigma$, a sample set (size $N=10,000$) is generated to estimate the timing resolution $\delta$. 
+
+\begin{equation}
+    V(t) = V_{0}\exp\left(-\frac{1}{2}\left(\frac{\ln(t/\tau)}{\sigma}\right)^{2}\right)
+    \label{eq:dayaspe}
+\end{equation}
+
+We use Maximum Likelihood Estimation (MLE) to estimate $t_{0}$ in formula\eqref{eq:time-pro}, which is the starting time of the time profile. The difference between truth starting time $t_{0tru}$ and reconstructed starting time $t_{0rec}$ are collected to produce the starting time residual ($\Delta t_{0}=t_{0rec}-t_{0tru}$) distribution. The time resolution $\delta$ is the standard deviation(STD) of the starting time residual distribution. The likelihood defined in MLE is formula \eqref{eq:likelihood}. 
+
+\begin{align}
+    \mathcal{L}(t_{0}) &= \Pi_{i=0}^{N_{pe}}\left(\sum_{j=1}^{n}[P_{i}(q_{i},j)(P_{t}(t_{i}))^{j}]\right)
+    \label{eq:likelihood} \\
+    P_{i}(q_{i},j) &= \frac{P_{q}(q_{i}|j)}{\sum_{j=1}^{n}P_{q}(q_{i}|j)}
+\end{align}
+
+For reconstructed hittime and charge produced by waveform analysis algorithms, each charge $q$ is registered to a single hittime $t$, but the number of PE at single hittime is uncertain. $P_{i}(q_{i},j)$ is the posterior probability if the number of PE is $j$ with charge $q_{i}$. 
+
+The estimation result of $t_{0}$ using only simulated data is shown in figure~\ref{fig:reso-diff}, where $\delta_{1st}$ and $\delta_{all}$ are timing resolution using the first PE and all PE when reconstruction, respectively. The vertical axis is ratio, $\delta_{all}/\delta_{1st}$. Because time resolution estimation here is only based on simulated data, the result will reveal the advantage of using detailed information of all PE. It is distinct that the timing resolution is smaller when reconstructing rise time using all PE. 
 
 \begin{figure}[H]
     \centering
@@ -64,7 +79,7 @@ We used Maximum Likelihood Estimation (MLE) to estimate $t_{0}$ in formula\eqref
     \caption{\label{fig:reso-diff} Timing resolution improved of waveform analysis}
 \end{figure}
 
-Before taking deep look into the methods, input and output need to be defined. A Geant4\cite{agostinelli_geant4simulation_2003}-based simulation package simulated events in the 1-ton detector\cite{wang_design_2017}. After collected, all data but PMT response is discarded. The input for waveform analysis is pedestal subtracted PMT waveform (see figure~\ref{fig:input}), and the output is the $q_{r}$ or $n_{r}$ sequence (see figure~\ref{fig:output}). 
+Before taking deep look into the methods, input and output need to be defined. The input for waveform analysis is pedestal subtracted PMT waveform (see figure~\ref{fig:input}), and the output is the $q_{rec}$ sequence (see figure~\ref{fig:output}). 
 
 \begin{figure}[H]
 \begin{minipage}[b]{.5\textwidth}
@@ -83,14 +98,12 @@ Before taking deep look into the methods, input and output need to be defined. A
 \end{minipage}
 \end{figure}
 
-The histogram of $N_{pe}$ and data structure show in figure (see figure~\ref{fig:penum}). 
+The histogram of $N_{pe}$ shows in figure (see figure~\ref{fig:penum}). 
 
 \begin{figure}[H]
     \centering
-    \scalebox{0.4}{\input{figures/pepos.pgf}}
+    \scalebox{0.4}{\input{figures/penum.pgf}}
     \caption{\label{fig:penum} $N_{pos}$ Histogram}
 \end{figure}
-
-The intention this work is extracting information of all hits in 1 DAQ window including $t$ \& reconstructed charge, $q_{r}(t)$. 
 
 % section Towards Timing Resolution (end)

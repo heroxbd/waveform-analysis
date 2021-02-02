@@ -104,7 +104,7 @@ if method == 'lucyddm':
             ax.set_xlabel(r'$\mu$')
             ax.set_ylabel(r'$\mathrm{ratio}$')
             ax.set_title(fr'$\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$')
-            ax.set_ylim(0.3, 1)
+            ax.set_ylim(0.3, 1.05)
             ax.grid()
             ax.legend(loc='lower left').set_zorder(1)
     fig.savefig('Note/figures/vs-deltadiv.pgf')

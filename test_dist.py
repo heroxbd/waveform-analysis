@@ -44,7 +44,7 @@ def wpdist(a, b):
         wave0 = wave0 / np.sum(spe_pre[cid]['spe'])
         wave1 = wave1 / np.sum(spe_pre[cid]['spe'])
         dt['chargediff'][c] = np.sum(wl) - np.sum(w)
-        dt['TotalPEpos'][c] = len(pet0)
+        dt['NPE'][c] = len(pet0)
 
         dt['wdist'][c] = scipy.stats.wasserstein_distance(t, pet_sub, u_weights=w, v_weights=wl)
         dt['TriggerNo'][c] = df_wav[i_wav[i]]['TriggerNo']
@@ -71,7 +71,7 @@ e_ans = df_ans['TriggerNo']*Chnum + df_ans['PMTId']
 e_ans, i_ans = np.unique(e_ans, return_index=True)
 i_ans = np.append(i_ans, len(df_ans))
 
-opdt = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('TotalPEpos', np.uint16), ('wdist', np.float64), ('chargediff', np.float64), ('RSS', np.float64), ('RSS_recon', np.float64), ('RSS_truth', np.float64)])
+opdt = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('NPE', np.uint16), ('wdist', np.float64), ('chargediff', np.float64), ('RSS', np.float64), ('RSS_recon', np.float64), ('RSS_truth', np.float64)])
 window = len(df_wav[0]['Waveform'])
 
 e_wav = df_wav['TriggerNo']*Chnum + df_wav['ChannelID']; df_wav = df_wav[np.isin(e_wav, e_ans)]

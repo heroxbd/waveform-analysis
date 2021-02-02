@@ -14,7 +14,7 @@ First intuitive method is find peak method. We first smooth the input waveform u
 \end{figure}
 
 \subsection{Waveform shift}
-A threshold $v_{th}$ is settled with respect to noise in simulation data. In waveform shift method, first we locate pedestal reduced origin waveform voltage, $v_{w}(t)$, which exceeds $v_{th}$. Then we shift the exceeding part leftward. The $\Delta t$ we move is the peak time of $v_{spe}$. And treat the normalized exceeding part as $q_{r}(t)$. The demonstration here shows a result with W-dist = 10.75ns. 
+A threshold $v_{th}$ is settled with respect to noise in simulation data. In waveform shift method, first we locate pedestal reduced origin waveform voltage, $v_{w}(t)$, which exceeds $v_{th}$. Then we shift the exceeding part leftward. The $\Delta t$ we move is the peak time of $v_{spe}$. And treat the normalized exceeding part as $q_{rec}(t)$. The demonstration here shows a result with W-dist = 10.75ns. 
 
 \begin{figure}[H]
     \centering
@@ -23,10 +23,10 @@ A threshold $v_{th}$ is settled with respect to noise in simulation data. In wav
 \end{figure}
 
 \subsection{Fourier transform deconvolution}
-Third method is Fourier deconvolution. First we extract enough single-photoelectron (SPE) response, $v_{spe}(t)$, from simulation data in fitting method. We suppose the average of these $v_{w}$ is the $v_{spe}$. Assuming that the waveform is the convolution of $v_{spe}$ and $q_{r}(t)$, the Fast Fourier transform (FFT) of $v_{w}$ and $v_{spe}$ are computed. A rectangular filter, $f$, is added. Then compute the inverse FFT of the quotient, which is between filtered FFT of $v_{w}$ and FFT of $v_{spe}$. 
+Third method is Fourier deconvolution. First we extract enough single-photoelectron (SPE) response, $v_{spe}(t)$, from simulation data in fitting method. We suppose the average of these $v_{w}$ is the $v_{spe}$. Assuming that the waveform is the convolution of $v_{spe}$ and $q_{rec}(t)$, the Fast Fourier transform (FFT) of $v_{w}$ and $v_{spe}$ are computed. A rectangular filter, $f$, is added. Then compute the inverse FFT of the quotient, which is between filtered FFT of $v_{w}$ and FFT of $v_{spe}$. 
 
 \begin{itemize}
-    \item $q_{r}(t) = \mathcal{F}^{-1}\{\frac{f[\mathcal{F}(v_{w})]}{\mathcal{F}(v_{spe})}\}$
+    \item $q_{rec}(t) = \mathcal{F}^{-1}\{\frac{f[\mathcal{F}(v_{w})]}{\mathcal{F}(v_{spe})}\}$
 \end{itemize}
 
 The demonstration here shows a result with W-dist = 1.63ns. 
@@ -38,12 +38,12 @@ The demonstration here shows a result with W-dist = 1.63ns.
 \end{figure}
 
 \subsection{Lucy deconvolution}
-Lucy-Richardson deconvolution is a non linear iteration method, to calculate the deconvolution of signals. Lucy deconvolution has an advantage against Fourier deconvolution which is a constraint that $q_{r}(t)$ are larger than 0. 
+Lucy-Richardson deconvolution is a non linear iteration method, to calculate the deconvolution of signals. Lucy deconvolution has an advantage against Fourier deconvolution which is a constraint that $q_{rec}(t)$ are larger than 0. 
 
 In $t$-th Lucy iteration, the calculation shows in \eqref{eq:lucy-inter} where $v^{*}_{spe}$ is flipped $v_{spe}$. 
 \begin{align}
-    q_{r}^{(0)} &= \frac{v_{w}}{\sum v_{spe}} \\
-    q_{r}^{(n)} &= q_{r}^{(n-1)} \cdot \left(\frac{v_{w}}{q_{r}^{(n-1)} \otimes v_{spe}} \otimes v^{*}_{spe}\right) \label{eq:lucy-inter}
+    q_{rec}^{(0)} &= \frac{v_{w}}{\sum v_{spe}} \\
+    q_{rec}^{(n)} &= q_{rec}^{(n-1)} \cdot \left(\frac{v_{w}}{q_{rec}^{(n-1)} \otimes v_{spe}} \otimes v^{*}_{spe}\right) \label{eq:lucy-inter}
 \end{align}
 
 Usually 50 iterations were performed ($n_{max}=50$). The demonstration here shows a result with W-dist = 1.25ns. 
@@ -55,40 +55,40 @@ Usually 50 iterations were performed ($n_{max}=50$). The demonstration here show
 \end{figure}
 
 \subsection{Fitting}
-Waveform is the convolution of $v_{spe}$ and $q_{r}(t)$, using $q_{r}(t)$ as an example below (see formula~\eqref{eq:wave-con}). 
+Waveform is the convolution of $v_{spe}$ and $q_{rec}(t)$, using $q_{rec}(t)$ as an example below (see formula~\eqref{eq:wave-con}). 
 \begin{align}
-    v_{w} &= q_{r} \otimes v_{spe} \label{eq:wave-con} \\
-    L &= L(v_{r}(t), v_{w}(t)) = L(q_{r}(t), v_{spe}, v_{w}(t)) = RSS(v_{w}, q_{r} \otimes v_{spe}) \label{eq:loss-rss}
+    v_{w} &= q_{rec} \otimes v_{spe} \label{eq:wave-con} \\
+    L &= L(v_{r}(t), v_{w}(t)) = L(q_{rec}(t), v_{spe}, v_{w}(t)) = RSS(v_{w}, q_{rec} \otimes v_{spe}) \label{eq:loss-rss}
 \end{align}
 
-In fitting process, the parameter is $q_{r}(t)$ in each discrete $t_{w}$. The complete information hided in origin waveform is disturbed by background noise and pile-up. The loss (see formula~\ref{eq:loss-rss}) which is optimized is the Residual sum of squares (RSS) between the origin wave $v_{w}(t)$ and reconstructed wave $v_{r}(t)$ according to the parameters. The parameters will tend to be preciser when the reconstructed wave approaching to the origin wave. 
+In fitting process, the parameter is $q_{rec}(t)$ in each discrete $t_{w}$. The complete information hided in origin waveform is disturbed by background noise and pile-up. The loss (see formula~\ref{eq:loss-rss}) which is optimized is the Residual sum of squares (RSS) between the origin wave $v_{w}(t)$ and reconstructed wave $v_{r}(t)$ according to the parameters. The parameters will tend to be preciser when the reconstructed wave approaching to the origin wave. 
 
-Fitting program is implemented with Limited-memory BFGS with bound constraint\cite{byrd_limited_1995} (L-BFGS-B). The $q_{r}$ and $n_{r}$ are constrained to be larger than 0. 
+Fitting program is implemented with Limited-memory BFGS with bound constraint\cite{byrd_limited_1995} (L-BFGS-B). The $q_{rec}$ and $n_{r}$ are constrained to be larger than 0. 
 
 The L-BFGS-B depends on gradient evaluation and its iteration stops when gradient is smaller than a certain tiny value. In some circumstances the fitting result may stuck in local minimum rather than global minimum. An program based on Hamiltonian Monte Carlo (HMC) is developed intending to obtain global minimum. HMC is a efficient Markov Chain Monte Carlo (MCMC) method for achieving samples from a distribution for which direct sampling is difficult\cite{neal_mcmc_2012}. The sample derived by HMC can usually be ergodic in the distribution, so the global minimum will be obtain with large sampling set. But the results are similar with L-BFGS-B and HMC. 
 
-The figure \ref{fig:fitting} shows one of the fitting result. We can see the origin waveform $v_{w}$ and reconstructed waveform $v_{r}$ are very similar. The reconstructed and truth $q_{r}$ are also similar. 
+The figure \ref{fig:fitting} shows one of the fitting result. We can see the origin waveform $v_{w}$ and reconstructed waveform $v_{r}$ are very similar. The reconstructed and truth $q_{rec}$ are also similar. 
 \begin{figure}[H]
     \centering
     \scalebox{0.4}{\input{figures/demoe1c0.pgf}}
     \caption{\label{fig:fitting} Fitting Demo, W-dist = 2.26}
 \end{figure}
 
-The result reconstructing $q_{r}$ when $N_{pos}=4$ shows in figure. (see figure~\ref{fig:fitting-hist}) The overall result of W-dist reconstructing $q_{r}$ shows in figure (see figure~\ref{fig:fitting-npos}). The error bar shows 10 to 90 percentile of Wasserstein distance ($W_{d}$) distribution. 
+The result reconstructing $q_{rec}$ when $N_{pos}=4$ shows in figure. (see figure~\ref{fig:fitting-hist}) The overall result of W-dist reconstructing $q_{rec}$ shows in figure (see figure~\ref{fig:fitting-npos}). The error bar shows 10 to 90 percentile of Wasserstein distance ($W_{d}$) distribution. 
 
 \begin{figure}[H]
 \begin{minipage}[t]{.5\textwidth}
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/xiaopeipchargehist.pgf}}
-    \caption{\label{fig:fitting-hist} $W_{d}$ Histogram when fitting $q_{r}$ (95\% counts, $N_{pos}=4$)}
+    \caption{\label{fig:fitting-hist} $W_{d}$ Histogram when fitting $q_{rec}$ (95\% counts, $N_{pos}=4$)}
 \end{figure}
 \end{minipage}
 \begin{minipage}[t]{.5\textwidth}
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/xiaopeipchargestats.pgf}}
-    \caption{\label{fig:fitting-npos} $W_{d}$ vs $N_{pos}$ when fitting $q_{r}$}
+    \caption{\label{fig:fitting-npos} $W_{d}$ vs $N_{pos}$ when fitting $q_{rec}$}
 \end{figure}
 \end{minipage}
 \end{figure}
@@ -147,21 +147,21 @@ A direct implementation of judgement metrics into loss function is often difficu
 % \subsubsection{Result}
 In the training process, we trained CNN for each PMT channel. The loss which is Wasserstein distance during training show in figure \ref{fig:loss}. 
 
-The result reconstructing $q_{r}$ when $N_{pos}=4$ shows in figure. (see figure~\ref{fig:cnn-hist}) The overall result of W-dist reconstructing $q_{r}$ shows in figure (see figure~\ref{fig:cnn-npos}). The result shows that CNN is the best for reconstruction of $q_{r}(t)$. The error bar shows 10 to 90 percentile of Wasserstein distance distribution. 
+The result reconstructing $q_{rec}$ when $N_{pos}=4$ shows in figure. (see figure~\ref{fig:cnn-hist}) The overall result of W-dist reconstructing $q_{rec}$ shows in figure (see figure~\ref{fig:cnn-npos}). The result shows that CNN is the best for reconstruction of $q_{rec}(t)$. The error bar shows 10 to 90 percentile of Wasserstein distance distribution. 
 
 \begin{figure}[H]
 \begin{minipage}[t]{.5\textwidth}
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/takarachargehist.pgf}}
-    \caption{\label{fig:cnn-hist} $W_{d}$ Histogram when CNN $q_{r}$ (95\% counts, $N_{pos}=4$)}
+    \caption{\label{fig:cnn-hist} $W_{d}$ Histogram when CNN $q_{rec}$ (95\% counts, $N_{pos}=4$)}
 \end{figure}
 \end{minipage}
 \begin{minipage}[t]{.5\textwidth}
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/takarachargestats.pgf}}
-    \caption{\label{fig:cnn-npos}$W_{d}$ vs $N_{pos}$ when CNN $q_{r}$}
+    \caption{\label{fig:cnn-npos}$W_{d}$ vs $N_{pos}$ when CNN $q_{rec}$}
 \end{figure}
 \end{minipage}
 \end{figure}
