@@ -67,22 +67,25 @@ df_ans = np.sort(df_ans, kind='stable', order=['TriggerNo', 'PMTId'])
 df_sub = np.sort(df_sub, kind='stable', order=['TriggerNo', 'ChannelID'])
 df_wav = np.sort(df_wav, kind='stable', order=['TriggerNo', 'ChannelID'])
 Chnum = len(np.unique(df_ans['PMTId']))
-e_ans = df_ans['TriggerNo']*Chnum + df_ans['PMTId']
+e_ans = df_ans['TriggerNo'] * Chnum + df_ans['PMTId']
 e_ans, i_ans = np.unique(e_ans, return_index=True)
 i_ans = np.append(i_ans, len(df_ans))
 
 opdt = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('NPE', np.uint16), ('wdist', np.float64), ('chargediff', np.float64), ('RSS', np.float64), ('RSS_recon', np.float64), ('RSS_truth', np.float64)])
 window = len(df_wav[0]['Waveform'])
 
-e_wav = df_wav['TriggerNo']*Chnum + df_wav['ChannelID']; df_wav = df_wav[np.isin(e_wav, e_ans)]
-e_wav, i_wav = np.unique(df_wav['TriggerNo']*Chnum + df_wav['ChannelID'], return_index=True)
+e_wav = df_wav['TriggerNo'] * Chnum + df_wav['ChannelID']
+df_wav = df_wav[np.isin(e_wav, e_ans)]
+e_wav, i_wav = np.unique(df_wav['TriggerNo'] * Chnum + df_wav['ChannelID'], return_index=True)
 
-e_sub = df_sub['TriggerNo']*Chnum + df_sub['ChannelID']; df_sub = df_sub[np.isin(e_sub, e_ans)]
-e_sub, i_sub = np.unique(df_sub['TriggerNo']*Chnum + df_sub['ChannelID'], return_index=True)
+e_sub = df_sub['TriggerNo']*Chnum + df_sub['ChannelID']
+df_sub = df_sub[np.isin(e_sub, e_ans)]
+e_sub, i_sub = np.unique(df_sub['TriggerNo'] * Chnum + df_sub['ChannelID'], return_index=True)
 i_sub = np.append(i_sub, len(df_sub))
 assert len(e_ans) ==  len(e_wav) and len(e_ans) == len(e_sub), 'Incomplete Submission'
 
-l = len(e_sub); chunk = l // Ncpu + 1
+l = len(e_sub)
+chunk = l // Ncpu + 1
 slices = np.vstack((np.arange(0, l, chunk), np.append(np.arange(chunk, l, chunk), l))).T.astype(np.int).tolist()
 with Pool(min(Ncpu, cpu_count())) as pool:
     result = pool.starmap(wpdist, slices)

@@ -162,4 +162,4 @@ with h5py.File(fopt, 'w') as opt:
     dset.attrs['tau'] = Tau
     dset.attrs['sigma'] = Sigma
     print('The output file path is {}'.format(fopt))
-print('Finished! Consuming {0:.2f}s in total, cpu time {1:.2f}s.'.format(time.time() - global_start, time.process_time() - cpu_global_start))
+print('Finished! Consuming {0:.02f}s in total, cpu time {1:.02f}s.'.format(time.time() - global_start, time.process_time() - cpu_global_start))

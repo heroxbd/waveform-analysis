@@ -338,7 +338,7 @@ def demo(pet, pwe, tth, spe_pre, window, wave, cid, full=False, fold='Note/figur
     ax3.legend(loc=1)
     ax3.grid()
     if ext != '.pgf':
-        fig.suptitle('eid={},cid={},'.format(tth['TriggerNo'][0], tth['PMTId'][0])+distd+'-dist={:.2f},{:.2f}'.format(wdist, edist), y=0.95)
+        fig.suptitle('eid={},cid={},'.format(tth['TriggerNo'][0], tth['PMTId'][0])+distd+'-dist={:.02f},{:.02f}'.format(wdist, edist), y=0.95)
     fig.savefig(fold + '/demoe{}c{}'.format(tth['TriggerNo'][0], tth['PMTId'][0]) + ext)
     fig.savefig(fold + '/demoe{}c{}'.format(tth['TriggerNo'][0], tth['PMTId'][0]) + '.pdf')
     fig.clf()

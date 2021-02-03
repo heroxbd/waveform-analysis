@@ -44,10 +44,10 @@ global_start = time.time()
 cpu_global_start = time.process_time()
 
 psr = argparse.ArgumentParser()
-psr.add_argument('-o', dest='opt', type=str, nargs='+', help='output file')
+psr.add_argument('-o', dest='opt', type=str, help='output file')
 psr.add_argument('ipt', type=str, help='input file')
 psr.add_argument('--met', type=str, help='fitting method')
-psr.add_argument('--ref', type=str, nargs='+', help='reference file')
+psr.add_argument('--ref', type=str, help='reference file')
 psr.add_argument('-N', '--Ncpu', dest='Ncpu', type=int, default=50)
 args = psr.parse_args()
 
@@ -55,9 +55,9 @@ fipt = args.ipt
 fopt = args.opt
 reference = args.ref
 method = args.met
+Demo = False
 
 use_cuda = False
-
 if use_cuda:
     device = torch.device(0)
     torch.cuda.init()
@@ -65,9 +65,7 @@ if use_cuda:
 else:
     device = torch.device('cpu')
 
-Demo = False
-
-spe_pre = wff.read_model(reference[0])
+spe_pre = wff.read_model(reference)
 with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
     ent = ipt['Readout/Waveform'][:]
     N = len(ent)
@@ -333,45 +331,35 @@ e_pel = ent['TriggerNo'] * Chnum + ent['ChannelID']
 e_pel, i_pel = np.unique(e_pel, return_index=True)
 i_pel = np.append(i_pel, len(ent))
 
-sdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('tsfirsttruth', np.float64), ('tsfirstcharge', np.float64), ('tstruth', np.float64), ('tscharge', np.float64)])
+sdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('tswave', np.float64)])
 ts = np.zeros(N, dtype=sdtp)
-ts['TriggerNo'] = np.unique(ent['TriggerNo'])
-ts['ChannelID'] = np.unique(ent['ChannelID'])
-ts['tscharge'] = np.full(N, np.nan)
+ts['TriggerNo'] = ent['TriggerNo']
+ts['ChannelID'] = ent['ChannelID']
 pelist = np.sort(pelist, kind='stable', order=['TriggerNo', 'PMTId', 'HitPosInWindow'])
 Chnum = len(np.unique(ent['ChannelID']))
 e_pel = pelist['TriggerNo'] * Chnum + pelist['PMTId']
 e_pel, i_pel = np.unique(e_pel, return_index=True)
 i_pel = np.append(i_pel, len(pelist))
-ts['tsfirsttruth'] = np.array([np.min(pelist[i_pel[i]:i_pel[i+1]]['HitPosInWindow']) for i in range(N)])
-ts['tsfirstcharge'] = np.full(N, np.nan)
 opdt = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('HitPosInWindow', np.uint16), ('Charge', np.float64)])
 
 chunk = N // args.Ncpu + 1
 slices = np.vstack((np.arange(0, N, chunk), np.append(np.arange(chunk, N, chunk), N))).T.astype(np.int).tolist()
 with Pool(min(args.Ncpu, cpu_count())) as pool:
     result = pool.starmap(partial(time_numpyro), slices)
-
-ts['tstruth'] = np.hstack([result[i][0] for i in range(len(slices))])
+ts['tswave'] = np.hstack([result[i][0] for i in range(len(slices))])
 As = np.hstack([result[i][1] for i in range(len(slices))])
 count = np.sum([result[i][2] for i in range(len(slices))])
 As = np.sort(As, kind='stable', order=['TriggerNo', 'ChannelID'])
 print('Successful MCMC ratio is {:.2%}'.format(count / N))
 print('Prediction generated, real time {0:.4f}s, cpu time {1:.4f}s'.format(time.time() - tic, time.process_time() - cpu_tic))
 
-with h5py.File(fopt[0], 'w') as opt:
-    dset = opt.create_dataset('risetime', data=ts, compression='gzip')
-    dset.attrs['Method'] = method
-    dset.attrs['mu'] = Mu
-    dset.attrs['tau'] = Tau
-    dset.attrs['sigma'] = Sigma
-    print('The output file path is {}'.format(fopt[0]))
-with h5py.File(fopt[1], 'w') as opt:
-    dset = opt.create_dataset('photoelectron', data=As, compression='gzip')
-    dset.attrs['Method'] = method
-    dset.attrs['mu'] = Mu
-    dset.attrs['tau'] = Tau
-    dset.attrs['sigma'] = Sigma
-    print('The output file path is {}'.format(fopt[1]))
+with h5py.File(fopt, 'w') as opt:
+    pedset = opt.create_dataset('photoelectron', data=As, compression='gzip')
+    pedset.attrs['Method'] = method
+    pedset.attrs['mu'] = Mu
+    pedset.attrs['tau'] = Tau
+    pedset.attrs['sigma'] = Sigma
+    tsdset = opt.create_dataset('starttime', data=ts, compression='gzip')
+    print('The output file path is {}'.format(fopt))
 
-print('Finished! Consuming {0:.2f}s in total, cpu time {1:.2f}s.'.format(time.time() - global_start, time.process_time() - cpu_global_start))
+print('Finished! Consuming {0:.02f}s in total, cpu time {1:.02f}s.'.format(time.time() - global_start, time.process_time() - cpu_global_start))

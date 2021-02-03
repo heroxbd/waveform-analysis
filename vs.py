@@ -37,7 +37,7 @@ with open(args.conf) as f:
 filelist = os.listdir(args.folder[0])
 filelist = [f for f in filelist if f[0] != '.' and os.path.splitext(f)[-1] == '.h5']
 numbers = [[float(i) for i in f[:-3].split('-')] for f in filelist]
-stype = np.dtype([('mu', np.float), ('tau', np.float), ('sigma', np.float), ('n', np.uint), ('stdtruth', np.float), ('stdcharge', np.float), ('stdfirsttruth', np.float), ('stdfirstcharge', np.float), ('N', np.uint)])
+stype = np.dtype([('mu', np.float), ('tau', np.float), ('sigma', np.float), ('n', np.uint), ('stdfirsttruth', np.float), ('stdtruth', np.float), ('stdcharge', np.float), ('stdwave', np.float), ('N', np.uint)])
 mts = np.zeros(len(numbers), dtype=stype)
 mts['mu'] = np.array([i[0] for i in numbers])
 mts['tau'] = np.array([i[1] for i in numbers])
@@ -52,27 +52,27 @@ for i in range(len(mts)):
     tau = mts[i]['tau']
     sigma = mts[i]['sigma']
     with h5py.File(os.path.join(args.folder[0], f), 'r', libver='latest', swmr=True) as soluf, h5py.File(os.path.join(args.folder[1], f), 'r', libver='latest', swmr=True) as wavef:
-        time = soluf['risetime'][:]
-        method = soluf['risetime'].attrs['Method']
+        time = soluf['starttime'][:]
+        method = soluf['starttime'].attrs['Method']
         start = wavef['SimTruth/T'][:]
     mts[i]['N'] = len(start)
+    mts[i]['stdfirsttruth'] = np.std(time['tsfirsttruth'] - start['T0'], ddof=-1)
     mts[i]['stdtruth'] = np.std(time['tstruth'] - start['T0'], ddof=-1)
     mts[i]['stdcharge'] = np.std(time['tscharge'] - start['T0'], ddof=-1)
-    mts[i]['stdfirsttruth'] = np.std(time['tsfirsttruth'] - start['T0'], ddof=-1)
-    mts[i]['stdfirstcharge'] = np.std(time['tsfirstcharge'] - start['T0'], ddof=-1)
+    mts[i]['stdwave'] = np.std(time['tswave'] - start['T0'], ddof=-1)
 
-dhigh = np.array([np.max(mts['stdtruth']), np.max(mts['stdcharge']), np.max(mts['stdfirsttruth']), np.max(mts['stdfirsttruth'])])
-dhigh = np.max(dhigh[~np.isnan(dhigh)])
+dhigh = np.array([np.max(mts['stdfirsttruth']), np.max(mts['stdtruth']), np.max(mts['stdcharge']), np.max(mts['stdwave'])])
+dhigh = np.max(dhigh[~np.isnan(dhigh)]) * 1.05
 
 def draw(tau, sigma, pdf):
     stdlist = mts[(mts['tau'] == tau) & (mts['sigma'] == sigma)]
     fig = plt.figure()
     gs = gridspec.GridSpec(1, 1, figure=fig, left=0.15, right=0.95, top=0.9, bottom=0.1, wspace=0.2, hspace=0.3)
     ax = fig.add_subplot(gs[0, 0])
+    ax.plot(stdlist['mu'], stdlist['stdfirsttruth'], label=r'$\delta_{1sttru}$', marker='^')
     ax.plot(stdlist['mu'], stdlist['stdtruth'], label=r'$\delta_{tru}$', marker='^')
     ax.plot(stdlist['mu'], stdlist['stdcharge'], label=r'$\delta_{cha}$', marker='^')
-    ax.plot(stdlist['mu'], stdlist['stdfirsttruth'], label=r'$\delta_{1sttru}$', marker='^')
-    ax.plot(stdlist['mu'], stdlist['stdfirstcharge'], label=r'$\delta_{1stcha}$', marker='^')
+    ax.plot(stdlist['mu'], stdlist['stdwave'], label=r'$\delta_{wave}$', marker='^')
     ax.set_xlabel(r'$\mu$')
     ax.set_ylabel(r'$\delta/\mathrm{{ns}}$')
     ax.set_title(fr'$\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$')

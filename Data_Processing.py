@@ -127,7 +127,7 @@ else :
     while(loss > 100):
         net = Net_1().to(device)
         loss = testing(trial_loader, met='wdist')
-        print('Trying initial parameters with loss={:.2f}'.format(loss))
+        print('Trying initial parameters with loss={:.02f}'.format(loss))
     lr = 5e-3
 print('Initial loss={}'.format(loss))
 print('Sum of parameters: {:.4f}'.format(sum(parm.numel() for parm in net.parameters())))

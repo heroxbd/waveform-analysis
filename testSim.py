@@ -16,7 +16,7 @@ p = [8., 0.5, 24.]
 p[2] = p[2] * gmu / np.sum(wff.spe(np.arange(window), tau=p[0], sigma=p[1], A=p[2]))
 std = 1.
 
-np.random.seed(0)
+np.random.seed(42)
 
 wdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('Waveform', np.int16, window)])
 tdtp = np.dtype([('TriggerNo', np.uint32), ('T0', np.float64)])
