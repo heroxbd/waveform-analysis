@@ -61,8 +61,8 @@ for i in range(len(mts)):
     mts[i]['stdfirsttruth'] = np.std(time['tsfirsttruth'] - start['T0'], ddof=-1)
     mts[i]['stdfirstcharge'] = np.std(time['tsfirstcharge'] - start['T0'], ddof=-1)
 
-dlow = np.min([np.min(mts['stdtruth']), np.min(mts['stdcharge']), np.min(mts['stdfirsttruth']), np.min(mts['stdfirsttruth'])])
-dhigh = np.max([np.max(mts['stdtruth']), np.max(mts['stdcharge']), np.max(mts['stdfirsttruth']), np.max(mts['stdfirsttruth'])])
+dhigh = np.array([np.max(mts['stdtruth']), np.max(mts['stdcharge']), np.max(mts['stdfirsttruth']), np.max(mts['stdfirsttruth'])])
+dhigh = np.max(dhigh[~np.isnan(dhigh)])
 
 def draw(tau, sigma, pdf):
     stdlist = mts[(mts['tau'] == tau) & (mts['sigma'] == sigma)]
@@ -76,7 +76,7 @@ def draw(tau, sigma, pdf):
     ax.set_xlabel(r'$\mu$')
     ax.set_ylabel(r'$\delta/\mathrm{{ns}}$')
     ax.set_title(fr'$\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$')
-    ax.set_ylim(dlow, dhigh)
+    ax.set_ylim(0, dhigh)
     ax.grid()
     ax.legend().set_zorder(1)
     pdf.savefig(fig)

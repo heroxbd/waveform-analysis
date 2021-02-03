@@ -338,7 +338,12 @@ ts = np.zeros(N, dtype=sdtp)
 ts['TriggerNo'] = np.unique(ent['TriggerNo'])
 ts['ChannelID'] = np.unique(ent['ChannelID'])
 ts['tscharge'] = np.full(N, np.nan)
-ts['tsfirsttruth'] = np.full(N, np.nan)
+pelist = np.sort(pelist, kind='stable', order=['TriggerNo', 'PMTId', 'HitPosInWindow'])
+Chnum = len(np.unique(ent['ChannelID']))
+e_pel = pelist['TriggerNo'] * Chnum + pelist['PMTId']
+e_pel, i_pel = np.unique(e_pel, return_index=True)
+i_pel = np.append(i_pel, len(pelist))
+ts['tsfirsttruth'] = np.array([np.min(pelist[i_pel[i]:i_pel[i+1]]['HitPosInWindow']) for i in range(N)])
 ts['tsfirstcharge'] = np.full(N, np.nan)
 opdt = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('HitPosInWindow', np.uint16), ('Charge', np.float64)])
 
