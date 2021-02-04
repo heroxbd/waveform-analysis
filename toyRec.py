@@ -83,23 +83,23 @@ with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as ipt, h5py.File(args
         tswave['tswave'] = np.full(N, np.nan)
     assert np.all(e_cha == e_pel), 'File not match!'
 
-sdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('tsfirsttruth', np.float64), ('tstruth', np.float64), ('tscharge', np.float64)])
+sdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('ts1sttruth', np.float64), ('tstruth', np.float64), ('tscharge', np.float64)])
 ts = np.zeros(N, dtype=sdtp)
 ts['TriggerNo'] = tc['TriggerNo']
 ts['ChannelID'] = tc['ChannelID']
-ts['tsfirsttruth'] = np.array([np.min(pelist[i_pel[i]:i_pel[i+1]]['HitPosInWindow']) for i in range(N)])
+ts['ts1sttruth'] = np.array([np.min(pelist[i_pel[i]:i_pel[i+1]]['HitPosInWindow']) for i in range(N)])
 
 chunk = N // args.Ncpu + 1
 slices = np.vstack((np.arange(0, N, chunk), np.append(np.arange(chunk, N, chunk), N))).T.astype(np.int).tolist()
 with Pool(min(args.Ncpu, cpu_count())) as pool:
     result = pool.starmap(partial(start_time, mode='all'), slices)
 ts['tstruth'] = np.hstack(result)
-print('Mode all finished, real time {0:.4f}s, cpu time {1:.4f}s until now'.format(time.time() - global_start, time.process_time() - cpu_global_start))
+print('Mode all finished, real time {0:.02f}s, cpu time {1:.02f}s until now'.format(time.time() - global_start, time.process_time() - cpu_global_start))
 with Pool(min(args.Ncpu, cpu_count())) as pool:
     result = pool.starmap(partial(start_time, mode='charge'), slices)
 ts['tscharge'] = np.hstack(result)
 ts = recfunctions.join_by(('TriggerNo', 'ChannelID'), ts, tswave, usemask=False)
-print('Mode charge finished, real time {0:.4f}s, cpu time {1:.4f}s until now'.format(time.time() - global_start, time.process_time() - cpu_global_start))
+print('Mode charge finished, real time {0:.02f}s, cpu time {1:.02f}s until now'.format(time.time() - global_start, time.process_time() - cpu_global_start))
 
 with h5py.File(args.opt, 'w') as opt:
     dset = opt.create_dataset('starttime', data=ts, compression='gzip')

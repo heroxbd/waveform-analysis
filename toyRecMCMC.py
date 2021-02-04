@@ -26,7 +26,7 @@ torch.manual_seed(0)
 import pyro
 pyro.set_rng_seed(0)
 import jax
-# jax.config.update('jax_enable_x64', True)
+jax.config.update('jax_enable_x64', True)
 import jax.numpy as jnp
 import numpyro
 # numpyro.set_platform('gpu')
@@ -144,7 +144,8 @@ def time_pyro(a0, a1):
 
 class mNormal(numpyro.distributions.distribution.Distribution):
     arg_constraints = {'pl': numpyro.distributions.constraints.real}
-    support = numpyro.distributions.constraints.real
+    # support = numpyro.distributions.constraints.real
+    support = numpyro.distributions.constraints.positive
     reparametrized_params = ['pl']
 
     def __init__(self, pl, s, mu, sigma, validate_args=None):
@@ -162,7 +163,7 @@ class mNormal(numpyro.distributions.distribution.Distribution):
         logprob1 = self.norm1.log_prob(value)
         prob = jnp.vstack([logprob0, logprob1])
         pl = jnp.vstack([(1 - self.pl), self.pl])
-        return jax.scipy.special.logsumexp(prob, axis=0, b=pl)
+        return jax.scipy.special.logsumexp(prob, axis=0, b=pl) + jnp.log(2)
 
 def time_numpyro(a0, a1):
     init = namedtuple('ParamInfo', ['z', 'potential_energy', 'z_grad'])
@@ -182,8 +183,9 @@ def time_numpyro(a0, a1):
         if Tau == 0:
             light_curve = numpyro.distributions.Normal(t0, scale=Sigma)
             pl = numpyro.primitives.deterministic('pl', jnp.exp(light_curve.log_prob(tlist)) * mu + jnp.finfo(jnp.float32).resolution)
+            # pl = numpyro.primitives.deterministic('pl', 1 / (math.sqrt(2. * math.pi) * Sigma) * jnp.exp(-((tlist - t0) / Sigma) ** 2 / 2) * mu + jnp.finfo(jnp.float64).epsneg)
         else:
-            pl = numpyro.primitives.deterministic('pl', Co * (1. - jax.scipy.special.erf((Alpha * Sigma ** 2 - (tlist - t0)) / (math.sqrt(2.) * Sigma))) * jnp.exp(-Alpha * (tlist - t0)) * mu + jnp.finfo(jnp.float32).resolution)
+            pl = numpyro.primitives.deterministic('pl', Co * (1. - jax.scipy.special.erf((Alpha * Sigma ** 2 - (tlist - t0)) / (math.sqrt(2.) * Sigma))) * jnp.exp(-Alpha * (tlist - t0)) * mu + jnp.finfo(jnp.float64).epsneg)
         # A = numpyro.sample('A', numpyro.contrib.tfp.distributions.MixtureSameFamily(
         #     numpyro.contrib.tfp.distributions.Categorical(jnp.vstack([(1 - pl), pl]).T),
         #     numpyro.contrib.tfp.distributions.Normal(jnp.repeat(jnp.array([[0., 1.]]), window, axis=0), jnp.repeat(jnp.array([[std / gsigma, gsigma / gmu]]), window, axis=0))
@@ -196,23 +198,26 @@ def time_numpyro(a0, a1):
     mcmc = numpyro.infer.MCMC(nuts_kernel, num_samples=1000, num_warmup=500, num_chains=1, progress_bar=Demo, jit_model_args=True)
     for i in range(a0, a1):
         cid = ent[i]['ChannelID']
-        wave = jnp.array(ent[i]['Waveform'].astype(np.float32))
+        wave = jnp.array(ent[i]['Waveform'].astype(np.float32)) * spe_pre[cid]['epulse']
         mu = jnp.sum(wave) / gmu
-        A = jnp.hstack([jnp.where(wave[:Awindow] > spe_pre[cid]['std'] * 5, wave[:Awindow], 0)[spe_pre[cid]['mar_l']:], jnp.zeros(spe_pre[cid]['mar_l'])])
-        A = A / jnp.sum(A) * mu
-        t0 = jnp.clip(jnp.argmax(wave) * spe_pre[cid]['epulse'] - spe_pre[cid]['mar_l'], 0, window).astype(jnp.float32)
+        A_init = jnp.hstack([jnp.where(wave[:Awindow] > spe_pre[cid]['std'] * 5, wave[:Awindow], 0)[spe_pre[cid]['mar_l']:], jnp.zeros(spe_pre[cid]['mar_l'])])
+        A_init = A_init / jnp.sum(A_init) * mu
+        t0_init = jnp.clip(jnp.argmax(wave) - spe_pre[cid]['mar_l'], 0, window).astype(jnp.float32)
         try:
             mcmc.run(rng_key, y=wave, mu=mu)
             # potential = lambda z: numpyro.infer.util.potential_energy(model=model, model_args=(wave, mu), model_kwargs={}, params=z)
-            # initp = init(z={'t0':t0, 'A':A}, potential_energy=potential({'t0':t0, 'A':A}), z_grad=jax.grad(potential)({'t0':t0, 'A':A}))
+            # initp = init(z={'t0':t0_init, 'A':A_init}, potential_energy=potential({'t0':t0_init, 'A':A_init}), z_grad=jax.grad(potential)({'t0':t0_init, 'A':A_init}))
             # mcmc.run(rng_key, y=wave, mu=mu, init_params=initp)
             t0 = np.array(mcmc.get_samples()['t0'])
             A = np.array(mcmc.get_samples()['A'])
             count = count + 1
+            if np.abs(np.mean(t0) - t0_init) > 3 * Sigma:
+                t0 = np.where(np.abs(np.mean(t0) - t0_init) <= 3 * Sigma, np.mean(t0), t0_init)
+                print('Bad waveform is TriggerNo = {}, ChannelID = {}, i = {}'.format(ent[i]['TriggerNo'], ent[i]['ChannelID'], i))
         except:
-            t0 = np.array([t0])
-            A = np.array([A])
-            print('TriggerNo = {}, ChannelID = {}, i = {}'.format(ent[i]['TriggerNo'], ent[i]['ChannelID'], i))
+            t0 = np.array([t0_init])
+            A = np.array([A_init])
+            print('Failed waveform is TriggerNo = {}, ChannelID = {}, i = {}'.format(ent[i]['TriggerNo'], ent[i]['ChannelID'], i))
         stime[i - a0] = np.mean(t0)
         pet, pwe = wff.clip(tlist, np.mean(A, axis=0), Thres)
         end = start + len(pwe)
@@ -321,7 +326,7 @@ if not os.path.exists('stanmodel.pkl'):
     os.system('python3 stanmodel.py')
 stanmodel = pickle.load(open('stanmodel.pkl', 'rb'))
 
-print('Initialization finished, real time {0:.4f}s, cpu time {1:.4f}s'.format(time.time() - global_start, time.process_time() - cpu_global_start))
+print('Initialization finished, real time {0:.02f}s, cpu time {1:.02f}s'.format(time.time() - global_start, time.process_time() - cpu_global_start))
 tic = time.time()
 cpu_tic = time.process_time()
 
@@ -341,7 +346,7 @@ e_pel = pelist['TriggerNo'] * Chnum + pelist['PMTId']
 e_pel, i_pel = np.unique(e_pel, return_index=True)
 i_pel = np.append(i_pel, len(pelist))
 opdt = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('HitPosInWindow', np.uint16), ('Charge', np.float64)])
-
+time_numpyro(858, 859)
 chunk = N // args.Ncpu + 1
 slices = np.vstack((np.arange(0, N, chunk), np.append(np.arange(chunk, N, chunk), N))).T.astype(np.int).tolist()
 with Pool(min(args.Ncpu, cpu_count())) as pool:
@@ -350,8 +355,8 @@ ts['tswave'] = np.hstack([result[i][0] for i in range(len(slices))])
 As = np.hstack([result[i][1] for i in range(len(slices))])
 count = np.sum([result[i][2] for i in range(len(slices))])
 As = np.sort(As, kind='stable', order=['TriggerNo', 'ChannelID'])
-print('Successful MCMC ratio is {:.2%}'.format(count / N))
-print('Prediction generated, real time {0:.4f}s, cpu time {1:.4f}s'.format(time.time() - tic, time.process_time() - cpu_tic))
+print('Successful MCMC ratio is {:.4%}'.format(count / N))
+print('Prediction generated, real time {0:.02f}s, cpu time {1:.02f}s'.format(time.time() - tic, time.process_time() - cpu_tic))
 
 with h5py.File(fopt, 'w') as opt:
     pedset = opt.create_dataset('photoelectron', data=As, compression='gzip')

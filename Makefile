@@ -1,6 +1,7 @@
 SHELL:=bash
 channelN:=$(shell seq -f '%02g' 0 0)
-mu:=$(shell seq -f '%02g' 1 1 5 && seq -f '%02g' 6 2 10 && seq -f '%02g' 15 5 30)
+# mu:=$(shell seq -f '%02g' 1 1 5 && seq -f '%02g' 6 2 10 && seq -f '%02g' 15 5 30)
+mu:=$(shell seq -f '%02g' 5 5 30)
 tau:=$(shell seq -f '%02g' 0 20 100)
 sigma:=$(shell seq -f '%02g' 0 5 15)
 
@@ -42,7 +43,7 @@ solu : $(solu)
 sim : $(sim)
 
 define mcmcrec
-result/$(method)/char/%.h5 &: waveform/%.h5 spe.h5
+result/$(method)/char/%.h5 : waveform/%.h5 spe.h5
 	@mkdir -p $$(dir $$@)
 	python3 toyRecMCMC.py $$< --met $(method) -N 100 --ref $$(word 2,$$^) -o $$@ > $$@.log 2>&1
 endef
@@ -96,7 +97,7 @@ result/$(method)/.PreProcess : $(sim) spe.h5
 waveform/%.h5 :
 	@rm -f spe.h5
 	@mkdir -p $(dir $@)
-	python3 toySim.py --mts $* --noi -N 10000 -o $@ > $@.log 2>&1
+	python3 toySim.py --mts $* --noi -N 1000 -o $@ > $@.log 2>&1
 
 spe.h5 : $(sim) ;
 

@@ -37,12 +37,17 @@ with open(args.conf) as f:
 filelist = os.listdir(args.folder[0])
 filelist = [f for f in filelist if f[0] != '.' and os.path.splitext(f)[-1] == '.h5']
 numbers = [[float(i) for i in f[:-3].split('-')] for f in filelist]
-stype = np.dtype([('mu', np.float), ('tau', np.float), ('sigma', np.float), ('n', np.uint), ('stdfirsttruth', np.float), ('stdtruth', np.float), ('stdcharge', np.float), ('stdwave', np.float), ('N', np.uint)])
+stype = np.dtype([('mu', np.float), ('tau', np.float), ('sigma', np.float), ('n', np.uint), ('std1sttruth', np.float), ('stdtruth', np.float), ('stdcharge', np.float), ('stdwave', np.float), ('N', np.uint)])
 mts = np.zeros(len(numbers), dtype=stype)
 mts['mu'] = np.array([i[0] for i in numbers])
 mts['tau'] = np.array([i[1] for i in numbers])
 mts['sigma'] = np.array([i[2] for i in numbers])
 mts['n'] = np.arange(len(numbers))
+mts['N'] = np.nan
+mts['std1sttruth'] = np.nan
+mts['stdtruth'] = np.nan
+mts['stdcharge'] = np.nan
+mts['stdwave'] = np.nan
 mts = np.sort(mts, kind='stable', order=['mu', 'tau', 'sigma'])
 
 pdf = PdfPages(args.opt)
@@ -51,17 +56,20 @@ for i in range(len(mts)):
     mu = mts[i]['mu']
     tau = mts[i]['tau']
     sigma = mts[i]['sigma']
-    with h5py.File(os.path.join(args.folder[0], f), 'r', libver='latest', swmr=True) as soluf, h5py.File(os.path.join(args.folder[1], f), 'r', libver='latest', swmr=True) as wavef:
-        time = soluf['starttime'][:]
-        method = soluf['starttime'].attrs['Method']
-        start = wavef['SimTruth/T'][:]
-    mts[i]['N'] = len(start)
-    mts[i]['stdfirsttruth'] = np.std(time['tsfirsttruth'] - start['T0'], ddof=-1)
-    mts[i]['stdtruth'] = np.std(time['tstruth'] - start['T0'], ddof=-1)
-    mts[i]['stdcharge'] = np.std(time['tscharge'] - start['T0'], ddof=-1)
-    mts[i]['stdwave'] = np.std(time['tswave'] - start['T0'], ddof=-1)
+    try:
+        with h5py.File(os.path.join(args.folder[0], f), 'r', libver='latest', swmr=True) as soluf, h5py.File(os.path.join(args.folder[1], f), 'r', libver='latest', swmr=True) as wavef:
+            time = soluf['starttime'][:]
+            method = soluf['starttime'].attrs['Method']
+            start = wavef['SimTruth/T'][:]
+        mts[i]['N'] = len(start)
+        mts[i]['std1sttruth'] = np.std(time['ts1sttruth'] - start['T0'], ddof=-1)
+        mts[i]['stdtruth'] = np.std(time['tstruth'] - start['T0'], ddof=-1)
+        mts[i]['stdcharge'] = np.std(time['tscharge'] - start['T0'], ddof=-1)
+        mts[i]['stdwave'] = np.std(time['tswave'] - start['T0'], ddof=-1)
+    except:
+        pass
 
-dhigh = np.array([np.max(mts['stdfirsttruth']), np.max(mts['stdtruth']), np.max(mts['stdcharge']), np.max(mts['stdwave'])])
+dhigh = np.array([np.max(mts['std1sttruth']), np.max(mts['stdtruth']), np.max(mts['stdcharge']), np.max(mts['stdwave'])])
 dhigh = np.max(dhigh[~np.isnan(dhigh)]) * 1.05
 
 def draw(tau, sigma, pdf):
@@ -69,10 +77,11 @@ def draw(tau, sigma, pdf):
     fig = plt.figure()
     gs = gridspec.GridSpec(1, 1, figure=fig, left=0.15, right=0.95, top=0.9, bottom=0.1, wspace=0.2, hspace=0.3)
     ax = fig.add_subplot(gs[0, 0])
-    ax.plot(stdlist['mu'], stdlist['stdfirsttruth'], label=r'$\delta_{1sttru}$', marker='^')
+    ax.plot(stdlist['mu'], stdlist['std1sttruth'], label=r'$\delta_{1sttru}$', marker='^')
     ax.plot(stdlist['mu'], stdlist['stdtruth'], label=r'$\delta_{tru}$', marker='^')
     ax.plot(stdlist['mu'], stdlist['stdcharge'], label=r'$\delta_{cha}$', marker='^')
-    ax.plot(stdlist['mu'], stdlist['stdwave'], label=r'$\delta_{wave}$', marker='^')
+    if np.all(np.isnan(stdlist['stdwave'])):
+        ax.plot(stdlist['mu'], stdlist['stdwave'], label=r'$\delta_{wave}$', marker='^')
     ax.set_xlabel(r'$\mu$')
     ax.set_ylabel(r'$\delta/\mathrm{{ns}}$')
     ax.set_title(fr'$\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$')
@@ -97,10 +106,10 @@ if method == 'lucyddm':
             ax = fig.add_subplot(gs[j, i])
             stdlist = mts[(mts['tau'] == tau) & (mts['sigma'] == sigma)]
             alpha = 0.05
-            yerr1st = np.vstack([stdlist['stdfirsttruth']-np.sqrt(np.power(stdlist['stdfirsttruth'],2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(stdlist['stdfirsttruth'],2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-stdlist['stdfirsttruth']])
+            yerr1st = np.vstack([stdlist['std1sttruth']-np.sqrt(np.power(stdlist['std1sttruth'],2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(stdlist['std1sttruth'],2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-stdlist['std1sttruth']])
             yerrall = np.vstack([stdlist['stdtruth']-np.sqrt(np.power(stdlist['stdtruth'],2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(stdlist['stdtruth'],2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-stdlist['stdtruth']])
-            yerr = np.vstack([stdlist['stdtruth'] / stdlist['stdfirsttruth'] - (stdlist['stdtruth'] - yerrall[0]) / (stdlist['stdfirsttruth'] + yerr1st[1]), (stdlist['stdtruth'] + yerrall[1]) / (stdlist['stdfirsttruth'] - yerr1st[0]) - stdlist['stdtruth'] / stdlist['stdfirsttruth']])
-            ax.errorbar(stdlist['mu'], stdlist['stdtruth'] / stdlist['stdfirsttruth'], yerr=yerr, label=r'$\frac{\delta_{tru}}{\delta_{1sttru}}$', marker='^')
+            yerr = np.vstack([stdlist['stdtruth'] / stdlist['std1sttruth'] - (stdlist['stdtruth'] - yerrall[0]) / (stdlist['std1sttruth'] + yerr1st[1]), (stdlist['stdtruth'] + yerrall[1]) / (stdlist['std1sttruth'] - yerr1st[0]) - stdlist['stdtruth'] / stdlist['std1sttruth']])
+            ax.errorbar(stdlist['mu'], stdlist['stdtruth'] / stdlist['std1sttruth'], yerr=yerr, label=r'$\frac{\delta_{tru}}{\delta_{1sttru}}$', marker='^')
             ax.set_xlabel(r'$\mu$')
             ax.set_ylabel(r'$\mathrm{ratio}$')
             ax.set_title(fr'$\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$')

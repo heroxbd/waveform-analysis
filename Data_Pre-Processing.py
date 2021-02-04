@@ -98,12 +98,12 @@ for filename in files :
         trainfile_list.append((sliceNo, filename, slices[i], slices[i + 1], Truth_slices[i], Truth_slices[i + 1]))
         sliceNo = sliceNo + 1
     h5file.close()
-print('Initialization Finished, consuming {:.5f}s.'.format(time() - start))
+print('Initialization Finished, consuming {:.02f}s.'.format(time() - start))
 with Pool(min(len(trainfile_list), cpu_count())) as pool :
     Reading_Result = dict(pool.starmap(Read_Data, trainfile_list))
 Waveforms_and_info = pd.concat([Reading_Result[i]['Waveform'] for i in range(len(trainfile_list))])
 GroundTruth = pd.concat([Reading_Result[i]['GroundTruth'] for i in range(len(trainfile_list))])
-print('Data Loaded, consuming {:.5f}s'.format(time() - start))
+print('Data Loaded, consuming {:.02f}s'.format(time() - start))
 
 Grouped_Waves = Waveforms_and_info.groupby(by='ChannelID')
 Grouped_Truth = GroundTruth.groupby(by='PMTId')
@@ -113,5 +113,5 @@ channelid_list = np.unique(Waveforms_and_info['ChannelID'].to_numpy())
 start = time()
 with Pool(min(len(channelid_list), cpu_count())) as pool :
     pool.map(PreProcess, channelid_list)
-print('Data Saved, consuming {:.5f}s'.format(time() - start))
-print('Finished, consuming {:.4f}s in total.'.format(time() - global_start))
+print('Data Saved, consuming {:.02f}s'.format(time() - start))
+print('Finished, consuming {:.02f}s in total.'.format(time() - global_start))

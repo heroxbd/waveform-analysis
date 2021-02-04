@@ -130,7 +130,7 @@ else :
         print('Trying initial parameters with loss={:.02f}'.format(loss))
     lr = 5e-3
 print('Initial loss={}'.format(loss))
-print('Sum of parameters: {:.4f}'.format(sum(parm.numel() for parm in net.parameters())))
+print('Sum of parameters: {:.02f}'.format(sum(parm.numel() for parm in net.parameters())))
 # optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9) #0.001
 optimizer = optim.Adam(net.parameters(), lr=lr)
 checking_period = np.int(0.25 * (len(Wave_train) / BATCHSIZE))
@@ -162,8 +162,8 @@ for epoch in range(37):  # loop over the dataset multiple times
         running_loss += loss.data.item()
 
         if (i + 1) % checking_period == 0:    # print every 2000 mini-batches
-            print('[%d, %5d] running_loss: %.3f' % (epoch + 1, i + 1, running_loss / checking_period))
-            training_record.write('%.3f ' % ((running_loss / checking_period)))
+            print('[{0:02d}, {1:05d}] running_loss: {2:.04f}'.format(epoch + 1, i + 1, running_loss / checking_period))
+            training_record.write('{:.04f} '.format(running_loss / checking_period))
             training_result.append((running_loss / checking_period))
             running_loss = 0.0
 
@@ -171,11 +171,11 @@ for epoch in range(37):  # loop over the dataset multiple times
     test_performance = testing(test_loader)
 #     test_performance = testing(test_loader, met='l2')
     print('epoch ', str(epoch), ' test:', test_performance)
-    testing_record.write('%4f ' % (test_performance))
+    testing_record.write('{:.04f}'.format(test_performance))
     testing_result.append(test_performance)
     if epoch % 4 == 0:
         # saving network
-        save_name = SavePath + '_epoch' + '{:02d}'.format(epoch) + '_loss' + '%.4f' % (test_performance)
+        save_name = SavePath + '_epoch{0:02d}_loss{1:.04f}'.format(epoch, test_performance)
         torch.save(net, save_name)
 
 print('Training Finished')

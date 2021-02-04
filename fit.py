@@ -144,7 +144,7 @@ if args.Ncpu == 1:
 else:
     chunk = l // args.Ncpu + 1
     slices = np.vstack((np.arange(0, l, chunk), np.append(np.arange(chunk, l, chunk), l))).T.astype(np.int).tolist()
-print('Initialization finished, real time {0:.4f}s, cpu time {1:.4f}s'.format(time.time() - global_start, time.process_time() - cpu_global_start))
+print('Initialization finished, real time {0:.02f}s, cpu time {1:.02f}s'.format(time.time() - global_start, time.process_time() - cpu_global_start))
 tic = time.time()
 cpu_tic = time.process_time()
 with Pool(min(args.Ncpu, cpu_count())) as pool:
@@ -154,7 +154,7 @@ with Pool(min(args.Ncpu, cpu_count())) as pool:
         select_result = pool.starmap(fitting, slices)
 result = np.hstack(select_result)
 result = np.sort(result, kind='stable', order=['TriggerNo', 'ChannelID'])
-print('Prediction generated, real time {0:.4f}s, cpu time {1:.4f}s'.format(time.time() - tic, time.process_time() - cpu_tic))
+print('Prediction generated, real time {0:.02f}s, cpu time {1:.02f}s'.format(time.time() - tic, time.process_time() - cpu_tic))
 with h5py.File(fopt, 'w') as opt:
     dset = opt.create_dataset('photoelectron', data=result, compression='gzip')
     dset.attrs['Method'] = method

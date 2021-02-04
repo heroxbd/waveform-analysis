@@ -54,7 +54,7 @@ Total_entries = len(RawDataFile.root.Readout.Waveform)
 RawDataFile.close()
 WindowSize = origin_dtype['Waveform'].shape[0]
 gpufloat_dtype = np.dtype([(name, np.dtype('float32') if name == 'Waveform' else origin_dtype[name].base, origin_dtype[name].shape) for name in origin_dtype.names])
-print('Initialization finished, real time {0:.4f}s, cpu time {1:.4f}s'.format(time.time() - global_start, time.process_time() - cpu_global_start))
+print('Initialization finished, real time {0:.02f}s, cpu time {1:.02f}s'.format(time.time() - global_start, time.process_time() - cpu_global_start))
 print('Processing {} entries'.format(Total_entries))
 
 with h5py.File(filename, 'r', libver='latest', swmr=True) as ipt:
@@ -70,7 +70,7 @@ slices = np.append(np.arange(0, Total_entries, int(np.ceil(Total_entries / N))),
 ranges = list(zip(slices[0:-1], slices[1:]))
 with Pool(min(N, cpu_count())) as pool :
     Waveforms_and_info = pd.concat(pool.starmap(Read_Data, ranges))
-print('Data Loaded, consuming {0:.4f}s using {1} threads, cpu time {2:.4f}s'.format(time.time() - tic, N, time.process_time() - cpu_tic))
+print('Data Loaded, consuming {0:.02f}s using {1} threads, cpu time {2:.02f}s'.format(time.time() - tic, N, time.process_time() - cpu_tic))
 
 channelid_set = set(Waveforms_and_info['ChannelID'])
 Channel_Grouped_Waveform = Waveforms_and_info.groupby(by='ChannelID')
@@ -82,7 +82,7 @@ device = torch.device(Device)
 nets = dict([])
 for channelid in tqdm(channelid_set, desc='Loading Nets of each channel') :
     nets[channelid] = torch.load(NetDir + '/Channel{:02d}.torch_net'.format(channelid), map_location=device)
-print('Net Loaded, consuming {0:.4f}s'.format(time.time() - tic))
+print('Net Loaded, consuming {0:.02f}s'.format(time.time() - tic))
 
 filter_limit = 0.05
 Timeline = np.arange(WindowSize).reshape(1, WindowSize)
@@ -133,7 +133,7 @@ for ch in tqdm(channelid_set, desc='Predict for each channel') :
 Result = pd.concat(Result)
 Result = Result.sort_values(by=['TriggerNo', 'ChannelID'])
 Result = Result.to_records(index=False)
-print('Prediction generated, real time {0:.4f}s, cpu time {1:.4f}s'.format(time.time() - tic, time.process_time() - cpu_tic))
+print('Prediction generated, real time {0:.02f}s, cpu time {1:.02f}s'.format(time.time() - tic, time.process_time() - cpu_tic))
 
 with h5py.File(output, 'w') as opt:
     dset = opt.create_dataset('photoelectron', data=Result, compression='gzip')
