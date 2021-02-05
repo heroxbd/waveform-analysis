@@ -81,8 +81,7 @@ with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
 
 gmu = 160.
 gsigma = 40.
-p = [8., 0.5, 24.]
-p[2] = (p[2] * gmu / np.sum(wff.spe(np.arange(window), tau=p[0], sigma=p[1], A=p[2]))).item()
+p = spe_pre[0]['parameters']
 if Tau != 0:
     Alpha = 1 / Tau
     Co = (Alpha / 2. * np.exp(Alpha ** 2 * Sigma ** 2 / 2.)).item()
@@ -200,10 +199,11 @@ def time_numpyro(a0, a1):
         cid = ent[i]['ChannelID']
         wave = jnp.array(ent[i]['Waveform'].astype(np.float32)) * spe_pre[cid]['epulse']
         mu = jnp.sum(wave) / gmu
-        A_init = jnp.hstack([jnp.where(wave[:Awindow] > spe_pre[cid]['std'] * 5, wave[:Awindow], 0)[spe_pre[cid]['mar_l']:], jnp.zeros(spe_pre[cid]['mar_l'])])
+        A_init = jnp.hstack([jnp.where(wave[:Awindow] > spe_pre[cid]['std'] * 5, wave[:Awindow], 0)[round(spe_pre[cid]['mar_l']):], jnp.zeros(round(spe_pre[cid]['mar_l']))])
         A_init = A_init / jnp.sum(A_init) * mu
-        t0_init = jnp.clip(jnp.argmax(wave) - spe_pre[cid]['mar_l'], 0, window).astype(jnp.float32)
+        t0_init = jnp.clip(jnp.argwhere(wave - spe_pre[cid]['std'] * 5 > 0).flatten()[0] - spe_pre[cid]['mar_l'], 0, window).astype(jnp.float32)
         try:
+            # raise OSError
             mcmc.run(rng_key, y=wave, mu=mu)
             # potential = lambda z: numpyro.infer.util.potential_energy(model=model, model_args=(wave, mu), model_kwargs={}, params=z)
             # initp = init(z={'t0':t0_init, 'A':A_init}, potential_energy=potential({'t0':t0_init, 'A':A_init}), z_grad=jax.grad(potential)({'t0':t0_init, 'A':A_init}))
@@ -211,13 +211,13 @@ def time_numpyro(a0, a1):
             t0 = np.array(mcmc.get_samples()['t0'])
             A = np.array(mcmc.get_samples()['A'])
             count = count + 1
-            if np.abs(np.mean(t0) - t0_init) > 3 * Sigma:
-                t0 = np.where(np.abs(np.mean(t0) - t0_init) <= 3 * Sigma, np.mean(t0), t0_init)
-                print('Bad waveform is TriggerNo = {}, ChannelID = {}, i = {}'.format(ent[i]['TriggerNo'], ent[i]['ChannelID'], i))
+            if np.abs(np.mean(t0) - t0_init) > 5 * Sigma:
+                t0 = np.where(np.abs(np.mean(t0) - t0_init) <= 5 * Sigma, np.mean(t0), t0_init)
+                print('Bad waveform is TriggerNo = {:05d}, ChannelID = {:02d}, i = {:05d}'.format(ent[i]['TriggerNo'], ent[i]['ChannelID'], i))
         except:
             t0 = np.array([t0_init])
             A = np.array([A_init])
-            print('Failed waveform is TriggerNo = {}, ChannelID = {}, i = {}'.format(ent[i]['TriggerNo'], ent[i]['ChannelID'], i))
+            print('Failed waveform is TriggerNo = {:05d}, ChannelID = {:02d}, i = {:05d}'.format(ent[i]['TriggerNo'], ent[i]['ChannelID'], i))
         stime[i - a0] = np.mean(t0)
         pet, pwe = wff.clip(tlist, np.mean(A, axis=0), Thres)
         end = start + len(pwe)
@@ -289,12 +289,12 @@ def time_pymc(a0, a1):
         wave = ent[i]['Waveform']
         mu = np.sum(wave) / gmu
         A = np.hstack([np.where(wave[:Awindow] > spe_pre[cid]['std'] * 5, wave[:Awindow], 0)[spe_pre[cid]['mar_l']:], np.zeros(spe_pre[cid]['mar_l'])])
-        A = A / np.sum(A) * mu
-        t0 = np.clip(np.argmax(wave) * spe_pre[cid]['epulse'] - spe_pre[cid]['mar_l'], 0, window).astype(np.float32)
+        A_init = A / np.sum(A) * mu
+        t0_init = np.clip(np.argwhere(wave - spe_pre[cid]['std'] * 5 > 0).flatten()[0] - spe_pre[cid]['mar_l'], 0, window).astype(np.float32)
         with model(wave, mu):
             try:
                 step = pymc3.NUTS()
-                trace = pymc3.sample(1000, tune=500, start={'t0':t0,'A':A}, step=step, chains=2, cores=2, random_seed=[0, 1], return_inferencedata=False)
+                trace = pymc3.sample(1000, tune=500, start={'t0':t0_init,'A':A_init}, step=step, chains=2, cores=2, random_seed=[0, 1], return_inferencedata=False)
                 t0 = trace['t0']
                 A = trace['A']
                 pet, pwe = wff.clip(tlist, np.mean(A, axis=0), Thres)
@@ -346,7 +346,7 @@ e_pel = pelist['TriggerNo'] * Chnum + pelist['PMTId']
 e_pel, i_pel = np.unique(e_pel, return_index=True)
 i_pel = np.append(i_pel, len(pelist))
 opdt = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('HitPosInWindow', np.uint16), ('Charge', np.float64)])
-time_numpyro(858, 859)
+
 chunk = N // args.Ncpu + 1
 slices = np.vstack((np.arange(0, N, chunk), np.append(np.arange(chunk, N, chunk), N))).T.astype(np.int).tolist()
 with Pool(min(args.Ncpu, cpu_count())) as pool:

@@ -39,7 +39,7 @@ def xiaopeip(wave, spe_pre, eta=0):
     lowp = np.argwhere(wave > 5 * spe_pre['std']).flatten()
 #     lowp = rm_frag(lowp)
     if len(lowp) != 0:
-        fitp = np.arange(lowp.min() - spe_pre['mar_l'], lowp.max() + spe_pre['mar_r'])
+        fitp = np.arange(lowp.min() - round(spe_pre['mar_l']), lowp.max() + round(spe_pre['mar_r']))
         fitp = np.unique(np.clip(fitp, 0, len(wave)-1))
         pet = lowp - spe_pre['peak_c']
         pet = np.unique(np.clip(pet, 0, len(wave)-1))
@@ -185,9 +185,13 @@ def read_model(spe_path):
         gs = gridspec.GridSpec(1, 1, figure=fig, left=0.1, right=0.85, top=0.95, bottom=0.15, wspace=0.4, hspace=0.5)
         ax = fig.add_subplot(gs[0, 0])
         for i in range(len(spe)):
-            peak_c = np.argmax(spe[i]); t = np.argwhere(spe[i][peak_c:] < 0.1).flatten()[0] + peak_c
-            mar_l = np.sum(spe[i][:peak_c] < 5 * std[i])
-            mar_r = np.sum(spe[i][peak_c:t] < 5 * std[i])
+            peak_c = np.argmax(spe[i])
+            ft = interp1d(np.arange(0, len(spe[i]) - peak_c), 0.1 - spe[i][peak_c:])
+            t = opti.fsolve(ft, np.argwhere(spe[i][peak_c:] < 0.1).flatten()[0])[0] + peak_c
+            fl = interp1d(np.arange(0, peak_c), spe[i][:peak_c] - 5 * std[i])
+            mar_l = opti.fsolve(fl, np.sum(spe[i][:peak_c] < 5 * std[i]))[0]
+            fr = interp1d(np.arange(0, len(spe[i]) - peak_c), 5 * std[i] - spe[i][peak_c:])
+            mar_r = t - (opti.fsolve(fr, np.sum(spe[i][peak_c:] > 5 * std[i]))[0] + peak_c)
             spe_pre_i = {'spe':spe[i], 'epulse':epulse, 'peak_c':peak_c, 'mar_l':mar_l, 'mar_r':mar_r, 'std':std[i], 'parameters':p[i]}
             spe_pre.update({cid[i]:spe_pre_i})
             ax.plot(spe_pre[cid[i]]['spe'])
