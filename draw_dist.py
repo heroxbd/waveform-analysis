@@ -80,32 +80,6 @@ for i in tqdm(range(l), disable=args.pri):
         rss = dt['RSS'][dt['NPE'] == i+1]
         rss_recon = dt['RSS_recon'][dt['NPE'] == i+1]
         rss_truth = dt['RSS_truth'][dt['NPE'] == i+1]
-        fig = plt.figure()
-        gs = gridspec.GridSpec(2, 2, figure=fig, left=0.05, right=0.95, top=0.9, bottom=0.1, wspace=0.15, hspace=0.2)
-        ax0 = fig.add_subplot(gs[0, 0])
-        n = max(np.percentile(dtwpi, 95), N)
-        ax0.hist(dtwpi[dtwpi < n], bins=50)
-        a = (dtwpi < n).sum()
-        b = len(dtwpi)
-        ax0.set_title('count {}(<{:.02f}ns)/{}={:.02f}'.format(a, n, b, a/b))
-        ax0.set_xlabel(r'$W-dist/\mathrm{ns}$')
-        ax1 = fig.add_subplot(gs[0, 1])
-        r1 = np.percentile(rss, 0)
-        r2 = np.percentile(rss, 98)
-        ax1.hist(rss[(rss > r1) & (rss < r2)], bins=50, density=1)
-        ax1.set_xlabel(r'$RSS/\mathrm{mV}^{2}$' + ', within ({:.02f}, {:.02f})'.format(r1, r2))
-        ax2 = fig.add_subplot(gs[1, 0])
-        ax2.hist(dt['chargediff'][dt['NPE'] == i+1], bins=50)
-        ax2.set_xlabel(r'$Charge-diff/\mathrm{mV}\cdot\mathrm{ns}$')
-        ax3 = fig.add_subplot(gs[1, 1])
-        deltarss = rss_recon - rss_truth
-        r1 = np.percentile(deltarss, 0)
-        r2 = np.percentile(deltarss, 98)
-        ax3.hist(deltarss[(deltarss > r1) & (deltarss < r2)], bins=50, density=1)
-        ax3.set_xlabel(r'$RSS_{recon} - RSS_{truth}/\mathrm{mV}^{2}$' + ', within ({:.02f}, {:.02f})'.format(r1, r2))
-        fig.suptitle(args.ipt.split('/')[-1] + ' ' + r'$N_{pe}$' + '={:.0f}'.format(i+1))
-        pdf.savefig(fig)
-        plt.close(fig)
     else:
         wdist_stats[i, :] = np.nan
         edist_stats[i, :] = np.nan
@@ -210,5 +184,34 @@ if not np.all(np.isnan(time['tswave'])):
 
 pdf.savefig(fig)
 plt.close(fig)
+
+for i in tqdm(range(l), disable=args.pri):
+    if i+1 in penum:
+        fig = plt.figure()
+        gs = gridspec.GridSpec(2, 2, figure=fig, left=0.05, right=0.95, top=0.9, bottom=0.1, wspace=0.15, hspace=0.2)
+        ax0 = fig.add_subplot(gs[0, 0])
+        n = max(np.percentile(dtwpi, 95), N)
+        ax0.hist(dtwpi[dtwpi < n], bins=50)
+        a = (dtwpi < n).sum()
+        b = len(dtwpi)
+        ax0.set_title('count {}(<{:.02f}ns)/{}={:.02f}'.format(a, n, b, a/b))
+        ax0.set_xlabel(r'$W-dist/\mathrm{ns}$')
+        ax1 = fig.add_subplot(gs[0, 1])
+        r1 = np.percentile(rss, 0)
+        r2 = np.percentile(rss, 98)
+        ax1.hist(rss[(rss > r1) & (rss < r2)], bins=50, density=1)
+        ax1.set_xlabel(r'$RSS/\mathrm{mV}^{2}$' + ', within ({:.02f}, {:.02f})'.format(r1, r2))
+        ax2 = fig.add_subplot(gs[1, 0])
+        ax2.hist(dt['chargediff'][dt['NPE'] == i+1], bins=50)
+        ax2.set_xlabel(r'$Charge-diff/\mathrm{mV}\cdot\mathrm{ns}$')
+        ax3 = fig.add_subplot(gs[1, 1])
+        deltarss = rss_recon - rss_truth
+        r1 = np.percentile(deltarss, 0)
+        r2 = np.percentile(deltarss, 98)
+        ax3.hist(deltarss[(deltarss > r1) & (deltarss < r2)], bins=50, density=1)
+        ax3.set_xlabel(r'$RSS_{recon} - RSS_{truth}/\mathrm{mV}^{2}$' + ', within ({:.02f}, {:.02f})'.format(r1, r2))
+        fig.suptitle(args.ipt.split('/')[-1] + ' ' + r'$N_{pe}$' + '={:.0f}'.format(i+1))
+        pdf.savefig(fig)
+        plt.close(fig)
 
 pdf.close()
