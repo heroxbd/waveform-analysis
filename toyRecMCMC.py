@@ -71,7 +71,6 @@ with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
     N = len(ent)
     print('{} waveforms will be computed'.format(N))
     window = len(ent[0]['Waveform'])
-    Awindow = int(window * 0.95)
     assert window >= len(spe_pre[0]['spe']), 'Single PE too long which is {}'.format(len(spe_pre[0]['spe']))
     Mu = ipt['Readout/Waveform'].attrs['mu'].item()
     Tau = ipt['Readout/Waveform'].attrs['tau'].item()
@@ -89,6 +88,7 @@ std = 1.
 Thres = 0.1
 
 def time_pyro(a0, a1):
+    Awindow = int(window * 0.95)
     stime = np.empty(a1 - a0)
     dt = np.zeros((a1 - a0) * Awindow, dtype=opdt)
     start = 0
@@ -165,15 +165,17 @@ class mNormal(numpyro.distributions.distribution.Distribution):
         return jax.scipy.special.logsumexp(prob, axis=0, b=pl) + jnp.log(2)
 
 def time_numpyro(a0, a1):
+    n = 2
+    Awindow = int(window * 0.95)
     init = namedtuple('ParamInfo', ['z', 'potential_energy', 'z_grad'])
     rng_key = jax.random.PRNGKey(1)
     rng_key, rng_key_ = jax.random.split(rng_key)
     stime = np.empty(a1 - a0)
-    dt = np.zeros((a1 - a0) * Awindow, dtype=opdt)
+    dt = np.zeros((a1 - a0) * Awindow * n, dtype=opdt)
     start = 0
     end = 0
     count = 0
-    tlist = jnp.arange(Awindow)
+    tlist = jnp.arange(0, Awindow, 1 / n)
     t_auto = jnp.arange(window)[:, None] - tlist
     # amplitude to voltage converter
     AV = p[2] * jnp.exp(-1 / 2 * jnp.power((jnp.log((t_auto + jnp.abs(t_auto)) * (1 / p[0] / 2)) * (1 / p[1])), 2))
@@ -181,10 +183,10 @@ def time_numpyro(a0, a1):
         t0 = numpyro.sample('t0', numpyro.distributions.Uniform(0., 600.))
         if Tau == 0:
             light_curve = numpyro.distributions.Normal(t0, scale=Sigma)
-            pl = numpyro.primitives.deterministic('pl', jnp.exp(light_curve.log_prob(tlist)) * mu + jnp.finfo(jnp.float32).resolution)
-            # pl = numpyro.primitives.deterministic('pl', 1 / (math.sqrt(2. * math.pi) * Sigma) * jnp.exp(-((tlist - t0) / Sigma) ** 2 / 2) * mu + jnp.finfo(jnp.float64).epsneg)
+            pl = numpyro.primitives.deterministic('pl', jnp.exp(light_curve.log_prob(tlist)) * mu / n + jnp.finfo(jnp.float32).resolution)
+            # pl = numpyro.primitives.deterministic('pl', 1 / (math.sqrt(2. * math.pi) * Sigma) * jnp.exp(-((tlist - t0) / Sigma) ** 2 / 2) * mu / n + jnp.finfo(jnp.float64).epsneg)
         else:
-            pl = numpyro.primitives.deterministic('pl', Co * (1. - jax.scipy.special.erf((Alpha * Sigma ** 2 - (tlist - t0)) / (math.sqrt(2.) * Sigma))) * jnp.exp(-Alpha * (tlist - t0)) * mu + jnp.finfo(jnp.float64).epsneg)
+            pl = numpyro.primitives.deterministic('pl', Co * (1. - jax.scipy.special.erf((Alpha * Sigma ** 2 - (tlist - t0)) / (math.sqrt(2.) * Sigma))) * jnp.exp(-Alpha * (tlist - t0)) * mu / n + jnp.finfo(jnp.float64).epsneg)
         # A = numpyro.sample('A', numpyro.contrib.tfp.distributions.MixtureSameFamily(
         #     numpyro.contrib.tfp.distributions.Categorical(jnp.vstack([(1 - pl), pl]).T),
         #     numpyro.contrib.tfp.distributions.Normal(jnp.repeat(jnp.array([[0., 1.]]), window, axis=0), jnp.repeat(jnp.array([[std / gsigma, gsigma / gmu]]), window, axis=0))
@@ -199,7 +201,7 @@ def time_numpyro(a0, a1):
         cid = ent[i]['ChannelID']
         wave = jnp.array(ent[i]['Waveform'].astype(np.float32)) * spe_pre[cid]['epulse']
         mu = jnp.sum(wave) / gmu
-        A_init = jnp.hstack([jnp.where(wave[:Awindow] > spe_pre[cid]['std'] * 5, wave[:Awindow], 0)[round(spe_pre[cid]['mar_l']):], jnp.zeros(round(spe_pre[cid]['mar_l']))])
+        A_init = jnp.repeat(jnp.hstack([jnp.where(wave[:Awindow] > spe_pre[cid]['std'] * 5, wave[:Awindow], 0)[round(spe_pre[cid]['mar_l']):], jnp.zeros(round(spe_pre[cid]['mar_l']))]), n)
         A_init = A_init / jnp.sum(A_init) * mu
         t0_init = jnp.clip(jnp.argwhere(wave - spe_pre[cid]['std'] * 5 > 0).flatten()[0] - spe_pre[cid]['mar_l'], 0, window).astype(jnp.float32)
         try:
@@ -263,6 +265,7 @@ def time_stan(a0, a1):
     return stime, dt, count
 
 def time_pymc(a0, a1):
+    Awindow = int(window * 0.95)
     stime = np.empty(a1 - a0)
     dt = np.zeros((a1 - a0) * Awindow, dtype=opdt)
     start = 0
