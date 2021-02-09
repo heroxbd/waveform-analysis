@@ -48,7 +48,7 @@ psr.add_argument('-o', dest='opt', type=str, help='output file')
 psr.add_argument('ipt', type=str, help='input file')
 psr.add_argument('--met', type=str, help='fitting method')
 psr.add_argument('--ref', type=str, help='reference file')
-psr.add_argument('-N', '--Ncpu', dest='Ncpu', type=int, default=50)
+psr.add_argument('-N', '--Ncpu', dest='Ncpu', type=int, default=25)
 args = psr.parse_args()
 
 fipt = args.ipt
@@ -129,11 +129,11 @@ def time_pyro(a0, a1):
         A = mcmc.get_samples()['A'].cpu().numpy()
         count = count + 1
         stime[i - a0] = np.mean(t0)
-        pet, pwe = wff.clip(tlist, np.mean(A, axis=0), Thres)
-        end = start + len(pwe)
+        pet, cha = wff.clip(tlist, np.mean(A, axis=0), Thres)
+        end = start + len(cha)
         dt['HitPosInWindow'][start:end] = pet
-        pwe = pwe / pwe.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
-        dt['Charge'][start:end] = pwe
+        cha = cha / cha.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
+        dt['Charge'][start:end] = cha
         dt['TriggerNo'][start:end] = ent[i]['TriggerNo']
         dt['ChannelID'][start:end] = ent[i]['ChannelID']
         start = end
@@ -221,11 +221,11 @@ def time_numpyro(a0, a1):
             A = np.array([A_init])
             print('Failed waveform is TriggerNo = {:05d}, ChannelID = {:02d}, i = {:05d}'.format(ent[i]['TriggerNo'], ent[i]['ChannelID'], i))
         stime[i - a0] = np.mean(t0)
-        pet, pwe = wff.clip(tlist, np.mean(A, axis=0), Thres)
-        end = start + len(pwe)
+        pet, cha = wff.clip(tlist, np.mean(A, axis=0), Thres)
+        end = start + len(cha)
         dt['HitPosInWindow'][start:end] = pet
-        pwe = pwe / pwe.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
-        dt['Charge'][start:end] = pwe
+        cha = cha / cha.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
+        dt['Charge'][start:end] = cha
         dt['TriggerNo'][start:end] = ent[i]['TriggerNo']
         dt['ChannelID'][start:end] = ent[i]['ChannelID']
         start = end
@@ -252,11 +252,11 @@ def time_stan(a0, a1):
         A = fit['A']
         count = count + 1
         stime[i - a0] = np.mean(t0)
-        pet, pwe = wff.clip(tlist, np.mean(A, axis=0), Thres)
-        end = start + len(pwe)
+        pet, cha = wff.clip(tlist, np.mean(A, axis=0), Thres)
+        end = start + len(cha)
         dt['HitPosInWindow'][start:end] = pet
-        pwe = pwe / pwe.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
-        dt['Charge'][start:end] = pwe
+        cha = cha / cha.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
+        dt['Charge'][start:end] = cha
         dt['TriggerNo'][start:end] = ent[i]['TriggerNo']
         dt['ChannelID'][start:end] = ent[i]['ChannelID']
         start = end
@@ -300,19 +300,19 @@ def time_pymc(a0, a1):
                 trace = pymc3.sample(1000, tune=500, start={'t0':t0_init,'A':A_init}, step=step, chains=2, cores=2, random_seed=[0, 1], return_inferencedata=False)
                 t0 = trace['t0']
                 A = trace['A']
-                pet, pwe = wff.clip(tlist, np.mean(A, axis=0), Thres)
+                pet, cha = wff.clip(tlist, np.mean(A, axis=0), Thres)
                 count = count + 1
             except:
                 map_estimate = pymc3.find_MAP()
                 t0 = map_estimate['t0']
                 A = map_estimate['A']
-                pet, pwe = wff.clip(tlist, A, Thres)
+                pet, cha = wff.clip(tlist, A, Thres)
                 print('TriggerNo = {}, ChannelID = {}, i = {}'.format(ent[i]['TriggerNo'], ent[i]['ChannelID'], i))
         stime[i - a0] = np.mean(t0)
-        end = start + len(pwe)
+        end = start + len(cha)
         dt['HitPosInWindow'][start:end] = pet
-        pwe = pwe / pwe.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
-        dt['Charge'][start:end] = pwe
+        cha = cha / cha.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
+        dt['Charge'][start:end] = cha
         dt['TriggerNo'][start:end] = ent[i]['TriggerNo']
         dt['ChannelID'][start:end] = ent[i]['ChannelID']
         start = end
@@ -348,7 +348,7 @@ Chnum = len(np.unique(ent['ChannelID']))
 e_pel = pelist['TriggerNo'] * Chnum + pelist['PMTId']
 e_pel, i_pel = np.unique(e_pel, return_index=True)
 i_pel = np.append(i_pel, len(pelist))
-opdt = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('HitPosInWindow', np.uint16), ('Charge', np.float64)])
+opdt = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('HitPosInWindow', np.float64), ('Charge', np.float64)])
 
 chunk = N // args.Ncpu + 1
 slices = np.vstack((np.arange(0, N, chunk), np.append(np.arange(chunk, N, chunk), N))).T.astype(np.int).tolist()

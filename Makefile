@@ -1,7 +1,7 @@
 SHELL:=bash
 channelN:=$(shell seq -f '%02g' 0 0)
 mu:=$(shell seq -f '%02g' 1 1 5 && seq -f '%02g' 6 2 10 && seq -f '%02g' 15 5 30)
-# mu:=$(shell seq -f '%02g' 15 5 30)
+# mu:=$(shell seq -f '%02g' 15 5 15)
 tau:=$(shell seq -f '%02g' 0 20 100)
 sigma:=$(shell seq -f '%02g' 0 5 15)
 
@@ -45,7 +45,7 @@ sim : $(sim)
 define mcmcrec
 result/$(method)/char/%.h5 : waveform/%.h5 spe.h5
 	@mkdir -p $$(dir $$@)
-	python3 toyRecMCMC.py $$< --met $(method) -N 50 --ref $$(word 2,$$^) -o $$@ > $$@.log 2>&1
+	python3 toyRecMCMC.py $$< --met $(method) -N 25 --ref $$(word 2,$$^) -o $$@ > $$@.log 2>&1
 endef
 
 define fit

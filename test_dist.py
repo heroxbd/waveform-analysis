@@ -31,27 +31,25 @@ def wpdist(a, b):
         p = spe_pre[cid]['parameters']
         wave = df_wav[i_wav[i]]['Waveform'].astype(np.float) * spe_pre[cid]['epulse']
         
-        wl = df_sub[i_sub[i]:i_sub[i+1]]['Charge']
         pet_sub = df_sub[i_sub[i]:i_sub[i+1]]['HitPosInWindow']
-        pf_s = np.zeros(window)
-        pf_s[pet_sub] = wl
-        wave1 = np.convolve(spe_pre[cid]['spe'], pf_s, 'full')[:window]
-        t = df_ans[i_ans[i]:i_ans[i+1]]['HitPosInWindow']
-        w = df_ans[i_ans[i]:i_ans[i+1]]['Charge']
-        pet0 = np.unique(t)
-        pwe0 = np.array([np.sum(w[t == j]) for j in pet0])
-        wave0 = np.sum([np.where(pan > pet0[j], wff.spe(pan - pet0[j], tau=p[0], sigma=p[1], A=p[2]) * pwe0[j], 0) for j in range(len(pet0))], axis=0)
-        wave0 = wave0 / np.sum(spe_pre[cid]['spe'])
-        wave1 = wave1 / np.sum(spe_pre[cid]['spe'])
-        dt['chargediff'][c] = np.sum(wl) - np.sum(w)
-        dt['NPE'][c] = len(pet0)
+        cha_sub = df_sub[i_sub[i]:i_sub[i+1]]['Charge']
+        wav_sub = np.sum([np.where(pan > pet_sub[j], wff.spe(pan - pet_sub[j], tau=p[0], sigma=p[1], A=p[2]) * cha_sub[j], 0) for j in range(len(pet_sub))], axis=0)
+        pet_ans_0 = df_ans[i_ans[i]:i_ans[i+1]]['HitPosInWindow']
+        cha_ans = df_ans[i_ans[i]:i_ans[i+1]]['Charge']
+        pet_ans = np.unique(pet_ans_0)
+        cha_ans = np.array([np.sum(cha_ans[pet_ans_0 == j]) for j in pet_ans])
+        wav_ans = np.sum([np.where(pan > pet_ans[j], wff.spe(pan - pet_ans[j], tau=p[0], sigma=p[1], A=p[2]) * cha_ans[j], 0) for j in range(len(pet_ans))], axis=0)
+        wav_ans = wav_ans / np.sum(spe_pre[cid]['spe'])
+        wav_sub = wav_sub / np.sum(spe_pre[cid]['spe'])
+        dt['chargediff'][c] = np.sum(cha_sub) - np.sum(cha_ans)
+        dt['NPE'][c] = len(pet_ans)
 
-        dt['wdist'][c] = scipy.stats.wasserstein_distance(t, pet_sub, u_weights=w, v_weights=wl)
+        dt['wdist'][c] = scipy.stats.wasserstein_distance(pet_ans, pet_sub, u_weights=cha_ans, v_weights=cha_sub)
         dt['TriggerNo'][c] = df_wav[i_wav[i]]['TriggerNo']
         dt['ChannelID'][c] = cid
-        dt['RSS'][c] = np.power(wave1 - wave0, 2).sum()
-        dt['RSS_truth'][c] = np.power(wave0 - wave, 2).sum()
-        dt['RSS_recon'][c] = np.power(wave1 - wave, 2).sum()
+        dt['RSS'][c] = np.power(wav_sub - wav_ans, 2).sum()
+        dt['RSS_truth'][c] = np.power(wav_ans - wave, 2).sum()
+        dt['RSS_recon'][c] = np.power(wav_sub - wave, 2).sum()
     return dt
 
 spe_pre = wff.read_model(args.ref[1])

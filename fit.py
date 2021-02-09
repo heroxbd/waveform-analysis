@@ -70,24 +70,24 @@ def inferencing(a, b):
             cid = ent[i]['ChannelID']
             wave = ent[i]['Waveform'].astype(np.float) * spe_pre[ent[i]['ChannelID']]['epulse']
             pos = np.argwhere(wave[spe_pre[cid]['peak_c'] + 2:] > 5 * spe_pre[cid]['std']).flatten()
-            pwe = wave[pos]/(spe_pre[cid]['spe'].sum())
+            cha = wave[pos]/(spe_pre[cid]['spe'].sum())
             flag = 1
             if len(pos) != 0:
                 mne = spe[cid][np.mod(tlist.reshape(window, 1) - pos.reshape(1, len(pos)), window)]
                 # op = stanmodel.sampling(data=dict(m=mne, y=wave, Nf=window, Np=len(pos)), iter=1000, seed=0)
-                # pwe = lasso_select(op['x'], wave, mne)
+                # cha = lasso_select(op['x'], wave, mne)
                 if not len(pos) in mcmc_collect:
                     model_collect.update({len(pos) : partial(model, n=len(pos), eta=E)})
                     nuts_kernel_collect.update({len(pos) : NUTS(model_collect[len(pos)], step_size=0.01, adapt_step_size=True)})
                     mcmc_collect.update({len(pos) : MCMC(nuts_kernel_collect[len(pos)], num_warmup=warmup, num_samples=samples, num_chains=1, progress_bar=Demo, jit_model_args=True)})
                 mcmc_collect[len(pos)].run(rng_key, wave=jnp.array(wave), mne=jnp.array(mne))
-                pwe = np.mean(np.array(mcmc_collect[len(pos)].get_samples()['penum']), axis=0)
-                # pwe = lasso_select(np.array(mcmc_collect[len(pos)].get_samples()['penum']), wave, mne)
-            pet, pwe = wff.clip(pet, pwe, Thres)
+                cha = np.mean(np.array(mcmc_collect[len(pos)].get_samples()['penum']), axis=0)
+                # cha = lasso_select(np.array(mcmc_collect[len(pos)].get_samples()['penum']), wave, mne)
+            pet, cha = wff.clip(pet, cha, Thres)
             end = start + len(pet)
             dti['HitPosInWindow'][start:end] = pet
-            pwe = pwe / pwe.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
-            dt['Charge'][start:end] = pwe
+            cha = cha / cha.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
+            dt['Charge'][start:end] = cha
             dt['TriggerNo'][start:end] = ent[i]['TriggerNo']
             dt['ChannelID'][start:end] = ent[i]['ChannelID']
             start = end
@@ -105,23 +105,23 @@ def fitting(a, b):
             wave = ent[i]['Waveform'].astype(np.float) * spe_pre[ent[i]['ChannelID']]['epulse']
 
             if method == 'xiaopeip':
-#                 pet, pwe, ped = wff.xiaopeip(wave, spe_pre[ent[i]['ChannelID']])
+#                 pet, cha, ped = wff.xiaopeip(wave, spe_pre[ent[i]['ChannelID']])
 #                 wave = wave - ped
-                pet, pwe = wff.xiaopeip(wave, spe_pre[ent[i]['ChannelID']])
+                pet, cha = wff.xiaopeip(wave, spe_pre[ent[i]['ChannelID']])
             elif method == 'lucyddm':
-                pet, pwe = wff.lucyddm(wave, spe_pre[ent[i]['ChannelID']]['spe'], iterations=50)
+                pet, cha = wff.lucyddm(wave, spe_pre[ent[i]['ChannelID']]['spe'], iterations=50)
             elif method == 'threshold':
-                pet, pwe = wff.threshold(wave, spe_pre[ent[i]['ChannelID']])
+                pet, cha = wff.threshold(wave, spe_pre[ent[i]['ChannelID']])
             elif method == 'fftrans':
-                pet, pwe = wff.waveformfft(wave, spe_pre[ent[i]['ChannelID']])
+                pet, cha = wff.waveformfft(wave, spe_pre[ent[i]['ChannelID']])
             elif method == 'findpeak':
-                pet, pwe = wff.findpeak(wave, spe_pre[ent[i]['ChannelID']])
-            pet, pwe = wff.clip(pet, pwe, Thres)
+                pet, cha = wff.findpeak(wave, spe_pre[ent[i]['ChannelID']])
+            pet, cha = wff.clip(pet, cha, Thres)
 
-            end = start + len(pwe)
+            end = start + len(cha)
             dt['HitPosInWindow'][start:end] = pet
-            pwe = pwe / pwe.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
-            dt['Charge'][start:end] = pwe
+            cha = cha / cha.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
+            dt['Charge'][start:end] = cha
             dt['TriggerNo'][start:end] = ent[i]['TriggerNo']
             dt['ChannelID'][start:end] = ent[i]['ChannelID']
             start = end
@@ -130,7 +130,7 @@ def fitting(a, b):
     return dt
 
 spe_pre = wff.read_model(reference[0])
-opdt = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('HitPosInWindow', np.uint16), ('Charge', np.float64)])
+opdt = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('HitPosInWindow', np.float64), ('Charge', np.float64)])
 with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
     l = len(ipt['Readout/Waveform'])
     print('{} waveforms will be computed'.format(l))

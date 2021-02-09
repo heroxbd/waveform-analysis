@@ -44,18 +44,18 @@ def xiaopeip(wave, spe_pre, eta=0):
         pet = lowp - spe_pre['peak_c']
         pet = np.unique(np.clip(pet, 0, len(wave)-1))
         if len(pet) != 0:
-#             pwe, ped = xiaopeip_core(wave, spe_pre['spe'], fitp, pet, eta=eta)
-            pwe = xiaopeip_core(wave, spe_pre['spe'], fitp, pet, eta=eta)
-            pwe = pwe / np.sum(pwe) * np.sum(wave) / np.sum(spe_pre['spe'])
+#             cha, ped = xiaopeip_core(wave, spe_pre['spe'], fitp, pet, eta=eta)
+            cha = xiaopeip_core(wave, spe_pre['spe'], fitp, pet, eta=eta)
+            cha = cha / np.sum(cha) * np.sum(wave) / np.sum(spe_pre['spe'])
         else:
             flag = 0
     else:
         flag = 0
     if flag == 0:
         pet = np.array([np.argmax(wave[spe_pre['peak_c']:])])
-        pwe = np.array([1])
-#     return pet, pwe, ped
-    return pet, pwe
+        cha = np.array([1])
+#     return pet, cha, ped
+    return pet, cha
 
 # def xiaopeip_core(wave, spe, fitp, possible, eta=0):
 #     l = len(wave)
@@ -149,12 +149,12 @@ def waveformfft(wave, spe_pre):
 
 def threshold(wave, spe_pre):
     pet = np.argwhere(wave[spe_pre['peak_c']:] > spe_pre['std'] * 5).flatten()
-    pwe = wave[spe_pre['peak_c']:][pet]
-    pwe = pwe / pwe.sum() * np.abs(wave.sum()) / spe_pre['spe'].sum()
+    cha = wave[spe_pre['peak_c']:][pet]
+    cha = cha / cha.sum() * np.abs(wave.sum()) / spe_pre['spe'].sum()
     if len(pet) == 0:
         pet = np.array([np.argmax(wave[spe_pre['peak_c']:])])
-        pwe = np.array([1])
-    return pet, pwe
+        cha = np.array([1])
+    return pet, cha
 
 def findpeak(wave, spe_pre):
     w = savgol_filter(wave, 11, 2)
@@ -162,12 +162,12 @@ def findpeak(wave, spe_pre):
     dpta = np.diff(dpta, prepend=dpta[0])
     petr = np.argwhere((w > spe_pre['std'] * 5) & (dpta < 0)).flatten() - spe_pre['peak_c']
     pet = petr[petr >= 0]
-    pwe = wave[pet + spe_pre['peak_c']]
-    pwe = pwe / np.sum(pwe) * np.abs(np.sum(wave)) / np.sum(spe_pre['spe'])
+    cha = wave[pet + spe_pre['peak_c']]
+    cha = cha / np.sum(cha) * np.abs(np.sum(wave)) / np.sum(spe_pre['spe'])
     if len(pet) == 0:
         pet = np.array([np.argmax(wave[spe_pre['peak_c']:])])
-        pwe = np.array([1])
-    return pet, pwe
+        cha = np.array([1])
+    return pet, cha
 
 def read_model(spe_path):
     with h5py.File(spe_path, 'r', libver='latest', swmr=True) as speFile:
@@ -203,14 +203,14 @@ def read_model(spe_path):
         plt.close()
     return spe_pre
 
-def clip(pet, pwe, thres):
-    if len(pet[pwe > thres]) == 0:
-        pet = np.array([pet[np.argmax(pwe)]])
-        pwe = np.array([1])
+def clip(pet, cha, thres):
+    if len(pet[cha > thres]) == 0:
+        pet = np.array([pet[np.argmax(cha)]])
+        cha = np.array([1])
     else:
-        pet = pet[pwe > thres]
-        pwe = pwe[pwe > thres]
-    return pet, pwe
+        pet = pet[cha > thres]
+        cha = cha[cha > thres]
+    return pet, cha
 
 def snip_baseline(waveform, itera=20):
     wm = np.min(waveform)
@@ -272,38 +272,33 @@ def probcharge(charge, n, gmu, gsigma=40):
     prob = norm.pdf(charge, loc=gmu, scale=gsigma) / (1 - norm.cdf(0, loc=gmu, scale=gsigma))
     return prob
 
-def demo(pet, pwe, tth, spe_pre, window, wave, cid, full=False, fold='Note/figures', ext='.pgf'):
+def demo(pet_sub, cha_sub, tth, spe_pre, window, wave, cid, p, full=False, fold='Note/figures', ext='.pgf'):
     penum = len(tth)
     print('PEnum is {}'.format(penum))
-    pf0 = np.zeros(window)
-    pf1 = np.zeros(window)
-    t = tth['HitPosInWindow']
-    w = tth['Charge']
-    tu = np.unique(t)
-    cu = np.array([np.sum(w[tth['HitPosInWindow'] == i]) for i in tu])
-    tuint = np.around(tu).astype(np.int)
-    for i in tu:
-        pf0[i] = pf0[i] + cu[i]
-    pf0 = pf0 / spe_pre['spe'].sum()
-    pf1[pet] = pwe / spe_pre['spe'].sum()
+    pan = np.arange(window)
+    pet_ans_0 = tth['HitPosInWindow']
+    cha_ans = tth['Charge']
+    pet_ans = np.unique(pet_ans_0)
+    cha_ans = np.array([np.sum(cha_ans[pet_ans_0 == i]) for i in pet_ans])
     ylabel = '$Charge/\mathrm{mV}\cdot\mathrm{ns}$'
-    distd = '(W/ns,C/mV*ns)'; distl = 'cdiff'
-    edist = pwe.sum() - w.sum()
-    print('truth HitPosInWindow = {}, Weight = {}'.format(t, w))
-    wave0 = np.convolve(spe_pre['spe'], pf0, 'full')[:window]
-    print('truth Resi-norm = {}'.format(np.linalg.norm(wave-wave0)))
-    print('HitPosInWindow = {}, Weight = {}'.format(pet, pwe))
-    wdist = scipy.stats.wasserstein_distance(t, pet, u_weights=w, v_weights=pwe)
-    print('wdist = {}, '.format(wdist)+distl+' = {}'.format(edist))
-    wave1 = np.convolve(spe_pre['spe'], pf1, 'full')[:window]
-    print('Resi-norm = {}'.format(np.linalg.norm(wave-wave1)))
+    distd = '(W/ns,C/mV*ns)'
+    distl = 'cdiff'
+    edist = cha_sub.sum() - cha_ans.sum()
+    print('truth HitPosInWindow = {}, Weight = {}'.format(pet_ans, cha_ans))
+    wav_ans = np.sum([np.where(pan > pet_ans[j], spe(pan - pet_ans[j], tau=p[0], sigma=p[1], A=p[2]) * cha_ans[j], 0) for j in range(len(pet_ans))], axis=0)
+    print('truth Resi-norm = {}'.format(np.linalg.norm(wave - wav_ans)))
+    print('HitPosInWindow = {}, Weight = {}'.format(pet_sub, cha_sub))
+    wdist = scipy.stats.wasserstein_distance(pet_ans, pet_sub, u_weights=cha_ans, v_weights=cha_sub)
+    print('wdist = {}, '.format(wdist) + distl + ' = {}'.format(edist))
+    wav_sub = np.sum([np.where(pan > pet_sub[j], spe(pan - pet_sub[j], tau=p[0], sigma=p[1], A=p[2]) * cha_sub[j], 0) for j in range(len(pet_sub))], axis=0)
+    print('Resi-norm = {}'.format(np.linalg.norm(wave - wav_sub)))
 
     fig = plt.figure(figsize=(10, 10))
     fig.tight_layout()
     ax0 = fig.add_axes((.1, .2, .85, .3))
     ax0.plot(wave, c='b', label='origin wave')
-    ax0.plot(wave0, c='k', label='truth wave')
-    ax0.plot(wave1, c='g', label='recon wave')
+    ax0.plot(wav_ans, c='k', label='truth wave')
+    ax0.plot(wav_sub, c='g', label='recon wave')
     ax0.set_ylabel('$Voltage/\mathrm{mV}$')
     ax0.hlines(5 * spe_pre['std'], 0, 1029, color='c', label='threshold')
     ax0.set_xticklabels([])
@@ -313,31 +308,31 @@ def demo(pet, pwe, tth, spe_pre, window, wave, cid, full=False, fold='Note/figur
     if full:
         ax0.set_xlim(0, window)
     else:
-        ax0.set_xlim(max(t.min()-50, 0), min(t.max()+150, window))
+        ax0.set_xlim(max(pet_ans.min()-50, 0), min(pet_ans.max()+150, window))
     ax1 = fig.add_axes((.1, .5, .85, .2))
-    ax1.vlines(tu, 0, cu, color='k', label='truth Charge')
+    ax1.vlines(pet_ans, 0, cha_ans, color='k', label='truth Charge')
     ax1.set_ylabel(ylabel)
     ax1.set_xticklabels([])
     ax1.set_xlim(ax0.get_xlim())
-    ax1.set_ylim(0, max(max(cu), max(pwe))*1.1)
-    ax1.set_yticks(np.arange(0, max(max(cu), max(pwe)), 50))
+    ax1.set_ylim(0, max(max(cha_ans), max(cha_sub))*1.1)
+    ax1.set_yticks(np.arange(0, max(max(cha_ans), max(cha_sub)), 50))
     ax1.legend(loc=1)
     ax1.grid()
     ax2 = fig.add_axes((.1, .7, .85, .2))
-    ax2.vlines(pet, 0, pwe, color='g', label='recon Charge')
+    ax2.vlines(pet_sub, 0, cha_sub, color='g', label='recon Charge')
     ax2.set_ylabel(ylabel)
     ax2.set_xticklabels([])
     ax2.set_xlim(ax0.get_xlim())
-    ax2.set_ylim(0, max(max(cu), max(pwe))*1.1)
-    ax2.set_yticks(np.arange(0, max(max(cu), max(pwe)), 50))
+    ax2.set_ylim(0, max(max(cha_ans), max(cha_sub))*1.1)
+    ax2.set_yticks(np.arange(0, max(max(cha_ans), max(cha_sub)), 50))
     ax2.legend(loc=1)
     ax2.grid()
     ax3 = fig.add_axes((.1, .1, .85, .1))
-    ax3.scatter(np.arange(window), wave1 - wave, c='k', label='residual wave', marker='.')
+    ax3.scatter(np.arange(window), wav_sub - wave, c='k', label='residual wave', marker='.')
     ax3.set_xlabel('$t/\mathrm{ns}$')
     ax3.set_ylabel('$Voltage/\mathrm{mV}$')
     ax3.set_xlim(ax0.get_xlim())
-    dh = int((max(np.abs(wave1 - wave))//5+1)*5)
+    dh = int((max(np.abs(wav_sub - wave))//5+1)*5)
     ax3.set_yticks(np.linspace(-dh, dh, int(2*dh//5+1)))
     ax3.legend(loc=1)
     ax3.grid()
