@@ -45,7 +45,7 @@ sim : $(sim)
 define mcmcrec
 result/$(method)/char/%.h5 : waveform/%.h5 spe.h5
 	@mkdir -p $$(dir $$@)
-	python3 toyRecMCMC.py $$< --met $(method) -N 25 --ref $$(word 2,$$^) -o $$@ > $$@.log 2>&1
+	python3 toyRecMCMC.py $$< --met $(method) -N 100 --ref $$(word 2,$$^) -o $$@ > $$@.log 2>&1
 endef
 
 define fit

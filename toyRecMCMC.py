@@ -23,13 +23,20 @@ from tqdm import tqdm
 import torch
 torch.manual_seed(0)
 # torch.autograd.set_detect_anomaly(True)
+use_cuda = False
+if use_cuda:
+    device = torch.device(0)
+    torch.cuda.init()
+    torch.cuda.empty_cache()
+else:
+    device = torch.device('cpu')
 import pyro
 pyro.set_rng_seed(0)
 import jax
 jax.config.update('jax_enable_x64', True)
 import jax.numpy as jnp
 import numpyro
-# numpyro.set_platform('gpu')
+numpyro.set_platform('cpu')
 # numpyro.set_host_device_count(2)
 # import numpyro.contrib.tfp.distributions
 import pystan
@@ -55,15 +62,7 @@ fipt = args.ipt
 fopt = args.opt
 reference = args.ref
 method = args.met
-Demo = False
-
-use_cuda = False
-if use_cuda:
-    device = torch.device(0)
-    torch.cuda.init()
-    torch.cuda.empty_cache()
-else:
-    device = torch.device('cpu')
+Demo = True
 
 spe_pre = wff.read_model(reference)
 with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
@@ -165,21 +164,16 @@ class mNormal(numpyro.distributions.distribution.Distribution):
         return jax.scipy.special.logsumexp(prob, axis=0, b=pl) + jnp.log(2)
 
 def time_numpyro(a0, a1):
-    n = 2
     Awindow = int(window * 0.95)
     init = namedtuple('ParamInfo', ['z', 'potential_energy', 'z_grad'])
     rng_key = jax.random.PRNGKey(1)
     rng_key, rng_key_ = jax.random.split(rng_key)
     stime = np.empty(a1 - a0)
-    dt = np.zeros((a1 - a0) * Awindow * n, dtype=opdt)
+    dt = np.zeros((a1 - a0) * Awindow * 2, dtype=opdt)
     start = 0
     end = 0
     count = 0
-    tlist = jnp.arange(0, Awindow, 1 / n)
-    t_auto = jnp.arange(window)[:, None] - tlist
-    # amplitude to voltage converter
-    AV = p[2] * jnp.exp(-1 / 2 * jnp.power((jnp.log((t_auto + jnp.abs(t_auto)) * (1 / p[0] / 2)) * (1 / p[1])), 2))
-    def model(y, mu):
+    def model(n, y, mu, tlist, AV):
         t0 = numpyro.sample('t0', numpyro.distributions.Uniform(0., 600.))
         if Tau == 0:
             light_curve = numpyro.distributions.Normal(t0, scale=Sigma)
@@ -196,17 +190,29 @@ def time_numpyro(a0, a1):
             obs = numpyro.sample('obs', numpyro.distributions.Normal(jnp.matmul(AV, A), scale=std), obs=y)
         return obs
     nuts_kernel = numpyro.infer.NUTS(model, adapt_step_size=True)
-    mcmc = numpyro.infer.MCMC(nuts_kernel, num_samples=1000, num_warmup=500, num_chains=1, progress_bar=Demo, jit_model_args=True)
+    mcmc = numpyro.infer.MCMC(nuts_kernel, num_samples=1000, num_warmup=1000, num_chains=1, progress_bar=Demo, chain_method='sequential', jit_model_args=True)
     for i in range(a0, a1):
         cid = ent[i]['ChannelID']
         wave = jnp.array(ent[i]['Waveform'].astype(np.float32)) * spe_pre[cid]['epulse']
         mu = jnp.sum(wave) / gmu
+        if mu > 15:
+            n = 3
+        else:
+            n = 2
         A_init = jnp.repeat(jnp.hstack([jnp.where(wave[:Awindow] > spe_pre[cid]['std'] * 5, wave[:Awindow], 0)[round(spe_pre[cid]['mar_l']):], jnp.zeros(round(spe_pre[cid]['mar_l']))]), n)
         A_init = A_init / jnp.sum(A_init) * mu
-        t0_init = jnp.clip(jnp.argwhere(wave - spe_pre[cid]['std'] * 5 > 0).flatten()[0] - spe_pre[cid]['mar_l'], 0, window).astype(jnp.float32)
+        pan = jnp.argwhere(wave - spe_pre[cid]['std'] * 5 > 0).flatten()
+        t0_init = jnp.clip(pan[0] - spe_pre[cid]['mar_l'], 0, window).astype(jnp.float32)
+        right = jnp.clip(pan.min() - round(2 * spe_pre[cid]['mar_l']), 0, window)
+        left = jnp.clip(pan.max(), 0, window)
+        # print(left - right)
+        tlist = jnp.arange(right, left, 1 / n)
+        t_auto = jnp.arange(window)[:, None] - tlist
+        # amplitude to voltage converter
+        AV = p[2] * jnp.exp(-1 / 2 * jnp.power((jnp.log((t_auto + jnp.abs(t_auto)) * (1 / p[0] / 2)) * (1 / p[1])), 2))
         try:
             # raise OSError
-            mcmc.run(rng_key, y=wave, mu=mu)
+            mcmc.run(rng_key, n=n, y=wave, mu=mu, tlist=tlist, AV=AV)
             # potential = lambda z: numpyro.infer.util.potential_energy(model=model, model_args=(wave, mu), model_kwargs={}, params=z)
             # initp = init(z={'t0':t0_init, 'A':A_init}, potential_energy=potential({'t0':t0_init, 'A':A_init}), z_grad=jax.grad(potential)({'t0':t0_init, 'A':A_init}))
             # mcmc.run(rng_key, y=wave, mu=mu, init_params=initp)
@@ -214,6 +220,15 @@ def time_numpyro(a0, a1):
             A = np.array(mcmc.get_samples()['A'])
             count = count + 1
             if np.abs(np.mean(t0) - t0_init) > 5 * Sigma:
+                plt.plot(ent[i]['Waveform'], 'b', label='wave')
+                plt.plot(np.arange(right, left, 1 / n), np.mean(A, axis=0) * np.sum(spe_pre[cid]['spe']), 'k', label='A')
+                plt.hlines(spe_pre[cid]['std'] * 5, 0, ent[i]['Waveform'].max(), 'y', label='thres')
+                plt.vlines(t0_init, 0, ent[i]['Waveform'].max(), 'm', label='t0_init')
+                plt.vlines(np.mean(t0), 0, ent[i]['Waveform'].max(), 'r', label='t0_mcmc')
+                plt.vlines(simtruth[i]['T0'], 0, ent[i]['Waveform'].max(), 'g', label='t0_truth')
+                plt.xlim(right, left)
+                plt.legend()
+                plt.savefig('{:05d}.png'.format(i))
                 t0 = np.where(np.abs(np.mean(t0) - t0_init) <= 5 * Sigma, np.mean(t0), t0_init)
                 print('Bad waveform is TriggerNo = {:05d}, ChannelID = {:02d}, i = {:05d}'.format(ent[i]['TriggerNo'], ent[i]['ChannelID'], i))
         except:
@@ -324,7 +339,7 @@ if args.Ncpu == 1:
     slices = [[0, N]]
 else:
     chunk = N // args.Ncpu + 1
-    slices = np.vstack((np.arange(0, N, chunk), np.append(np.arange(chunk, N, chunk), N))).T.astype(np.int).tolist()
+    slices = np.vstack((np.arange(0, N, chunk), np.append(np.arange(chunk, N, chunk), N))).T.astype(int).tolist()
 if not os.path.exists('stanmodel.pkl'):
     os.system('python3 stanmodel.py')
 stanmodel = pickle.load(open('stanmodel.pkl', 'rb'))
@@ -350,8 +365,6 @@ e_pel, i_pel = np.unique(e_pel, return_index=True)
 i_pel = np.append(i_pel, len(pelist))
 opdt = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('HitPosInWindow', np.float64), ('Charge', np.float64)])
 
-chunk = N // args.Ncpu + 1
-slices = np.vstack((np.arange(0, N, chunk), np.append(np.arange(chunk, N, chunk), N))).T.astype(np.int).tolist()
 with Pool(min(args.Ncpu, cpu_count())) as pool:
     result = pool.starmap(partial(time_numpyro), slices)
 ts['tswave'] = np.hstack([result[i][0] for i in range(len(slices))])
