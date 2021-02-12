@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import os
 import random
 import argparse
@@ -64,7 +62,7 @@ def PreProcess(channelid) :
     Origin_Waves = np.vstack(Waves_of_this_channel['Waveform'].to_numpy())
     Shifted_Waves = np.empty((len(Origin_Waves), WindowSize), dtype=np.float32)
     for i in range(len(Origin_Waves)) :
-        Shifted_Waves[i] = Origin_Waves[i].astype(np.float) * spe_pre[channelid]['epulse']
+        Shifted_Waves[i] = Origin_Waves[i].astype(np.float64) * spe_pre[channelid]['epulse']
 
     PEnumSpectrum = Make_Time_Vector(Truth_of_this_channel, Waves_of_this_channel, 'PEnum')
     ChargeSpectrum = Make_Time_Vector(Truth_of_this_channel, Waves_of_this_channel, 'Charge')

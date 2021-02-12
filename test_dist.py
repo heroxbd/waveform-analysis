@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import sys
 import numpy as np
 import csv
@@ -29,7 +27,7 @@ def wpdist(a, b):
     for i, c in zip(range(a, b), range(b - a)):
         cid = df_wav[i_wav[i]]['ChannelID']
         p = spe_pre[cid]['parameters']
-        wave = df_wav[i_wav[i]]['Waveform'].astype(np.float) * spe_pre[cid]['epulse']
+        wave = df_wav[i_wav[i]]['Waveform'].astype(np.float64) * spe_pre[cid]['epulse']
         
         pet_sub = df_sub[i_sub[i]:i_sub[i+1]]['HitPosInWindow']
         cha_sub = df_sub[i_sub[i]:i_sub[i+1]]['Charge']
@@ -84,7 +82,7 @@ assert len(e_ans) ==  len(e_wav) and len(e_ans) == len(e_sub), 'Incomplete Submi
 
 l = len(e_sub)
 chunk = l // Ncpu + 1
-slices = np.vstack((np.arange(0, l, chunk), np.append(np.arange(chunk, l, chunk), l))).T.astype(np.int).tolist()
+slices = np.vstack((np.arange(0, l, chunk), np.append(np.arange(chunk, l, chunk), l))).T.astype(int).tolist()
 with Pool(min(Ncpu, cpu_count())) as pool:
     result = pool.starmap(wpdist, slices)
 dt = np.hstack(result)

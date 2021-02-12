@@ -1,7 +1,7 @@
-# -*- coding: utf-8 -*-
-
 import os
 import math
+import warnings
+warnings.filterwarnings('ignore', 'The iteration is not making good progress')
 
 import numpy as np
 np.set_printoptions(suppress=True)
@@ -187,11 +187,11 @@ def read_model(spe_path):
         for i in range(len(spe)):
             peak_c = np.argmax(spe[i])
             ft = interp1d(np.arange(0, len(spe[i]) - peak_c), 0.1 - spe[i][peak_c:])
-            t = opti.fsolve(ft, np.argwhere(spe[i][peak_c:] < 0.1).flatten()[0])[0] + peak_c
+            t = opti.fsolve(ft, x0=np.argwhere(spe[i][peak_c:] < 0.1).flatten()[0])[0] + peak_c
             fl = interp1d(np.arange(0, peak_c), spe[i][:peak_c] - 5 * std[i])
-            mar_l = opti.fsolve(fl, np.sum(spe[i][:peak_c] < 5 * std[i]))[0]
+            mar_l = opti.fsolve(fl, x0=np.sum(spe[i][:peak_c] < 5 * std[i]))[0]
             fr = interp1d(np.arange(0, len(spe[i]) - peak_c), 5 * std[i] - spe[i][peak_c:])
-            mar_r = t - (opti.fsolve(fr, np.sum(spe[i][peak_c:] > 5 * std[i]))[0] + peak_c)
+            mar_r = t - (opti.fsolve(fr, x0=np.sum(spe[i][peak_c:] > 5 * std[i]))[0] + peak_c)
             spe_pre_i = {'spe':spe[i], 'epulse':epulse, 'peak_c':peak_c, 'mar_l':mar_l, 'mar_r':mar_r, 'std':std[i], 'parameters':p[i]}
             spe_pre.update({cid[i]:spe_pre_i})
             ax.plot(spe_pre[cid[i]]['spe'])
@@ -249,15 +249,32 @@ def convolve_exp_norm(x, tau, sigma):
     return y
 
 def spe(t, tau, sigma, A):
-    s = np.zeros_like(t).astype(np.float)
+    s = np.zeros_like(t).astype(np.float64)
     t0 = t[t > np.finfo(np.float64).tiny]
     s[t > np.finfo(np.float64).tiny] = A * np.exp(-1 / 2 * (np.log(t0 / tau) * np.log(t0 / tau) / sigma / sigma))
     return s
 
-def charge(n, gmu, gsigma=40):
-    gsigma = 40.
+def charge(n, gmu, gsigma):
     chargesam = norm.ppf(1 - uniform.rvs(scale=1-norm.cdf(0, loc=gmu, scale=gsigma), size=n), loc=gmu, scale=gsigma)
     return chargesam
+
+def probcharhitt(t0, hitt, probcharge, Tau, Sigma, npe):
+    prob = probcharge * np.power(convolve_exp_norm(hitt - t0, Tau, Sigma), np.arange(1, npe)[:, None])
+    prob = np.sum(prob / np.sum(probcharge, axis=0), axis=0)
+    return prob
+
+def likelihoodt0(hitt, char, gmu, gsigma, Tau, Sigma, npe, mode='charge'):
+    b = [0., 600.]
+    tlist = np.arange(b[0], b[1] + 1)
+    if mode == 'charge':
+        probcharge = np.array([npeprobcharge(char, i, gmu=gmu, gsigma=gsigma) for i in range(1, npe)])
+        logL = lambda t0 : -1 * np.sum(np.log(np.clip(probcharhitt(t0, hitt, probcharge, Tau, Sigma, npe), np.finfo(np.float64).tiny, np.inf)))
+        # logL = lambda t0 : -1 * np.sum(np.log(np.clip(convolve_exp_norm(hitt - t0, Tau, Sigma) * (char / gmu), np.finfo(np.float64).tiny, np.inf)))
+    elif mode == 'all':
+        logL = lambda t0 : -1 * np.sum(np.log(np.clip(convolve_exp_norm(hitt - t0, Tau, Sigma), np.finfo(np.float64).tiny, np.inf)))
+    logLv = np.vectorize(logL)
+    t0 = opti.fmin_l_bfgs_b(logL, x0=[tlist[np.argmin(logLv(tlist))]], approx_grad=True, bounds=[b], maxfun=500000)[0]
+    return t0
 
 def lasso_select(pf_r, wave, mne, E):
     pf_r = pf_r[np.argmin([loss(pf_r[j], mne, wave, E) for j in range(len(pf_r))])]
@@ -266,7 +283,7 @@ def lasso_select(pf_r, wave, mne, E):
 def loss(x, M, y, eta=0.):
     return np.power(y - np.matmul(M, x), 2).sum() + eta * x.sum()
 
-def probcharge(charge, n, gmu, gsigma=40):
+def npeprobcharge(charge, n, gmu, gsigma):
     gmu = gmu * n
     gsigma = gsigma * np.sqrt(n)
     prob = norm.pdf(charge, loc=gmu, scale=gsigma) / (1 - norm.cdf(0, loc=gmu, scale=gsigma))

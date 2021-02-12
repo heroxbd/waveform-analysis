@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import sys
 import re
 import time
@@ -68,7 +66,7 @@ def inferencing(a, b):
         end = 0
         for i in range(a, b):
             cid = ent[i]['ChannelID']
-            wave = ent[i]['Waveform'].astype(np.float) * spe_pre[ent[i]['ChannelID']]['epulse']
+            wave = ent[i]['Waveform'].astype(np.float64) * spe_pre[ent[i]['ChannelID']]['epulse']
             pos = np.argwhere(wave[spe_pre[cid]['peak_c'] + 2:] > 5 * spe_pre[cid]['std']).flatten()
             cha = wave[pos]/(spe_pre[cid]['spe'].sum())
             flag = 1
@@ -102,7 +100,7 @@ def fitting(a, b):
         start = 0
         end = 0
         for i in range(a, b):
-            wave = ent[i]['Waveform'].astype(np.float) * spe_pre[ent[i]['ChannelID']]['epulse']
+            wave = ent[i]['Waveform'].astype(np.float64) * spe_pre[ent[i]['ChannelID']]['epulse']
 
             if method == 'xiaopeip':
 #                 pet, cha, ped = wff.xiaopeip(wave, spe_pre[ent[i]['ChannelID']])
@@ -143,7 +141,7 @@ if args.Ncpu == 1:
     slices = [[0, l]]
 else:
     chunk = l // args.Ncpu + 1
-    slices = np.vstack((np.arange(0, l, chunk), np.append(np.arange(chunk, l, chunk), l))).T.astype(np.int).tolist()
+    slices = np.vstack((np.arange(0, l, chunk), np.append(np.arange(chunk, l, chunk), l))).T.astype(int).tolist()
 print('Initialization finished, real time {0:.02f}s, cpu time {1:.02f}s'.format(time.time() - global_start, time.process_time() - cpu_global_start))
 tic = time.time()
 cpu_tic = time.process_time()

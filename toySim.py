@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import os
 import itertools
 import argparse
@@ -35,6 +33,7 @@ Tau = float(mtslist[1])
 Sigma = float(mtslist[2])
 
 gmu = 160.
+gsigma = 40.
 p = [8., 0.5, 24.]
 p[2] = p[2] * gmu / np.sum(wff.spe(np.arange(window), tau=p[0], sigma=p[1], A=p[2]))
 std = 1.
@@ -43,7 +42,7 @@ def sampling(a0, a1, mu, tau, sigma):
     np.random.seed(a0)
     npe = poisson.ppf(1 - uniform.rvs(scale=1-poisson.cdf(0, mu), size=a1 - a0), mu).astype(np.int)
     t0 = np.random.uniform(100, 500, size=a1 - a0)
-    sams = [np.vstack((wff.time(npe[i], tau, sigma) + t0[i], wff.charge(npe[i], gmu=gmu))).T for i in range(a1 - a0)]
+    sams = [np.vstack((wff.time(npe[i], tau, sigma) + t0[i], wff.charge(npe[i], gmu=gmu, gsigma=gsigma))).T for i in range(a1 - a0)]
     wdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('Waveform', np.int16, window)])
     waves = np.empty(a1 - a0).astype(wdtp)
     pan = np.arange(window)

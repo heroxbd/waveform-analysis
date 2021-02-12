@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import sys
 import h5py
 import argparse
@@ -8,10 +6,7 @@ psr = argparse.ArgumentParser()
 psr.add_argument('-o', dest='opt', help='output file')
 psr.add_argument('ipt', help='input file')
 psr.add_argument('--ref', type=str, nargs='+', help='reference file')
-psr.add_argument('-p', dest='pri', action='store_false', help='print bool', default=True)
 args = psr.parse_args()
-if args.pri:
-    sys.stdout = None
 
 import csv
 import numpy as np
@@ -61,7 +56,7 @@ penum = np.unique(dt['NPE'])
 l = min(50, penum.max())
 wdist_stats = np.zeros((l, 6))
 edist_stats = np.zeros((l, 6))
-for i in tqdm(range(l), disable=args.pri):
+for i in range(l):
     if i+1 in penum:
         dtwpi = dt['wdist'][dt['NPE'] == i+1]
         dtepi = dt['RSS'][dt['NPE'] == i+1]
@@ -90,16 +85,18 @@ L = len(dt['wdist'])
 fig = plt.figure()
 gs = gridspec.GridSpec(2, 2, figure=fig, left=0.1, right=0.9, top=0.9, bottom=0.1, wspace=0.2, hspace=0.3)
 ax1 = fig.add_subplot(gs[0, 0])
-ax1.hist(dt['wdist'][dt['wdist']<N], bins=50, density=1)
+ax1.hist(dt['wdist'][dt['wdist'] < N], bins=50)
 ax1.set_title('count {}(Wd<{:.02f}ns)/{}={:.02f}'.format(a, N, L, a/L))
 ax1.set_xlabel(r'$W-dist/\mathrm{ns}$')
-ax1.set_ylabel(r'$Normalized Count$')
+ax1.set_ylabel(r'$Count$')
+# ax1.set_yscale('log')
 ax2 = fig.add_subplot(gs[1, 0])
-ax2.hist(dt['RSS'][np.abs(dt['RSS']) < M], bins=50, density=1)
-ax1.set_ylabel(r'$Normalized Count$')
+ax2.hist(dt['RSS'][np.abs(dt['RSS']) < M], bins=50)
+ax2.set_ylabel(r'$Count$')
+# ax2.set_yscale('log')
 ax2.set_title('count {}(RSS<{:.02f}mV^2)/{}={:.02f}'.format(b, M, L, b/L))
 ax2.set_xlabel(r'$RSS/\mathrm{mV}^{2}$')
-ax2.yaxis.get_major_formatter().set_powerlimits((0, 1))
+# ax2.yaxis.get_major_formatter().set_powerlimits((0, 1))
 ax3 = fig.add_subplot(gs[:, 1])
 vali = np.logical_and(np.abs(dt['RSS'])<M, dt['wdist']<N)
 h2 = ax3.hist2d(dt['wdist'][vali], dt['RSS'][vali], bins=(50, 50), cmap=mycmp)
@@ -107,7 +104,7 @@ fig.colorbar(h2[3], ax=ax3, aspect=50)
 ax3.set_xlabel('$W-dist/\mathrm{ns}$')
 ax3.set_ylabel(r'$RSS/\mathrm{mV}^{2}$')
 ax3.set_title('W-dist&RSS hist, Wd<{:.02f}ns, RSS<{:.02f}mV^2,'.format(N, M))
-ax3.yaxis.get_major_formatter().set_powerlimits((0, 1))
+# ax3.yaxis.get_major_formatter().set_powerlimits((0, 1))
 fig.suptitle(args.ipt.split('/')[-1] + ' Dist stats, method = ' + str(method))
 pdf.savefig(fig)
 plt.close(fig)
@@ -115,9 +112,7 @@ plt.close(fig)
 fig = plt.figure()
 gs = gridspec.GridSpec(1, 2, figure=fig, left=0.1, right=0.9, top=0.9, bottom=0.1, wspace=0.2, hspace=0.2)
 ax1 = fig.add_subplot(gs[0, 0])
-# ey1 = np.vstack([wdist_stats[:, 0]-wdist_stats[:, 4], wdist_stats[:, 5]-wdist_stats[:, 0]])
-# ax1.errorbar(np.arange(1, l + 1), wdist_stats[:, 0], yerr=ey1, label=r'$W-dist^{95\%}_{5\%}$')
-ax1.boxplot(np.array([dt['wdist'][dt['NPE'] == i+1] for i in range(l)], dtype=np.object), sym='', patch_artist=True)
+ax1.boxplot(np.array([dt['wdist'][dt['NPE'] == i+1] for i in range(l)], dtype=object), sym='', patch_artist=True)
 ax1.plot(np.arange(1, l + 1), wdist_stats[:, 0], label=r'$W-dist$')
 ax1.set_xlabel(r'$N_{pe}$')
 ax1.set_xlim(penum[0] - 0.5, penum[-1] + 0.5)
@@ -125,9 +120,7 @@ ax1.set_ylabel(r'$W-dist/\mathrm{ns}$')
 ax1.set_title('W-dist vs ' + r'$N_{pe}$' + ' stats')
 ax1.legend()
 ax2 = fig.add_subplot(gs[0, 1])
-# ey2 = np.vstack([edist_stats[:, 0]-edist_stats[:, 4], edist_stats[:, 5]-edist_stats[:, 0]])
-# ax2.errorbar(np.arange(1, l + 1), edist_stats[:, 0], yerr=ey2, label=r'$RSS^{95\%}_{5\%}$')
-ax2.boxplot(np.array([dt['RSS'][dt['NPE'] == i+1] for i in range(l)], dtype=np.object), sym='', patch_artist=True)
+ax2.boxplot(np.array([dt['RSS'][dt['NPE'] == i+1] for i in range(l)], dtype=object), sym='', patch_artist=True)
 ax2.plot(np.arange(1, l + 1), edist_stats[:, 0], label=r'$RSS$')
 ax2.set_xlabel(r'$N_{pe}$')
 ax2.set_xlim(penum[0] - 0.5, penum[-1] + 0.5)
@@ -185,32 +178,42 @@ if not np.all(np.isnan(time['tswave'])):
 pdf.savefig(fig)
 plt.close(fig)
 
-for i in tqdm(range(l), disable=args.pri):
+for i in range(l):
     if i+1 in penum:
+        dtwpi = dt['wdist'][dt['NPE'] == i+1]
+        rss = dt['RSS'][dt['NPE'] == i+1]
+        rss_recon = dt['RSS_recon'][dt['NPE'] == i+1]
+        rss_truth = dt['RSS_truth'][dt['NPE'] == i+1]
+        charged = dt['chargediff'][dt['NPE'] == i+1]
+        deltarss = rss_recon - rss_truth
         fig = plt.figure()
         gs = gridspec.GridSpec(2, 2, figure=fig, left=0.05, right=0.95, top=0.9, bottom=0.1, wspace=0.15, hspace=0.2)
         ax0 = fig.add_subplot(gs[0, 0])
-        n = max(np.percentile(dtwpi, 95), N)
-        ax0.hist(dtwpi[dtwpi < n], bins=50)
-        a = (dtwpi < n).sum()
-        b = len(dtwpi)
-        ax0.set_title('count {}(<{:.02f}ns)/{}={:.02f}'.format(a, n, b, a/b))
+        ax0.hist(dtwpi, bins=np.arange(0, dtwpi.max()+0.01, 0.01))
+        # n = max(np.percentile(dtwpi, 95), N)
+        # ax0.hist(dtwpi[dtwpi < n], bins=50)
+        # a = (dtwpi < n).sum()
+        # b = len(dtwpi)
+        # ax0.set_title('count {}(<{:.02f}ns)/{}={:.02f}'.format(a, n, b, a/b))
         ax0.set_xlabel(r'$W-dist/\mathrm{ns}$')
         ax1 = fig.add_subplot(gs[0, 1])
-        r1 = np.percentile(rss, 0)
-        r2 = np.percentile(rss, 98)
-        ax1.hist(rss[(rss > r1) & (rss < r2)], bins=50, density=1)
-        ax1.set_xlabel(r'$RSS/\mathrm{mV}^{2}$' + ', within ({:.02f}, {:.02f})'.format(r1, r2))
+        ax1.hist(rss, bins=np.arange(0, rss.max()+50, 50))
+        ax1.set_xlabel(r'$RSS/\mathrm{mV}^{2}$')
+        # r1 = np.percentile(rss, 0)
+        # r2 = np.percentile(rss, 98)
+        # ax1.hist(rss[(rss > r1) & (rss < r2)], bins=50)
+        # ax1.set_xlabel(r'$RSS/\mathrm{mV}^{2}$' + ', within ({:.02f}, {:.02f})'.format(r1, r2))
         ax2 = fig.add_subplot(gs[1, 0])
-        ax2.hist(dt['chargediff'][dt['NPE'] == i+1], bins=50)
+        ax2.hist(charged, bins=np.arange(0, charged.max()+2, 2))
         ax2.set_xlabel(r'$Charge-diff/\mathrm{mV}\cdot\mathrm{ns}$')
         ax3 = fig.add_subplot(gs[1, 1])
-        deltarss = rss_recon - rss_truth
-        r1 = np.percentile(deltarss, 0)
-        r2 = np.percentile(deltarss, 98)
-        ax3.hist(deltarss[(deltarss > r1) & (deltarss < r2)], bins=50, density=1)
-        ax3.set_xlabel(r'$RSS_{recon} - RSS_{truth}/\mathrm{mV}^{2}$' + ', within ({:.02f}, {:.02f})'.format(r1, r2))
-        fig.suptitle(args.ipt.split('/')[-1] + ' ' + r'$N_{pe}$' + '={:.0f}'.format(i+1))
+        ax3.hist(deltarss, bins=np.arange(0, deltarss.max()+50, 50))
+        ax3.set_xlabel(r'$RSS_{recon} - RSS_{truth}/\mathrm{mV}^{2}$')
+        # r1 = np.percentile(deltarss, 0)
+        # r2 = np.percentile(deltarss, 98)
+        # ax3.hist(deltarss[(deltarss > r1) & (deltarss < r2)], bins=50)
+        # ax3.set_xlabel(r'$RSS_{recon} - RSS_{truth}/\mathrm{mV}^{2}$' + ', within ({:.02f}, {:.02f})'.format(r1, r2))
+        fig.suptitle(args.ipt.split('/')[-1] + ' ' + r'$N_{pe}$' + ' = {:.0f}'.format(i+1) + ' ' + 'count = {}'.format(sum(dt['NPE'] == i+1)))
         pdf.savefig(fig)
         plt.close(fig)
 

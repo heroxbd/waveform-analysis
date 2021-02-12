@@ -1,7 +1,7 @@
 SHELL:=bash
 channelN:=$(shell seq -f '%02g' 0 0)
-mu:=$(shell seq -f '%02g' 1 1 5 && seq -f '%02g' 6 2 10 && seq -f '%02g' 15 5 30)
-# mu:=$(shell seq -f '%02g' 15 5 15)
+# mu:=$(shell seq -f '%02g' 1 1 5 && seq -f '%02g' 6 2 10 && seq -f '%02g' 15 5 30)
+mu:=$(shell seq -f '%02g' 15 5 15)
 tau:=$(shell seq -f '%02g' 0 20 100)
 sigma:=$(shell seq -f '%02g' 0 5 15)
 
@@ -103,9 +103,6 @@ spe.h5 : $(sim) ;
 
 clean :
 	pushd result/$(method); rm -r ./* ; popd
-
-model.pkl :
-	python3 model.py $@
 
 .DELETE_ON_ERROR: 
 

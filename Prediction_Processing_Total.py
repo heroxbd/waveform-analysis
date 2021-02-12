@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import argparse
 psr = argparse.ArgumentParser()
 psr.add_argument('ipt', help='input file')
@@ -43,7 +41,7 @@ def Read_Data(startentry, endentry) :
             Shifted_Waves_and_info[name] = Waveforms_and_info[name]
     for i in range(len(Waveforms_and_info)) :
         channelid = Waveforms_and_info[i]['ChannelID']
-        Shifted_Waves_and_info[i]['Waveform'] = Waveforms_and_info[i]['Waveform'].astype(np.float) * spe_pre[channelid]['epulse']
+        Shifted_Waves_and_info[i]['Waveform'] = Waveforms_and_info[i]['Waveform'].astype(np.float64) * spe_pre[channelid]['epulse']
     RawDataFile.close()
     return pd.DataFrame({name: list(Shifted_Waves_and_info[name]) for name in gpufloat_dtype.names})
 

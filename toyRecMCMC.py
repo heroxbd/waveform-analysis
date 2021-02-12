@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import os
 import sys
 import re
@@ -62,7 +60,7 @@ fipt = args.ipt
 fopt = args.opt
 reference = args.ref
 method = args.met
-Demo = True
+Demo = False
 
 spe_pre = wff.read_model(reference)
 with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
@@ -164,6 +162,7 @@ class mNormal(numpyro.distributions.distribution.Distribution):
         return jax.scipy.special.logsumexp(prob, axis=0, b=pl) + jnp.log(2)
 
 def time_numpyro(a0, a1):
+    npe = 6
     Awindow = int(window * 0.95)
     init = namedtuple('ParamInfo', ['z', 'potential_energy', 'z_grad'])
     rng_key = jax.random.PRNGKey(1)
@@ -173,8 +172,8 @@ def time_numpyro(a0, a1):
     start = 0
     end = 0
     count = 0
-    def model(n, y, mu, tlist, AV):
-        t0 = numpyro.sample('t0', numpyro.distributions.Uniform(0., 600.))
+    def model(n, y, mu, tlist, AV, t0right, t0left):
+        t0 = numpyro.sample('t0', numpyro.distributions.Uniform(t0right, t0left))
         if Tau == 0:
             light_curve = numpyro.distributions.Normal(t0, scale=Sigma)
             pl = numpyro.primitives.deterministic('pl', jnp.exp(light_curve.log_prob(tlist)) * mu / n + jnp.finfo(jnp.float32).resolution)
@@ -192,48 +191,32 @@ def time_numpyro(a0, a1):
     nuts_kernel = numpyro.infer.NUTS(model, adapt_step_size=True)
     mcmc = numpyro.infer.MCMC(nuts_kernel, num_samples=1000, num_warmup=1000, num_chains=1, progress_bar=Demo, chain_method='sequential', jit_model_args=True)
     for i in range(a0, a1):
+        petime = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
         cid = ent[i]['ChannelID']
         wave = jnp.array(ent[i]['Waveform'].astype(np.float32)) * spe_pre[cid]['epulse']
         mu = jnp.sum(wave) / gmu
-        if mu > 15:
-            n = 3
-        else:
-            n = 2
-        A_init = jnp.repeat(jnp.hstack([jnp.where(wave[:Awindow] > spe_pre[cid]['std'] * 5, wave[:Awindow], 0)[round(spe_pre[cid]['mar_l']):], jnp.zeros(round(spe_pre[cid]['mar_l']))]), n)
-        A_init = A_init / jnp.sum(A_init) * mu
-        pan = jnp.argwhere(wave - spe_pre[cid]['std'] * 5 > 0).flatten()
-        t0_init = jnp.clip(pan[0] - spe_pre[cid]['mar_l'], 0, window).astype(jnp.float32)
-        right = jnp.clip(pan.min() - round(2 * spe_pre[cid]['mar_l']), 0, window)
-        left = jnp.clip(pan.max(), 0, window)
-        # print(left - right)
+        n = max(round(mu / math.sqrt(Tau ** 2 + Sigma ** 2)), 1)
+        hitt, char = wff.lucyddm(ent[i]['Waveform'], spe_pre[cid]['spe'], iterations=50)
+        hitt = hitt[char > Thres]
+        char = char[char > Thres]
+        t0_init = jnp.array(wff.likelihoodt0(hitt=hitt, char=char, gmu=gmu, gsigma=gsigma, Tau=Tau, Sigma=Sigma, npe=npe, mode='charge'))
+        right = jnp.clip(hitt.min() - round(3 * spe_pre[cid]['mar_l']), 0, window)
+        left = jnp.clip(hitt.max() + round(3 * spe_pre[cid]['mar_l']), 0, window)
         tlist = jnp.arange(right, left, 1 / n)
         t_auto = jnp.arange(window)[:, None] - tlist
-        # amplitude to voltage converter
         AV = p[2] * jnp.exp(-1 / 2 * jnp.power((jnp.log((t_auto + jnp.abs(t_auto)) * (1 / p[0] / 2)) * (1 / p[1])), 2))
         try:
-            # raise OSError
-            mcmc.run(rng_key, n=n, y=wave, mu=mu, tlist=tlist, AV=AV)
-            # potential = lambda z: numpyro.infer.util.potential_energy(model=model, model_args=(wave, mu), model_kwargs={}, params=z)
-            # initp = init(z={'t0':t0_init, 'A':A_init}, potential_energy=potential({'t0':t0_init, 'A':A_init}), z_grad=jax.grad(potential)({'t0':t0_init, 'A':A_init}))
-            # mcmc.run(rng_key, y=wave, mu=mu, init_params=initp)
-            t0 = np.array(mcmc.get_samples()['t0'])
+            mcmc.run(rng_key, n=n, y=wave, mu=mu, tlist=tlist, AV=AV, t0right=t0_init - 3 * Sigma, t0left=t0_init + 3 * Sigma)
+            t0 = np.array(mcmc.get_samples()['t0']).flatten()
             A = np.array(mcmc.get_samples()['A'])
-            count = count + 1
-            if np.abs(np.mean(t0) - t0_init) > 5 * Sigma:
-                plt.plot(ent[i]['Waveform'], 'b', label='wave')
-                plt.plot(np.arange(right, left, 1 / n), np.mean(A, axis=0) * np.sum(spe_pre[cid]['spe']), 'k', label='A')
-                plt.hlines(spe_pre[cid]['std'] * 5, 0, ent[i]['Waveform'].max(), 'y', label='thres')
-                plt.vlines(t0_init, 0, ent[i]['Waveform'].max(), 'm', label='t0_init')
-                plt.vlines(np.mean(t0), 0, ent[i]['Waveform'].max(), 'r', label='t0_mcmc')
-                plt.vlines(simtruth[i]['T0'], 0, ent[i]['Waveform'].max(), 'g', label='t0_truth')
-                plt.xlim(right, left)
-                plt.legend()
-                plt.savefig('{:05d}.png'.format(i))
-                t0 = np.where(np.abs(np.mean(t0) - t0_init) <= 5 * Sigma, np.mean(t0), t0_init)
-                print('Bad waveform is TriggerNo = {:05d}, ChannelID = {:02d}, i = {:05d}'.format(ent[i]['TriggerNo'], ent[i]['ChannelID'], i))
+            if np.std(t0) < 2 * Sigma:
+                count = count + 1
+            else:
+                raise ValueError
         except:
             t0 = np.array([t0_init])
-            A = np.array([A_init])
+            tlist = hitt
+            A = np.array([char])
             print('Failed waveform is TriggerNo = {:05d}, ChannelID = {:02d}, i = {:05d}'.format(ent[i]['TriggerNo'], ent[i]['ChannelID'], i))
         stime[i - a0] = np.mean(t0)
         pet, cha = wff.clip(tlist, np.mean(A, axis=0), Thres)

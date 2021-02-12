@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import os
 import sys
 import re
@@ -37,7 +35,7 @@ with open(args.conf) as f:
 filelist = os.listdir(args.folder[0])
 filelist = [f for f in filelist if f[0] != '.' and os.path.splitext(f)[-1] == '.h5']
 numbers = [[float(i) for i in f[:-3].split('-')] for f in filelist]
-stype = np.dtype([('mu', np.float), ('tau', np.float), ('sigma', np.float), ('n', np.uint), ('std1sttruth', np.float), ('stdtruth', np.float), ('stdcharge', np.float), ('stdwave', np.float), ('N', np.uint)])
+stype = np.dtype([('mu', np.float64), ('tau', np.float64), ('sigma', np.float64), ('n', np.uint), ('std1sttruth', np.float64), ('stdtruth', np.float64), ('stdcharge', np.float64), ('stdwave', np.float64), ('N', np.uint)])
 mts = np.zeros(len(numbers), dtype=stype)
 mts['mu'] = np.array([i[0] for i in numbers])
 mts['tau'] = np.array([i[1] for i in numbers])

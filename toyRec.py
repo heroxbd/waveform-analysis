@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import time
 import argparse
 from functools import partial
@@ -23,30 +21,21 @@ global_start = time.time()
 cpu_global_start = time.process_time()
 
 window = 1029
-npe = 4
+npe = 6
 gmu = 160.
-
-def probcharhitt(t0, hitt, probcharge):
-    prob = probcharge * np.power(wff.convolve_exp_norm(hitt - t0, Tau, Sigma), np.arange(1, npe)[:, None])
-    prob = np.sum(prob / np.sum(probcharge, axis=0), axis=0)
-    return prob
+gsigma = 40.
 
 def start_time(a0, a1, mode):
     stime = np.empty(a1 - a0)
     for i in range(a0, a1):
-        b = [0., 600.]
-        tlist = np.arange(b[0], b[1] + 1)
         if mode == 'charge':
-            hitt = charge[i_cha[i]:i_cha[i+1]]['HitPosInWindow'].astype(np.float)
+            hitt = charge[i_cha[i]:i_cha[i+1]]['HitPosInWindow'].astype(np.float64)
             char = charge[i_cha[i]:i_cha[i+1]]['Charge']
-            probcharge = np.array([wff.probcharge(char, i, gmu=gmu) for i in range(1, npe)])
-            logL = lambda t0 : -1 * np.sum(np.log(np.clip(probcharhitt(t0, hitt, probcharge), np.finfo(np.float).tiny, np.inf)))
-            # logL = lambda t0 : -1 * np.sum(np.log(np.clip(wff.convolve_exp_norm(hitt - t0, Tau, Sigma) * (char / gmu), np.finfo(np.float).tiny, np.inf)))
+            t0 = wff.likelihoodt0(hitt, char=char, gmu=gmu, gsigma=gsigma, Tau=Tau, Sigma=Sigma, npe=npe, mode='charge')
         elif mode == 'all':
-            hitt = pelist[i_pel[i]:i_pel[i+1]]['HitPosInWindow'].astype(np.float)
-            logL = lambda t0 : -1 * np.sum(np.log(np.clip(wff.convolve_exp_norm(hitt - t0, Tau, Sigma), np.finfo(np.float).tiny, np.inf)))
-        logLv = np.vectorize(logL)
-        stime[i - a0] = opti.fmin_l_bfgs_b(logL, x0=[tlist[np.argmin(logLv(tlist))]], approx_grad=True, bounds=[b], maxfun=500000)[0]
+            hitt = pelist[i_pel[i]:i_pel[i+1]]['HitPosInWindow'].astype(np.float64)
+            t0 = wff.likelihoodt0(hitt, char=None, gmu=gmu, gsigma=gsigma, Tau=Tau, Sigma=Sigma, npe=npe, mode='all')
+        stime[i - a0] = t0
     return stime
 
 spe_pre = wff.read_model('spe.h5')
@@ -90,7 +79,7 @@ ts['ChannelID'] = tc['ChannelID']
 ts['ts1sttruth'] = np.array([np.min(pelist[i_pel[i]:i_pel[i+1]]['HitPosInWindow']) for i in range(N)])
 
 chunk = N // args.Ncpu + 1
-slices = np.vstack((np.arange(0, N, chunk), np.append(np.arange(chunk, N, chunk), N))).T.astype(np.int).tolist()
+slices = np.vstack((np.arange(0, N, chunk), np.append(np.arange(chunk, N, chunk), N))).T.astype(int).tolist()
 with Pool(min(args.Ncpu, cpu_count())) as pool:
     result = pool.starmap(partial(start_time, mode='all'), slices)
 ts['tstruth'] = np.hstack(result)
