@@ -1,7 +1,7 @@
 SHELL:=bash
 channelN:=$(shell seq -f '%02g' 0 0)
-# mu:=$(shell seq -f '%02g' 1 1 5 && seq -f '%02g' 6 2 10 && seq -f '%02g' 15 5 30)
-mu:=$(shell seq -f '%02g' 15 5 15)
+mu:=$(shell seq -f '%02g' 1 1 5 && seq -f '%02g' 6 2 10 && seq -f '%02g' 15 5 30)
+# mu:=$(shell seq -f '%02g' 15 5 15)
 tau:=$(shell seq -f '%02g' 0 20 100)
 sigma:=$(shell seq -f '%02g' 0 5 15)
 
@@ -32,9 +32,9 @@ Nets:=$(channelN:%=result/$(method)/char/Nets/Channel%.torch_net)
 
 .PHONY : all
 
-all : solu vs
+all : solu
 
-vs : result/$(method)/solu/vs.pdf
+vs : Note/figures/vs-delta.pdf
 
 test : $(hist) $(reco)
 
@@ -73,9 +73,10 @@ result/$(method)/dist/%.h5 : waveform/%.h5 result/$(method)/char/%.h5 spe.h5
 result/$(method)/solu/%.h5 : result/$(method)/char/%.h5 waveform/%.h5
 	@mkdir -p $(dir $@)
 	python3 toyRec.py $< --ref $(word 2,$^) -o $@ > $@.log 2>&1
-result/$(method)/solu/vs.pdf : $(solu) rc.csv
+
+Note/figures/vs-delta.pdf : rc.csv
 	@mkdir -p $(dir $@)
-	python3 vs.py --folder result/$(method)/solu waveform --conf $(word $(words $^), $^) -o $@ > $@.log 2>&1
+	python3 vs.py --conf $^
 
 model : $(Nets)
 
