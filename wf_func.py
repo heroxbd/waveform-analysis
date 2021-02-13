@@ -84,7 +84,6 @@ def xiaopeip_core(wave, spe, fitp, possible, eta=0):
     mne = spe[np.mod(fitp.reshape(len(fitp), 1) - possible.reshape(1, len(possible)), l)]
     try:
         ans = opti.fmin_l_bfgs_b(norm_fit, ans0, args=(mne, wave[fitp], eta), approx_grad=True, bounds=b, maxfun=500000)
-#         ans = opti.fmin_l_bfgs_b(wdist_fit, ans0, args=(mne, wave[fitp], eta), approx_grad=True, bounds=b, maxfun=500000)
     except ValueError:
         ans = [np.ones(len(possible)) * 0.2]
     # ans = opti.fmin_slsqp(norm_fit, ans0, args=(mne, wave[fitp]), bounds=b, iprint=-1, iter=500000)
@@ -93,10 +92,6 @@ def xiaopeip_core(wave, spe, fitp, possible, eta=0):
 
 def norm_fit(x, M, y, eta=0):
     return np.power(y - np.matmul(M, x), 2).sum() + eta * x.sum()
-
-def wdist_fit(x, M, y, eta=0):
-    r = np.matmul(M, x)
-    return np.sum(np.abs(np.cumsum(r) / np.sum(r) - np.cumsum(y) / np.sum(y)))
 
 def rm_frag(lowp):
     t = np.argwhere(np.diff(lowp) > 1).flatten()
@@ -212,16 +207,6 @@ def clip(pet, cha, thres):
         cha = cha[cha > thres]
     return pet, cha
 
-def snip_baseline(waveform, itera=20):
-    wm = np.min(waveform)
-    waveform = waveform - wm
-    v = np.log(np.log(np.sqrt(waveform+1)+1)+1)
-    N = waveform.shape[0]
-    for i in range(itera):
-        v[i:N-i] = np.minimum(v[i:N-i], (v[:N-2*i] + v[2*i:])/2)
-    w = np.power(np.exp(np.exp(v) - 1) - 1, 2) - 1 + wm
-    return w
-
 def glow(n, tau):
     return np.random.exponential(tau, size=n)
 
@@ -275,13 +260,6 @@ def likelihoodt0(hitt, char, gmu, gsigma, Tau, Sigma, npe, mode='charge'):
     logLv = np.vectorize(logL)
     t0 = opti.fmin_l_bfgs_b(logL, x0=[tlist[np.argmin(logLv(tlist))]], approx_grad=True, bounds=[b], maxfun=500000)[0]
     return t0
-
-def lasso_select(pf_r, wave, mne, E):
-    pf_r = pf_r[np.argmin([loss(pf_r[j], mne, wave, E) for j in range(len(pf_r))])]
-    return pf_r
-
-def loss(x, M, y, eta=0.):
-    return np.power(y - np.matmul(M, x), 2).sum() + eta * x.sum()
 
 def npeprobcharge(charge, n, gmu, gsigma):
     gmu = gmu * n

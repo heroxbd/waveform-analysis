@@ -197,8 +197,7 @@ def time_numpyro(a0, a1):
         mu = jnp.sum(wave) / gmu
         n = max(round(mu / math.sqrt(Tau ** 2 + Sigma ** 2)), 1)
         hitt, char = wff.lucyddm(ent[i]['Waveform'], spe_pre[cid]['spe'], iterations=50)
-        hitt = hitt[char > Thres]
-        char = char[char > Thres]
+        hitt, char = wff.clip(hitt, char, ent[i]['Waveform'], Thres)
         t0_init = jnp.array(wff.likelihoodt0(hitt=hitt, char=char, gmu=gmu, gsigma=gsigma, Tau=Tau, Sigma=Sigma, npe=npe, mode='charge'))
         right = jnp.clip(hitt.min() - round(3 * spe_pre[cid]['mar_l']), 0, window)
         left = jnp.clip(hitt.max() + round(3 * spe_pre[cid]['mar_l']), 0, window)
