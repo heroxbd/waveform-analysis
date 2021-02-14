@@ -29,7 +29,9 @@ fopt = args.opt
 reference = args.ref
 method = args.met
 
-Thres = 0.1
+gmu = 160.
+gsigma = 40.
+Thres = 0.2
 
 def fitting(a, b):
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
@@ -45,7 +47,7 @@ def fitting(a, b):
 #                 wave = wave - ped
                 pet, cha = wff.xiaopeip(wave, spe_pre[ent[i]['ChannelID']])
             elif method == 'lucyddm':
-                pet, cha = wff.lucyddm(wave, spe_pre[ent[i]['ChannelID']]['spe'], iterations=50)
+                pet, cha = wff.lucyddm(wave, spe_pre[ent[i]['ChannelID']])
             elif method == 'threshold':
                 pet, cha = wff.threshold(wave, spe_pre[ent[i]['ChannelID']])
             elif method == 'fftrans':
@@ -83,6 +85,7 @@ else:
 print('Initialization finished, real time {0:.02f}s, cpu time {1:.02f}s'.format(time.time() - global_start, time.process_time() - cpu_global_start))
 tic = time.time()
 cpu_tic = time.process_time()
+
 with Pool(min(args.Ncpu, cpu_count())) as pool:
     select_result = pool.starmap(fitting, slices)
 result = np.hstack(select_result)

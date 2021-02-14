@@ -104,33 +104,26 @@ def rm_frag(lowp):
         lowp = np.concatenate((t), axis=0)
     return lowp
 
-def lucyddm(waveform, spe_pre, iterations=100):
+def lucyddm(waveform, spe_pre):
     '''Lucy deconvolution
-    Parameters
-    ----------
-    waveform : 1d array
-    spe : 1d array
-        point spread function; single photon electron response
-    iterations : int
-
-    Returns
-    -------
-    signal : 1d array
-
     References
     ----------
     .. [1] https://en.wikipedia.org/wiki/Richardson%E2%80%93Lucy_deconvolution
     .. [2] https://github.com/scikit-image/scikit-image/blob/master/skimage/restoration/deconvolution.py#L329
     '''
-    spe = np.append(np.zeros(len(spe_pre) - 2 * 9 - 1), np.abs(spe_pre))
+    spe = np.append(np.zeros(len(spe_pre['spe']) - 2 * 9 - 1), np.abs(spe_pre['spe']))
     waveform = np.where(waveform <= 0, 1e-6, waveform)
     spe = np.where(spe <= 0, 1e-6, spe)
     waveform = waveform / np.sum(spe)
     wave_deconv = waveform.copy()
     spe_mirror = spe[::-1]
-    for _ in range(iterations):
+    while True:
         relative_blur = waveform / np.convolve(wave_deconv, spe, mode='same')
-        wave_deconv *= np.convolve(relative_blur, spe_mirror, mode='same')
+        new_wave_deconv = wave_deconv * np.convolve(relative_blur, spe_mirror, mode='same')
+        if np.max(np.abs(wave_deconv[9:] - new_wave_deconv[9:])) < 1e-4:
+            break
+        else:
+            wave_deconv = new_wave_deconv
     return np.arange(0, len(waveform) - 9), wave_deconv[9:]
 
 def waveformfft(wave, spe_pre):
@@ -240,7 +233,7 @@ def spe(t, tau, sigma, A):
     return s
 
 def charge(n, gmu, gsigma):
-    chargesam = norm.ppf(1 - uniform.rvs(scale=1-norm.cdf(0, loc=gmu, scale=gsigma), size=n), loc=gmu, scale=gsigma)
+    chargesam = norm.ppf(1 - uniform.rvs(scale=1-norm.cdf(gmu-3*gsigma, loc=gmu, scale=gsigma), size=n), loc=gmu, scale=gsigma)
     return chargesam
 
 def probcharhitt(t0, hitt, probcharge, Tau, Sigma, npe):

@@ -82,7 +82,7 @@ if Tau != 0:
     Alpha = 1 / Tau
     Co = (Alpha / 2. * np.exp(Alpha ** 2 * Sigma ** 2 / 2.)).item()
 std = 1.
-Thres = 0.1
+Thres = 0.2
 
 def time_pyro(a0, a1):
     Awindow = int(window * 0.95)
@@ -168,6 +168,7 @@ def time_numpyro(a0, a1):
     rng_key = jax.random.PRNGKey(1)
     rng_key, rng_key_ = jax.random.split(rng_key)
     stime = np.empty(a1 - a0)
+    accep = np.full(a1 - a0, np.nan)
     dt = np.zeros((a1 - a0) * Awindow * 2, dtype=opdt)
     start = 0
     end = 0
@@ -196,8 +197,8 @@ def time_numpyro(a0, a1):
         wave = jnp.array(ent[i]['Waveform'].astype(np.float32)) * spe_pre[cid]['epulse']
         mu = jnp.sum(wave) / gmu
         n = max(round(mu / math.sqrt(Tau ** 2 + Sigma ** 2)), 1)
-        hitt, char = wff.lucyddm(ent[i]['Waveform'], spe_pre[cid]['spe'], iterations=50)
-        hitt, char = wff.clip(hitt, char, ent[i]['Waveform'], Thres)
+        hitt, char = wff.lucyddm(ent[i]['Waveform'], spe_pre[cid])
+        hitt, char = wff.clip(hitt, char, Thres)
         t0_init = jnp.array(wff.likelihoodt0(hitt=hitt, char=char, gmu=gmu, gsigma=gsigma, Tau=Tau, Sigma=Sigma, npe=npe, mode='charge'))
         right = jnp.clip(hitt.min() - round(3 * spe_pre[cid]['mar_l']), 0, window)
         left = jnp.clip(hitt.max() + round(3 * spe_pre[cid]['mar_l']), 0, window)
@@ -205,7 +206,12 @@ def time_numpyro(a0, a1):
         t_auto = jnp.arange(window)[:, None] - tlist
         AV = p[2] * jnp.exp(-1 / 2 * jnp.power((jnp.log((t_auto + jnp.abs(t_auto)) * (1 / p[0] / 2)) * (1 / p[1])), 2))
         try:
-            mcmc.run(rng_key, n=n, y=wave, mu=mu, tlist=tlist, AV=AV, t0right=t0_init - 3 * Sigma, t0left=t0_init + 3 * Sigma)
+            ticrun = time.time()
+            mcmc.run(rng_key, n=n, y=wave, mu=mu, tlist=tlist, AV=AV, t0right=t0_init - 3 * Sigma, t0left=t0_init + 3 * Sigma, extra_fields=('num_steps', 'accept_prob'))
+            tocrun = time.time()
+            num_leapfrogs = mcmc.get_extra_fields()['num_steps'].sum()
+            # print('avg. time for each step :', (tocrun - ticrun) / num_leapfrogs)
+            accep[i - a0] = np.array(mcmc.get_extra_fields()['accept_prob']).mean()
             t0 = np.array(mcmc.get_samples()['t0']).flatten()
             A = np.array(mcmc.get_samples()['A'])
             if np.std(t0) < 2 * Sigma:
@@ -228,7 +234,7 @@ def time_numpyro(a0, a1):
         start = end
     dt = dt[:end]
     dt = np.sort(dt, kind='stable', order=['TriggerNo', 'ChannelID'])
-    return stime, dt, count
+    return stime, dt, count, accep
 
 def time_stan(a0, a1):
     stime = np.empty(a1 - a0)
@@ -352,6 +358,15 @@ with Pool(min(args.Ncpu, cpu_count())) as pool:
 ts['tswave'] = np.hstack([result[i][0] for i in range(len(slices))])
 As = np.hstack([result[i][1] for i in range(len(slices))])
 count = np.sum([result[i][2] for i in range(len(slices))])
+accep = np.hstack([result[i][3] for i in range(len(slices))])
+
+ff = plt.figure(figsize=(8, 6))
+ax = ff.add_subplot()
+ax.hist(accep, bins=np.arange(0, 1+0.02, 0.02))
+ax.set_yscale('log')
+ff.savefig(os.path.splitext(fopt)[0] + '.pdf')
+plt.close()
+
 As = np.sort(As, kind='stable', order=['TriggerNo', 'ChannelID'])
 print('Successful MCMC ratio is {:.4%}'.format(count / N))
 print('Prediction generated, real time {0:.02f}s, cpu time {1:.02f}s'.format(time.time() - tic, time.process_time() - cpu_tic))

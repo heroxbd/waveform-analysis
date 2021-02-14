@@ -34,8 +34,6 @@ Nets:=$(channelN:%=result/$(method)/char/Nets/Channel%.torch_net)
 
 all : solu
 
-vs : Note/figures/vs-delta.pdf
-
 test : $(hist) $(reco)
 
 solu : $(solu)
@@ -74,8 +72,7 @@ result/$(method)/solu/%.h5 : result/$(method)/char/%.h5 waveform/%.h5
 	@mkdir -p $(dir $@)
 	python3 toyRec.py $< --ref $(word 2,$^) -o $@ > $@.log 2>&1
 
-Note/figures/vs-delta.pdf : rc.csv
-	@mkdir -p $(dir $@)
+vs : rc.csv
 	python3 vs.py --conf $^
 
 model : $(Nets)
