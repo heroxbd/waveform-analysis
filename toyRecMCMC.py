@@ -122,7 +122,7 @@ def time_pyro(a0, a1):
 class mNormal(numpyro.distributions.distribution.Distribution):
     arg_constraints = {'pl': numpyro.distributions.constraints.real}
     # support = numpyro.distributions.constraints.real
-    support = numpyro.distributions.constraints.positive
+    support = numpyro.distributions.constraints.greater_than(-std/gsigma)
     reparametrized_params = ['pl']
 
     def __init__(self, pl, s, mu, sigma, validate_args=None):
@@ -170,8 +170,6 @@ def time_numpyro(a0, a1):
         with numpyro.plate('observations', window):
             obs = numpyro.sample('obs', numpyro.distributions.Normal(jnp.matmul(AV, A), scale=std), obs=y)
         return obs
-    nuts_kernel = numpyro.infer.NUTS(model, adapt_step_size=True)
-    mcmc = numpyro.infer.MCMC(nuts_kernel, num_samples=1000, num_warmup=1000, num_chains=1, progress_bar=Demo, chain_method='sequential', jit_model_args=True)
     for i in range(a0, a1):
         petime = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
         cid = ent[i]['ChannelID']
@@ -181,11 +179,22 @@ def time_numpyro(a0, a1):
         hitt, char = wff.lucyddm(ent[i]['Waveform'], spe_pre[cid])
         hitt, char = wff.clip(hitt, char, Thres)
         t0_init = jnp.array(wff.likelihoodt0(hitt=hitt, char=char, gmu=gmu, gsigma=gsigma, Tau=Tau, Sigma=Sigma, npe=npe, mode='charge'))
-        right = jnp.clip(hitt.min() - round(3 * spe_pre[cid]['mar_l']), 0, window)
-        left = jnp.clip(hitt.max() + round(3 * spe_pre[cid]['mar_l']), 0, window)
-        tlist = jnp.arange(right, left, 1 / n)
+        s3 = round(3 * spe_pre[cid]['mar_l'])
+        s3l = min(hitt.min(), s3)
+        s3r = min(window - hitt.max(), s3)
+        tlist = jnp.arange(hitt.min() - s3l, hitt.max() + s3r, 1 / n)
+        A_init = np.zeros_like(tlist)
+        A_init[(s3l*n):((len(hitt)+s3l)*n)] = np.repeat(char, n)
+
         t_auto = jnp.arange(window)[:, None] - tlist
         AV = p[2] * jnp.exp(-1 / 2 * jnp.power((jnp.log((t_auto + jnp.abs(t_auto)) * (1 / p[0] / 2)) * (1 / p[1])), 2))
+        nuts_kernel = numpyro.infer.NUTS(model, adapt_step_size=True, 
+                                         init_strategy=numpyro.infer.initialization.init_to_value(values={
+                                             "t0": t0_init,
+                                             "A": A_init
+                                         }))
+        mcmc = numpyro.infer.MCMC(nuts_kernel, num_samples=1000, num_warmup=100, num_chains=1,
+                                  progress_bar=True, chain_method='sequential', jit_model_args=True)
         try:
             ticrun = time.time()
             mcmc.run(rng_key, n=n, y=wave, mu=mu, tlist=tlist, AV=AV, t0right=t0_init - 3 * Sigma, t0left=t0_init + 3 * Sigma, extra_fields=('num_steps', 'accept_prob'))
