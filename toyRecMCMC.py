@@ -8,9 +8,6 @@ import pickle
 from functools import partial
 from multiprocessing import Pool, cpu_count
 from collections import namedtuple
-import logging
-logger = logging.getLogger('pymc3')
-logger.setLevel(logging.ERROR)
 
 import h5py
 import numpy as np
@@ -18,18 +15,6 @@ import numpy as np
 import scipy
 import pandas as pd
 from tqdm import tqdm
-import torch
-torch.manual_seed(0)
-# torch.autograd.set_detect_anomaly(True)
-use_cuda = False
-if use_cuda:
-    device = torch.device(0)
-    torch.cuda.init()
-    torch.cuda.empty_cache()
-else:
-    device = torch.device('cpu')
-import pyro
-pyro.set_rng_seed(0)
 import jax
 jax.config.update('jax_enable_x64', True)
 import jax.numpy as jnp
@@ -37,10 +22,6 @@ import numpyro
 numpyro.set_platform('cpu')
 # numpyro.set_host_device_count(2)
 # import numpyro.contrib.tfp.distributions
-import pystan
-import arviz
-import theano
-import pymc3
 import matplotlib.pyplot as plt
 
 import wf_func as wff
