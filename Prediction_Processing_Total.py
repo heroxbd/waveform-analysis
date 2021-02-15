@@ -31,7 +31,7 @@ import pandas as pd
 from tqdm import tqdm
 import h5py
 import uproot
-import awkward1 as ak
+import awkward as ak
 
 import torch
 torch.no_grad()
@@ -83,7 +83,7 @@ def Read_Data(fileno) :
     TriggerNo = np.array(TriggerNo).repeat(nchannels)
     ChannelId = np.array(ak.flatten(ChannelId))
     nwaves = len(ChannelId)
-    Waveform = RawDataFile["Readout"]["Waveform"].array(flatten=True)
+    Waveform = np.array(ak.flatten(RawDataFile["Readout"]["Waveform"].array()))
     WindowSize = int(len(Waveform) / nwaves)
     Waveform = np.array(Waveform).reshape((nwaves, WindowSize))
     waveform_dtype = np.dtype([("TriggerNo", np.uint32), ("ChannelID", np.uint32), ("FileNo", np.int32), ("Pedestal", np.float32), ("Waveform", np.int16, WindowSize)])
