@@ -31,7 +31,7 @@ method = args.met
 
 gmu = 160.
 gsigma = 40.
-Thres = 0.2
+Thres = {'xiaopeip':0.2, 'lucyddm':0.2, 'fftrans':0.1, 'findpeak':0.1, 'threshold':0.1}
 
 def fitting(a, b):
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
@@ -48,13 +48,13 @@ def fitting(a, b):
                 pet, cha = wff.xiaopeip(wave, spe_pre[ent[i]['ChannelID']])
             elif method == 'lucyddm':
                 pet, cha = wff.lucyddm(wave, spe_pre[ent[i]['ChannelID']])
-            elif method == 'threshold':
-                pet, cha = wff.threshold(wave, spe_pre[ent[i]['ChannelID']])
             elif method == 'fftrans':
                 pet, cha = wff.waveformfft(wave, spe_pre[ent[i]['ChannelID']])
             elif method == 'findpeak':
                 pet, cha = wff.findpeak(wave, spe_pre[ent[i]['ChannelID']])
-            pet, cha = wff.clip(pet, cha, Thres)
+            elif method == 'threshold':
+                pet, cha = wff.threshold(wave, spe_pre[ent[i]['ChannelID']])
+            pet, cha = wff.clip(pet, cha, Thres[method])
 
             end = start + len(cha)
             dt['HitPosInWindow'][start:end] = pet

@@ -75,7 +75,7 @@ t0 = np.hstack([result[i][0] for i in range(len(result))])
 samples = np.hstack([result[i][1] for i in range(len(result))])
 waves = np.hstack([result[i][2] for i in range(len(result))])
 
-v = np.logical_not(np.any(np.isnan(waves['Waveform']), axis=1) | np.isin(waves['TriggerNo'], samples['TriggerNo'][samples['HitPosInWindow'] > window - 1]))
+v = np.logical_not((np.sum(waves['Waveform'], axis=1) < 0) | np.any(np.isnan(waves['Waveform']), axis=1) | np.isin(waves['TriggerNo'], samples['TriggerNo'][samples['HitPosInWindow'] > window - 1]))
 if np.sum(v) != args.N:
     t0 = t0[v]
     samples = samples[np.isin(samples['TriggerNo'], waves['TriggerNo'][v])]

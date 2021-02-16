@@ -37,7 +37,6 @@ def xiaopeip(wave, spe_pre, eta=0):
     l = len(wave)
     flag = 1
     lowp = np.argwhere(wave > 5 * spe_pre['std']).flatten()
-#     lowp = rm_frag(lowp)
     if len(lowp) != 0:
         fitp = np.arange(lowp.min() - round(spe_pre['mar_l']), lowp.max() + round(spe_pre['mar_r']))
         fitp = np.unique(np.clip(fitp, 0, len(wave)-1))
@@ -93,17 +92,6 @@ def xiaopeip_core(wave, spe, fitp, possible, eta=0):
 def norm_fit(x, M, y, eta=0):
     return np.power(y - np.matmul(M, x), 2).sum() + eta * x.sum()
 
-def rm_frag(lowp):
-    t = np.argwhere(np.diff(lowp) > 1).flatten()
-    ind = np.vstack((np.insert(t + 1, 0, 0), np.append(t, len(lowp)))).T
-    slices = [lowp[ind[i][0] : ind[i][1]] for i in range(len(ind))]
-    t = [slices[i] for i in range(len(slices)) if len(slices[i]) > 1]
-    if len(t) == 0:
-        lowp = np.array([])
-    else:
-        lowp = np.concatenate((t), axis=0)
-    return lowp
-
 def lucyddm(waveform, spe_pre):
     '''Lucy deconvolution
     References
@@ -128,12 +116,26 @@ def lucyddm(waveform, spe_pre):
 
 def waveformfft(wave, spe_pre):
     length = len(wave)
-    spefft = fft(spe_pre['spe'], 2*length)
-    wavef = fft(wave, 2*length)
-    wavef[(length-int(length*0.8)):(length+int(length*0.8))] = 0
-    signalf = np.true_divide(wavef, spefft)
-    recon = np.real(ifft(signalf, 2*length))
-    return np.arange(length), recon[:length]
+    w = wave
+    pet = np.arange(length)
+    w = savgol_filter(w, 11, 2)
+    lowp = np.argwhere(w > 5 * spe_pre['std']).flatten()
+    if len(lowp) != 0:
+        left = np.clip(lowp.min() - round(2 * spe_pre['mar_l']), 0, length - 1)
+        right = np.clip(lowp.max() + round(2 * spe_pre['mar_r']), 0, length - 1)
+        w[:left] = 0
+        w[right:] = 0
+        spefft = fft(spe_pre['spe'], 2*length)
+        wavef = fft(w, 2*length)
+        wavef[(length-round(length*0.8)):(length+round(length*0.8))] = 0
+        signalf = np.true_divide(wavef, spefft)
+        recon = np.real(ifft(signalf, 2*length))
+        cha = recon[:length]
+        cha = np.abs(cha / np.sum(cha) * np.abs(np.sum(wave)) / np.sum(spe_pre['spe']))
+    else:
+        cha = np.zeros(length)
+        cha[np.argmax(wave[spe_pre['peak_c']:])] = 1
+    return pet, cha
 
 def threshold(wave, spe_pre):
     pet = np.argwhere(wave[spe_pre['peak_c']:] > spe_pre['std'] * 5).flatten()
@@ -233,7 +235,7 @@ def spe(t, tau, sigma, A):
     return s
 
 def charge(n, gmu, gsigma):
-    chargesam = norm.ppf(1 - uniform.rvs(scale=1-norm.cdf(gmu-3*gsigma, loc=gmu, scale=gsigma), size=n), loc=gmu, scale=gsigma)
+    chargesam = norm.ppf(1 - uniform.rvs(scale=1-norm.cdf(0, loc=gmu, scale=gsigma), size=n), loc=gmu, scale=gsigma)
     return chargesam
 
 def probcharhitt(t0, hitt, probcharge, Tau, Sigma, npe):

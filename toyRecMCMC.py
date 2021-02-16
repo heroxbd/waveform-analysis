@@ -7,7 +7,6 @@ import argparse
 import pickle
 from functools import partial
 from multiprocessing import Pool, cpu_count
-from collections import namedtuple
 
 import h5py
 import numpy as np
@@ -65,64 +64,10 @@ if Tau != 0:
 std = 1.
 Thres = 0.2
 
-def time_pyro(a0, a1):
-    Awindow = int(window * 0.95)
-    stime = np.empty(a1 - a0)
-    dt = np.zeros((a1 - a0) * Awindow, dtype=opdt)
-    start = 0
-    end = 0
-    count = 0
-    tlist = torch.arange(Awindow).to(device)
-    t_auto = (torch.arange(window)[:, None] - tlist).to(device)
-    # amplitude to voltage converter
-    AV = (p[2] * torch.exp(-1 / 2 * torch.pow((torch.log((t_auto + torch.abs(t_auto)) * (1 / p[0] / 2)) * (1 / p[1])), 2))).to(device)
-    Amu = torch.tensor((0., 1.)).expand(window, 2).to(device)
-    Asigma = torch.tensor((std / gsigma, gsigma / gmu)).expand(window, 2).to(device)
-    wmu = torch.tensor(0.).to(device)
-    wsigma = torch.tensor(std).to(device)
-    left = torch.tensor(0.).to(device)
-    right = torch.tensor(600.).to(device)
-    def model(y, mu):
-        t0 = pyro.sample('t0', pyro.distributions.Uniform(left, right)).to(device)
-        if Tau == 0:
-            light_curve = pyro.distributions.Normal(t0, scale=Sigma)
-            pl = (torch.exp(light_curve.log_prob(tlist)) * mu).to(device)
-        else:
-            pl = (Co * (1. - torch.erf((Alpha * Sigma ** 2 - (tlist - t0)) / (math.sqrt(2.) * Sigma))) * torch.exp(-Alpha * (tlist - t0)) * mu).to(device)
-        A = pyro.sample('A', pyro.distributions.MixtureSameFamily(
-            pyro.distributions.Categorical(torch.stack((1 - pl, pl)).T.to(device)),
-            pyro.distributions.Normal(Amu, Asigma)
-        ))
-        with pyro.plate('observations', window):
-            obs = pyro.sample('obs', pyro.distributions.Normal(wmu, scale=wsigma), obs=y-torch.matmul(AV, A)).to(device)
-        return obs
-    nuts_kernel = pyro.infer.mcmc.NUTS(model, jit_compile=True)
-    mcmc = pyro.infer.mcmc.api.MCMC(nuts_kernel, num_samples=1000, warmup_steps=500, num_chains=1)
-    for i in range(a0, a1):
-        w = ent[i]['Waveform']
-        wave = torch.from_numpy(w.astype(np.float32)).to(device)
-        mu=1 / gmu * torch.sum(wave)
-        mcmc.run(y=wave, mu=mu)
-        t0 = mcmc.get_samples()['t0'].cpu().numpy()
-        A = mcmc.get_samples()['A'].cpu().numpy()
-        count = count + 1
-        stime[i - a0] = np.mean(t0)
-        pet, cha = wff.clip(tlist, np.mean(A, axis=0), Thres)
-        end = start + len(cha)
-        dt['HitPosInWindow'][start:end] = pet
-        cha = cha / cha.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
-        dt['Charge'][start:end] = cha
-        dt['TriggerNo'][start:end] = ent[i]['TriggerNo']
-        dt['ChannelID'][start:end] = ent[i]['ChannelID']
-        start = end
-    dt = dt[:end]
-    dt = np.sort(dt, kind='stable', order=['TriggerNo', 'ChannelID'])
-    return stime, dt, count
-
 class mNormal(numpyro.distributions.distribution.Distribution):
     arg_constraints = {'pl': numpyro.distributions.constraints.real}
     # support = numpyro.distributions.constraints.real
-    support = numpyro.distributions.constraints.greater_than(-std/gsigma)
+    support = numpyro.distributions.constraints.positive
     reparametrized_params = ['pl']
 
     def __init__(self, pl, s, mu, sigma, validate_args=None):
@@ -145,7 +90,6 @@ class mNormal(numpyro.distributions.distribution.Distribution):
 def time_numpyro(a0, a1):
     npe = 6
     Awindow = int(window * 0.95)
-    init = namedtuple('ParamInfo', ['z', 'potential_energy', 'z_grad'])
     rng_key = jax.random.PRNGKey(1)
     rng_key, rng_key_ = jax.random.split(rng_key)
     stime = np.empty(a1 - a0)
@@ -158,7 +102,7 @@ def time_numpyro(a0, a1):
         t0 = numpyro.sample('t0', numpyro.distributions.Uniform(t0right, t0left))
         if Tau == 0:
             light_curve = numpyro.distributions.Normal(t0, scale=Sigma)
-            pl = numpyro.primitives.deterministic('pl', jnp.exp(light_curve.log_prob(tlist)) * mu / n + jnp.finfo(jnp.float32).resolution)
+            pl = numpyro.primitives.deterministic('pl', jnp.exp(light_curve.log_prob(tlist)) * mu / n + jnp.finfo(jnp.float64).epsneg)
             # pl = numpyro.primitives.deterministic('pl', 1 / (math.sqrt(2. * math.pi) * Sigma) * jnp.exp(-((tlist - t0) / Sigma) ** 2 / 2) * mu / n + jnp.finfo(jnp.float64).epsneg)
         else:
             pl = numpyro.primitives.deterministic('pl', Co * (1. - jax.scipy.special.erf((Alpha * Sigma ** 2 - (tlist - t0)) / (math.sqrt(2.) * Sigma))) * jnp.exp(-Alpha * (tlist - t0)) * mu / n + jnp.finfo(jnp.float64).epsneg)
@@ -178,23 +122,18 @@ def time_numpyro(a0, a1):
         n = max(round(mu / math.sqrt(Tau ** 2 + Sigma ** 2)), 1)
         hitt, char = wff.lucyddm(ent[i]['Waveform'], spe_pre[cid])
         hitt, char = wff.clip(hitt, char, Thres)
+        char = char / char.sum() * jnp.clip(jnp.abs(wave.sum()), 1e-6, jnp.inf) / spe_pre[cid]['spe'].sum()
         t0_init = jnp.array(wff.likelihoodt0(hitt=hitt, char=char, gmu=gmu, gsigma=gsigma, Tau=Tau, Sigma=Sigma, npe=npe, mode='charge'))
-        s3 = round(3 * spe_pre[cid]['mar_l'])
-        s3l = min(hitt.min(), s3)
-        s3r = min(window - hitt.max(), s3)
-        tlist = jnp.arange(hitt.min() - s3l, hitt.max() + s3r, 1 / n)
-        A_init = np.zeros_like(tlist)
-        A_init[(s3l*n):((len(hitt)+s3l)*n)] = np.repeat(char, n)
-
+        right = jnp.clip(hitt.min() - round(3 * spe_pre[cid]['mar_l']), 0, window)
+        left = jnp.clip(hitt.max() + round(3 * spe_pre[cid]['mar_l']), 0, window)
+        tlist = jnp.arange(right, left, 1 / n)
+        A_init = np.zeros(left - right)
+        A_init[hitt - hitt.min() + round(3 * spe_pre[cid]['mar_l'])] = char
+        A_init = jnp.repeat(A_init, n) / n + jnp.finfo(jnp.float64).epsneg
         t_auto = jnp.arange(window)[:, None] - tlist
         AV = p[2] * jnp.exp(-1 / 2 * jnp.power((jnp.log((t_auto + jnp.abs(t_auto)) * (1 / p[0] / 2)) * (1 / p[1])), 2))
-        nuts_kernel = numpyro.infer.NUTS(model, adapt_step_size=True, 
-                                         init_strategy=numpyro.infer.initialization.init_to_value(values={
-                                             "t0": t0_init,
-                                             "A": A_init
-                                         }))
-        mcmc = numpyro.infer.MCMC(nuts_kernel, num_samples=1000, num_warmup=100, num_chains=1,
-                                  progress_bar=True, chain_method='sequential', jit_model_args=True)
+        nuts_kernel = numpyro.infer.NUTS(model, adapt_step_size=True, init_strategy=numpyro.infer.initialization.init_to_value(values={'t0': t0_init, 'A': A_init}))
+        mcmc = numpyro.infer.MCMC(nuts_kernel, num_samples=1000, num_warmup=300, num_chains=1, progress_bar=Demo, chain_method='sequential', jit_model_args=True)
         try:
             ticrun = time.time()
             mcmc.run(rng_key, n=n, y=wave, mu=mu, tlist=tlist, AV=AV, t0right=t0_init - 3 * Sigma, t0left=t0_init + 3 * Sigma, extra_fields=('num_steps', 'accept_prob'))
@@ -214,7 +153,7 @@ def time_numpyro(a0, a1):
             A = np.array([char])
             print('Failed waveform is TriggerNo = {:05d}, ChannelID = {:02d}, i = {:05d}'.format(ent[i]['TriggerNo'], ent[i]['ChannelID'], i))
         stime[i - a0] = np.mean(t0)
-        pet, cha = wff.clip(tlist, np.mean(A, axis=0), Thres)
+        pet, cha = wff.clip(np.array(tlist), np.mean(A, axis=0), Thres)
         end = start + len(cha)
         dt['HitPosInWindow'][start:end] = pet
         cha = cha / cha.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
@@ -226,101 +165,11 @@ def time_numpyro(a0, a1):
     dt = np.sort(dt, kind='stable', order=['TriggerNo', 'ChannelID'])
     return stime, dt, count, accep
 
-def time_stan(a0, a1):
-    stime = np.empty(a1 - a0)
-    dt = np.zeros((a1 - a0) * window, dtype=opdt)
-    start = 0
-    end = 0
-    count = 0
-    tlist = np.arange(window)
-    t_auto = tlist[:, None] - tlist
-    AV = p[2] * np.exp(-1 / 2 * np.power((np.log((t_auto + np.abs(t_auto)) * (1 / p[0] / 2)) * (1 / p[1])), 2))
-    for i in range(a0, a1):
-        wave = ent[i]['Waveform']
-        mu = np.sum(wave) / gmu
-        fit = stanmodel.sampling(data=dict(N=window, Tau=Tau, Sigma=Sigma, mu=mu, s=std / gsigma, sigma=gsigma / gmu, std=std, AV=AV, w=wave), warmup=500, iter=1500, seed=0)
-        # print(pystan.check_hmc_diagnostics(fit))
-        # print(fit.to_dataframe())
-        t0 = fit['t0']
-        A = fit['A']
-        count = count + 1
-        stime[i - a0] = np.mean(t0)
-        pet, cha = wff.clip(tlist, np.mean(A, axis=0), Thres)
-        end = start + len(cha)
-        dt['HitPosInWindow'][start:end] = pet
-        cha = cha / cha.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
-        dt['Charge'][start:end] = cha
-        dt['TriggerNo'][start:end] = ent[i]['TriggerNo']
-        dt['ChannelID'][start:end] = ent[i]['ChannelID']
-        start = end
-    dt = dt[:end]
-    dt = np.sort(dt, kind='stable', order=['TriggerNo', 'ChannelID'])
-    return stime, dt, count
-
-def time_pymc(a0, a1):
-    Awindow = int(window * 0.95)
-    stime = np.empty(a1 - a0)
-    dt = np.zeros((a1 - a0) * Awindow, dtype=opdt)
-    start = 0
-    end = 0
-    count = 0
-    tlist = np.arange(Awindow)
-    t_auto = np.arange(window)[:, None] - tlist
-    AV = p[2] * np.exp(-1 / 2 * np.power((np.log((t_auto + np.abs(t_auto)) * (1 / p[0] / 2)) * (1 / p[1])), 2))
-    one = np.repeat(np.array([[0., 1.]]), Awindow, axis=0)
-    sigma = np.repeat(np.array([[std / gsigma, gsigma / gmu]]), Awindow, axis=0)
-    def model(y, mu):
-        with pymc3.Model() as mix01:
-            t0 = pymc3.Uniform('t0', lower=0., upper=600.)
-            if Tau == 0:
-                pl = 1 / (Sigma * np.sqrt(2 * np.pi)) * np.exp(-(tlist - t0) ** 2 / (2 * Sigma**2)) * mu
-            else:
-                pl = Co * (1. - pymc3.math.erf((Alpha * Sigma ** 2 - (tlist - t0)) / (np.sqrt(2.) * Sigma))) * np.exp(-Alpha * (tlist - t0)) * mu
-            pl = pymc3.math.stack([(1 - pl), pl], axis=1)
-            A = pymc3.NormalMixture('A', w=pl, mu=one, sigma=sigma, shape=(Awindow,))
-            obs = pymc3.Normal('obs', mu=0., sigma=std, observed=y-pymc3.math.dot(AV, A))
-        return mix01
-    for i in range(a0, a1):
-        cid = ent[i]['ChannelID']
-        wave = ent[i]['Waveform']
-        mu = np.sum(wave) / gmu
-        A = np.hstack([np.where(wave[:Awindow] > spe_pre[cid]['std'] * 5, wave[:Awindow], 0)[spe_pre[cid]['mar_l']:], np.zeros(spe_pre[cid]['mar_l'])])
-        A_init = A / np.sum(A) * mu
-        t0_init = np.clip(np.argwhere(wave - spe_pre[cid]['std'] * 5 > 0).flatten()[0] - spe_pre[cid]['mar_l'], 0, window).astype(np.float32)
-        with model(wave, mu):
-            try:
-                step = pymc3.NUTS()
-                trace = pymc3.sample(1000, tune=500, start={'t0':t0_init,'A':A_init}, step=step, chains=2, cores=2, random_seed=[0, 1], return_inferencedata=False)
-                t0 = trace['t0']
-                A = trace['A']
-                pet, cha = wff.clip(tlist, np.mean(A, axis=0), Thres)
-                count = count + 1
-            except:
-                map_estimate = pymc3.find_MAP()
-                t0 = map_estimate['t0']
-                A = map_estimate['A']
-                pet, cha = wff.clip(tlist, A, Thres)
-                print('TriggerNo = {}, ChannelID = {}, i = {}'.format(ent[i]['TriggerNo'], ent[i]['ChannelID'], i))
-        stime[i - a0] = np.mean(t0)
-        end = start + len(cha)
-        dt['HitPosInWindow'][start:end] = pet
-        cha = cha / cha.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
-        dt['Charge'][start:end] = cha
-        dt['TriggerNo'][start:end] = ent[i]['TriggerNo']
-        dt['ChannelID'][start:end] = ent[i]['ChannelID']
-        start = end
-    dt = dt[:end]
-    dt = np.sort(dt, kind='stable', order=['TriggerNo', 'ChannelID'])
-    return stime, dt, count
-
 if args.Ncpu == 1:
     slices = [[0, N]]
 else:
     chunk = N // args.Ncpu + 1
     slices = np.vstack((np.arange(0, N, chunk), np.append(np.arange(chunk, N, chunk), N))).T.astype(int).tolist()
-if not os.path.exists('stanmodel.pkl'):
-    os.system('python3 stanmodel.py')
-stanmodel = pickle.load(open('stanmodel.pkl', 'rb'))
 
 print('Initialization finished, real time {0:.02f}s, cpu time {1:.02f}s'.format(time.time() - global_start, time.process_time() - cpu_global_start))
 tic = time.time()
@@ -352,9 +201,9 @@ accep = np.hstack([result[i][3] for i in range(len(slices))])
 
 ff = plt.figure(figsize=(8, 6))
 ax = ff.add_subplot()
-ax.hist(accep, bins=np.arange(0, 1+0.02, 0.02))
-ax.set_yscale('log')
-ff.savefig(os.path.splitext(fopt)[0] + '.pdf')
+ax.hist(accep, bins=np.arange(0, 1+0.02, 0.02), label='accept_prob')
+ax.legend(loc='upper right')
+ff.savefig(os.path.splitext(fopt)[0] + '.png')
 plt.close()
 
 As = np.sort(As, kind='stable', order=['TriggerNo', 'ChannelID'])
