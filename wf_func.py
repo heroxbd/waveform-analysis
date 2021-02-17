@@ -14,7 +14,6 @@ import scipy.special as special
 from scipy.signal import convolve
 from scipy.signal import savgol_filter
 import matplotlib
-matplotlib.use('pgf')
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from mpl_axes_aligner import align
@@ -115,16 +114,14 @@ def lucyddm(waveform, spe_pre):
     return np.arange(0, len(waveform) - 9), wave_deconv[9:]
 
 def waveformfft(wave, spe_pre):
-    length = len(wave)
-    w = wave
-    pet = np.arange(length)
-    w = savgol_filter(w, 11, 2)
+    w = savgol_filter(wave, 11, 2)
     lowp = np.argwhere(w > 5 * spe_pre['std']).flatten()
     if len(lowp) != 0:
-        left = np.clip(lowp.min() - round(2 * spe_pre['mar_l']), 0, length - 1)
-        right = np.clip(lowp.max() + round(2 * spe_pre['mar_r']), 0, length - 1)
-        w[:left] = 0
-        w[right:] = 0
+        left = np.clip(lowp.min() - round(2 * spe_pre['mar_l']), 0, len(wave) - 1)
+        right = np.clip(lowp.max() + round(2 * spe_pre['mar_r']), 0, len(wave) - 1)
+        pet = np.arange(left, right)
+        w = w[left:right]
+        length = len(w)
         spefft = fft(spe_pre['spe'], 2*length)
         wavef = fft(w, 2*length)
         wavef[(length-round(length*0.8)):(length+round(length*0.8))] = 0
@@ -133,8 +130,8 @@ def waveformfft(wave, spe_pre):
         cha = recon[:length]
         cha = np.abs(cha / np.sum(cha) * np.abs(np.sum(wave)) / np.sum(spe_pre['spe']))
     else:
-        cha = np.zeros(length)
-        cha[np.argmax(wave[spe_pre['peak_c']:])] = 1
+        pet = np.argmax(wave[spe_pre['peak_c']:]).flatten()
+        cha = np.array([1])
     return pet, cha
 
 def threshold(wave, spe_pre):
@@ -160,6 +157,7 @@ def findpeak(wave, spe_pre):
     return pet, cha
 
 def read_model(spe_path):
+    matplotlib.use('pgf')
     with h5py.File(spe_path, 'r', libver='latest', swmr=True) as speFile:
         cid = speFile['SinglePE'].attrs['ChannelID']
         epulse = speFile['SinglePE'].attrs['Epulse']
@@ -234,20 +232,26 @@ def spe(t, tau, sigma, A):
     s[t > np.finfo(np.float64).tiny] = A * np.exp(-1 / 2 * (np.log(t0 / tau) * np.log(t0 / tau) / sigma / sigma))
     return s
 
-def charge(n, gmu, gsigma):
-    chargesam = norm.ppf(1 - uniform.rvs(scale=1-norm.cdf(0, loc=gmu, scale=gsigma), size=n), loc=gmu, scale=gsigma)
+def charge(n, gmu, gsigma, thres=40):
+    chargesam = norm.ppf(1 - uniform.rvs(scale=1-norm.cdf(thres, loc=gmu, scale=gsigma), size=n), loc=gmu, scale=gsigma)
     return chargesam
 
 def probcharhitt(t0, hitt, probcharge, Tau, Sigma, npe):
-    prob = probcharge * np.power(convolve_exp_norm(hitt - t0, Tau, Sigma), np.arange(1, npe)[:, None])
-    prob = np.sum(prob / np.sum(probcharge, axis=0), axis=0)
+    prob = np.where(npe > 0, probcharge * np.power(convolve_exp_norm(hitt - t0, Tau, Sigma), npe), 0)
+    prob = np.sum(prob, axis=1) / np.sum(probcharge, axis=1)
     return prob
 
 def likelihoodt0(hitt, char, gmu, gsigma, Tau, Sigma, npe, mode='charge'):
     b = [0., 600.]
-    tlist = np.arange(b[0], b[1] + 1)
+    tlist = np.arange(b[0], b[1] + 1e-6, 0.2)
     if mode == 'charge':
-        probcharge = np.array([npeprobcharge(char, i, gmu=gmu, gsigma=gsigma) for i in range(1, npe)])
+        l = len(hitt)
+        char = np.tile(char, (2 * npe + 1, 1)).T
+        hitt = np.tile(hitt, (2 * npe + 1, 1)).T
+        npe = np.round(char / gmu) + np.tile(np.arange(-npe, npe + 1), (l, 1))
+        npe[npe <= 0] = np.nan
+        probcharge = npeprobcharge(char, npe, gmu=gmu, gsigma=gsigma)
+        probcharhitt(500, hitt, probcharge, Tau, Sigma, npe)
         logL = lambda t0 : -1 * np.sum(np.log(np.clip(probcharhitt(t0, hitt, probcharge, Tau, Sigma, npe), np.finfo(np.float64).tiny, np.inf)))
         # logL = lambda t0 : -1 * np.sum(np.log(np.clip(convolve_exp_norm(hitt - t0, Tau, Sigma) * (char / gmu), np.finfo(np.float64).tiny, np.inf)))
     elif mode == 'all':
@@ -256,13 +260,17 @@ def likelihoodt0(hitt, char, gmu, gsigma, Tau, Sigma, npe, mode='charge'):
     t0 = opti.fmin_l_bfgs_b(logL, x0=[tlist[np.argmin(logLv(tlist))]], approx_grad=True, bounds=[b], maxfun=500000)[0]
     return t0
 
-def npeprobcharge(charge, n, gmu, gsigma):
-    gmu = gmu * n
-    gsigma = gsigma * np.sqrt(n)
-    prob = norm.pdf(charge, loc=gmu, scale=gsigma) / (1 - norm.cdf(0, loc=gmu, scale=gsigma))
+def npeprobcharge(charge, npe, gmu, gsigma):
+    prob = np.where(npe > 0, norm.pdf(charge, loc=gmu * npe, scale=gsigma * np.sqrt(npe)) / (1 - norm.cdf(0, loc=gmu * npe, scale=gsigma * np.sqrt(npe))), 0)
     return prob
 
+def stdrmoutlier(array, r):
+    arrayrmoutlier = array[np.abs(array - np.mean(array)) < r * np.std(array, ddof=-1)]
+    std = np.std(arrayrmoutlier, ddof=-1)
+    return std, len(arrayrmoutlier)
+
 def demo(pet_sub, cha_sub, tth, spe_pre, window, wave, cid, p, full=False, fold='Note/figures', ext='.pgf'):
+    matplotlib.use('pgf')
     penum = len(tth)
     print('PEnum is {}'.format(penum))
     pan = np.arange(window)
@@ -290,7 +298,7 @@ def demo(pet_sub, cha_sub, tth, spe_pre, window, wave, cid, p, full=False, fold=
     ax0.plot(wav_ans, c='k', label='truth wave')
     ax0.plot(wav_sub, c='g', label='recon wave')
     ax0.set_ylabel('$Voltage/\mathrm{mV}$')
-    ax0.hlines(5 * spe_pre['std'], 0, 1029, color='c', label='threshold')
+    ax0.hlines(5 * spe_pre['std'], 0, len(success), color='c', label='threshold')
     ax0.set_xticklabels([])
     ax0.set_ylim(min(wave)-5, max(wave)+5)
     ax0.legend(loc=1)
@@ -345,4 +353,3 @@ def demo(pet_sub, cha_sub, tth, spe_pre, window, wave, cid, p, full=False, fold=
     fig.savefig(fold + '/spe{:02d}'.format(cid) + '.pdf')
     fig.clf()
     plt.close(fig)
-    return

@@ -19,6 +19,7 @@ from matplotlib import cm
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.colors import ListedColormap
 import matplotlib.gridspec as gridspec
+
 import wf_func as wff
 
 matplotlib.rcParams.update(matplotlib.rcParamsDefault)
@@ -145,7 +146,7 @@ ax0.set_ylabel(r'$Count$')
 ax0.set_yscale('log')
 ax0.legend()
 s = np.std(time['ts1sttruth'] - start['T0'], ddof=-1)
-ax0.set_title(fr'$\sigma_{{1sttru}}={s:.02f}$')
+ax0.set_title(fr'$\delta_{{1sttru}}={s:.02f}$')
 
 ax1 = fig.add_subplot(gs[0, 1])
 ax1.hist(time['tstruth'] - start['T0'], bins=100, label=r'$t_{truth} - t_{0}$')
@@ -154,7 +155,7 @@ ax1.set_ylabel(r'$Count$')
 ax1.set_yscale('log')
 ax1.legend()
 s = np.std(time['tstruth'] - start['T0'], ddof=-1)
-ax1.set_title(fr'$\sigma_{{truth}}={s:.02f}$')
+ax1.set_title(fr'$\delta_{{truth}}={s:.02f}$')
 
 ax2 = fig.add_subplot(gs[1, 0])
 ax2.hist(time['tscharge'] - start['T0'], bins=100, label=r'$t_{charge} - t_{0}$')
@@ -163,7 +164,7 @@ ax2.set_ylabel(r'$Count$')
 ax2.set_yscale('log')
 ax2.legend()
 s = np.std(time['tscharge'] - start['T0'], ddof=-1)
-ax2.set_title(fr'$\sigma_{{charge}}={s:.02f}$')
+ax2.set_title(fr'$\delta_{{charge}}={s:.02f}$')
 
 if not np.all(np.isnan(time['tswave'])):
     ax3 = fig.add_subplot(gs[1, 1])
@@ -173,7 +174,7 @@ if not np.all(np.isnan(time['tswave'])):
     ax3.set_yscale('log')
     ax3.legend()
     s = np.std(time['tswave'] - start['T0'], ddof=-1)
-    ax3.set_title(fr'$\sigma_{{wave}}={s:.02f}$')
+    ax3.set_title(fr'$\delta_{{wave}}={s:.02f}$')
 
 pdf.savefig(fig)
 plt.close(fig)

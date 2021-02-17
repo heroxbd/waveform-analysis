@@ -39,10 +39,10 @@ p[2] = p[2] * gmu / np.sum(wff.spe(np.arange(window), tau=p[0], sigma=p[1], A=p[
 std = 1.
 
 def sampling(a0, a1, mu, tau, sigma):
-    np.random.seed(a0)
+    np.random.seed(a0 + round(Tau + Sigma))
     npe = poisson.ppf(1 - uniform.rvs(scale=1-poisson.cdf(0, mu), size=a1 - a0), mu).astype(np.int)
     t0 = np.random.uniform(100, 500, size=a1 - a0)
-    sams = [np.vstack((wff.time(npe[i], tau, sigma) + t0[i], wff.charge(npe[i], gmu=gmu, gsigma=gsigma))).T for i in range(a1 - a0)]
+    sams = [np.vstack((wff.time(npe[i], tau, sigma) + t0[i], wff.charge(npe[i], gmu=gmu, gsigma=gsigma, thres=0))).T for i in range(a1 - a0)]
     wdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('Waveform', np.int16, window)])
     waves = np.empty(a1 - a0).astype(wdtp)
     pan = np.arange(window)
@@ -75,7 +75,7 @@ t0 = np.hstack([result[i][0] for i in range(len(result))])
 samples = np.hstack([result[i][1] for i in range(len(result))])
 waves = np.hstack([result[i][2] for i in range(len(result))])
 
-v = np.logical_not((np.sum(waves['Waveform'], axis=1) < 0) | np.any(np.isnan(waves['Waveform']), axis=1) | np.isin(waves['TriggerNo'], samples['TriggerNo'][samples['HitPosInWindow'] > window - 1]))
+v = np.logical_not((np.sum(waves['Waveform'], axis=1) <= 0) | np.any(np.isnan(waves['Waveform']), axis=1) | np.isin(waves['TriggerNo'], samples['TriggerNo'][samples['HitPosInWindow'] > window - 1]))
 if np.sum(v) != args.N:
     t0 = t0[v]
     samples = samples[np.isin(samples['TriggerNo'], waves['TriggerNo'][v])]

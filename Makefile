@@ -95,7 +95,7 @@ result/$(method)/.PreProcess : $(sim) spe.h5
 waveform/%.h5 :
 	@rm -f spe.h5
 	@mkdir -p $(dir $@)
-	python3 toySim.py --mts $* --noi -N 3000 -o $@ > $@.log 2>&1
+	python3 toySim.py --mts $* --noi -N 1000 -o $@ > $@.log 2>&1
 
 spe.h5 : $(sim) ;
 

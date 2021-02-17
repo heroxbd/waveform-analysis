@@ -21,7 +21,7 @@ global_start = time.time()
 cpu_global_start = time.process_time()
 
 window = 1029
-npe = 6
+npe = 2
 gmu = 160.
 gsigma = 40.
 
@@ -77,7 +77,7 @@ ts = np.zeros(N, dtype=sdtp)
 ts['TriggerNo'] = tc['TriggerNo']
 ts['ChannelID'] = tc['ChannelID']
 ts['ts1sttruth'] = np.array([np.min(pelist[i_pel[i]:i_pel[i+1]]['HitPosInWindow']) for i in range(N)])
-
+start_time(310, 311, mode='charge')
 chunk = N // args.Ncpu + 1
 slices = np.vstack((np.arange(0, N, chunk), np.append(np.arange(chunk, N, chunk), N))).T.astype(int).tolist()
 with Pool(min(args.Ncpu, cpu_count())) as pool:
