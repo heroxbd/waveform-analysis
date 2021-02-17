@@ -52,11 +52,9 @@ with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
     Mu = ipt['Readout/Waveform'].attrs['mu'].item()
     Tau = ipt['Readout/Waveform'].attrs['tau'].item()
     Sigma = ipt['Readout/Waveform'].attrs['sigma'].item()
-    pelist = ipt['SimTriggerInfo']['PEList'][:]
-    simtruth = ipt['SimTruth/T'][:]
+    gmu = ipt['SimTriggerInfo/PEList'].attrs['gmu'].item()
+    gsigma = ipt['SimTriggerInfo/PEList'].attrs['gsigma'].item()
 
-gmu = 160.
-gsigma = 40.
 p = spe_pre[0]['parameters']
 if Tau != 0:
     Alpha = 1 / Tau
@@ -115,7 +113,6 @@ def time_numpyro(a0, a1):
             obs = numpyro.sample('obs', numpyro.distributions.Normal(jnp.matmul(AV, A), scale=std), obs=y)
         return obs
     for i in range(a0, a1):
-        petime = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
         cid = ent[i]['ChannelID']
         wave = jnp.array(ent[i]['Waveform'].astype(np.float32)) * spe_pre[cid]['epulse']
         mu = jnp.sum(wave) / gmu
@@ -185,11 +182,6 @@ sdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('tswave', 
 ts = np.zeros(N, dtype=sdtp)
 ts['TriggerNo'] = ent['TriggerNo']
 ts['ChannelID'] = ent['ChannelID']
-pelist = np.sort(pelist, kind='stable', order=['TriggerNo', 'PMTId', 'HitPosInWindow'])
-Chnum = len(np.unique(ent['ChannelID']))
-e_pel = pelist['TriggerNo'] * Chnum + pelist['PMTId']
-e_pel, i_pel = np.unique(e_pel, return_index=True)
-i_pel = np.append(i_pel, len(pelist))
 opdt = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('HitPosInWindow', np.float64), ('Charge', np.float64)])
 
 with Pool(min(args.Ncpu, cpu_count())) as pool:
@@ -202,7 +194,7 @@ accep = np.hstack([result[i][3] for i in range(len(slices))])
 ff = plt.figure(figsize=(8, 6))
 ax = ff.add_subplot()
 ax.hist(accep, bins=np.arange(0, 1+0.02, 0.02), label='accept_prob')
-ax.legend(loc='upper right')
+ax.legend(loc='upper left')
 ff.savefig(os.path.splitext(fopt)[0] + '.png')
 plt.close()
 

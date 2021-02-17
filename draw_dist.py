@@ -8,7 +8,6 @@ psr.add_argument('ipt', help='input file')
 psr.add_argument('--ref', type=str, nargs='+', help='reference file')
 args = psr.parse_args()
 
-import csv
 import numpy as np
 from scipy import stats
 from tqdm import tqdm
@@ -140,21 +139,21 @@ fig = plt.figure()
 gs = gridspec.GridSpec(2, 2, figure=fig, left=0.1, right=0.95, top=0.9, bottom=0.1, wspace=0.2, hspace=0.3)
 
 ax0 = fig.add_subplot(gs[0, 0])
-ax0.hist(time['ts1sttruth'] - start['T0'], bins=100, label=r'$t_{1sttru} - t_{0}$')
+ax0.hist(start['ts1sttruth'] - start['T0'], bins=100, label=r'$t_{1sttru} - t_{0}$')
 ax0.set_xlabel(r'$t_{1sttru} - t_{0}/\mathrm{s}$')
 ax0.set_ylabel(r'$Count$')
 ax0.set_yscale('log')
 ax0.legend()
-s = np.std(time['ts1sttruth'] - start['T0'], ddof=-1)
+s = np.std(start['ts1sttruth'] - start['T0'], ddof=-1)
 ax0.set_title(fr'$\delta_{{1sttru}}={s:.02f}$')
 
 ax1 = fig.add_subplot(gs[0, 1])
-ax1.hist(time['tstruth'] - start['T0'], bins=100, label=r'$t_{truth} - t_{0}$')
+ax1.hist(start['tstruth'] - start['T0'], bins=100, label=r'$t_{truth} - t_{0}$')
 ax1.set_xlabel(r'$t_{truth} - t_{0}/\mathrm{s}$')
 ax1.set_ylabel(r'$Count$')
 ax1.set_yscale('log')
 ax1.legend()
-s = np.std(time['tstruth'] - start['T0'], ddof=-1)
+s = np.std(start['tstruth'] - start['T0'], ddof=-1)
 ax1.set_title(fr'$\delta_{{truth}}={s:.02f}$')
 
 ax2 = fig.add_subplot(gs[1, 0])

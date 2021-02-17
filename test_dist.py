@@ -1,6 +1,5 @@
 import sys
 import numpy as np
-import csv
 import h5py
 import scipy.stats
 import itertools as it

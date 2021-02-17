@@ -232,7 +232,7 @@ def spe(t, tau, sigma, A):
     s[t > np.finfo(np.float64).tiny] = A * np.exp(-1 / 2 * (np.log(t0 / tau) * np.log(t0 / tau) / sigma / sigma))
     return s
 
-def charge(n, gmu, gsigma, thres=40):
+def charge(n, gmu, gsigma, thres=0):
     chargesam = norm.ppf(1 - uniform.rvs(scale=1-norm.cdf(thres, loc=gmu, scale=gsigma), size=n), loc=gmu, scale=gsigma)
     return chargesam
 

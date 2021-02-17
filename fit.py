@@ -29,8 +29,6 @@ fopt = args.opt
 reference = args.ref
 method = args.met
 
-gmu = 160.
-gsigma = 40.
 Thres = {'xiaopeip':0.2, 'lucyddm':0.2, 'fftrans':0.1, 'findpeak':0.1, 'threshold':0.1}
 
 def fitting(a, b):

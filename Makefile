@@ -2,8 +2,6 @@ SHELL:=bash
 channelN:=$(shell seq -f '%02g' 0 0)
 mu:=$(shell seq -f '%02g' 1 1 5 && seq -f '%02g' 6 2 10 && seq -f '%02g' 15 5 30)
 # mu:=$(shell seq -f '%02g' 15 5 15)
-tau:=$(shell seq -f '%02g' 0 20 100)
-sigma:=$(shell seq -f '%02g' 0 5 15)
 
 tau:=$(shell awk -F',' 'NR == 1 { print $1 }' rc.csv)
 sigma:=$(shell awk -F',' 'NR == 2 { print $1 }' rc.csv)
@@ -15,7 +13,6 @@ sim:=$(erg:%=waveform/%.h5)
 char:=$(patsubst waveform/%.h5,result/$(method)/char/%.h5,$(sim))
 solu:=$(patsubst waveform/%.h5,result/$(method)/solu/%.h5,$(sim))
 dist:=$(patsubst waveform/%.h5,result/$(method)/dist/%.h5,$(sim))
-reco:=$(patsubst waveform/%.h5,result/$(method)/reco/%.csv,$(sim))
 hist:=$(patsubst waveform/%.h5,result/$(method)/hist/%.pdf,$(sim))
 ifeq ($(method), takara)
     predict:=nn
@@ -32,9 +29,9 @@ Nets:=$(channelN:%=result/$(method)/char/Nets/Channel%.torch_net)
 
 .PHONY : all
 
-all : solu
+all : test
 
-test : $(hist) $(reco)
+test : $(hist)
 
 solu : $(solu)
 
@@ -59,9 +56,6 @@ result/$(method)/char/%.h5 : waveform/%.h5 spe.h5 $(Nets)
 endef
 $(eval $(call $(predict)))
 
-result/$(method)/reco/%.csv : result/$(method)/dist/%.h5 waveform/%.h5 result/$(method)/solu/%.h5
-	@mkdir -p $(dir $@)
-	python3 csv_dist.py $< --ref $(wordlist 2,3,$^) -o $@ > $@.log 2>&1
 result/$(method)/hist/%.pdf : result/$(method)/dist/%.h5 waveform/%.h5 result/$(method)/solu/%.h5
 	@mkdir -p $(dir $@)
 	python3 draw_dist.py $< --ref $(wordlist 2,3,$^) -o $@ > $@.log 2>&1

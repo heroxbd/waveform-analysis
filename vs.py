@@ -5,6 +5,8 @@ import time
 import math
 import csv
 import argparse
+import warnings
+warnings.filterwarnings('ignore')
 
 import h5py
 import numpy as np
@@ -22,7 +24,6 @@ import wf_func as wff
 import matplotlib
 matplotlib.use('pgf')
 
-plt.rcParams['font.size'] = 4
 plt.style.use('default')
 
 psr = argparse.ArgumentParser()
@@ -39,7 +40,7 @@ with open(args.conf) as f:
 filelist = os.listdir('result/lucyddm/solu')
 filelist = [f for f in filelist if f[0] != '.' and os.path.splitext(f)[-1] == '.h5']
 numbers = [[float(i) for i in f[:-3].split('-')] for f in filelist]
-stype = np.dtype([('mu', np.float64), ('tau', np.float64), ('sigma', np.float64), ('n', np.uint), ('std1sttruth', np.float64), ('stdtruth', np.float64), ('stdcharge', np.float64), ('stdwave', np.float64), ('wdist', np.float64, 3), ('RSS', np.float64, 3), ('N', np.uint), ('std1sttruthsuccess', np.uint), ('stdtruthsuccess', np.uint), ('stdchargesuccess', np.uint), ('stdwavesuccess', np.uint)])
+stype = np.dtype([('mu', np.float64), ('tau', np.float64), ('sigma', np.float64), ('n', np.uint), ('std1sttruth', np.float64), ('stdtruth', np.float64), ('stdcharge', np.float64), ('stdwave', np.float64), ('wdist', np.float64, 3), ('RSS', np.float64, 3), ('N', np.uint), ('stdchargesuccess', np.uint), ('stdwavesuccess', np.uint)])
 mtsi = np.zeros(len(numbers), dtype=stype)
 mtsi['mu'] = np.array([i[0] for i in numbers])
 mtsi['tau'] = np.array([i[1] for i in numbers])
@@ -57,10 +58,9 @@ mtsi = np.sort(mtsi, kind='stable', order=['mu', 'tau', 'sigma'])
 mts = {'fftrans':mtsi.copy(), 'lucyddm':mtsi.copy(), 'xiaopeip':mtsi.copy(), 'mcmcrec':mtsi.copy()}
 label = {'1st':r'$_{1st}$', 'tru':r'$_{tru}$', 'findpeak':r'$_{findpeak}$', 'threshold':r'$_{shift}$', 'fftrans':r'$_{fftrans}$', 'lucyddm':r'$_{lucyddm}$', 'xiaopeip':r'$_{xiaopeip}$', 'mcmcrec':r'$_{mcmccha}$', 'wave':r'$_{mcmct0}$'}
 color = {'1st':'b', 'tru':'k', 'findpeak':'C0', 'threshold':'C1', 'fftrans':'m', 'lucyddm':'y', 'xiaopeip':'c', 'mcmcrec':'r', 'wave':'g'}
-jit = 0.05
+jit = 0.1
 jitter = {'tru':-4 * jit, 'wave':-3 * jit, 'mcmcrec':-2 * jit, 'lucyddm':-1 * jit, 'xiaopeip':0, 'fftrans':1 * jit, '1st':2 * jit, 'findpeak':3 * jit, 'threshold':4 * jit}
 
-r = 7
 for key in mts.keys():
     for i in range(len(mts[key])):
         f = filelist[mts[key][i]['n']]
@@ -72,14 +72,16 @@ for key in mts.keys():
                 time = soluf['starttime'][:]
                 record = distf['Record'][:]
                 start = wavef['SimTruth/T'][:]
+                r = wavef['SimTruth/T'].attrs['r']
+            vali = np.abs(time['tscharge'] - start['T0'] - np.mean(time['tscharge'] - start['T0'])) < r * np.std(time['tscharge'] - start['T0'], ddof=-1)
             mts[key][i]['N'] = len(start)
-            mts[key][i]['std1sttruth'], mts[key][i]['std1sttruthsuccess'] = wff.stdrmoutlier(time['ts1sttruth'] - start['T0'], r)
-            mts[key][i]['stdtruth'], mts[key][i]['stdtruthsuccess'] = wff.stdrmoutlier(time['tstruth'] - start['T0'], r)
-            mts[key][i]['stdcharge'], mts[key][i]['stdchargesuccess'] = wff.stdrmoutlier(time['tscharge'] - start['T0'], r)
-            if not np.any(np.isnan(time['tswave'])):
-                mts[key][i]['stdwave'], mts[key][i]['stdwavesuccess'] = wff.stdrmoutlier(time['tswave'] - start['T0'], r)
-            mts[key][i]['wdist'] = np.insert(np.percentile(record['wdist'], [10, 90]), 1, record['wdist'].mean())
-            mts[key][i]['RSS'] = np.insert(np.percentile(record['RSS'], [10, 90]), 1, record['RSS'].mean())
+            mts[key][i]['std1sttruth'] = np.std(start['ts1sttruth'] - start['T0'], ddof=-1)
+            mts[key][i]['stdtruth'] = np.std(start['tstruth'] - start['T0'], ddof=-1)
+            mts[key][i]['stdcharge'], mts[key][i]['stdchargesuccess'] = wff.stdrmoutlier(time['tscharge'][vali] - start['T0'][vali], r)
+            if not np.any(np.isnan(time['tswave'][vali])):
+                mts[key][i]['stdwave'], mts[key][i]['stdwavesuccess'] = wff.stdrmoutlier(time['tswave'][vali] - start['T0'][vali], r)
+            mts[key][i]['wdist'] = np.insert(np.percentile(record['wdist'][vali], [10, 90]), 1, record['wdist'][vali].mean())
+            mts[key][i]['RSS'] = np.insert(np.percentile(record['RSS'][vali], [10, 90]), 1, record['RSS'][vali].mean())
         except:
             pass
 
@@ -120,7 +122,7 @@ for sigma, i in zip(Sigma, [0, 1]):
         ax.set_xlabel(r'$\mu$')
         ax.set_ylabel(r'$\delta/\mathrm{ns}$')
         ax.set_title(fr'$\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$')
-        ax.set_ylim(0, lim['delta'][i, j])
+        # ax.set_ylim(0, lim['delta'][i, j])
         # ax.set_yscale('log')
         ax.grid()
         ax.legend(loc='upper right')
@@ -147,7 +149,7 @@ for sigma, i in zip(Sigma, [0, 1]):
         ax.set_xlabel(r'$\mu$')
         ax.set_ylabel(r'$ratio$')
         ax.set_title(fr'$\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$')
-        ax.set_ylim(lim['deltadiv'][i, j], 1.1)
+        # ax.set_ylim(lim['deltadiv'][i, j], 1.1)
         ax.grid()
         ax.legend(loc='lower left')
 
@@ -162,7 +164,7 @@ for sigma, i in zip(Sigma, [0, 1]):
         ax.set_xlabel(r'$\mu$')
         ax.set_ylabel(r'$W-dist/\mathrm{ns}$')
         ax.set_title(fr'$\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$')
-        ax.set_ylim(0, lim['wdist'][i, j])
+        # ax.set_ylim(0, lim['wdist'][i, j])
         # ax.set_yscale('log')
         ax.grid()
         ax.legend(loc='upper right')
@@ -177,7 +179,7 @@ for sigma, i in zip(Sigma, [0, 1]):
         ax.set_xlabel(r'$\mu$')
         ax.set_ylabel(r'$RSS/\mathrm{mV}^{2}$')
         ax.set_title(fr'$\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$')
-        ax.set_ylim(0, lim['rss'][i, j])
+        # ax.set_ylim(0, lim['rss'][i, j])
         # ax.set_yscale('log')
         ax.yaxis.get_major_formatter().set_powerlimits((0, 1))
         ax.grid()
@@ -217,10 +219,6 @@ fig.savefig('Note/figures/vs-deltadiv.pdf')
 plt.close(fig)
 
 for key in mts.keys():
-    print(key.rjust(10) + ' std1sttruthsuccess mean = {:.04%}'.format((mts[key]['std1sttruthsuccess'] / mts[key]['N']).mean()))
-    print(key.rjust(10) + '  std1sttruthsuccess min = {:.04%}'.format((mts[key]['std1sttruthsuccess'] / mts[key]['N']).min()))
-    print(key.rjust(10) + '    stdtruthsuccess mean = {:.04%}'.format((mts[key]['stdtruthsuccess'] / mts[key]['N']).mean()))
-    print(key.rjust(10) + '     stdtruthsuccess min = {:.04%}'.format((mts[key]['stdtruthsuccess'] / mts[key]['N']).min()))
     print(key.rjust(10) + '   stdchargesuccess mean = {:.04%}'.format((mts[key]['stdchargesuccess'] / mts[key]['N']).mean()))
     print(key.rjust(10) + '    stdchargesuccess min = {:.04%}'.format((mts[key]['stdchargesuccess'] / mts[key]['N']).min()))
 print('mcmcrecwav'.rjust(10) + '     stdwavesuccess mean = {:.04%}'.format((mts['mcmcrec']['stdwavesuccess'] / mts['mcmcrec']['N']).mean()))
