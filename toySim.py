@@ -41,7 +41,7 @@ std = 1.
 
 def sampling(a0, a1, mu, tau, sigma):
     np.random.seed(a0 + round(Tau + Sigma))
-    npe = poisson.ppf(1 - uniform.rvs(scale=1-poisson.cdf(0, mu), size=a1 - a0), mu).astype(np.int)
+    npe = poisson.ppf(1 - uniform.rvs(scale=1-poisson.cdf(0, mu), size=a1 - a0), mu).astype(int)
     t0 = np.random.uniform(100., 500., size=a1 - a0)
     sams = [np.vstack((wff.time(npe[i], tau, sigma) + t0[i], wff.charge(npe[i], gmu=gmu, gsigma=gsigma, thres=0))).T for i in range(a1 - a0)]
     wdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('Waveform', np.int16, window)])
@@ -68,7 +68,7 @@ def sampling(a0, a1, mu, tau, sigma):
     return t, pelist, waves
 
 chunk = args.N // args.Ncpu + 1
-slices = np.vstack((np.arange(0, args.N, chunk), np.append(np.arange(chunk, args.N, chunk), args.N))).T.astype(np.int).tolist()
+slices = np.vstack((np.arange(0, args.N, chunk), np.append(np.arange(chunk, args.N, chunk), args.N))).T.astype(int).tolist()
 
 with Pool(min(args.Ncpu, cpu_count())) as pool:
     result = pool.starmap(partial(sampling, mu=Mu, tau=Tau, sigma=Sigma), slices)

@@ -5,9 +5,11 @@
 
 \input{Wdist}
 
+\subsection{Methods}
+
 Waveform analysis algorithms are presented below, separately. It is worth mentioning that the hittime in our waveform analysis results is discrete value (integers in a DAQ window). 
 
-\subsection{Find peak}
+\subsubsection{Find peak}
 \label{sec:findpeak}
 
 First intuitive method is the find peak method. We first smooth the input waveform using Savitzky–Golay filter to alleviate the obstruction of electron noise. Then we find the peak of the smoothed waveform and move the peaks leftward. The shifted voltage is now promotional to reconstructed charge $q_{rec}(t)$ related with corresponding hittime. The leftward distance we moved, $\Delta t$ is the peak time of SPE response $v_{spe}$, described by formula \eqref{eq:dayaspe}. Finally the charge are normalized to retain the consistency with total charge which is the integration of the waveform. The demonstration here shows a result with W-dist = 11.29ns. 
@@ -18,7 +20,7 @@ First intuitive method is the find peak method. We first smooth the input wavefo
     \caption{Find Peak Method Demo, W-dist = 11.29ns}
 \end{figure}
 
-\subsection{Waveform shift}
+\subsubsection{Waveform shift}
 
 A threshold $v_{th}$ is settled with respect to electronics noise in simulation data. In waveform shift method, first we locate waveform voltage, $v_{w}(t)$, which exceeds $v_{th}$. Then we shift the exceeding part leftward. The $\Delta t$ we move is the same as find peak method in section \ref{sec:findpeak}. Finally we treat the normalized exceeding part as $q_{rec}(t)$. The demonstration here shows a result with W-dist = 10.75ns. 
 
@@ -28,7 +30,7 @@ A threshold $v_{th}$ is settled with respect to electronics noise in simulation 
     \caption{Waveform Shift Method Demo, W-dist = 10.75ns}
 \end{figure}
 
-\subsection{Fourier deconvolution}
+\subsubsection{Fourier deconvolution}
 
 Third method is Fourier transform deconvolution. Assuming that the waveform is the convolution of $v_{spe}$ and $q(t)$, the Fast Fourier transform (FFT) of $v_{w}$ and $v_{spe}$ are computed. A rectangular filter, $f$, is implemented. Then we compute the inverse FFT of the quotient between filtered FFT of $v_{w}$ and FFT of $v_{spe}$. We pick out positive value from inverse FFT result, and normalize them to obtain $q_{rec}(t)$. The process is shown in formula \eqref{eq:fft}. 
 
@@ -45,9 +47,9 @@ The demonstration here shows a result with W-dist = 1.63ns.
     \caption{Fourier Deconvolution Demo, W-dist = 1.63}
 \end{figure}
 
-\subsection{Lucy deconvolution}
+\subsubsection{Lucy deconvolution}
 
-Lucy-Richardson deconvolution is a non linear iteration method, to calculate the deconvolution of signals. It has been used in astronomy \cite{li_richardson-lucy_2019}, image processing and many other fields. Lucy deconvolution has an advantage against Fourier deconvolution which is a constraint that $q_{rec}(t)$ must be larger than 0. 
+Lucy-Richardson deconvolution (LucyDDM) is a non linear iteration method, to calculate the deconvolution of signals. It has been used in astronomy \cite{li_richardson-lucy_2019}, image processing and many other fields. Lucy deconvolution has an advantage against Fourier deconvolution which is a constraint that $q_{rec}(t)$ must be larger than 0. 
 
 In $n$-th iteration, the calculation shows in \eqref{eq:lucy-inter} where $v^{*}_{spe}$ is flipped $v_{spe}$. 
 \begin{align}
@@ -55,7 +57,7 @@ In $n$-th iteration, the calculation shows in \eqref{eq:lucy-inter} where $v^{*}
     q_{rec}^{(n)} &= q_{rec}^{(n-1)} \cdot \left(\frac{v_{w}}{q_{rec}^{(n-1)} \otimes v_{spe}} \otimes v^{*}_{spe}\right) \label{eq:lucy-inter}
 \end{align}
 
-Usually 50 iterations were performed ($n_{max}=50$). The demonstration here shows a result with W-dist = 1.25ns. 
+Iteration will stop when two adjacent loop give very close results. The demonstration here shows a result with W-dist = 1.25ns. 
 
 \begin{figure}[H]
     \centering
@@ -63,13 +65,13 @@ Usually 50 iterations were performed ($n_{max}=50$). The demonstration here show
     \caption{Lucy Deconvolution Demo, W-dist = 1.25}
 \end{figure}
 
-\subsection{Fitting}
+\subsubsection{Fitting}
 
 Waveform is the convolution of $v_{spe}$ and $q_{rec}(t)$ (see formula~\eqref{eq:wave-con}). 
 
 \begin{align}
     v_{w} &= q_{rec} \otimes v_{spe} \label{eq:wave-con} \\
-    L &= L(v_{r}(t), v_{w}(t)) = L(q_{rec}(t), v_{spe}, v_{w}(t)) = \mathrm{RSS}(v_{w}, q_{rec} \otimes v_{spe}) \label{eq:loss-rss}
+    L &= L(v_{r}, v_{w}) = L(q_{rec}, v_{spe}, v_{w}) = \mathrm{RSS}(v_{w}, q_{rec} \otimes v_{spe}) \label{eq:loss-rss}
 \end{align}
 
 In fitting process, the parameter are $q_{rec}(t)$ in each discrete hittime $t$. The complete information hided in origin waveform is disturbed by electronics noise and pile-up. The loss (see formula~\ref{eq:loss-rss}) which we optimize in fitting is the residual sum of squares (RSS) between the origin wave $v_{w}(t)$ and reconstructed wave $v_{r}(t)$ according to the parameters. The parameters will tend to be preciser when the reconstructed wave approaching to the origin wave. 
@@ -84,14 +86,14 @@ The figure~\ref{fig:fitting} shows one of the fitting result. We can see the ori
     \caption{\label{fig:fitting} Fitting Demo, W-dist = 2.26}
 \end{figure}
 
-The result reconstructing $q_{rec}$ when $\mu=5, \tau=20, \sigma=10$ shows in figure. (see figure~\ref{fig:fitting-hist}) The overall result of W-dist reconstructing $q_{rec}$ shows in figure (see figure~\ref{fig:fitting-npe}). 
+The result reconstructing $q_{rec}$ when $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$ shows in figure. (see figure~\ref{fig:fitting-hist}) The overall result of W-dist reconstructing $q_{rec}$ shows in figure (see figure~\ref{fig:fitting-npe}). 
 
 \begin{figure}[H]
 \begin{minipage}[t]{.5\textwidth}
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/xiaopeipchargehist.pgf}}
-    \caption{\label{fig:fitting-hist} $W_{d}$ Histogram \& Boxplot, $\mu=5, \tau=20, \sigma=10$, method is Fitting}
+    \caption{\label{fig:fitting-hist} $W_{d}$ Histogram \& Boxplot, $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$, method is Fitting}
 \end{figure}
 \end{minipage}
 \begin{minipage}[t]{.5\textwidth}
@@ -103,21 +105,23 @@ The result reconstructing $q_{rec}$ when $\mu=5, \tau=20, \sigma=10$ shows in fi
 \end{minipage}
 \end{figure}
 
-\subsection{HMC}
+\subsubsection{HMC}
 
 The typical variable optimization methods such as L-BFGS-B depends on gradient evaluation and their iteration stops when gradient is smaller than a certain tiny value, following the convention in the field of numerical calculation. In some circumstances the fitting result may stuck in local minimum rather than global minimum. Hamiltonian Monte Carlo method has potential to overcome this difficulty. 
 
 An program based on Hamiltonian Monte Carlo (HMC) is developed intending to sample from the posterior distribution of $t_{0}$, as well as $q$. HMC is a efficient Markov Chain Monte Carlo (MCMC) method for achieving samples from a distribution for which direct sampling is difficult \cite{neal_mcmc_2012}. The sample derived by HMC can usually be ergodic in the distribution, so the global minimum will be obtain with large sampling set. 
 
-The model and prior distribution is defined like~\eqref{eq:}
+The model and prior distribution is defined below: 
 
 \begin{align}
     t_{0} &\sim \mathrm{Uniform}(0, L_{w}) \\
-    A(t_{i}) &= \mu \cdot P_{t}(t_{i}) \\
-    v_{w}(t_{i}) &\sim \mathcal{N}(F_{w}(A), \sigma_{w})
+    P_{q}(t_{i}) &= \mu \cdot P_{t}(t_{i}) \\
+    q(t_{i}) &\sim \mathrm{Mix}\mathcal{N}(P_{q}(t_{i}), \mu_{g}, \sigma_{g}^{2}) \\
+    v_{w}(t_{i}) &\sim \mathcal{N}(F_{w}(s), \sigma_{w}^{2}) \\
+    f_{MN}(q(t_{i}) | P_{q}(t_{i}), \mu_{g}, \sigma_{g}^{2}) &= (1 - P_{q}(t_{i}))\delta(q(t_{i})) + P_{q}(t_{i})\mathcal{N}(q(t_{i}) | \mu_{g}, \sigma_{g}^{2}) \label{eq:mixnormal}
 \end{align}
 
-where $t_{0}$ is the starting time of time profile and $L_{w}$ is nothing but a upper limit of $t_{0}$. $A(t_{i})$ is the number of PEs expectation in time interval $[t_{i}, t_{i}+\mathrm{d}t]$, where $\mathrm{d}t$ is a man-made small time interval depends on the precision required. Given $A$, using function $F_{w}$ we re-build the waveform expectation. 
+where $t_{0}$ is the starting time of time profile and $L_{w}$ is nothing but a upper limit of $t_{0}$. $P_{q}(t_{i})$ is the equivalent charge expectation in time interval $[t_{i}, t_{i}+\mathrm{d}t]$, where $\mathrm{d}t$ is a man-made small time interval depends on the precision required. $q$ follow the probability Normal mixture distribution, whose probability density function (PDF) is $f_{MN}$ in \eqref{eq:mixnormal}. Given $q$, using function $F_{w}(q)$ is the rebuilt waveform expectation. 
 
 We use NumPyro \cite{phan2019composable}, a graceful probabilistic programming library, to build the model and sample. One of sampling result shows in figure~\ref{fig:mcmcrec-t0hist}. 
 
@@ -126,21 +130,21 @@ We use NumPyro \cite{phan2019composable}, a graceful probabilistic programming l
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/mcmcrect0hist.pgf}}
-    \caption{\label{fig:mcmcrec-t0hist} $\Delta t_{0}$ Histogram, $\mu=5, \tau=20, \sigma=10$, method is HMC}
+    \caption{\label{fig:mcmcrec-t0hist} $\Delta t_{0}$ Histogram, $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$, method is HMC}
 \end{figure}
 \end{minipage}
 \begin{minipage}[t]{.5\textwidth}
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/mcmcrecchargehist.pgf}}
-    \caption{\label{fig:mcmcrec-chargehist} $W_{d}$ Histogram, $\mu=5, \tau=20, \sigma=10$, method is HMC}
+    \caption{\label{fig:mcmcrec-chargehist} $W_{d}$ Histogram, $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$, method is HMC}
 \end{figure}
 \end{minipage}
 \end{figure}
 
-We can see during HMC sampling, the charge w.r.t. time, $q_{rec}$, is also collected. The result reconstructing $q_{rec}$ when $\mu=5, \tau=20, \sigma=10$ shows in figure (see figure~\ref{fig:charg-hist}). 
+We can see during HMC sampling, the charge w.r.t. time, $q_{rec}$, is also collected. The result reconstructing $q_{rec}$ when $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$ shows in figure (see figure~\ref{fig:mcmcrec-chargehist}). 
 
-\subsection{CNN}
+\subsubsection{CNN}
 
 % \subsubsection{Network structure}
 
@@ -194,14 +198,14 @@ A direct implementation of judgement metrics into loss function is often difficu
 % \subsubsection{Result}
 In the training process, we trained CNN for each PMT channel. The loss which is Wasserstein distance during training show in figure~\ref{fig:loss}. 
 
-The result reconstructing $q_{rec}$ when $\mu=5, \tau=20, \sigma=10$ shows in figure (see figure~\ref{fig:cnn-hist}). The overall result of W-dist reconstructing $q_{rec}$ shows in figure (see figure~\ref{fig:cnn-npe}). The result shows that CNN is the best for reconstruction of $q_{rec}(t)$. The error bar shows 10 to 90 percentile of Wasserstein distance distribution. 
+The result reconstructing $q_{rec}$ when $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$ shows in figure (see figure~\ref{fig:cnn-hist}). The overall result of W-dist reconstructing $q_{rec}$ shows in figure (see figure~\ref{fig:cnn-npe}). The result shows that CNN is the best for reconstruction of $q_{rec}(t)$. 
 
 \begin{figure}[H]
 \begin{minipage}[t]{.5\textwidth}
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/takarachargehist.pgf}}
-    \caption{\label{fig:cnn-hist} $W_{d}$ Histogram \& Boxplot, $\mu=5, \tau=20, \sigma=10$, method is CNN}
+    \caption{\label{fig:cnn-hist} $W_{d}$ Histogram \& Boxplot, $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$, method is CNN}
 \end{figure}
 \end{minipage}
 \begin{minipage}[t]{.5\textwidth}
@@ -212,5 +216,36 @@ The result reconstructing $q_{rec}$ when $\mu=5, \tau=20, \sigma=10$ shows in fi
 \end{figure}
 \end{minipage}
 \end{figure}
+
+\subsection{Program Efficiency}
+
+The efficiency of 4 good performance methods on our simulation dataset show in table~\ref{fig:efficiency}. The CNN is faster than Lucy deconvolution, and much faster than fitting. When we reduce accuracy requirement of these methods except CNN, such as decreasing the number of iteration (for LucyDDM and Fitting) or the sampling amount (for MCMC), the time these methods consume will decrease. 
+
+\begin{table}[H]
+    \centering
+    \caption{\label{fig:efficiency} Reconstruction Efficiency}
+    \begin{tabular}{c|c}
+        \hline
+        & Performance/$10^{5}$Waveform \\
+        \hline
+        CNN & 6.0s (GPU) \\
+        \hline
+        Fitting & 2180s (CPU) \\
+        \hline
+        LucyDDM & 591s (CPU) \\
+        \hline
+        MCMC & 18325s (CPU) \\
+        \hline
+    \end{tabular}
+\end{table}
+\hspace{4mm}
+
+The hardware we used listed here: 
+\begin{center}
+\begin{itemize}
+    \item GPU: Using one graphic card of NVIDIA\textsuperscript{\textregistered} Tesla\textsuperscript{\textregistered} K80
+    \item CPU: Using 100 CPU cores of AMD EYPC\texttrademark\ 7702
+\end{itemize}
+\end{center}
 
 % section Algorithm (end)

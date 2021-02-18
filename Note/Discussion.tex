@@ -1,39 +1,28 @@
 \section{Discussion} % (fold)
 \label{sec:discussion}
 
-A summary of all methods is plotted in \ref{fig:chargesummary} which is reconstruction performance of $q_{rec}$. The errorbar shows 10 to 90 percentile of Wasserstein distance distribution. 
+The $W_{d}$ summary of all methods is plotted in \ref{fig:chargesummary}, with all dataset parameters $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$. The errorbar shows 5 to 95 percentile of Wasserstein distance distribution. 
 
 \begin{figure}[H]
     \centering
     \scalebox{0.6}{\input{figures/summarycharge.pgf}}
+    \caption{\label{fig:chargesummary} $W_{d}$ of methods, $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$}
+\end{figure}
+
+It is apparent that FindPeak and Shift are second-rate among all 7 methods, so we will only discuss other 5 methods below. The $W_{d}$ summary of 5 methods (FFT, LucyDDM, Fitting, MCMC, CNN) is plotted in \ref{fig:chargesummary}, with all dataset parameters combination. The errorbar shows 5 to 95 percentile of Wasserstein distance distribution. 
+
+\begin{figure}[H]
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/vs-wdist.pgf}}
     \caption{\label{fig:chargesummary} $W_{d}$ of methods, error bar 5--95 percentile ($q_{rec}$)}
 \end{figure}
 
-The efficiency of CNN fitting and Lucy deconvolution method show in table~\ref{fig:efficiency}. The CNN is faster than Lucy deconvolution, and much faster than fitting. 
+We can see that as method CNN uses Wasserstein distance as loss directly during trainin, its Wasserstein distance is the smallest. While Fitting treats RSS as its loss, CNN still obtains the least RSS among 5 methods (see formula~\ref{fig:rsssummary})
 
-\begin{table}[H]
+\begin{figure}[H]
     \centering
-    \caption{\label{fig:efficiency} Reconstruction Efficiency}
-    \begin{tabular}{c|c}
-        \hline
-        & Performance/$10^{5}$Waveform \\
-        \hline
-        CNN & 6.0s (GPU) \\
-        \hline
-        Fitting & 2000s (CPU) \\
-        \hline
-        LucyDDM & 24s (CPU) \\
-        \hline
-    \end{tabular}
-\end{table}
-\hspace{4mm}
-
-The hardware we used listed here: 
-\begin{center}
-\begin{itemize}
-    \item GPU: Using one graphic card of NVIDIA\textsuperscript{\textregistered} Tesla\textsuperscript{\textregistered} K80
-    \item CPU: Using 50 CPU cores of AMD EYPC\texttrademark\ 7702
-\end{itemize}
-\end{center}
+    \resizebox{\textwidth}{!}{\input{figures/vs-rss.pgf}}
+    \caption{\label{fig:rsssummary} RSS of methods, error bar 5--95 percentile ($q_{rec}$)}
+\end{figure}
 
 % section Performance (end)

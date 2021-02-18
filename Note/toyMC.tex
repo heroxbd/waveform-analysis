@@ -24,13 +24,13 @@ Typical PMT response includes several individual processes. First, single photon
 \end{minipage}
 \end{figure}
 
-The data acquisition system will digitalize the time and voltage of recorded PMT output. Most of the time, when handling PMT waveform, we record the time of first PE according to threshold of voltage, $v_{th}$, and total charge in a DAQ window. The voltage which is higher than a certain threshold is assumed to be the consequence of photonelectron. Total charge is the integration of the waveform. Single photonelectron (SPE) induced charge can be a wide distribution, rather than a single value (see figure~\ref{fig:charge}). In these practical scenarios, one waveform is converted to a pair of numbers. More detailed information of the waveform was lost. 
+The data acquisition system will digitalize the time and voltage of recorded PMT output. Most of the time, when handling PMT waveform, we record the time of first PE according to threshold of voltage, $v_{th}$, and total charge in a DAQ window. The voltage which is higher than a certain threshold is assumed to be the consequence of photonelectron. Total charge is the integration of the waveform. Single photonelectron (SPE) induced charge can be a wide distribution (usually truncated normal distribution) rather than a single value (see figure~\ref{fig:charge}). In these practical scenarios, one waveform is converted to a pair of numbers. More detailed information of the waveform was lost. 
 
 \begin{minipage}[b]{1.\textwidth}
 \begin{figure}[H]
     \centering
     \scalebox{0.4}{\input{figures/chargehist.pgf}}
-    \caption{\label{fig:charge} Distribution of Charge}
+    \caption{\label{fig:charge} Truncated normal distribution of charge, mean=$\mu_{g}$, standard deviation=$\sigma_{g}$}
 \end{figure}
 \end{minipage}
 
@@ -45,7 +45,7 @@ In toy MC, we describe the light transmit process using a hypothetical parameter
 % \begin{figure}[H]
 \begin{minipage}{.4\textwidth}
 \begin{align}
-    P_{t}(t) = \frac{1}{\tau}e^{-\frac{t - t_{0}}{\tau}} \otimes \mathcal{N}(\sigma)
+    P_{t}(t) = \frac{1}{\tau}e^{-\frac{t - t_{0}}{\tau}} \otimes \mathcal{N}(\sigma^{2})
     \label{eq:time-pro}
 \end{align}
 \end{minipage}
@@ -61,7 +61,7 @@ In toy MC, we describe the light transmit process using a hypothetical parameter
 Here we discuss the configuration and process of simulation in toy MC. The total number of PE in a DAQ window (in a single waveform), $N_{pe}$, is sampled from a Truncated Poisson distribution ($N_{pe}=0$ samples are abandoned) with expectation $\mu$. The hittime $t_{tru}$ of each PE is sampled from the time profile $P_{t}(t)$ of the liquid scintillator. The charge of each PE $q_{tru}$ is sampled from parameterized calibration result, which can be described as truncated normal distribution with probability distribution function \eqref{eq:truncated}. The simulation datasets are combination of hittime $t_{tru}$ and charge of PE, $q_{tru}$. 
 
 \begin{equation}
-    P_{q}(q) = A\cdot\mathcal{N}(\mu_{q},\sigma_{q}),\,(q>0)
+    P_{q}(q) = A\cdot\mathcal{N}(\mu_{q},\sigma_{q}^{2}),\,(q>0)
     \label{eq:truncated}
 \end{equation}
 
@@ -86,8 +86,8 @@ The estimation result of $t_{0}$ using only simulated data is shown in figure~\r
 
 \begin{figure}[H]
     \centering
-    \scalebox{0.7}{\input{figures/2010vs-deltadiv.pgf}}
-    \caption{\label{fig:reso-diff} Timing resolution improved of waveform analysis, $\tau$=20ns $\sigma$=10ns}
+    \scalebox{0.5}{\input{figures/2010vs-deltadiv.pgf}}
+    \caption{\label{fig:reso-diff} Timing resolution improved by waveform analysis, $\tau$=20ns $\sigma$=10ns}
 \end{figure}
 
 Before taking deep look into the methods, input and output need to be defined. The input for waveform analysis is pedestal subtracted PMT waveform (see figure~\ref{fig:input}), and the output is the $q_{rec}$ sequence (see figure~\ref{fig:output}). 
@@ -97,14 +97,14 @@ Before taking deep look into the methods, input and output need to be defined. T
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/wave.pgf}}
-    \caption{\label{fig:input} Data Input}
+    \caption{\label{fig:input} Data input}
 \end{figure}
 \end{minipage}
 \begin{minipage}[b]{.5\textwidth}
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/charge.pgf}}
-    \caption{\label{fig:output} Data Output}
+    \caption{\label{fig:output} Data output}
 \end{figure}
 \end{minipage}
 \end{figure}
@@ -114,7 +114,7 @@ The histogram of $N_{pe}$ when $\mu=5$ shows in figure (see figure~\ref{fig:penu
 \begin{figure}[H]
     \centering
     \scalebox{0.4}{\input{figures/penum.pgf}}
-    \caption{\label{fig:penum} $N_{pe}$ Histogram}
+    \caption{\label{fig:penum} $N_{pe}$ histogram}
 \end{figure}
 
 % section Towards Timing Resolution (end)

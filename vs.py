@@ -25,6 +25,7 @@ import matplotlib
 matplotlib.use('pgf')
 
 plt.style.use('default')
+plt.rcParams['font.size'] = 15
 
 psr = argparse.ArgumentParser()
 psr.add_argument('--conf', type=str, help='configuration of tau & sigma')
@@ -33,7 +34,7 @@ args = psr.parse_args()
 with open(args.conf) as f:
     f_csv = csv.reader(f, delimiter=' ')
     Tau = next(f_csv)
-    Tau = [int(i) for i in Tau]
+    Tau = [int(i) for i in Tau][:2]
     Sigma = next(f_csv)
     Sigma = [int(i) for i in Sigma]
 
@@ -54,7 +55,7 @@ mtsi['wdist'] = np.nan
 mtsi['RSS'] = np.nan
 mtsi = np.sort(mtsi, kind='stable', order=['mu', 'tau', 'sigma'])
 
-mts = {'findpeak':mtsi.copy(), 'threshold':mtsi.copy(), 'fftrans':mtsi.copy(), 'lucyddm':mtsi.copy(), 'xiaopeip':mtsi.copy(), 'takara':mtsi.copy(), 'mcmcrec':mtsi.copy()}
+mts = {'findpeak':mtsi.copy(), 'threshold':mtsi.copy(), 'fftrans':mtsi.copy(), 'lucyddm':mtsi.copy(), 'xiaopeip':mtsi.copy(), 'mcmcrec':mtsi.copy(), 'takara':mtsi.copy()}
 # mts = {'fftrans':mtsi.copy(), 'lucyddm':mtsi.copy(), 'xiaopeip':mtsi.copy(), 'takara':mtsi.copy(), 'mcmcrec':mtsi.copy()}
 label = {'1st':'\mathrm{1st}', 'tru':'\mathrm{Truth}', 'findpeak':'\mathrm{FindPeak}', 'threshold':'\mathrm{Shift}', 'fftrans':'\mathrm{FFT}', 'lucyddm':'\mathrm{LucyDDM}', 'xiaopeip':'\mathrm{Fitting}', 'takara':'\mathrm{CNN}', 'mcmcrec':'\mathrm{MCMCcha}', 'wave':'\mathrm{MCMCt0}'}
 color = {'1st':'b', 'tru':'k', 'findpeak':'C1', 'threshold':'C2', 'fftrans':'m', 'lucyddm':'y', 'xiaopeip':'c', 'takara':'C0', 'mcmcrec':'r', 'wave':'g'}
@@ -92,16 +93,16 @@ whigh = np.max(whigh[~np.isnan(whigh)]) * 1.05
 rhigh = np.array([[np.max(mts[key]['RSS'])] for key in mts.keys()])
 rhigh = np.max(rhigh[~np.isnan(rhigh)]) * 1.05
 
-figd = plt.figure(figsize=(12, 12))
-gsd = gridspec.GridSpec(3, 2, figure=figd, left=0.1, right=0.95, top=0.95, bottom=0.05, wspace=0.2, hspace=0.3)
-figdd = plt.figure(figsize=(12, 12))
-gsdd = gridspec.GridSpec(3, 2, figure=figd, left=0.1, right=0.95, top=0.95, bottom=0.05, wspace=0.2, hspace=0.3)
-figw = plt.figure(figsize=(12, 12))
-gsw = gridspec.GridSpec(3, 2, figure=figw, left=0.1, right=0.95, top=0.95, bottom=0.05, wspace=0.2, hspace=0.3)
-figr = plt.figure(figsize=(12, 12))
-gsr = gridspec.GridSpec(3, 2, figure=figr, left=0.1, right=0.95, top=0.95, bottom=0.05, wspace=0.2, hspace=0.3)
+figd = plt.figure(figsize=(len(Sigma) * 6, len(Tau) * 4))
+gsd = gridspec.GridSpec(len(Tau), len(Sigma), figure=figd, left=0.1, right=0.95, top=0.95, bottom=0.1, wspace=0.2, hspace=0.3)
+figdd = plt.figure(figsize=(len(Sigma) * 6, len(Tau) * 4))
+gsdd = gridspec.GridSpec(len(Tau), len(Sigma), figure=figd, left=0.1, right=0.95, top=0.95, bottom=0.1, wspace=0.2, hspace=0.3)
+figw = plt.figure(figsize=(len(Sigma) * 6, len(Tau) * 4))
+gsw = gridspec.GridSpec(len(Tau), len(Sigma), figure=figw, left=0.1, right=0.95, top=0.95, bottom=0.1, wspace=0.2, hspace=0.3)
+figr = plt.figure(figsize=(len(Sigma) * 6, len(Tau) * 4))
+gsr = gridspec.GridSpec(len(Tau), len(Sigma), figure=figr, left=0.1, right=0.95, top=0.95, bottom=0.1, wspace=0.2, hspace=0.3)
 alpha = 0.05
-lim = {'deltadiv':np.tile([0.3, 0.5, 0.5], (2, 1)), 'wdist':np.tile([2.5, 4, 7], (2, 1)), 'rss':np.tile([4e3, 2.5e3, 2e3], (2, 1))}
+lim = {'deltadiv':np.tile([0.5, 0.5, 0.5], (2, 1)), 'wdist':np.tile([3, 6, 7], (2, 1)), 'rss':np.array([[5e3, 3e3, 2e3], [4.5e3, 3e3, 2e3]])}
 keylist = list(mts.keys())
 for sigma, i in zip(Sigma, [0, 1]):
     for tau, j in zip(Tau, [0, 1, 2]):
@@ -160,9 +161,10 @@ for sigma, i in zip(Sigma, [0, 1]):
             if key == 'findpeak' or key == 'threshold':
                 continue
             wdistlist = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
-            # ax.plot(wdistlist['mu'] + jitter[key], wdistlist['wdist'], c=color[key], label='$W-dist_'+label[key]+'$', marker='^')
+            la = '$W-dist_'+label[key]+'$' if key != 'mcmcrec' else '$W-dist_{\mathrm{MCMC}}$'
+            # ax.plot(wdistlist['mu'] + jitter[key], wdistlist['wdist'], c=color[key], label=la, marker='^')
             yerr = np.vstack([wdistlist['wdist'][:, 1] - wdistlist['wdist'][:, 0], wdistlist['wdist'][:, 2] - wdistlist['wdist'][:, 1]])
-            ax.errorbar(wdistlist['mu'] + jitter[key], wdistlist['wdist'][:, 1], yerr=yerr, label='$W-dist_'+label[key]+'$', c=color[key], marker='^')
+            ax.errorbar(wdistlist['mu'] + jitter[key], wdistlist['wdist'][:, 1], yerr=yerr, label=la, c=color[key], marker='^')
             ax.fill_between(wdistlist['mu'] + jitter[key], wdistlist['wdist'][:, 0], wdistlist['wdist'][:, 2], fc=color[key], alpha=0.1, color=None)
         ax.set_xlabel(r'$\mu$')
         ax.set_ylabel(r'$W-dist/\mathrm{ns}$')
@@ -177,9 +179,10 @@ for sigma, i in zip(Sigma, [0, 1]):
             if key == 'findpeak' or key == 'threshold':
                 continue
             rsslist = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
-            # ax.plot(rsslist['mu'] + jitter[key], rsslist['RSS'], c=color[key], label='$RSS_'+label[key]+'$', marker='^')
+            la = '$RSS_'+label[key]+'$' if key != 'mcmcrec' else '$RSS_{\mathrm{MCMC}}$'
+            # ax.plot(rsslist['mu'] + jitter[key], rsslist['RSS'], c=color[key], label=la, marker='^')
             yerr = np.vstack([rsslist['RSS'][:, 1] - rsslist['RSS'][:, 0], rsslist['RSS'][:, 2] - rsslist['RSS'][:, 1]])
-            ax.errorbar(rsslist['mu'] + jitter[key], rsslist['RSS'][:, 1], yerr=yerr, label='$RSS_'+label[key]+'$', c=color[key], marker='^')
+            ax.errorbar(rsslist['mu'] + jitter[key], rsslist['RSS'][:, 1], yerr=yerr, label=la, c=color[key], marker='^')
             ax.fill_between(rsslist['mu'] + jitter[key], rsslist['RSS'][:, 0], rsslist['RSS'][:, 2], fc=color[key], alpha=0.1, color=None)
         ax.set_xlabel(r'$\mu$')
         ax.set_ylabel(r'$RSS/\mathrm{mV}^{2}$')
@@ -202,8 +205,8 @@ figr.savefig('Note/figures/vs-rss.pgf')
 figr.savefig('Note/figures/vs-rss.pdf')
 plt.close(figr)
 
-fig = plt.figure(figsize=(8, 12))
-gs = gridspec.GridSpec(3, 2, figure=fig, left=0.1, right=0.95, top=0.95, bottom=0.05, wspace=0.2, hspace=0.3)
+fig = plt.figure(figsize=(len(Sigma) * 6, len(Tau) * 4))
+gs = gridspec.GridSpec(len(Tau), len(Sigma), figure=fig, left=0.1, right=0.95, top=0.95, bottom=0.1, wspace=0.2, hspace=0.3)
 for sigma, i in zip(Sigma, [0, 1]):
     for tau, j in zip(Tau, [0, 1, 2]):
         ax = fig.add_subplot(gs[j, i])
@@ -223,7 +226,7 @@ fig.savefig('Note/figures/vs-deltadiv.pgf')
 fig.savefig('Note/figures/vs-deltadiv.pdf')
 plt.close(fig)
 
-fig = plt.figure(figsize=(4, 4))
+fig = plt.figure(figsize=(6, 6))
 ax = fig.add_subplot()
 tau = 20
 sigma = 10
@@ -256,7 +259,7 @@ ax.bar(x, wdist[:, 1], color='b')
 ax.set_ylim(0, math.ceil(wdist.max()))
 ax.set_ylabel(r'$\mathrm{Wasserstein}\ \mathrm{Distance}/\mathrm{ns}$')
 ax.set_xticks(x)
-ax.set_xticklabels(['$'+label[key]+'$' if key != 'mcmcrec' else '$\mathrm{MCMC}$' for key in keylist])
+ax.set_xticklabels(['$'+label[key]+'$' if key != 'mcmcrec' else '$\mathrm{MCMC}$' for key in keylist], Fontsize=12)
 ax.errorbar(x, wdist[:, 1], yerr=dy, fmt='o', ecolor='r', color='b', elinewidth=2, capsize=3)
 ax.set_title(fr'$\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$')
 fig.savefig('Note/figures/summarycharge.pgf')
