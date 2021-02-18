@@ -283,12 +283,12 @@ def demo(pet_sub, cha_sub, tth, spe_pre, window, wave, cid, p, full=False, fold=
     distl = 'cdiff'
     edist = cha_sub.sum() - cha_ans.sum()
     print('truth HitPosInWindow = {}, Weight = {}'.format(pet_ans, cha_ans))
-    wav_ans = np.sum([np.where(pan > pet_ans[j], spe(pan - pet_ans[j], tau=p[0], sigma=p[1], A=p[2]) * cha_ans[j], 0) for j in range(len(pet_ans))], axis=0)
+    wav_ans = np.sum([np.where(pan > pet_ans[j], spe(pan - pet_ans[j], tau=p[0], sigma=p[1], A=p[2]) * cha_ans[j] / spe_pre['spe'].sum(), 0) for j in range(len(pet_ans))], axis=0)
     print('truth Resi-norm = {}'.format(np.linalg.norm(wave - wav_ans)))
     print('HitPosInWindow = {}, Weight = {}'.format(pet_sub, cha_sub))
     wdist = scipy.stats.wasserstein_distance(pet_ans, pet_sub, u_weights=cha_ans, v_weights=cha_sub)
     print('wdist = {}, '.format(wdist) + distl + ' = {}'.format(edist))
-    wav_sub = np.sum([np.where(pan > pet_sub[j], spe(pan - pet_sub[j], tau=p[0], sigma=p[1], A=p[2]) * cha_sub[j], 0) for j in range(len(pet_sub))], axis=0)
+    wav_sub = np.sum([np.where(pan > pet_sub[j], spe(pan - pet_sub[j], tau=p[0], sigma=p[1], A=p[2]) * cha_sub[j] / spe_pre['spe'].sum(), 0) for j in range(len(pet_sub))], axis=0)
     print('Resi-norm = {}'.format(np.linalg.norm(wave - wav_sub)))
 
     fig = plt.figure(figsize=(10, 10))
@@ -298,7 +298,7 @@ def demo(pet_sub, cha_sub, tth, spe_pre, window, wave, cid, p, full=False, fold=
     ax0.plot(wav_ans, c='k', label='truth wave')
     ax0.plot(wav_sub, c='g', label='recon wave')
     ax0.set_ylabel('$Voltage/\mathrm{mV}$')
-    ax0.hlines(5 * spe_pre['std'], 0, len(success), color='c', label='threshold')
+    ax0.hlines(5 * spe_pre['std'], 0, len(wave), color='c', label='threshold')
     ax0.set_xticklabels([])
     ax0.set_ylim(min(wave)-5, max(wave)+5)
     ax0.legend(loc=1)

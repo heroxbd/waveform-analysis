@@ -30,7 +30,7 @@ A threshold $v_{th}$ is settled with respect to electronics noise in simulation 
 
 \subsection{Fourier deconvolution}
 
-Third method is Fourier transform deconvolution. Assuming that the waveform is the convolution of $v_{spe}$ and $q(t)$, the Fast Fourier transform (FFT) of $v_{w}$ and $v_{spe}$ are computed. A rectangular filter, $f$, is added. Then we compute the inverse FFT of the quotient between filtered FFT of $v_{w}$ and FFT of $v_{spe}$. We pick out positive value from inverse FFT result, and normalize them to obtain $q_{rec}(t)$. The process is shown in formula \eqref{eq:fft}. 
+Third method is Fourier transform deconvolution. Assuming that the waveform is the convolution of $v_{spe}$ and $q(t)$, the Fast Fourier transform (FFT) of $v_{w}$ and $v_{spe}$ are computed. A rectangular filter, $f$, is implemented. Then we compute the inverse FFT of the quotient between filtered FFT of $v_{w}$ and FFT of $v_{spe}$. We pick out positive value from inverse FFT result, and normalize them to obtain $q_{rec}(t)$. The process is shown in formula \eqref{eq:fft}. 
 
 \begin{equation}
     q_{rec}(t) = \mathcal{F}^{-1}\{\frac{f[\mathcal{F}(v_{w})]}{\mathcal{F}(v_{spe})}\}
@@ -69,36 +69,36 @@ Waveform is the convolution of $v_{spe}$ and $q_{rec}(t)$ (see formula~\eqref{eq
 
 \begin{align}
     v_{w} &= q_{rec} \otimes v_{spe} \label{eq:wave-con} \\
-    L &= L(v_{r}(t), v_{w}(t)) = L(q_{rec}(t), v_{spe}, v_{w}(t)) = RSS(v_{w}, q_{rec} \otimes v_{spe}) \label{eq:loss-rss}
+    L &= L(v_{r}(t), v_{w}(t)) = L(q_{rec}(t), v_{spe}, v_{w}(t)) = \mathrm{RSS}(v_{w}, q_{rec} \otimes v_{spe}) \label{eq:loss-rss}
 \end{align}
 
 In fitting process, the parameter are $q_{rec}(t)$ in each discrete hittime $t$. The complete information hided in origin waveform is disturbed by electronics noise and pile-up. The loss (see formula~\ref{eq:loss-rss}) which we optimize in fitting is the residual sum of squares (RSS) between the origin wave $v_{w}(t)$ and reconstructed wave $v_{r}(t)$ according to the parameters. The parameters will tend to be preciser when the reconstructed wave approaching to the origin wave. 
 
-Fitting program is implemented with Limited-memory BFGS with bound constraint\cite{byrd_limited_1995} (L-BFGS-B). L-BFGS-B has an advantage that the $q_{rec}$ are constrained to be larger than 0. 
+Fitting program is implemented with Limited-memory BFGS with bound constraint \cite{byrd_limited_1995} (L-BFGS-B). L-BFGS-B has an advantage that the $q_{rec}$ are constrained to be larger than 0. 
 
-The figure \ref{fig:fitting} shows one of the fitting result. We can see the origin waveform $v_{w}$ and reconstructed waveform $v_{r}$ are very similar. The reconstructed and truth $q_{rec}$ are also similar. 
+The figure~\ref{fig:fitting} shows one of the fitting result. We can see the origin waveform $v_{w}$ and reconstructed waveform $v_{r}$ are very similar. The reconstructed and truth $q_{rec}$ are also similar. 
 
 \begin{figure}[H]
     \centering
-    \scalebox{0.4}{\input{figures/demoe1c0.pgf}}
+    \scalebox{0.4}{\input{figures/demoe0c0.pgf}}
     \caption{\label{fig:fitting} Fitting Demo, W-dist = 2.26}
 \end{figure}
 
-The result reconstructing $q_{rec}$ when $N_{pos}=4$ shows in figure. (see figure~\ref{fig:fitting-hist}) The overall result of W-dist reconstructing $q_{rec}$ shows in figure (see figure~\ref{fig:fitting-npos}). The error bar shows 10 to 90 percentile of Wasserstein distance ($W_{d}$) distribution. 
+The result reconstructing $q_{rec}$ when $\mu=5, \tau=20, \sigma=10$ shows in figure. (see figure~\ref{fig:fitting-hist}) The overall result of W-dist reconstructing $q_{rec}$ shows in figure (see figure~\ref{fig:fitting-npe}). 
 
 \begin{figure}[H]
 \begin{minipage}[t]{.5\textwidth}
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/xiaopeipchargehist.pgf}}
-    \caption{\label{fig:fitting-hist} $W_{d}$ Histogram when fitting $q_{rec}$ (95\% counts, $N_{pos}=4$)}
+    \caption{\label{fig:fitting-hist} $W_{d}$ Histogram \& Boxplot, $\mu=5, \tau=20, \sigma=10$, method is Fitting}
 \end{figure}
 \end{minipage}
 \begin{minipage}[t]{.5\textwidth}
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/xiaopeipchargestats.pgf}}
-    \caption{\label{fig:fitting-npos} $W_{d}$ vs $N_{pos}$ when fitting $q_{rec}$}
+    \caption{\label{fig:fitting-npe} $W_{d}$ vs $N_{pe}$, method is Fitting}
 \end{figure}
 \end{minipage}
 \end{figure}
@@ -107,7 +107,38 @@ The result reconstructing $q_{rec}$ when $N_{pos}=4$ shows in figure. (see figur
 
 The typical variable optimization methods such as L-BFGS-B depends on gradient evaluation and their iteration stops when gradient is smaller than a certain tiny value, following the convention in the field of numerical calculation. In some circumstances the fitting result may stuck in local minimum rather than global minimum. Hamiltonian Monte Carlo method has potential to overcome this difficulty. 
 
-An program based on Hamiltonian Monte Carlo (HMC) is developed intending to obtain global minimum. HMC is a efficient Markov Chain Monte Carlo (MCMC) method for achieving samples from a distribution for which direct sampling is difficult\cite{neal_mcmc_2012}. The sample derived by HMC can usually be ergodic in the distribution, so the global minimum will be obtain with large sampling set. 
+An program based on Hamiltonian Monte Carlo (HMC) is developed intending to sample from the posterior distribution of $t_{0}$, as well as $q$. HMC is a efficient Markov Chain Monte Carlo (MCMC) method for achieving samples from a distribution for which direct sampling is difficult \cite{neal_mcmc_2012}. The sample derived by HMC can usually be ergodic in the distribution, so the global minimum will be obtain with large sampling set. 
+
+The model and prior distribution is defined like~\eqref{eq:}
+
+\begin{align}
+    t_{0} &\sim \mathrm{Uniform}(0, L_{w}) \\
+    A(t_{i}) &= \mu \cdot P_{t}(t_{i}) \\
+    v_{w}(t_{i}) &\sim \mathcal{N}(F_{w}(A), \sigma_{w})
+\end{align}
+
+where $t_{0}$ is the starting time of time profile and $L_{w}$ is nothing but a upper limit of $t_{0}$. $A(t_{i})$ is the number of PEs expectation in time interval $[t_{i}, t_{i}+\mathrm{d}t]$, where $\mathrm{d}t$ is a man-made small time interval depends on the precision required. Given $A$, using function $F_{w}$ we re-build the waveform expectation. 
+
+We use NumPyro \cite{phan2019composable}, a graceful probabilistic programming library, to build the model and sample. One of sampling result shows in figure~\ref{fig:mcmcrec-t0hist}. 
+
+\begin{figure}[H]
+\begin{minipage}[t]{.5\textwidth}
+\begin{figure}[H]
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/mcmcrect0hist.pgf}}
+    \caption{\label{fig:mcmcrec-t0hist} $\Delta t_{0}$ Histogram, $\mu=5, \tau=20, \sigma=10$, method is HMC}
+\end{figure}
+\end{minipage}
+\begin{minipage}[t]{.5\textwidth}
+\begin{figure}[H]
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/mcmcrecchargehist.pgf}}
+    \caption{\label{fig:mcmcrec-chargehist} $W_{d}$ Histogram, $\mu=5, \tau=20, \sigma=10$, method is HMC}
+\end{figure}
+\end{minipage}
+\end{figure}
+
+We can see during HMC sampling, the charge w.r.t. time, $q_{rec}$, is also collected. The result reconstructing $q_{rec}$ when $\mu=5, \tau=20, \sigma=10$ shows in figure (see figure~\ref{fig:charg-hist}). 
 
 \subsection{CNN}
 
@@ -161,23 +192,23 @@ A direct implementation of judgement metrics into loss function is often difficu
 \end{figure}
 
 % \subsubsection{Result}
-In the training process, we trained CNN for each PMT channel. The loss which is Wasserstein distance during training show in figure \ref{fig:loss}. 
+In the training process, we trained CNN for each PMT channel. The loss which is Wasserstein distance during training show in figure~\ref{fig:loss}. 
 
-The result reconstructing $q_{rec}$ when $N_{pos}=4$ shows in figure. (see figure~\ref{fig:cnn-hist}) The overall result of W-dist reconstructing $q_{rec}$ shows in figure (see figure~\ref{fig:cnn-npos}). The result shows that CNN is the best for reconstruction of $q_{rec}(t)$. The error bar shows 10 to 90 percentile of Wasserstein distance distribution. 
+The result reconstructing $q_{rec}$ when $\mu=5, \tau=20, \sigma=10$ shows in figure (see figure~\ref{fig:cnn-hist}). The overall result of W-dist reconstructing $q_{rec}$ shows in figure (see figure~\ref{fig:cnn-npe}). The result shows that CNN is the best for reconstruction of $q_{rec}(t)$. The error bar shows 10 to 90 percentile of Wasserstein distance distribution. 
 
 \begin{figure}[H]
 \begin{minipage}[t]{.5\textwidth}
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/takarachargehist.pgf}}
-    \caption{\label{fig:cnn-hist} $W_{d}$ Histogram when CNN $q_{rec}$ (95\% counts, $N_{pos}=4$)}
+    \caption{\label{fig:cnn-hist} $W_{d}$ Histogram \& Boxplot, $\mu=5, \tau=20, \sigma=10$, method is CNN}
 \end{figure}
 \end{minipage}
 \begin{minipage}[t]{.5\textwidth}
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/takarachargestats.pgf}}
-    \caption{\label{fig:cnn-npos}$W_{d}$ vs $N_{pos}$ when CNN $q_{rec}$}
+    \caption{\label{fig:cnn-npe} $W_{d}$ vs $N_{pe}$, method is CNN}
 \end{figure}
 \end{minipage}
 \end{figure}

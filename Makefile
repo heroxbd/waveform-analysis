@@ -24,8 +24,8 @@ else
 endif
 endif
 
-PreData:=$(channelN:%=result/$(method)/PreProcess/Pre_Channel%.h5)
-Nets:=$(channelN:%=result/$(method)/char/Nets/Channel%.torch_net)
+PreData:=$(channelN:%=result/takara/PreProcess/Pre_Channel%.h5)
+Nets:=$(channelN:%=result/takara/char/Nets/Channel%.torch_net)
 
 .PHONY : all
 
@@ -50,9 +50,9 @@ result/$(method)/char/%.h5 : waveform/%.h5 spe.h5
 endef
 
 define nn
-result/$(method)/char/%.h5 : waveform/%.h5 spe.h5 $(Nets)
+result/takara/char/%.h5 : waveform/%.h5 spe.h5 $(Nets)
 	@mkdir -p $$(dir $$@)
-	python3 -u Prediction_Processing_Total.py $$< --met $(method) -o $$@ --ref $$(word 2,$$^) -N result/$(method)/char/Nets -D 0 > $$@.log 2>&1
+	python3 -u Prediction_Processing_Total.py $$< --met takara -o $$@ --ref $$(word 2,$$^) -N result/takara/char/Nets -D 0 > $$@.log 2>&1
 endef
 $(eval $(call $(predict)))
 
@@ -71,19 +71,20 @@ vs : rc.csv
 
 model : $(Nets)
 
-result/$(method)/char/Nets/Channel%.torch_net : result/$(method)/char/Channel%/.Training_finished ;
+result/takara/char/Nets/Channel%.torch_net : result/takara/char/Channel%/.Training_finished ;
 
-result/$(method)/char/Channel%/.Training_finished : result/$(method)/PreProcess/Pre_Channel%.h5 spe.h5
+result/takara/char/Channel%/.Training_finished : result/takara/PreProcess/Pre_Channel%.h5 spe.h5
 	@mkdir -p $(dir $@)
-	@mkdir -p result/$(method)/char/Nets/
-	python3 -u Data_Processing.py $< -n $* -B 64 --ref $(word $(words $^), $^) -o result/$(method)/char/Nets/Channel$*.torch_net $(dir $@) > $(dir $@)Train.log 2>&1
+	@mkdir -p result/takara/char/Nets/
+	python3 -u Data_Processing.py $< -n $* -B 64 --ref $(word $(words $^), $^) -o result/takara/char/Nets/Channel$*.torch_net $(dir $@) > $(dir $@)Train.log 2>&1
 	@touch $@
 
-$(PreData) : result/$(method)/.PreProcess
+PreData : $(PreData)
+$(PreData) : result/takara/.PreProcess
 
-result/$(method)/.PreProcess : $(sim) spe.h5
-	@mkdir -p result/$(method)/PreProcess
-	python3 -u Data_Pre-Processing.py waveform/ -o result/$(method)/PreProcess/Pre_Channel --ref $(word $(words $^), $^) > result/$(method)/PreProcess/PreProcess.log 2>&1
+result/takara/.PreProcess : $(sim) spe.h5
+	@mkdir -p result/takara/PreProcess
+	python3 -u Data_Pre-Processing.py waveform/ -o result/takara/PreProcess/Pre_Channel --ref $(word $(words $^), $^) > result/takara/PreProcess/PreProcess.log 2>&1
 	@touch $@
 
 waveform/%.h5 :

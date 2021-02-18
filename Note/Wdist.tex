@@ -2,8 +2,7 @@ A figure of merit to distinguish the difference between reconstruction result an
 
 Suppose $P(X)$ and $Q(X)$ are 2 probability density function of random variable $X$. There are many ways to measure the difference (distance) between $P(X)$ and $Q(X)$: 
 
-\begin{figure}[H]
-\begin{minipage}{.25\textwidth}
+\begin{minipage}{.3\textwidth}
 \begin{align*}
     L_{1} &= \int|p-q| \ud t \\
     L_{2} &= \int(p-q)^{2} \ud t \\
@@ -18,23 +17,26 @@ Suppose $P(X)$ and $Q(X)$ are 2 probability density function of random variable 
     \caption{\label{fig:l2} L2 distance demo}
 \end{figure}
 \end{minipage}
-\end{figure}
 
 But these distances have certain shortcomings. First, they cannot compare discrete distribution with continuous distribution. Second, they are not sensitive to timing: as the graph shows, the L2 distances between the distribution of $a,b_{1}$ and $a,b_{2}$ is both 0.25, but the shape of the $b_{1}$ and $b_{2}$ distribution is very different (see figure~\ref{fig:l2}). 
 
 \label{sub:Wasserstein distance}
-    \begin{equation}
-        W_{p}(\mu,\nu):=\left(\inf_{\gamma\in\Phi(\mu,\nu)}\int_{\chi}d(x,y)^{p}\,\mathrm{d}\gamma(x,y)\right)^{1/p} \label{eq:w-dist-def}
-    \end{equation}
-    \begin{figure}[H]
-        \centering
-        \scalebox{0.4}{\input{figures/wdistdemo.pgf}}
-        \caption{\label{fig:Wasserstein transportation} Wasserstein transportation}
-    \end{figure}
+\begin{minipage}{.45\textwidth}
+\begin{equation}
+    W_{p}(\mu,\nu):=\left(\inf_{\gamma\in\Phi(\mu,\nu)}\int_{\chi}d(x,y)^{p}\,\mathrm{d}\gamma(x,y)\right)^{1/p} \label{eq:w-dist-def}
+\end{equation}
+\end{minipage}
+\begin{minipage}{.55\textwidth}
+\begin{figure}[H]
+    \centering
+    \scalebox{0.4}{\input{figures/wdistdemo.pgf}}
+    \caption{\label{fig:Wasserstein transportation} Wasserstein transportation}
+\end{figure}
+\end{minipage}
 
 Wasserstein distance can overcome these difficulty. Wasserstein distance between distribution $\mu$ and $\nu$ can be regarded as the minimal effort to transport mass from distribution $\mu$ to $\nu$, which is often described as earth move distance. Further the mass moves, more the effort we need to give. The transport plan between 2 different one-dimensional random variable distribution is described by $\gamma(x, y)$, which is a two-dimensional random variable distribution. $d(x,y)^{p}$ in the formula~\eqref{eq:w-dist-def} is the Borel measure on Polish spaces\cite{villani_2009}. There is a minimum function in the functional space of $\gamma(x, y)$, whose corresponding $W_{p}(\mu,\nu)$ is the Wasserstein distance between $\mu$ and $\nu$. 
 
-The calculation of Wasserstein distance, however, is not always easy and may suffer from the deficiency of analytical expression. In practice, the hittime in our waveform analysis results is discrete value (integers in a DAQ window), so the loss, Wasserstein distance(abbreviated as W-dist) can be calculated numerically. The corresponding charge of PE is each hittime can be regarded as weight in the distribution of hittime. Suppose $A$ and $B$ represent two sets of PE's hittime and charge. First the hittime $t$ are rounded to the nearest integer in the DAQ window. Then we subtract the cumulative distribution function (CDF) of A, $F_{A}$, and the CDF of B, $F_{B}$. Finally we sum the absolute value of the subtraction, which is formula \eqref{eq:numerical}. The whole process is equivalent to calculated the L1 distance of cumulative distribution function of distribution $A$ \& $B$. It is proved that the distance we define here is equivalent to Wasserstein distance with minor loss of accuracy(caused by rounding). 
+The calculation of Wasserstein distance, however, is not always easy and may suffer from the deficiency of analytical expression. In practice, we set $p=1$, then the hittime in our waveform analysis results is discrete value (integers in a DAQ window), so the loss, Wasserstein distance (abbreviated as W-dist) can be calculated numerically. The corresponding charge of PE is each hittime can be regarded as weight in the distribution of hittime. Suppose $A$ and $B$ represent two sets of PE's hittime and charge. First the hittime $t$ are rounded to the nearest integer in the DAQ window. Then we subtract the cumulative distribution function (CDF) of A, $F_{A}$, and the CDF of B, $F_{B}$. Finally we sum the absolute value of the subtraction, which is formula \eqref{eq:numerical}. The whole process is equivalent to calculated the L1 distance of cumulative distribution function of distribution $A$ \& $B$. It is proved that the distance we define here is equivalent to Wasserstein distance with minor loss of accuracy (caused by rounding). 
 
 \begin{equation}
     W_{d} = \sum_t|F_{A}(t) - F_{B}(t)|
