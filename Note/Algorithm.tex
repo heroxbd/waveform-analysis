@@ -105,11 +105,11 @@ The result reconstructing $q_{rec}$ when $\mu=5, \tau=20\mathrm{ns}, \sigma=10\m
 \end{minipage}
 \end{figure}
 
-\subsubsection{HMC}
+\subsubsection{MCMC}
 
 The typical variable optimization methods such as L-BFGS-B depends on gradient evaluation and their iteration stops when gradient is smaller than a certain tiny value, following the convention in the field of numerical calculation. In some circumstances the fitting result may stuck in local minimum rather than global minimum. Hamiltonian Monte Carlo method has potential to overcome this difficulty. 
 
-An program based on Hamiltonian Monte Carlo (HMC) is developed intending to sample from the posterior distribution of $t_{0}$, as well as $q$. HMC is a efficient Markov Chain Monte Carlo (MCMC) method for achieving samples from a distribution for which direct sampling is difficult \cite{neal_mcmc_2012}. The sample derived by HMC can usually be ergodic in the distribution, so the global minimum will be obtain with large sampling set. 
+An program based on Hamiltonian Monte Carlo (MCMC) is developed intending to sample from the posterior distribution of $t_{0}$, as well as $q$. MCMC is a efficient Markov Chain Monte Carlo (MCMC) method for achieving samples from a distribution for which direct sampling is difficult \cite{neal_mcmc_2012}. The sample derived by MCMC can usually be ergodic in the distribution, so the global minimum will be obtain with large sampling set. 
 
 The model and prior distribution is defined below: 
 
@@ -130,19 +130,19 @@ We use NumPyro \cite{phan2019composable}, a graceful probabilistic programming l
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/mcmcrect0hist.pgf}}
-    \caption{\label{fig:mcmcrec-t0hist} $\Delta t_{0}$ Histogram, $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$, method is HMC}
+    \caption{\label{fig:mcmcrec-t0hist} $\Delta t_{0}$ Histogram, $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$, method is MCMC}
 \end{figure}
 \end{minipage}
 \begin{minipage}[t]{.5\textwidth}
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/mcmcrecchargehist.pgf}}
-    \caption{\label{fig:mcmcrec-chargehist} $W_{d}$ Histogram, $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$, method is HMC}
+    \caption{\label{fig:mcmcrec-chargehist} $W_{d}$ Histogram, $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$, method is MCMC}
 \end{figure}
 \end{minipage}
 \end{figure}
 
-We can see during HMC sampling, the charge w.r.t. time, $q_{rec}$, is also collected. The result reconstructing $q_{rec}$ when $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$ shows in figure (see figure~\ref{fig:mcmcrec-chargehist}). 
+We can see during MCMC sampling, the charge w.r.t. time, $q_{rec}$, is also collected. The result reconstructing $q_{rec}$ when $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$ shows in figure (see figure~\ref{fig:mcmcrec-chargehist}). 
 
 \subsubsection{CNN}
 

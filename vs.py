@@ -95,14 +95,14 @@ rhigh = np.max(rhigh[~np.isnan(rhigh)]) * 1.05
 
 figd = plt.figure(figsize=(len(Sigma) * 6, len(Tau) * 4))
 gsd = gridspec.GridSpec(len(Tau), len(Sigma), figure=figd, left=0.1, right=0.95, top=0.95, bottom=0.1, wspace=0.2, hspace=0.3)
-figdd = plt.figure(figsize=(len(Sigma) * 6, len(Tau) * 4))
+figdd = plt.figure(figsize=(len(Sigma) * 6, len(Tau) * 6))
 gsdd = gridspec.GridSpec(len(Tau), len(Sigma), figure=figd, left=0.1, right=0.95, top=0.95, bottom=0.1, wspace=0.2, hspace=0.3)
 figw = plt.figure(figsize=(len(Sigma) * 6, len(Tau) * 4))
 gsw = gridspec.GridSpec(len(Tau), len(Sigma), figure=figw, left=0.1, right=0.95, top=0.95, bottom=0.1, wspace=0.2, hspace=0.3)
 figr = plt.figure(figsize=(len(Sigma) * 6, len(Tau) * 4))
 gsr = gridspec.GridSpec(len(Tau), len(Sigma), figure=figr, left=0.1, right=0.95, top=0.95, bottom=0.1, wspace=0.2, hspace=0.3)
 alpha = 0.05
-lim = {'deltadiv':np.tile([0.5, 0.5, 0.5], (2, 1)), 'wdist':np.tile([3, 6, 7], (2, 1)), 'rss':np.array([[5e3, 3e3, 2e3], [4.5e3, 3e3, 2e3]])}
+lim = {'deltadiv':np.tile([0., 0., 0.], (2, 1)), 'wdist':np.tile([3, 6, 7], (2, 1)), 'rss':np.array([[5e3, 3e3, 2e3], [4.5e3, 3e3, 2e3]])}
 keylist = list(mts.keys())
 for sigma, i in zip(Sigma, [0, 1]):
     for tau, j in zip(Tau, [0, 1, 2]):
@@ -151,7 +151,7 @@ for sigma, i in zip(Sigma, [0, 1]):
         ax.set_xlabel(r'$\mu$')
         ax.set_ylabel(r'$ratio$')
         ax.set_title(fr'$\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$')
-        ax.set_ylim(lim['deltadiv'][i, j], 1.05)
+        ax.set_ylim(lim['deltadiv'][i, j], 1.01)
         ax.grid()
         ax.legend(loc='lower left')
 
