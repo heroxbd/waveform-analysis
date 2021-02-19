@@ -94,18 +94,18 @@ rhigh = np.array([[np.max(mts[key]['RSS'])] for key in mts.keys()])
 rhigh = np.max(rhigh[~np.isnan(rhigh)]) * 1.05
 
 figd = plt.figure(figsize=(len(Sigma) * 6, len(Tau) * 4))
-gsd = gridspec.GridSpec(len(Tau), len(Sigma), figure=figd, left=0.1, right=0.95, top=0.95, bottom=0.1, wspace=0.2, hspace=0.3)
-figdd = plt.figure(figsize=(len(Sigma) * 6, len(Tau) * 6))
-gsdd = gridspec.GridSpec(len(Tau), len(Sigma), figure=figd, left=0.1, right=0.95, top=0.95, bottom=0.1, wspace=0.2, hspace=0.3)
+gsd = gridspec.GridSpec(len(Tau), len(Sigma), figure=figd, left=0.1, right=0.8, top=0.95, bottom=0.1, wspace=0.2, hspace=0.3)
+figdd = plt.figure(figsize=(len(Sigma) * 6, len(Tau) * 4))
+gsdd = gridspec.GridSpec(len(Tau), len(Sigma), figure=figd, left=0.1, right=0.8, top=0.95, bottom=0.1, wspace=0.2, hspace=0.3)
 figw = plt.figure(figsize=(len(Sigma) * 6, len(Tau) * 4))
-gsw = gridspec.GridSpec(len(Tau), len(Sigma), figure=figw, left=0.1, right=0.95, top=0.95, bottom=0.1, wspace=0.2, hspace=0.3)
+gsw = gridspec.GridSpec(len(Tau), len(Sigma), figure=figw, left=0.1, right=0.8, top=0.95, bottom=0.1, wspace=0.2, hspace=0.3)
 figr = plt.figure(figsize=(len(Sigma) * 6, len(Tau) * 4))
-gsr = gridspec.GridSpec(len(Tau), len(Sigma), figure=figr, left=0.1, right=0.95, top=0.95, bottom=0.1, wspace=0.2, hspace=0.3)
+gsr = gridspec.GridSpec(len(Tau), len(Sigma), figure=figr, left=0.1, right=0.8, top=0.95, bottom=0.1, wspace=0.2, hspace=0.3)
 alpha = 0.05
-lim = {'deltadiv':np.tile([0., 0., 0.], (2, 1)), 'wdist':np.tile([3, 6, 7], (2, 1)), 'rss':np.array([[5e3, 3e3, 2e3], [4.5e3, 3e3, 2e3]])}
+lim = {'deltadiv':np.tile([0.3, 0.5, 0.], (2, 1)), 'wdist':np.tile([3, 6, 7], (2, 1)), 'rss':np.array([[5e3, 3e3, 2e3], [4.5e3, 3e3, 2e3]])}
 keylist = list(mts.keys())
-for sigma, i in zip(Sigma, [0, 1]):
-    for tau, j in zip(Tau, [0, 1, 2]):
+for sigma, i in zip(Sigma, list(range(len(Sigma)))):
+    for tau, j in zip(Tau, list(range(len(Tau)))):
         ax = figd.add_subplot(gsd[j, i])
         stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == tau) & (mts['lucyddm']['sigma'] == sigma)]
         yerr1st = np.vstack([stdlist['std1sttruth']-np.sqrt(np.power(stdlist['std1sttruth'],2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(stdlist['std1sttruth'],2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-stdlist['std1sttruth']])
@@ -125,7 +125,8 @@ for sigma, i in zip(Sigma, [0, 1]):
         ax.set_title(fr'$\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$')
         # ax.set_yscale('log')
         ax.grid()
-        ax.legend(loc='upper right')
+        if i == len(Sigma) - 1 and j == len(Tau) - 1:
+            ax.legend(loc='upper left', bbox_to_anchor=(1., 1.5))
 
         ax = figdd.add_subplot(gsdd[j, i])
         stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == tau) & (mts['lucyddm']['sigma'] == sigma)]
@@ -153,7 +154,8 @@ for sigma, i in zip(Sigma, [0, 1]):
         ax.set_title(fr'$\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$')
         ax.set_ylim(lim['deltadiv'][i, j], 1.01)
         ax.grid()
-        ax.legend(loc='lower left')
+        if i == len(Sigma) - 1 and j == len(Tau) - 1:
+            ax.legend(loc='upper left', bbox_to_anchor=(1., 1.5))
 
         ax = figw.add_subplot(gsw[j, i])
         for k in range(len(keylist)):
@@ -172,7 +174,9 @@ for sigma, i in zip(Sigma, [0, 1]):
         ax.set_ylim(0, lim['wdist'][i, j])
         # ax.set_yscale('log')
         ax.grid()
-        ax.legend(loc='upper right')
+        if i == len(Sigma) - 1 and j == len(Tau) - 1:
+            ax.legend(loc='upper left', bbox_to_anchor=(1., 1.5))
+
         ax = figr.add_subplot(gsr[j, i])
         for k in range(len(keylist)):
             key = keylist[k]
@@ -191,7 +195,8 @@ for sigma, i in zip(Sigma, [0, 1]):
         # ax.set_yscale('log')
         ax.yaxis.get_major_formatter().set_powerlimits((0, 1))
         ax.grid()
-        ax.legend(loc='upper left')
+        if i == len(Sigma) - 1 and j == len(Tau) - 1:
+            ax.legend(loc='upper left', bbox_to_anchor=(1., 1.5))
 figd.savefig('Note/figures/vs-delta.pgf')
 figd.savefig('Note/figures/vs-delta.pdf')
 plt.close(figd)
@@ -207,8 +212,8 @@ plt.close(figr)
 
 fig = plt.figure(figsize=(len(Sigma) * 6, len(Tau) * 4))
 gs = gridspec.GridSpec(len(Tau), len(Sigma), figure=fig, left=0.1, right=0.95, top=0.95, bottom=0.1, wspace=0.2, hspace=0.3)
-for sigma, i in zip(Sigma, [0, 1]):
-    for tau, j in zip(Tau, [0, 1, 2]):
+for sigma, i in zip(Sigma, list(range(len(Sigma)))):
+    for tau, j in zip(Tau, list(range(len(Tau)))):
         ax = fig.add_subplot(gs[j, i])
         stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == tau) & (mts['lucyddm']['sigma'] == sigma)]
         alpha = 0.05
