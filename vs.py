@@ -102,7 +102,7 @@ gsw = gridspec.GridSpec(len(Tau), len(Sigma), figure=figw, left=0.1, right=0.8, 
 figr = plt.figure(figsize=(len(Sigma) * 6, len(Tau) * 4))
 gsr = gridspec.GridSpec(len(Tau), len(Sigma), figure=figr, left=0.1, right=0.8, top=0.95, bottom=0.1, wspace=0.2, hspace=0.3)
 alpha = 0.05
-lim = {'deltadiv':np.tile([0.3, 0.5, 0.], (2, 1)), 'wdist':np.tile([3, 6, 7], (2, 1)), 'rss':np.array([[5e3, 3e3, 2e3], [4.5e3, 3e3, 2e3]])}
+lim = {'deltadiv':np.tile([0.3, 0.5, 0.], (2, 1)), 'wdist':np.tile([2, 3.5, 7], (2, 1)), 'rss':np.array([[5e3, 3e3, 2e3], [4.5e3, 3e3, 2e3]])}
 keylist = list(mts.keys())
 for sigma, i in zip(Sigma, list(range(len(Sigma)))):
     for tau, j in zip(Tau, list(range(len(Tau)))):
@@ -137,7 +137,7 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
         ax.plot(stdlist['mu'] + jitter['tru'], stdlist['stdtruth'] / stdlist['std1sttruth'], label='$\delta_'+label['tru']+'/\delta_'+label['1st']+'$', c=color['tru'], marker='^')
         for k in range(len(keylist)):
             key = keylist[k]
-            if key == 'findpeak' or key == 'threshold':
+            if key == 'findpeak' or key == 'threshold' or key == 'fftrans':
                 continue
             stdlistkey = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
             yerrcha = np.vstack([stdlist['stdcharge']-np.sqrt(np.power(stdlist['stdcharge'],2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(stdlist['stdcharge'],2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-stdlist['stdcharge']])
@@ -160,7 +160,7 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
         ax = figw.add_subplot(gsw[j, i])
         for k in range(len(keylist)):
             key = keylist[k]
-            if key == 'findpeak' or key == 'threshold':
+            if key == 'findpeak' or key == 'threshold' or key == 'fftrans':
                 continue
             wdistlist = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
             la = '$W-dist_'+label[key]+'$' if key != 'mcmcrec' else '$W-dist_{\mathrm{MCMC}}$'
@@ -180,7 +180,7 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
         ax = figr.add_subplot(gsr[j, i])
         for k in range(len(keylist)):
             key = keylist[k]
-            if key == 'findpeak' or key == 'threshold':
+            if key == 'findpeak' or key == 'threshold' or key == 'fftrans':
                 continue
             rsslist = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
             la = '$RSS_'+label[key]+'$' if key != 'mcmcrec' else '$RSS_{\mathrm{MCMC}}$'
@@ -261,7 +261,7 @@ fig = plt.figure()
 # fig.tight_layout()
 ax = fig.add_subplot(111)
 ax.bar(x, wdist[:, 1], color='b')
-ax.set_ylim(0, math.ceil(wdist.max()))
+ax.set_ylim(0, math.ceil(wdist.max() + 0.5))
 ax.set_ylabel(r'$\mathrm{Wasserstein}\ \mathrm{Distance}/\mathrm{ns}$')
 ax.set_xticks(x)
 ax.set_xticklabels(['$'+label[key]+'$' if key != 'mcmcrec' else '$\mathrm{MCMC}$' for key in keylist], Fontsize=12)

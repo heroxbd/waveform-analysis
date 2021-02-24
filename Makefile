@@ -1,7 +1,7 @@
 SHELL:=bash
 channelN:=$(shell seq -f '%02g' 0 0)
 mu:=$(shell seq -f '%02g' 1 1 5 && seq -f '%02g' 6 2 10 && seq -f '%02g' 15 5 30)
-# mu:=$(shell seq -f '%02g' 15 5 15)
+# mu:=$(shell seq -f '%02g' 20 5 20)
 
 tau:=$(shell awk -F',' 'NR == 1 { print $1 }' rc.csv)
 sigma:=$(shell awk -F',' 'NR == 2 { print $1 }' rc.csv)
@@ -40,13 +40,13 @@ sim : $(sim)
 define mcmcrec
 result/$(method)/char/%.h5 : waveform/%.h5 spe.h5
 	@mkdir -p $$(dir $$@)
-	python3 toyRecMCMC.py $$< --met $(method) -N 100 --ref $$(word 2,$$^) -o $$@ > $$@.log 2>&1
+	python3 toyRecMCMC.py $$< --met $(method) -N 50 --ref $$(word 2,$$^) -o $$@ > $$@.log 2>&1
 endef
 
 define fit
 result/$(method)/char/%.h5 : waveform/%.h5 spe.h5
 	@mkdir -p $$(dir $$@)
-	OMP_NUM_THREADS=2 python3 fit.py $$< --met $(method) -N 100 --ref $$(wordlist 2,3,$$^) -o $$@ > $$@.log 2>&1
+	OMP_NUM_THREADS=2 python3 fit.py $$< --met $(method) -N 50 --ref $$(wordlist 2,3,$$^) -o $$@ > $$@.log 2>&1
 endef
 
 define nn
@@ -90,7 +90,7 @@ result/takara/.PreProcess : $(sim) spe.h5
 waveform/%.h5 :
 	@rm -f spe.h5
 	@mkdir -p $(dir $@)
-	python3 toySim.py --mts $* --noi -N 1000 -o $@ > $@.log 2>&1
+	python3 toySim.py --mts $* --noi -N 10000 -o $@ > $@.log 2>&1
 
 spe.h5 : $(sim) ;
 

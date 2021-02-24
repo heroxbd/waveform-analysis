@@ -9,7 +9,21 @@ The $W_{d}$ summary of all methods is plotted in \ref{fig:chargesummary}, with a
     \caption{\label{fig:chargesummary} $W_{d}$ of methods, $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$}
 \end{figure}
 
-It is apparent that FindPeak and Shift are second-rate among all 7 methods, so we will only discuss other 5 methods below. The $W_{d}$ summary of 5 methods (FFT, LucyDDM, Fitting, MCMC, CNN) is plotted in \ref{fig:chargesummary}, with all dataset parameters combination. The errorbar shows 5 to 95 percentile of Wasserstein distance distribution. 
+It is apparent that FindPeak, Shift and FFT are second-rate among all 7 methods, so we will only discuss other 4 methods below. 
+
+The timing resolution $\delta$ using waveform analysis results (charge $q_{rec}$) of these methods are computed and collected. The $t_{0}$ reconstruction process is also MLE, which introduced by formula \eqref{eq:likelihood}. Additionally, MCMC can provide estimation of $t_{0}$ directly, which is also collected. The comparison between timeing resolution using the first PE, all PE and the 5 methods is shown in figure~\ref{fig:deltamethods}. 
+
+\begin{figure}[H]
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/vs-delta.pgf}}
+    \caption{\label{fig:deltamethods} Timing resolution $\delta$ of methods}
+\end{figure}
+
+In the figure, $\mathrm{MCMCcha}$ corresponds to reconstruction with recorded $q_{rec}$ during sampling and $\mathrm{MCMCt0}$ corresponds to reconstruction with $t_{0}$, which is directly collected in MCMC method. 
+
+All 4 methods (LucyDDM, Fitting, MCMC, CNN) provide better timing resolution $\delta$ than only using the first PE during construction. 
+
+The $W_{d}$ summary of 4 methods (LucyDDM, Fitting, MCMC, CNN) is plotted in \ref{fig:chargesummary}, with all dataset parameters combination. The errorbar shows 5 to 95 percentile of Wasserstein distance distribution. 
 
 \begin{figure}[H]
     \centering
@@ -17,24 +31,12 @@ It is apparent that FindPeak and Shift are second-rate among all 7 methods, so w
     \caption{\label{fig:chargesummary} $W_{d}$ of methods, error bar 5--95 percentile ($q_{rec}$)}
 \end{figure}
 
-We can see that as method CNN uses Wasserstein distance as loss directly during trainin, its Wasserstein distance is the smallest. While Fitting treats RSS as its loss, CNN still obtains the least RSS among 5 methods (see formula~\ref{fig:rsssummary})
+We can see that as method CNN uses Wasserstein distance as loss directly during trainin, its Wasserstein distance is the smallest. While Fitting treats RSS as its loss, CNN still obtains the least RSS among 4 methods (see formula~\ref{fig:rsssummary})
 
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/vs-rss.pgf}}
     \caption{\label{fig:rsssummary} RSS of methods, error bar 5--95 percentile ($q_{rec}$)}
 \end{figure}
-
-The timing resolution $\delta$ using waveform analysis results (charge $q_{rec}$) of these methods are computed and collected. The $t_{0}$ reconstruction process is also MLE, which introduced by formula \eqref{eq:likelihood}. Additionally, MCMC can provide estimation of $t_{0}$ directly, which is also collected. The comparison between timeing resolution using the first PE, all PE and the 5 methods is shown in figure~\ref{fig:deltamethodsdiv}. 
-
-\begin{figure}[H]
-    \centering
-    \resizebox{\textwidth}{!}{\input{figures/vs-deltamethodsdiv.pgf}}
-    \caption{\label{fig:deltamethodsdiv} Timing resolution $\delta$ ratios of methods}
-\end{figure}
-
-In the figure, $\mathrm{MCMCcha}$ corresponds to reconstruction with recorded $q_{rec}$ during sampling and $\mathrm{MCMCt0}$ corresponds to reconstruction with $t_{0}$, which is directly collected in MCMC method. 
-
-All 5 methods (FFT, LucyDDM, Fitting, MCMC, CNN) provide better timing resolution $\delta$ than only using the first PE during construction. 
 
 % section Performance (end)
