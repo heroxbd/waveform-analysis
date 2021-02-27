@@ -8,6 +8,7 @@ from functools import partial
 from multiprocessing import Pool, cpu_count
 
 import numpy as np
+np.seterr(divide='ignore')
 # np.seterr(all='raise')
 import h5py
 
@@ -29,7 +30,7 @@ fopt = args.opt
 reference = args.ref
 method = args.met
 
-Thres = {'xiaopeip':0.2, 'lucyddm':0.2, 'fftrans':0.1, 'findpeak':0.1, 'threshold':0.1}
+Thres = {'xiaopeip':0.2, 'lucyddm':0.2, 'fftrans':0.1, 'findpeak':0.1, 'threshold':0.1, 'fbmp':0.2}
 
 def fitting(a, b):
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
@@ -37,10 +38,19 @@ def fitting(a, b):
         dt = np.zeros((b - a) * window, dtype=opdt)
         start = 0
         end = 0
+        tlist = np.arange(0, window - len(spe_pre[0]['spe']))
+        t_auto = np.arange(window)[:, None] - tlist
+        p = spe_pre[0]['parameters']
+        A = p[2] * np.exp(-1 / 2 * np.power((np.log((t_auto + np.abs(t_auto)) * (1 / p[0] / 2)) * (1 / p[1])), 2))
+        factor = np.linalg.norm(spe_pre[0]['spe'])
+        A = A / factor
+        # A = np.matmul(A, np.diag(1. / np.sqrt(np.diag(np.matmul(A.T, A)))))
         for i in range(a, b):
             wave = ent[i]['Waveform'].astype(np.float64) * spe_pre[ent[i]['ChannelID']]['epulse']
 
-            if method == 'xiaopeip':
+            if method == 'fbmp':
+                pet, cha = wff.fbmp(wave, spe_pre[ent[i]['ChannelID']], tlist, A, np.sum(wave) / gmu / (window - len(spe_pre[0]['spe'])), spe_pre[ent[i]['ChannelID']]['std'] ** 2, np.array([0., (gsigma) ** 2 * factor / gmu]), np.array([0., factor]), 10, stop=0)
+            elif method == 'xiaopeip':
 #                 pet, cha, ped = wff.xiaopeip(wave, spe_pre[ent[i]['ChannelID']])
 #                 wave = wave - ped
                 pet, cha = wff.xiaopeip(wave, spe_pre[ent[i]['ChannelID']])
@@ -75,6 +85,8 @@ with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
     Mu = ipt['Readout/Waveform'].attrs['mu']
     Tau = ipt['Readout/Waveform'].attrs['tau']
     Sigma = ipt['Readout/Waveform'].attrs['sigma']
+    gmu = ipt['SimTriggerInfo/PEList'].attrs['gmu']
+    gsigma = ipt['SimTriggerInfo/PEList'].attrs['gsigma']
 if args.Ncpu == 1:
     slices = [[0, l]]
 else:

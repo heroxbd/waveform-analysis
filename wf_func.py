@@ -156,6 +156,92 @@ def findpeak(wave, spe_pre):
         cha = np.array([1])
     return pet, cha
 
+def fbmp(y, spe_pre, tlist, A, p1, sig2w, sig2s, mus, D, stop=0):
+    xmmse = fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0)[0]
+    pet = tlist[xmmse > 0]
+    cha = xmmse[xmmse > 0] / mus[1]
+    if len(pet) == 0:
+        pet = np.array([np.argmax(y[spe_pre['peak_c']:])])
+        cha = np.array([1])
+    return pet, cha
+
+def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0):
+    M, N = A.shape
+    Q = len(mus) - 1
+    ps = np.insert(np.ones(Q) * p1 / Q, 0, 1 - p1)
+    sig2s = np.hstack([sig2s, sig2s[1] * np.ones(Q - 1)])
+
+    a2 = np.trace(np.matmul(A.T, A)) / N
+    nu_true_mean = - M / 2 - M / 2 * np.log(sig2w) - p1 * N / 2 * np.log(a2 * sig2s[1] / sig2w + 1) - M / 2 * np.log(2 * np.pi) + N * np.log(ps[0]) + p1 * N * np.log(ps[1] / ps[0])
+    nu_true_stdv = np.sqrt(M / 2 + N * p1 * (1 - p1) * (np.log(ps[1] / ps[0]) - np.log(a2 * sig2s[1] / sig2w + 1) / 2) ** 2)
+    nu_stop = nu_true_mean - stop * nu_true_stdv
+
+    psy_thresh = 1e-4
+    P = int(min(M, 1 + np.ceil(N * p1 + special.erfcinv(1e-2) * np.sqrt(2 * N * p1 * (1 - p1)))))
+
+    T = [[np.empty(0).astype(int) for i in range(D)] for i in range(P)]
+    sT = [[np.empty(0).astype(int) for i in range(D)] for i in range(P)]
+    nu = -np.inf * np.ones([P, D])
+    xmmse = [[np.empty(0).astype(int) for i in range(D)] for i in range(P)]
+    d_tot = np.inf
+
+    nu_root = -np.linalg.norm(y) ** 2 / 2 / sig2w - M * np.log(2 * np.pi) / 2 - M * np.log(sig2w) / 2 + N * np.log(ps[0])
+    Bxt_root = A / sig2w
+    betaxt_root = abs(sig2s[1] * (1 + sig2s[1] * sum(np.conjugate(A) * Bxt_root)) ** (-1))
+    nuxt_root = np.zeros(Q * N)
+    for q in range(Q):
+        nuxt_root[q * N: N + q * N] = nu_root + np.log(betaxt_root / sig2s[1]) / 2 + 0.5 * betaxt_root * abs(np.matmul(y[None, :], Bxt_root) + mus[q + 1] / sig2s[1]) ** 2 - 0.5 * abs(mus[q + 1]) ** 2 / sig2s[1] + np.log(ps[1] / ps[0])
+    
+    for d in range(D):
+        nuxt = nuxt_root
+        z = y
+        Bxt = Bxt_root
+        betaxt = betaxt_root
+        for p in range(P):
+            nustar = max(nuxt)
+            nqstar = np.argmax(nuxt)
+            while sum(abs(nustar - nu[p, :d]) < 1e-8):
+                nuxt[nqstar] = -np.inf
+                nustar = max(nuxt)
+                nqstar = np.argmax(nuxt)
+            qstar = int(nqstar // N)
+            nstar = int(nqstar % N)
+            nu[p, d] = nustar
+            T[p][d] = np.append(T[p - 1][d], nstar)
+            sT[p][d] = np.append(sT[p - 1][d], qstar)
+            z = z - A[:, nstar] * mus[qstar]
+            Bxt = Bxt - np.matmul(Bxt[:, nstar][:, None] * betaxt[nstar], np.matmul(Bxt[:, nstar][None, :], A))
+            xmmse[p][d] = np.zeros(N)
+            xmmse[p][d][T[p][d]] = mus[sT[p][d]] + sig2s[1] * np.matmul(Bxt[:, T[p][d]].T, z[:, None]).flatten()
+            betaxt = abs(sig2s[1] * (1 + sig2s[1] * np.sum(np.conjugate(A) * Bxt, axis=0)) ** (-1))
+            for q in range(Q):
+                nuxt[q * N: q * N + N] = nu[p][d] + np.log(betaxt / sig2s[1]) / 2 + 0.5 * betaxt * abs(np.matmul(z[None, :], Bxt) + mus[q + 1] / sig2s[1]) ** 2 - 0.5 * abs(mus[q + 1]) ** 2 / sig2s[1] + np.log(ps[1] / ps[0])
+                nuxt[T[p][d] + q * N] = -np.inf * np.ones(T[p][d].shape)
+
+        if max(nu[:, d]) > nu_stop:
+            d_tot = d
+            break
+    nu = nu[:, :d+1].flatten()
+
+    dum = np.sort(nu)[::-1]
+    indx = np.argsort(nu)[::-1]
+    d_max = int(np.ceil(indx[0] / P))
+    nu_max = nu[indx[0]]
+    num = sum(nu > nu_max + np.log(psy_thresh))
+    nu_star = nu[indx[:num]]
+    psy_star = np.exp(nu_star - nu_max) / sum(np.exp(nu_star - nu_max))
+    T_star = [None for i in range(num)]
+    xmmse_star = [None for i in range(num)]
+    p1_up = 0
+    for k in range(num):
+        T_star[k] = T[indx[k] % P][indx[k] // P]
+        xmmse_star[k] = xmmse[indx[k] % P][indx[k] // P]
+        p1_up = p1_up + psy_star[k] * len(T_star[k]) / N
+
+    xmmse = np.matmul(np.vstack([xmmse_star]).T, psy_star[:, None]).flatten()
+
+    return xmmse, xmmse_star, psy_star, nu_star, T_star, d_tot, d_max
+
 def read_model(spe_path):
     matplotlib.use('pgf')
     with h5py.File(spe_path, 'r', libver='latest', swmr=True) as speFile:
