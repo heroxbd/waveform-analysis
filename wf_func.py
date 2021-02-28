@@ -21,6 +21,7 @@ import h5py
 from scipy.interpolate import interp1d
 import numba
 
+matplotlib.use('pgf')
 plt.style.use('classic')
 plt.rcParams['savefig.dpi'] = 100
 plt.rcParams['figure.dpi'] = 100
@@ -156,8 +157,8 @@ def findpeak(wave, spe_pre):
         cha = np.array([1])
     return pet, cha
 
-def fbmp(y, spe_pre, tlist, A, p1, sig2w, sig2s, mus, D, stop=0):
-    xmmse = fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0)[0]
+def fbmp(y, spe_pre, tlist, A, p1, sig2s, mus, D, stop=0):
+    xmmse = fbmpr_fxn_reduced(y, A, p1, spe_pre['std'] ** 2, sig2s, mus, D, stop=0)[0]
     pet = tlist[xmmse > 0]
     cha = xmmse[xmmse > 0] / mus[1]
     if len(pet) == 0:
@@ -193,10 +194,14 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0):
         nuxt_root[q * N: N + q * N] = nu_root + np.log(betaxt_root / sig2s[1]) / 2 + 0.5 * betaxt_root * abs(np.matmul(y[None, :], Bxt_root) + mus[q + 1] / sig2s[1]) ** 2 - 0.5 * abs(mus[q + 1]) ** 2 / sig2s[1] + np.log(ps[1] / ps[0])
     
     for d in range(D):
-        nuxt = nuxt_root
-        z = y
-        Bxt = Bxt_root
-        betaxt = betaxt_root
+        nuxt = np.empty(nuxt_root.shape)
+        nuxt[:] = nuxt_root[:]
+        z = np.empty(y.shape)
+        z[:] = y[:]
+        Bxt = np.empty(Bxt_root.shape)
+        Bxt[:] = Bxt_root[:]
+        betaxt = np.empty(betaxt_root.shape)
+        betaxt[:] = betaxt_root[:]
         for p in range(P):
             nustar = max(nuxt)
             nqstar = np.argmax(nuxt)
@@ -208,8 +213,8 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0):
             nstar = int(nqstar % N)
             nu[p, d] = nustar
             T[p][d] = np.append(T[p - 1][d], nstar)
-            sT[p][d] = np.append(sT[p - 1][d], qstar)
-            z = z - A[:, nstar] * mus[qstar]
+            sT[p][d] = np.append(sT[p - 1][d], qstar + 1)
+            z = z - A[:, nstar] * mus[qstar + 1]
             Bxt = Bxt - np.matmul(Bxt[:, nstar][:, None] * betaxt[nstar], np.matmul(Bxt[:, nstar][None, :], A))
             xmmse[p][d] = np.zeros(N)
             xmmse[p][d][T[p][d]] = mus[sT[p][d]] + sig2s[1] * np.matmul(Bxt[:, T[p][d]].T, z[:, None]).flatten()
@@ -221,14 +226,14 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0):
         if max(nu[:, d]) > nu_stop:
             d_tot = d
             break
-    nu = nu[:, :d+1].flatten()
+    nu = nu[:, :d+1]
 
-    dum = np.sort(nu)[::-1]
-    indx = np.argsort(nu)[::-1]
-    d_max = int(np.ceil(indx[0] / P))
-    nu_max = nu[indx[0]]
-    num = sum(nu > nu_max + np.log(psy_thresh))
-    nu_star = nu[indx[:num]]
+    dum = np.sort(nu.T.flatten())[::-1]
+    indx = np.argsort(nu.T.flatten())[::-1]
+    d_max = int(np.floor(indx[0] / P))
+    nu_max = nu.T.flatten()[indx[0]]
+    num = sum(nu.flatten() > nu_max + np.log(psy_thresh))
+    nu_star = nu.T.flatten()[indx[:num]]
     psy_star = np.exp(nu_star - nu_max) / sum(np.exp(nu_star - nu_max))
     T_star = [None for i in range(num)]
     xmmse_star = [None for i in range(num)]
@@ -243,7 +248,6 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0):
     return xmmse, xmmse_star, psy_star, nu_star, T_star, d_tot, d_max
 
 def read_model(spe_path):
-    matplotlib.use('pgf')
     with h5py.File(spe_path, 'r', libver='latest', swmr=True) as speFile:
         cid = speFile['SinglePE'].attrs['ChannelID']
         epulse = speFile['SinglePE'].attrs['Epulse']
@@ -356,7 +360,6 @@ def stdrmoutlier(array, r):
     return std, len(arrayrmoutlier)
 
 def demo(pet_sub, cha_sub, tth, spe_pre, window, wave, cid, p, full=False, fold='Note/figures', ext='.pgf'):
-    matplotlib.use('pgf')
     penum = len(tth)
     print('PEnum is {}'.format(penum))
     pan = np.arange(window)
