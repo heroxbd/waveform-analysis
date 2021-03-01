@@ -55,12 +55,11 @@ mtsi['wdist'] = np.nan
 mtsi['RSS'] = np.nan
 mtsi = np.sort(mtsi, kind='stable', order=['mu', 'tau', 'sigma'])
 
-mts = {'findpeak':mtsi.copy(), 'threshold':mtsi.copy(), 'fftrans':mtsi.copy(), 'lucyddm':mtsi.copy(), 'xiaopeip':mtsi.copy(), 'mcmcrec':mtsi.copy(), 'takara':mtsi.copy()}
-# mts = {'fftrans':mtsi.copy(), 'lucyddm':mtsi.copy(), 'xiaopeip':mtsi.copy(), 'takara':mtsi.copy(), 'mcmcrec':mtsi.copy()}
-label = {'1st':'\mathrm{1st}', 'tru':'\mathrm{Truth}', 'findpeak':'\mathrm{FindPeak}', 'threshold':'\mathrm{Shift}', 'fftrans':'\mathrm{FFT}', 'lucyddm':'\mathrm{LucyDDM}', 'xiaopeip':'\mathrm{Fitting}', 'takara':'\mathrm{CNN}', 'mcmcrec':'\mathrm{MCMCcha}', 'wave':'\mathrm{MCMCt0}'}
-color = {'1st':'b', 'tru':'k', 'findpeak':'C1', 'threshold':'C2', 'fftrans':'m', 'lucyddm':'y', 'xiaopeip':'c', 'takara':'C0', 'mcmcrec':'r', 'wave':'g'}
+mts = {'findpeak':mtsi.copy(), 'threshold':mtsi.copy(), 'fftrans':mtsi.copy(), 'lucyddm':mtsi.copy(), 'xiaopeip':mtsi.copy(), 'mcmcrec':mtsi.copy(), 'takara':mtsi.copy(), 'fbmp':mtsi.copy()}
+label = {'1st':'\mathrm{1st}', 'tru':'\mathrm{Truth}', 'findpeak':'\mathrm{FindPeak}', 'threshold':'\mathrm{Shift}', 'fftrans':'\mathrm{FFT}', 'lucyddm':'\mathrm{LucyDDM}', 'xiaopeip':'\mathrm{Fitting}', 'takara':'\mathrm{CNN}', 'fbmp':'\mathrm{FBMP}', 'mcmcrec':'\mathrm{MCMCcha}', 'wave':'\mathrm{MCMCt0}'}
+color = {'1st':'b', 'tru':'k', 'findpeak':'C1', 'threshold':'C2', 'fftrans':'m', 'lucyddm':'y', 'xiaopeip':'c', 'takara':'C0', 'fbmp':'C4', 'mcmcrec':'r', 'wave':'g'}
 jit = 0.05
-jitter = {'tru':-5 * jit, 'mcmcrec':-4 * jit, 'lucyddm':-3 * jit, 'takara':-2 * jit, 'wave':-1 * jit, 'xiaopeip':0, 'fftrans':1 * jit, '1st':2 * jit, 'findpeak':3 * jit, 'threshold':4 * jit}
+jitter = {'tru':-6 * jit, 'mcmcrec':-5 * jit, 'fbmp':-4 * jit, 'lucyddm':-3 * jit, 'takara':-2 * jit, 'wave':-1 * jit, 'xiaopeip':0, 'fftrans':1 * jit, '1st':2 * jit, 'findpeak':3 * jit, 'threshold':4 * jit}
 
 for key in mts.keys():
     for i in range(len(mts[key])):
@@ -261,7 +260,7 @@ fig = plt.figure()
 # fig.tight_layout()
 ax = fig.add_subplot(111)
 ax.bar(x, wdist[:, 1], color='b')
-ax.set_ylim(0, math.ceil(wdist.max() + 0.5))
+ax.set_ylim(0, math.ceil(wdist[~np.isnan(wdist)].max() + 0.5))
 ax.set_ylabel(r'$\mathrm{Wasserstein}\ \mathrm{Distance}/\mathrm{ns}$')
 ax.set_xticks(x)
 ax.set_xticklabels(['$'+label[key]+'$' if key != 'mcmcrec' else '$\mathrm{MCMC}$' for key in keylist], Fontsize=12)

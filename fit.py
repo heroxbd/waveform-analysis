@@ -33,29 +33,34 @@ method = args.met
 Thres = {'xiaopeip':0.2, 'lucyddm':0.2, 'fftrans':0.1, 'findpeak':0.1, 'threshold':0.1, 'fbmp':0.2}
 
 def fitting(a, b):
+    nsp = 4
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
         ent = ipt['Readout/Waveform'][:]
+        pelist = ipt['SimTriggerInfo/PEList'][:]
         dt = np.zeros((b - a) * window, dtype=opdt)
         start = 0
         end = 0
+        p = spe_pre[0]['parameters']
+        factor = np.linalg.norm(spe_pre[0]['spe'])
         tlist = np.arange(0, window - len(spe_pre[0]['spe']))
         t_auto = np.arange(window)[:, None] - tlist
-        p = spe_pre[0]['parameters']
         A = p[2] * np.exp(-1 / 2 * np.power((np.log((t_auto + np.abs(t_auto)) * (1 / p[0] / 2)) * (1 / p[1])), 2))
-        factor = np.linalg.norm(spe_pre[0]['spe'])
         A = A / factor
         # A = np.matmul(A, np.diag(1. / np.sqrt(np.diag(np.matmul(A.T, A)))))
         for i in range(a, b):
             wave = ent[i]['Waveform'].astype(np.float64) * spe_pre[ent[i]['ChannelID']]['epulse']
 
             if method == 'fbmp':
-                pet, cha = wff.fbmp(wave, spe_pre[ent[i]['ChannelID']], tlist, A, np.sum(wave) / gmu / (window - len(spe_pre[0]['spe'])), spe_pre[ent[i]['ChannelID']]['std'] ** 2, np.array([0., (gsigma) ** 2 * factor / gmu]), np.array([0., factor]), 10, stop=0)
+                A, wave_r, tlist, t0_init, t0_init_delta, char_init, mu, n = wff.initial_params(wave, spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, gsigma, Thres['lucyddm'], npe, p, nsp)
+                A = A / factor
+                # A = np.matmul(A, np.diag(1. / np.sqrt(np.diag(np.matmul(A.T, A)))))
+                pet, cha = wff.fbmp(wave_r, spe_pre[ent[i]['ChannelID']], tlist, A, mu / len(tlist), gsigma ** 2 * factor / gmu, factor, 10, stop=0)
             elif method == 'xiaopeip':
 #                 pet, cha, ped = wff.xiaopeip(wave, spe_pre[ent[i]['ChannelID']])
 #                 wave = wave - ped
                 pet, cha = wff.xiaopeip(wave, spe_pre[ent[i]['ChannelID']])
             elif method == 'lucyddm':
-                pet, cha = wff.lucyddm(wave, spe_pre[ent[i]['ChannelID']])
+                pet, cha = wff.lucyddm(wave, spe_pre[ent[i]['ChannelID']]['spe'])
             elif method == 'fftrans':
                 pet, cha = wff.waveformfft(wave, spe_pre[ent[i]['ChannelID']])
             elif method == 'findpeak':
@@ -63,10 +68,13 @@ def fitting(a, b):
             elif method == 'threshold':
                 pet, cha = wff.threshold(wave, spe_pre[ent[i]['ChannelID']])
             pet, cha = wff.clip(pet, cha, Thres[method])
+            cha = cha / cha.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
+
+            # truth = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
+            # wff.demo(pet, cha, truth, spe_pre[ent[i]['ChannelID']], window, wave, ent[i]['ChannelID'], p, fold='.', ext='.pdf')
 
             end = start + len(cha)
             dt['HitPosInWindow'][start:end] = pet
-            cha = cha / cha.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
             dt['Charge'][start:end] = cha
             dt['TriggerNo'][start:end] = ent[i]['TriggerNo']
             dt['ChannelID'][start:end] = ent[i]['ChannelID']
@@ -87,6 +95,7 @@ with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
     Sigma = ipt['Readout/Waveform'].attrs['sigma']
     gmu = ipt['SimTriggerInfo/PEList'].attrs['gmu']
     gsigma = ipt['SimTriggerInfo/PEList'].attrs['gsigma']
+    npe = ipt['SimTruth/T'].attrs['npe']
 if args.Ncpu == 1:
     slices = [[0, l]]
 else:

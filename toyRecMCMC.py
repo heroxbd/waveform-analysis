@@ -45,6 +45,8 @@ Demo = False
 spe_pre = wff.read_model(reference)
 with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
     ent = ipt['Readout/Waveform'][:]
+    pelist = ipt['SimTriggerInfo/PEList'][:]
+    t0_truth = ipt['SimTruth/T'][:]
     N = len(ent)
     print('{} waveforms will be computed'.format(N))
     window = len(ent[0]['Waveform'])
@@ -54,6 +56,7 @@ with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
     Sigma = ipt['Readout/Waveform'].attrs['sigma'].item()
     gmu = ipt['SimTriggerInfo/PEList'].attrs['gmu'].item()
     gsigma = ipt['SimTriggerInfo/PEList'].attrs['gsigma'].item()
+    npe = ipt['SimTruth/T'].attrs['npe'].item()
 
 p = spe_pre[0]['parameters']
 if Tau != 0:
@@ -86,7 +89,7 @@ class mNormal(numpyro.distributions.distribution.Distribution):
         return jax.scipy.special.logsumexp(prob, axis=0, b=pl) + jnp.log(2)
 
 def time_numpyro(a0, a1):
-    npe = 2
+    nsp = 4
     Awindow = int(window * 0.95)
     rng_key = jax.random.PRNGKey(1)
     rng_key, rng_key_ = jax.random.split(rng_key)
@@ -96,44 +99,36 @@ def time_numpyro(a0, a1):
     start = 0
     end = 0
     count = 0
-    def model(n, y, mu, tlist, AV, t0right, t0left):
-        t0 = numpyro.sample('t0', numpyro.distributions.Uniform(t0right, t0left))
+    def model(n, y, mu, tlist, AV, t0left, t0right):
+        t0 = numpyro.sample('t0', numpyro.distributions.Uniform(t0left, t0right))
         if Tau == 0:
             light_curve = numpyro.distributions.Normal(t0, scale=Sigma)
             pl = numpyro.primitives.deterministic('pl', jnp.exp(light_curve.log_prob(tlist)) * mu / n + jnp.finfo(jnp.float64).epsneg)
             # pl = numpyro.primitives.deterministic('pl', 1 / (math.sqrt(2. * math.pi) * Sigma) * jnp.exp(-((tlist - t0) / Sigma) ** 2 / 2) * mu / n + jnp.finfo(jnp.float64).epsneg)
         else:
             pl = numpyro.primitives.deterministic('pl', Co * (1. - jax.scipy.special.erf((Alpha * Sigma ** 2 - (tlist - t0)) / (math.sqrt(2.) * Sigma))) * jnp.exp(-Alpha * (tlist - t0)) * mu / n + jnp.finfo(jnp.float64).epsneg)
-        # A = numpyro.sample('A', numpyro.contrib.tfp.distributions.MixtureSameFamily(
-        #     numpyro.contrib.tfp.distributions.Categorical(jnp.vstack([(1 - pl), pl]).T),
-        #     numpyro.contrib.tfp.distributions.Normal(jnp.repeat(jnp.array([[0., 1.]]), window, axis=0), jnp.repeat(jnp.array([[std / gsigma, gsigma / gmu]]), window, axis=0))
-        # ))
         A = numpyro.sample('A', mNormal(pl, std / gsigma, 1., gsigma / gmu))
-        with numpyro.plate('observations', window):
+        with numpyro.plate('observations', len(y)):
             obs = numpyro.sample('obs', numpyro.distributions.Normal(jnp.matmul(AV, A), scale=std), obs=y)
         return obs
     for i in range(a0, a1):
+        truth = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
         cid = ent[i]['ChannelID']
-        wave = jnp.array(ent[i]['Waveform'].astype(np.float32)) * spe_pre[cid]['epulse']
-        mu = jnp.sum(wave) / gmu
-        n = max(round(mu / math.sqrt(Tau ** 2 + Sigma ** 2)), 1)
-        hitt, char = wff.lucyddm(ent[i]['Waveform'], spe_pre[cid])
-        hitt, char = wff.clip(hitt, char, Thres)
-        char = char / char.sum() * jnp.clip(jnp.abs(wave.sum()), 1e-6, jnp.inf) / spe_pre[cid]['spe'].sum()
-        t0_init = jnp.array(wff.likelihoodt0(hitt=hitt, char=char, gmu=gmu, gsigma=gsigma, Tau=Tau, Sigma=Sigma, npe=npe, mode='charge'))
-        right = jnp.clip(hitt.min() - round(3 * spe_pre[cid]['mar_l']), 0, window)
-        left = jnp.clip(hitt.max() + round(3 * spe_pre[cid]['mar_l']), 0, window)
-        tlist = jnp.arange(right, left, 1 / n)
-        A_init = np.zeros(left - right)
-        A_init[hitt - hitt.min() + round(3 * spe_pre[cid]['mar_l'])] = char
-        A_init = jnp.repeat(A_init, n) / n + jnp.finfo(jnp.float64).epsneg
-        t_auto = jnp.arange(window)[:, None] - tlist
-        AV = p[2] * jnp.exp(-1 / 2 * jnp.power((jnp.log((t_auto + jnp.abs(t_auto)) * (1 / p[0] / 2)) * (1 / p[1])), 2))
+        wave = ent[i]['Waveform'].astype(np.float64) * spe_pre[cid]['epulse']
+
+        AV, wave, tlist, t0_init, t0_init_delta, A_init, mu, n = wff.initial_params(wave, spe_pre[cid], Tau, Sigma, gmu, gsigma, Thres, npe, p, nsp, is_t0=True)
+        AV = jnp.array(AV)
+        wave = jnp.array(wave)
+        tlist = jnp.array(tlist)
+        t0_init = jnp.array(t0_init)
+        A_init = jnp.array(A_init) + jnp.finfo(jnp.float64).epsneg
+        mu = jnp.array(mu)
+
         nuts_kernel = numpyro.infer.NUTS(model, adapt_step_size=True, init_strategy=numpyro.infer.initialization.init_to_value(values={'t0': t0_init, 'A': A_init}))
-        mcmc = numpyro.infer.MCMC(nuts_kernel, num_samples=1000, num_warmup=300, num_chains=1, progress_bar=Demo, chain_method='sequential', jit_model_args=True)
+        mcmc = numpyro.infer.MCMC(nuts_kernel, num_samples=1000, num_warmup=500, num_chains=1, progress_bar=Demo, chain_method='sequential', jit_model_args=True)
         try:
             ticrun = time.time()
-            mcmc.run(rng_key, n=n, y=wave, mu=mu, tlist=tlist, AV=AV, t0right=t0_init - 3 * Sigma, t0left=t0_init + 3 * Sigma, extra_fields=('num_steps', 'accept_prob'))
+            mcmc.run(rng_key, n=n, y=wave, mu=mu, tlist=tlist, AV=AV, t0left=t0_init - 3 * Sigma, t0right=t0_init + 3 * Sigma, extra_fields=('num_steps', 'accept_prob'))
             tocrun = time.time()
             num_leapfrogs = mcmc.get_extra_fields()['num_steps'].sum()
             # print('avg. time for each step :', (tocrun - ticrun) / num_leapfrogs)
@@ -145,15 +140,15 @@ def time_numpyro(a0, a1):
             else:
                 raise ValueError
         except:
-            t0 = np.array([t0_init])
-            tlist = hitt
-            A = np.array([char])
+            t0 = np.array(t0_init)
+            tlist = np.array(tlist)
+            A = np.array(A_init)
             print('Failed waveform is TriggerNo = {:05d}, ChannelID = {:02d}, i = {:05d}'.format(ent[i]['TriggerNo'], ent[i]['ChannelID'], i))
         stime[i - a0] = np.mean(t0)
         pet, cha = wff.clip(np.array(tlist), np.mean(A, axis=0), Thres)
+        cha = cha / cha.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
         end = start + len(cha)
         dt['HitPosInWindow'][start:end] = pet
-        cha = cha / cha.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
         dt['Charge'][start:end] = cha
         dt['TriggerNo'][start:end] = ent[i]['TriggerNo']
         dt['ChannelID'][start:end] = ent[i]['ChannelID']

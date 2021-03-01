@@ -19,7 +19,9 @@ import matplotlib.gridspec as gridspec
 from mpl_axes_aligner import align
 import h5py
 from scipy.interpolate import interp1d
-import numba
+from numba import njit
+import warnings
+warnings.filterwarnings('ignore')
 
 matplotlib.use('pgf')
 plt.style.use('classic')
@@ -99,7 +101,7 @@ def lucyddm(waveform, spe_pre):
     .. [1] https://en.wikipedia.org/wiki/Richardson%E2%80%93Lucy_deconvolution
     .. [2] https://github.com/scikit-image/scikit-image/blob/master/skimage/restoration/deconvolution.py#L329
     '''
-    spe = np.append(np.zeros(len(spe_pre['spe']) - 2 * 9 - 1), np.abs(spe_pre['spe']))
+    spe = np.append(np.zeros(len(spe_pre) - 2 * 9 - 1), np.abs(spe_pre))
     waveform = np.where(waveform <= 0, 1e-6, waveform)
     spe = np.where(spe <= 0, 1e-6, spe)
     waveform = waveform / np.sum(spe)
@@ -158,92 +160,78 @@ def findpeak(wave, spe_pre):
     return pet, cha
 
 def fbmp(y, spe_pre, tlist, A, p1, sig2s, mus, D, stop=0):
-    xmmse = fbmpr_fxn_reduced(y, A, p1, spe_pre['std'] ** 2, sig2s, mus, D, stop=0)[0]
+    xmmse = fbmpr_fxn_reduced(y, A, p1, spe_pre['std'] ** 2, sig2s, mus, D, stop=0)[1][0]
     pet = tlist[xmmse > 0]
-    cha = xmmse[xmmse > 0] / mus[1]
+    cha = xmmse[xmmse > 0] / mus
     if len(pet) == 0:
         pet = np.array([np.argmax(y[spe_pre['peak_c']:])])
         cha = np.array([1])
     return pet, cha
 
+# @njit
 def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0):
     M, N = A.shape
-    Q = len(mus) - 1
-    ps = np.insert(np.ones(Q) * p1 / Q, 0, 1 - p1)
-    sig2s = np.hstack([sig2s, sig2s[1] * np.ones(Q - 1)])
 
-    a2 = np.trace(np.matmul(A.T, A)) / N
-    nu_true_mean = - M / 2 - M / 2 * np.log(sig2w) - p1 * N / 2 * np.log(a2 * sig2s[1] / sig2w + 1) - M / 2 * np.log(2 * np.pi) + N * np.log(ps[0]) + p1 * N * np.log(ps[1] / ps[0])
-    nu_true_stdv = np.sqrt(M / 2 + N * p1 * (1 - p1) * (np.log(ps[1] / ps[0]) - np.log(a2 * sig2s[1] / sig2w + 1) / 2) ** 2)
+    nu_true_mean = -M / 2 - M / 2 * np.log(sig2w) - p1 * N / 2 * np.log(sig2s / sig2w + 1) - M / 2 * np.log(2 * np.pi) + N * np.log(1 - p1) + p1 * N * np.log(p1 / (1 - p1))
+    nu_true_stdv = np.sqrt(M / 2 + N * p1 * (1 - p1) * (np.log(p1 / (1 - p1)) - np.log(sig2s / sig2w + 1) / 2) ** 2)
     nu_stop = nu_true_mean - stop * nu_true_stdv
 
     psy_thresh = 1e-4
-    P = int(min(M, 1 + np.ceil(N * p1 + special.erfcinv(1e-2) * np.sqrt(2 * N * p1 * (1 - p1)))))
+    P = min(M, 1 + math.ceil(N * p1 + 1.82138636 * math.sqrt(2 * N * p1 * (1 - p1))))
 
-    T = [[np.empty(0).astype(int) for i in range(D)] for i in range(P)]
-    sT = [[np.empty(0).astype(int) for i in range(D)] for i in range(P)]
-    nu = -np.inf * np.ones([P, D])
-    xmmse = [[np.empty(0).astype(int) for i in range(D)] for i in range(P)]
-    d_tot = np.inf
+    T = np.full((P, D), 0)
+    nu = np.full((P, D), -np.inf)
+    xmmse = np.zeros((P, D, N))
+    d_tot = D - 1
 
-    nu_root = -np.linalg.norm(y) ** 2 / 2 / sig2w - M * np.log(2 * np.pi) / 2 - M * np.log(sig2w) / 2 + N * np.log(ps[0])
+    nu_root = -np.linalg.norm(y) ** 2 / 2 / sig2w - M * np.log(2 * np.pi) / 2 - M * np.log(sig2w) / 2 + N * np.log(1 - p1)
     Bxt_root = A / sig2w
-    betaxt_root = abs(sig2s[1] * (1 + sig2s[1] * sum(np.conjugate(A) * Bxt_root)) ** (-1))
-    nuxt_root = np.zeros(Q * N)
-    for q in range(Q):
-        nuxt_root[q * N: N + q * N] = nu_root + np.log(betaxt_root / sig2s[1]) / 2 + 0.5 * betaxt_root * abs(np.matmul(y[None, :], Bxt_root) + mus[q + 1] / sig2s[1]) ** 2 - 0.5 * abs(mus[q + 1]) ** 2 / sig2s[1] + np.log(ps[1] / ps[0])
+    betaxt_root = np.abs(sig2s / (1 + sig2s * np.sum(np.conjugate(A) * Bxt_root, axis=0)))
+    nuxt_root = nu_root + np.log(betaxt_root / sig2s) / 2 + 0.5 * betaxt_root * np.abs(np.dot(y, Bxt_root) + mus / sig2s) ** 2 - 0.5 * mus ** 2 / sig2s + np.log(p1 / (1 - p1))
     
     for d in range(D):
-        nuxt = np.empty(nuxt_root.shape)
-        nuxt[:] = nuxt_root[:]
-        z = np.empty(y.shape)
-        z[:] = y[:]
-        Bxt = np.empty(Bxt_root.shape)
-        Bxt[:] = Bxt_root[:]
-        betaxt = np.empty(betaxt_root.shape)
-        betaxt[:] = betaxt_root[:]
+        nuxt = nuxt_root.copy()
+        z = y.copy()
+        Bxt = Bxt_root.copy()
+        betaxt = betaxt_root.copy()
         for p in range(P):
             nustar = max(nuxt)
-            nqstar = np.argmax(nuxt)
-            while sum(abs(nustar - nu[p, :d]) < 1e-8):
-                nuxt[nqstar] = -np.inf
+            nstar = np.argmax(nuxt)
+            while np.sum(np.abs(nustar - nu[p, :d]) < 1e-8):
+                nuxt[nstar] = -np.inf
                 nustar = max(nuxt)
-                nqstar = np.argmax(nuxt)
-            qstar = int(nqstar // N)
-            nstar = int(nqstar % N)
+                nstar = np.argmax(nuxt)
             nu[p, d] = nustar
-            T[p][d] = np.append(T[p - 1][d], nstar)
-            sT[p][d] = np.append(sT[p - 1][d], qstar + 1)
-            z = z - A[:, nstar] * mus[qstar + 1]
-            Bxt = Bxt - np.matmul(Bxt[:, nstar][:, None] * betaxt[nstar], np.matmul(Bxt[:, nstar][None, :], A))
-            xmmse[p][d] = np.zeros(N)
-            xmmse[p][d][T[p][d]] = mus[sT[p][d]] + sig2s[1] * np.matmul(Bxt[:, T[p][d]].T, z[:, None]).flatten()
-            betaxt = abs(sig2s[1] * (1 + sig2s[1] * np.sum(np.conjugate(A) * Bxt, axis=0)) ** (-1))
-            for q in range(Q):
-                nuxt[q * N: q * N + N] = nu[p][d] + np.log(betaxt / sig2s[1]) / 2 + 0.5 * betaxt * abs(np.matmul(z[None, :], Bxt) + mus[q + 1] / sig2s[1]) ** 2 - 0.5 * abs(mus[q + 1]) ** 2 / sig2s[1] + np.log(ps[1] / ps[0])
-                nuxt[T[p][d] + q * N] = -np.inf * np.ones(T[p][d].shape)
+            T[p, d] = nstar
+            z = z - A[:, nstar] * mus
+            Bxt = Bxt - np.dot(betaxt[nstar] * Bxt[:, nstar].copy().reshape(M, 1), np.dot(Bxt[:, nstar], A).copy().reshape(1, N))
+            assist = np.zeros(N)
+            assist[T[:p+1, d]] = mus + sig2s * np.dot(z, Bxt[:, T[:p+1, d]])
+            xmmse[p, d] = assist
+            betaxt = np.abs(sig2s / (1 + sig2s * np.sum(A * Bxt, axis=0)))
+            nuxt = nustar + np.log(betaxt / sig2s) / 2 + 0.5 * betaxt * np.abs(np.dot(z, Bxt) + mus / sig2s) ** 2 - 0.5 * mus ** 2 / sig2s + np.log(p1 / (1 - p1))
+            nuxt[T[:p+1, d]] = np.full(p+1, -np.inf)
 
         if max(nu[:, d]) > nu_stop:
             d_tot = d
             break
-    nu = nu[:, :d+1]
+    nu = nu[:, :d+1].T.flatten()
 
-    dum = np.sort(nu.T.flatten())[::-1]
-    indx = np.argsort(nu.T.flatten())[::-1]
-    d_max = int(np.floor(indx[0] / P))
-    nu_max = nu.T.flatten()[indx[0]]
-    num = sum(nu.flatten() > nu_max + np.log(psy_thresh))
-    nu_star = nu.T.flatten()[indx[:num]]
-    psy_star = np.exp(nu_star - nu_max) / sum(np.exp(nu_star - nu_max))
-    T_star = [None for i in range(num)]
-    xmmse_star = [None for i in range(num)]
+    dum = np.sort(nu)[::-1]
+    indx = np.argsort(nu)[::-1]
+    d_max = math.floor(indx[0] // P)
+    nu_max = nu[indx[0]]
+    num = int(np.sum(nu > nu_max + np.log(psy_thresh)))
+    nu_star = nu[indx[:num]]
+    psy_star = np.exp(nu_star - nu_max) / np.sum(np.exp(nu_star - nu_max))
+    T_star = [T[:(indx[k] % P) + 1, indx[k] // P] for k in range(num)]
+    xmmse_star = np.empty((num, N))
     p1_up = 0
     for k in range(num):
-        T_star[k] = T[indx[k] % P][indx[k] // P]
-        xmmse_star[k] = xmmse[indx[k] % P][indx[k] // P]
-        p1_up = p1_up + psy_star[k] * len(T_star[k]) / N
+        xmmse_star[k] = xmmse[indx[k] % P, indx[k] // P]
+        p1_up = p1_up + psy_star[k] / N * len(T_star[k])
 
-    xmmse = np.matmul(np.vstack([xmmse_star]).T, psy_star[:, None]).flatten()
+    xmmse = np.dot(psy_star, xmmse_star)
 
     return xmmse, xmmse_star, psy_star, nu_star, T_star, d_tot, d_max
 
@@ -348,7 +336,37 @@ def likelihoodt0(hitt, char, gmu, gsigma, Tau, Sigma, npe, mode='charge'):
         logL = lambda t0 : -1 * np.sum(np.log(np.clip(convolve_exp_norm(hitt - t0, Tau, Sigma), np.finfo(np.float64).tiny, np.inf)))
     logLv = np.vectorize(logL)
     t0 = opti.fmin_l_bfgs_b(logL, x0=[tlist[np.argmin(logLv(tlist))]], approx_grad=True, bounds=[b], maxfun=500000)[0]
-    return t0
+    logLvdelta = np.vectorize(lambda t : np.abs(logL(t) - logL(t0) - 0.5))
+    t0delta = abs(opti.fmin_l_bfgs_b(logLvdelta, x0=[tlist[np.argmin(logLvdelta(tlist))]], approx_grad=True, bounds=[b], maxfun=500000)[0] - t0)
+    return t0, t0delta
+
+def initial_params(wave, spe_pre, Tau, Sigma, gmu, gsigma, Thres, npe, p, nsp, is_t0=False):
+    hitt, char = lucyddm(wave, spe_pre['spe'])
+    hitt, char = clip(hitt, char, Thres)
+    char = char / char.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
+    tlist = np.unique(np.floor(np.clip(np.hstack(hitt[:, None] + np.arange(-nsp, nsp+1)), 0, len(wave) - 1)))
+    npe_init = np.zeros(len(tlist))
+    npe_init[np.isin(tlist, hitt)] = char / gmu
+
+    index_prom = np.hstack([np.argwhere(wave > 3 * spe_pre['std']).flatten(), hitt])
+    left_wave = np.clip(index_prom.min() - round(2 * spe_pre['mar_l']), 0, len(wave) - 1)
+    right_wave = np.clip(index_prom.max() + round(2 * spe_pre['mar_r']), 0, len(wave) - 1)
+    wave = wave[left_wave:right_wave]
+
+    window = len(wave)
+    mu = np.sum(wave) / gmu
+    n = max(round(mu / math.sqrt(Tau ** 2 + Sigma ** 2)), 1)
+
+    tlist = np.sort(np.hstack(tlist[:, None] + np.arange(0, 1, 1 / n)))
+    npe_init = np.repeat(npe_init, n) / n
+    t_auto = np.arange(left_wave, right_wave)[:, None] - tlist
+    A = p[2] * np.exp(-1 / 2 * (np.log((t_auto + np.abs(t_auto)) * (1 / p[0] / 2)) * (1 / p[1])) ** 2)
+
+    t0_init = None
+    t0_init_delta = None
+    if is_t0:
+        t0_init, t0_init_delta = likelihoodt0(hitt=hitt, char=char, gmu=gmu, gsigma=gsigma, Tau=Tau, Sigma=Sigma, npe=npe, mode='charge')
+    return A, wave, tlist, t0_init, t0_init_delta, npe_init, mu, n
 
 def npeprobcharge(charge, npe, gmu, gsigma):
     prob = np.where(npe > 0, norm.pdf(charge, loc=gmu * npe, scale=gsigma * np.sqrt(npe)) / (1 - norm.cdf(0, loc=gmu * npe, scale=gsigma * np.sqrt(npe))), 0)
