@@ -12,6 +12,10 @@ import h5py
 import numpy as np
 # np.seterr(all='raise')
 import scipy
+import scipy.stats
+from scipy.stats import poisson, uniform, norm
+import scipy.special as special
+from scipy import optimize as opti
 import pandas as pd
 from tqdm import tqdm
 import jax
@@ -63,7 +67,7 @@ if Tau != 0:
     Alpha = 1 / Tau
     Co = (Alpha / 2. * np.exp(Alpha ** 2 * Sigma ** 2 / 2.)).item()
 std = 1.
-Thres = 0.2
+Thres = {'mcmc':0.2, 'lucyddm':0.2, 'fbmp':0.2}
 
 class mNormal(numpyro.distributions.distribution.Distribution):
     arg_constraints = {'pl': numpyro.distributions.constraints.real}
@@ -103,10 +107,9 @@ def time_numpyro(a0, a1):
         t0 = numpyro.sample('t0', numpyro.distributions.Uniform(t0left, t0right))
         if Tau == 0:
             light_curve = numpyro.distributions.Normal(t0, scale=Sigma)
-            pl = numpyro.primitives.deterministic('pl', jnp.exp(light_curve.log_prob(tlist)) * mu / n + jnp.finfo(jnp.float64).epsneg)
-            # pl = numpyro.primitives.deterministic('pl', 1 / (math.sqrt(2. * math.pi) * Sigma) * jnp.exp(-((tlist - t0) / Sigma) ** 2 / 2) * mu / n + jnp.finfo(jnp.float64).epsneg)
+            pl = numpyro.primitives.deterministic('pl', jnp.exp(light_curve.log_prob(tlist)) / n * mu + jnp.finfo(jnp.float64).epsneg)
         else:
-            pl = numpyro.primitives.deterministic('pl', Co * (1. - jax.scipy.special.erf((Alpha * Sigma ** 2 - (tlist - t0)) / (math.sqrt(2.) * Sigma))) * jnp.exp(-Alpha * (tlist - t0)) * mu / n + jnp.finfo(jnp.float64).epsneg)
+            pl = numpyro.primitives.deterministic('pl', Co * (1. - jax.scipy.special.erf((Alpha * Sigma ** 2 - (tlist - t0)) / (math.sqrt(2.) * Sigma))) * jnp.exp(-Alpha * (tlist - t0)) / n * mu + jnp.finfo(jnp.float64).epsneg)
         A = numpyro.sample('A', mNormal(pl, std / gsigma, 1., gsigma / gmu))
         with numpyro.plate('observations', len(y)):
             obs = numpyro.sample('obs', numpyro.distributions.Normal(jnp.matmul(AV, A), scale=std), obs=y)
@@ -116,7 +119,7 @@ def time_numpyro(a0, a1):
         cid = ent[i]['ChannelID']
         wave = ent[i]['Waveform'].astype(np.float64) * spe_pre[cid]['epulse']
 
-        AV, wave, tlist, t0_init, t0_init_delta, A_init, mu, n = wff.initial_params(wave, spe_pre[cid], Tau, Sigma, gmu, gsigma, Thres, npe, p, nsp, is_t0=True)
+        AV, wave, tlist, t0_init, t0_init_delta, A_init, mu, n = wff.initial_params(wave, spe_pre[cid], Tau, Sigma, gmu, gsigma, Thres['lucyddm'], npe, p, nsp, is_t0=True)
         AV = jnp.array(AV)
         wave = jnp.array(wave)
         tlist = jnp.array(tlist)
@@ -145,7 +148,7 @@ def time_numpyro(a0, a1):
             A = np.array(A_init)
             print('Failed waveform is TriggerNo = {:05d}, ChannelID = {:02d}, i = {:05d}'.format(ent[i]['TriggerNo'], ent[i]['ChannelID'], i))
         stime[i - a0] = np.mean(t0)
-        pet, cha = wff.clip(np.array(tlist), np.mean(A, axis=0), Thres)
+        pet, cha = wff.clip(np.array(tlist), np.mean(A, axis=0), Thres['mcmc'])
         cha = cha / cha.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
         end = start + len(cha)
         dt['HitPosInWindow'][start:end] = pet
@@ -156,6 +159,68 @@ def time_numpyro(a0, a1):
     dt = dt[:end]
     dt = np.sort(dt, kind='stable', order=['TriggerNo', 'ChannelID'])
     return stime, dt, count, accep
+
+def fbmp_inference(a0, a1):
+    nsp = 4
+    D = 10
+    stime = np.empty(a1 - a0)
+    dt = np.zeros((a1 - a0) * window, dtype=opdt)
+    d_tot = np.zeros(a1 - a0).astype(int)
+    start = 0
+    end = 0
+    factor = np.linalg.norm(spe_pre[0]['spe'])
+    tlist = np.arange(0, window - len(spe_pre[0]['spe']))
+    t_auto = np.arange(window)[:, None] - tlist
+    A = p[2] * np.exp(-1 / 2 * np.power((np.log((t_auto + np.abs(t_auto)) * (1 / p[0] / 2)) * (1 / p[1])), 2))
+    A = A / factor
+    # A = np.matmul(A, np.diag(1. / np.sqrt(np.diag(np.matmul(A.T, A)))))
+    b = [0., 600.]
+    time_fbmp = 0
+    def loglikelihood(t0, tlist, xmmse, psy_star):
+        if Tau == 0:
+            pl = 1 / (math.sqrt(2. * math.pi) * Sigma) * np.exp(-((tlist - t0) / Sigma) ** 2 / 2)
+        else:
+            pl = Co * (1. - special.erf((Alpha * Sigma ** 2 - (tlist - t0)) / (math.sqrt(2.) * Sigma))) * np.exp(-Alpha * (tlist - t0))
+        logL = special.logsumexp(np.sum(special.logsumexp(np.einsum('ijk->jik', np.stack([norm.logpdf(xmmse, loc=0, scale=std), norm.logpdf(xmmse, loc=gmu, scale=gsigma)])), axis=1, b=np.stack([(1 - pl), pl])), axis=1), axis=0, b=psy_star)
+        return logL
+    for i in range(a0, a1):
+        truth = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
+        cid = ent[i]['ChannelID']
+        wave = ent[i]['Waveform'].astype(np.float64) * spe_pre[cid]['epulse']
+
+        time_fbmp_start = time.time()
+        A, wave_r, tlist, t0_init, t0_init_delta, char_init, mu, n = wff.initial_params(wave, spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, gsigma, Thres['lucyddm'], npe, p, nsp, is_t0=True)
+        A = A / factor
+        # A = np.matmul(A, np.diag(1. / np.sqrt(np.diag(np.matmul(A.T, A)))))
+        xmmse, xmmse_star_r, psy_star, nu_star, T_star, d_tot_i, d_max = wff.fbmpr_fxn_reduced(wave_r, A, mu / len(tlist), spe_pre[cid]['std'] ** 2, gsigma ** 2 * factor / gmu, factor, D, stop=0)
+        time_fbmp = time_fbmp + time.time() - time_fbmp_start
+
+        xmmse_star = np.clip(xmmse_star_r, 0, np.inf)
+        xmmse_star_vali = xmmse_star[:, np.sum(xmmse_star, axis=0) > 0] / factor * gmu
+        tlist_vali = tlist[np.sum(xmmse_star, axis=0) > 0]
+        logL = lambda t0 : -1 * loglikelihood(t0, tlist_vali, xmmse_star_vali, psy_star)
+        logLv = np.vectorize(logL)
+        btlist = np.arange(t0_init - 3 * Sigma, t0_init + 3 * Sigma + 1e-6, 0.2)
+        t0 = opti.fmin_l_bfgs_b(logL, x0=[btlist[np.argmin(logLv(btlist))]], approx_grad=True, bounds=[b], maxfun=50000)[0]
+        # logLvdelta = np.vectorize(lambda t : np.abs(logL(t) - logL(t0) - 0.5))
+        # t0delta = abs(opti.fmin_l_bfgs_b(logLvdelta, x0=[btlist[np.argmin(logLvdelta(btlist))]], approx_grad=True, bounds=[b], maxfun=50000)[0] - t0)
+
+        stime[i - a0] = t0
+        d_tot[i - a0] = d_tot_i
+        xmmse_most = xmmse_star_r[0]
+        pet = tlist[xmmse_most > 0]
+        cha = xmmse_most[xmmse_most > 0] / factor
+        pet, cha = wff.clip(pet, cha, Thres['fbmp'])
+        cha = cha / cha.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
+        end = start + len(cha)
+        dt['HitPosInWindow'][start:end] = pet
+        dt['Charge'][start:end] = cha
+        dt['TriggerNo'][start:end] = ent[i]['TriggerNo']
+        dt['ChannelID'][start:end] = ent[i]['ChannelID']
+        start = end
+    dt = dt[:end]
+    dt = np.sort(dt, kind='stable', order=['TriggerNo', 'ChannelID'])
+    return stime, dt, d_tot, time_fbmp
 
 if args.Ncpu == 1:
     slices = [[0, N]]
@@ -179,22 +244,41 @@ ts['TriggerNo'] = ent['TriggerNo']
 ts['ChannelID'] = ent['ChannelID']
 opdt = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('HitPosInWindow', np.float64), ('Charge', np.float64)])
 
-with Pool(min(args.Ncpu, cpu_count())) as pool:
-    result = pool.starmap(partial(time_numpyro), slices)
-ts['tswave'] = np.hstack([result[i][0] for i in range(len(slices))])
-As = np.hstack([result[i][1] for i in range(len(slices))])
-count = np.sum([result[i][2] for i in range(len(slices))])
-accep = np.hstack([result[i][3] for i in range(len(slices))])
+if method == 'mcmc':
+    with Pool(min(args.Ncpu, cpu_count())) as pool:
+        result = pool.starmap(partial(time_numpyro), slices)
+    ts['tswave'] = np.hstack([result[i][0] for i in range(len(slices))])
+    As = np.hstack([result[i][1] for i in range(len(slices))])
+    count = np.sum([result[i][2] for i in range(len(slices))])
+    accep = np.hstack([result[i][3] for i in range(len(slices))])
 
-ff = plt.figure(figsize=(8, 6))
-ax = ff.add_subplot()
-ax.hist(accep, bins=np.arange(0, 1+0.02, 0.02), label='accept_prob')
-ax.legend(loc='upper left')
-ff.savefig(os.path.splitext(fopt)[0] + '.png')
-plt.close()
+    ff = plt.figure(figsize=(8, 6))
+    ax = ff.add_subplot()
+    ax.hist(accep, bins=np.arange(0, 1+0.02, 0.02), label='accept_prob')
+    ax.legend(loc='upper left')
+    ff.savefig(os.path.splitext(fopt)[0] + '.png')
+    plt.close()
 
-As = np.sort(As, kind='stable', order=['TriggerNo', 'ChannelID'])
-print('Successful MCMC ratio is {:.4%}'.format(count / N))
+    As = np.sort(As, kind='stable', order=['TriggerNo', 'ChannelID'])
+    print('Successful MCMC ratio is {:.4%}'.format(count / N))
+elif method == 'fbmp':
+    with Pool(min(args.Ncpu, cpu_count())) as pool:
+        result = pool.starmap(partial(fbmp_inference), slices)
+    ts['tswave'] = np.hstack([result[i][0] for i in range(len(slices))])
+    As = np.hstack([result[i][1] for i in range(len(slices))])
+    d_tot = np.hstack([result[i][2] for i in range(len(slices))])
+    time_fbmp = np.sum(np.hstack([result[i][3] for i in range(len(slices))])) / args.Ncpu
+    print('FBMP finished, real time {0:.02f}s per core'.format(time_fbmp))
+
+    ff = plt.figure(figsize=(8, 6))
+    ax = ff.add_subplot()
+    di, ci = np.unique(d_tot, return_counts=True)
+    ax.bar(di, ci, label='d_tot')
+    ax.legend()
+    ff.savefig(os.path.splitext(fopt)[0] + '.png')
+    plt.close()
+    As = np.sort(As, kind='stable', order=['TriggerNo', 'ChannelID'])
+
 print('Prediction generated, real time {0:.02f}s, cpu time {1:.02f}s'.format(time.time() - tic, time.process_time() - cpu_tic))
 
 with h5py.File(fopt, 'w') as opt:

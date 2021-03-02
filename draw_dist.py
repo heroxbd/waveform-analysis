@@ -10,6 +10,7 @@ args = psr.parse_args()
 
 import numpy as np
 from scipy import stats
+from scipy.stats import poisson, uniform, norm
 from tqdm import tqdm
 import matplotlib
 matplotlib.use('pgf')
@@ -131,9 +132,12 @@ fig.suptitle(args.ipt.split('/')[-1] + ' Dist stats, method = ' + str(method))
 pdf.savefig(fig)
 plt.close(fig)
 
-with h5py.File(args.ref[0], 'r', libver='latest', swmr=True) as wavef, h5py.File(args.ref[1], 'r', libver='latest', swmr=True) as soluf:
+with h5py.File(args.ref[0], 'r', libver='latest', swmr=True) as wavef, h5py.File(args.ref[1], 'r', libver='latest', swmr=True) as soluf, h5py.File(args.ref[2], 'r', libver='latest', swmr=True) as charf:
     start = wavef['SimTruth/T'][:]
     time = soluf['starttime'][:]
+    charge = charf['photoelectron'][:]
+    gmu = wavef['SimTriggerInfo/PEList'].attrs['gmu']
+    gsigma = wavef['SimTriggerInfo/PEList'].attrs['gsigma']
 
 fig = plt.figure()
 gs = gridspec.GridSpec(2, 2, figure=fig, left=0.1, right=0.95, top=0.9, bottom=0.1, wspace=0.2, hspace=0.3)
@@ -175,6 +179,19 @@ if not np.all(np.isnan(time['tswave'])):
     s = np.std(time['tswave'] - start['T0'], ddof=-1)
     ax3.set_title(fr'$\delta_{{wave}}={s:.02f}$')
 
+pdf.savefig(fig)
+plt.close(fig)
+
+fig = plt.figure()
+ax = fig.add_subplot(111)
+ax.hist(charge['Charge'], bins=100, alpha=0.5, density=True, label='PDF_rec')
+t = np.arange(0, 1000, 0.1)
+ax.plot(t, norm.pdf(t, loc=gmu, scale=gsigma) / (1 - norm.cdf(0, loc=gmu, scale=gsigma)), label='PDF_tru', color='k')
+ax.set_xlabel('Charge/mV·ns')
+ax.set_xlim(0, 500)
+ax.legend()
+ax.set_ylabel('Normalized Count')
+fig.suptitle(r'$Charge$' + ' summary')
 pdf.savefig(fig)
 plt.close(fig)
 

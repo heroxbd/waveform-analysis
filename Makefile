@@ -17,10 +17,14 @@ hist:=$(patsubst waveform/%.h5,result/$(method)/hist/%.pdf,$(sim))
 ifeq ($(method), takara)
     predict:=nn
 else
-ifeq ($(method), mcmcrec)
-	predict:=mcmcrec
+ifeq ($(method), mcmc)
+	predict:=bayesian
+else
+ifeq ($(method), fbmp)
+	predict:=bayesian
 else
     predict:=fit
+endif
 endif
 endif
 
@@ -37,10 +41,10 @@ solu : $(solu)
 
 sim : $(sim)
 
-define mcmcrec
+define bayesian
 result/$(method)/char/%.h5 : waveform/%.h5 spe.h5
 	@mkdir -p $$(dir $$@)
-	python3 toyRecMCMC.py $$< --met $(method) -N 50 --ref $$(word 2,$$^) -o $$@ > $$@.log 2>&1
+	python3 bayesian.py $$< --met $(method) -N 50 --ref $$(word 2,$$^) -o $$@ > $$@.log 2>&1
 endef
 
 define fit
@@ -56,9 +60,9 @@ result/takara/char/%.h5 : waveform/%.h5 spe.h5 $(Nets)
 endef
 $(eval $(call $(predict)))
 
-result/$(method)/hist/%.pdf : result/$(method)/dist/%.h5 waveform/%.h5 result/$(method)/solu/%.h5
+result/$(method)/hist/%.pdf : result/$(method)/dist/%.h5 waveform/%.h5 result/$(method)/solu/%.h5 result/$(method)/char/%.h5
 	@mkdir -p $(dir $@)
-	python3 draw_dist.py $< --ref $(wordlist 2,3,$^) -o $@ > $@.log 2>&1
+	python3 draw_dist.py $< --ref $(wordlist 2,4,$^) -o $@ > $@.log 2>&1
 result/$(method)/dist/%.h5 : waveform/%.h5 result/$(method)/char/%.h5 spe.h5
 	@mkdir -p $(dir $@)
 	python3 test_dist.py $(word 2,$^) --ref $< $(word 3,$^) -o $@ > $@.log 2>&1

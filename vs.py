@@ -55,11 +55,12 @@ mtsi['wdist'] = np.nan
 mtsi['RSS'] = np.nan
 mtsi = np.sort(mtsi, kind='stable', order=['mu', 'tau', 'sigma'])
 
-mts = {'findpeak':mtsi.copy(), 'threshold':mtsi.copy(), 'fftrans':mtsi.copy(), 'lucyddm':mtsi.copy(), 'xiaopeip':mtsi.copy(), 'mcmcrec':mtsi.copy(), 'takara':mtsi.copy(), 'fbmp':mtsi.copy()}
-label = {'1st':'\mathrm{1st}', 'tru':'\mathrm{Truth}', 'findpeak':'\mathrm{FindPeak}', 'threshold':'\mathrm{Shift}', 'fftrans':'\mathrm{FFT}', 'lucyddm':'\mathrm{LucyDDM}', 'xiaopeip':'\mathrm{Fitting}', 'takara':'\mathrm{CNN}', 'fbmp':'\mathrm{FBMP}', 'mcmcrec':'\mathrm{MCMCcha}', 'wave':'\mathrm{MCMCt0}'}
-color = {'1st':'b', 'tru':'k', 'findpeak':'C1', 'threshold':'C2', 'fftrans':'m', 'lucyddm':'y', 'xiaopeip':'c', 'takara':'C0', 'fbmp':'C4', 'mcmcrec':'r', 'wave':'g'}
-jit = 0.05
-jitter = {'tru':-6 * jit, 'mcmcrec':-5 * jit, 'fbmp':-4 * jit, 'lucyddm':-3 * jit, 'takara':-2 * jit, 'wave':-1 * jit, 'xiaopeip':0, 'fftrans':1 * jit, '1st':2 * jit, 'findpeak':3 * jit, 'threshold':4 * jit}
+mts = {'findpeak':mtsi.copy(), 'threshold':mtsi.copy(), 'fftrans':mtsi.copy(), 'lucyddm':mtsi.copy(), 'xiaopeip':mtsi.copy(), 'mcmc':mtsi.copy(), 'takara':mtsi.copy(), 'fbmp':mtsi.copy()}
+deltalabel = {'1st':'\mathrm{1st}', 'tru':'\mathrm{Truth}', 'findpeak':'\mathrm{FindPeak}', 'threshold':'\mathrm{Shift}', 'fftrans':'\mathrm{FFT}', 'lucyddm':'\mathrm{LucyDDM}', 'xiaopeip':'\mathrm{Fitting}', 'takara':'\mathrm{CNN}', 'fbmp':'\mathrm{FBMPcha}', 'fbmpwave':'\mathrm{FBMPt0}', 'mcmc':'\mathrm{MCMCcha}', 'mcmcwave':'\mathrm{MCMCt0}'}
+label = {'1st':'\mathrm{1st}', 'tru':'\mathrm{Truth}', 'findpeak':'\mathrm{FindPeak}', 'threshold':'\mathrm{Shift}', 'fftrans':'\mathrm{FFT}', 'lucyddm':'\mathrm{LucyDDM}', 'xiaopeip':'\mathrm{Fitting}', 'takara':'\mathrm{CNN}', 'fbmp':'\mathrm{FBMP}', 'fbmpwave':'\mathrm{FBMP}', 'mcmc':'\mathrm{MCMC}', 'mcmcwave':'\mathrm{MCMC}'}
+color = {'1st':'b', 'tru':'k', 'findpeak':'C1', 'threshold':'C2', 'fftrans':'m', 'lucyddm':'y', 'xiaopeip':'c', 'takara':'C0', 'fbmp':'C4', 'fbmpwave':'C5', 'mcmc':'r', 'mcmcwave':'g'}
+jit = 0.02
+jitter = {'tru':-6 * jit, 'mcmc':-5 * jit, 'fbmp':-4 * jit, 'fbmpwave':-3 * jit, 'lucyddm':-2 * jit, 'takara':-1 * jit, 'mcmcwave':0 * jit, 'xiaopeip':1, 'fftrans':2 * jit, '1st':3 * jit, 'findpeak':4 * jit, 'threshold':5 * jit}
 
 for key in mts.keys():
     for i in range(len(mts[key])):
@@ -109,16 +110,17 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
         stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == tau) & (mts['lucyddm']['sigma'] == sigma)]
         yerr1st = np.vstack([stdlist['std1sttruth']-np.sqrt(np.power(stdlist['std1sttruth'],2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(stdlist['std1sttruth'],2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-stdlist['std1sttruth']])
         yerrall = np.vstack([stdlist['stdtruth']-np.sqrt(np.power(stdlist['stdtruth'],2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(stdlist['stdtruth'],2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-stdlist['stdtruth']])
-        ax.errorbar(stdlist['mu'] + jitter['1st'], stdlist['std1sttruth'], yerr=yerr1st, c=color['1st'], label='$\delta_'+label['1st']+'$', marker='^')
-        ax.errorbar(stdlist['mu'] + jitter['tru'], stdlist['stdtruth'], yerr=yerrall, c=color['tru'], label='$\delta_'+label['tru']+'$', marker='^')
-        stdlistwav = mts['mcmcrec'][(mts['mcmcrec']['tau'] == tau) & (mts['mcmcrec']['sigma'] == sigma)]
-        yerrwav = np.vstack([stdlistwav['stdwave']-np.sqrt(np.power(stdlistwav['stdwave'],2)*stdlistwav['N']/chi2.ppf(1-alpha/2, stdlistwav['N'])), np.sqrt(np.power(stdlistwav['stdwave'],2)*stdlistwav['N']/chi2.ppf(alpha/2, stdlistwav['N']))-stdlistwav['stdwave']])
-        ax.errorbar(stdlistwav['mu'] + jitter['wave'], stdlistwav['stdwave'], yerr=yerrwav, c=color['wave'], label='$\delta_'+label['wave']+'$', marker='^')
+        ax.errorbar(stdlist['mu'] + jitter['1st'], stdlist['std1sttruth'], yerr=yerr1st, c=color['1st'], label='$\delta_'+deltalabel['1st']+'$', marker='^')
+        ax.errorbar(stdlist['mu'] + jitter['tru'], stdlist['stdtruth'], yerr=yerrall, c=color['tru'], label='$\delta_'+deltalabel['tru']+'$', marker='^')
+        for m in ['mcmc', 'fbmp']:
+            stdlistwav = mts[m][(mts[m]['tau'] == tau) & (mts[m]['sigma'] == sigma)]
+            yerrwav = np.vstack([stdlistwav['stdwave']-np.sqrt(np.power(stdlistwav['stdwave'],2)*stdlistwav['N']/chi2.ppf(1-alpha/2, stdlistwav['N'])), np.sqrt(np.power(stdlistwav['stdwave'],2)*stdlistwav['N']/chi2.ppf(alpha/2, stdlistwav['N']))-stdlistwav['stdwave']])
+            ax.errorbar(stdlistwav['mu'] + jitter[m + 'wave'], stdlistwav['stdwave'], yerr=yerrwav, c=color[m + 'wave'], label='$\delta_'+deltalabel[m + 'wave']+'$', marker='^')
         for k in range(len(keylist)):
             key = keylist[k]
             stdlist = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
             yerrcha = np.vstack([stdlist['stdcharge']-np.sqrt(np.power(stdlist['stdcharge'],2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(stdlist['stdcharge'],2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-stdlist['stdcharge']])
-            ax.errorbar(stdlist['mu'] + jitter[key], stdlist['stdcharge'], yerr=yerrcha, c=color[key], label='$\delta_'+label[key]+'$', marker='^')
+            ax.errorbar(stdlist['mu'] + jitter[key], stdlist['stdcharge'], yerr=yerrcha, c=color[key], label='$\delta_'+deltalabel[key]+'$', marker='^')
         ax.set_xlabel(r'$\mu$')
         ax.set_ylabel(r'$\delta/\mathrm{ns}$')
         ax.set_title(fr'$\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$')
@@ -129,25 +131,22 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
 
         ax = figdd.add_subplot(gsdd[j, i])
         stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == tau) & (mts['lucyddm']['sigma'] == sigma)]
-        yerr1st = np.vstack([stdlist['std1sttruth']-np.sqrt(np.power(stdlist['std1sttruth'],2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(stdlist['std1sttruth'],2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-stdlist['std1sttruth']])
-        yerrall = np.vstack([stdlist['stdtruth']-np.sqrt(np.power(stdlist['stdtruth'],2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(stdlist['stdtruth'],2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-stdlist['stdtruth']])
-        yerrall = np.vstack([stdlist['stdtruth'] / stdlist['std1sttruth'] - (stdlist['stdtruth'] - yerrall[0]) / (stdlist['std1sttruth'] + yerr1st[1]), (stdlist['stdtruth'] + yerrall[1]) / (stdlist['std1sttruth'] - yerr1st[0]) - stdlist['stdtruth'] / stdlist['std1sttruth']])
-        # ax.errorbar(stdlist['mu'] + jitter['tru'], stdlist['stdtruth'] / stdlist['std1sttruth'], yerr=yerrall, label='$\delta_'+label['tru']+'/\delta_'+label['1st']+'$', c=color['tru'], marker='^')
-        ax.plot(stdlist['mu'] + jitter['tru'], stdlist['stdtruth'] / stdlist['std1sttruth'], label='$\delta_'+label['tru']+'/\delta_'+label['1st']+'$', c=color['tru'], marker='^')
+        yerrall = stdlist['stdtruth'] / stdlist['std1sttruth'] / np.sqrt(stdlist['N'])
+        ax.errorbar(stdlist['mu'] + jitter['tru'], stdlist['stdtruth'] / stdlist['std1sttruth'], yerr=yerrall, label='$\delta_'+deltalabel['tru']+'/\delta_'+deltalabel['1st']+'$', c=color['tru'], marker='^')
+        # ax.plot(stdlist['mu'] + jitter['tru'], stdlist['stdtruth'] / stdlist['std1sttruth'], label='$\delta_'+deltalabel['tru']+'/\delta_'+deltalabel['1st']+'$', c=color['tru'], marker='^')
         for k in range(len(keylist)):
             key = keylist[k]
             if key == 'findpeak' or key == 'threshold' or key == 'fftrans':
                 continue
             stdlistkey = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
-            yerrcha = np.vstack([stdlist['stdcharge']-np.sqrt(np.power(stdlist['stdcharge'],2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(stdlist['stdcharge'],2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-stdlist['stdcharge']])
-            yerr = np.vstack([stdlist['std1sttruth'] / stdlistkey['stdcharge'] - (stdlist['std1sttruth'] - yerr1st[0]) / (stdlistkey['stdcharge'] + yerrcha[1]), (stdlist['std1sttruth'] + yerr1st[1]) / (stdlistkey['stdcharge'] - yerrcha[0]) - stdlist['std1sttruth'] / stdlistkey['stdcharge']])
-            # ax.errorbar(stdlist['mu'] + jitter[key], stdlistkey['stdcharge'] / stdlist['std1sttruth'], yerr=yerr, label='$\delta_'+label[key]+'/\delta_'+label['1st']+'$', c=color[key], marker='^')
-            ax.plot(stdlist['mu'] + jitter[key], stdlistkey['stdcharge'] / stdlist['std1sttruth'], label='$\delta_'+label[key]+'/\delta_'+label['1st']+'$', c=color[key], marker='^')
-        stdlistwav = mts['mcmcrec'][(mts['mcmcrec']['tau'] == tau) & (mts['mcmcrec']['sigma'] == sigma)]
-        yerrwav = np.vstack([stdlistwav['stdwave']-np.sqrt(np.power(stdlistwav['stdwave'],2)*stdlistwav['N']/chi2.ppf(1-alpha/2, stdlistwav['N'])), np.sqrt(np.power(stdlistwav['stdwave'],2)*stdlistwav['N']/chi2.ppf(alpha/2, stdlistwav['N']))-stdlistwav['stdwave']])
-        yerrwav = np.vstack([stdlistwav['stdwave'] / stdlist['std1sttruth'] - (stdlistwav['stdwave'] - yerrwav[0]) / (stdlist['std1sttruth'] + yerr1st[1]), (stdlistwav['stdwave'] + yerrwav[1]) / (stdlist['std1sttruth'] - yerr1st[0]) - stdlistwav['stdwave'] / stdlist['std1sttruth']])
-        # ax.errorbar(stdlistwav['mu'] + jitter['wave'], stdlistwav['stdwave'] / stdlist['std1sttruth'], yerr=yerrwav, label='$\delta_'+label['wave']+'/\delta_'+label['1st']+'$', c=color['wave'], marker='^')
-        ax.plot(stdlistwav['mu'] + jitter['wave'], stdlistwav['stdwave'] / stdlist['std1sttruth'], label='$\delta_'+label['wave']+'/\delta_'+label['1st']+'$', c=color['wave'], marker='^')
+            yerr = stdlistkey['stdcharge'] / stdlist['std1sttruth'] / np.sqrt(stdlistkey['N'])
+            ax.errorbar(stdlist['mu'] + jitter[key], stdlistkey['stdcharge'] / stdlist['std1sttruth'], yerr=yerr, label='$\delta_'+deltalabel[key]+'/\delta_'+deltalabel['1st']+'$', c=color[key], marker='^')
+            # ax.plot(stdlist['mu'] + jitter[key], stdlistkey['stdcharge'] / stdlist['std1sttruth'], label='$\delta_'+deltalabel[key]+'/\delta_'+deltalabel['1st']+'$', c=color[key], marker='^')
+        for m in ['mcmc', 'fbmp']:
+            stdlistwav = mts[m][(mts[m]['tau'] == tau) & (mts[m]['sigma'] == sigma)]
+            yerrwav = stdlistwav['stdcharge'] / stdlist['std1sttruth'] / np.sqrt(stdlistwav['N'])
+            ax.errorbar(stdlistwav['mu'] + jitter[m + 'wave'], stdlistwav['stdwave'] / stdlist['std1sttruth'], yerr=yerrwav, label='$\delta_'+deltalabel[m + 'wave']+'/\delta_'+deltalabel['1st']+'$', c=color[m + 'wave'], marker='^')
+            # ax.plot(stdlistwav['mu'] + jitter[m + 'wave'], stdlistwav['stdwave'] / stdlist['std1sttruth'], label='$\delta_'+deltalabel[m + 'wave']+'/\delta_'+deltalabel['1st']+'$', c=color[m + 'wave'], marker='^')
         ax.set_xlabel(r'$\mu$')
         ax.set_ylabel(r'$ratio$')
         ax.set_title(fr'$\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$')
@@ -162,10 +161,9 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
             if key == 'findpeak' or key == 'threshold' or key == 'fftrans':
                 continue
             wdistlist = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
-            la = '$W-dist_'+label[key]+'$' if key != 'mcmcrec' else '$W-dist_{\mathrm{MCMC}}$'
-            # ax.plot(wdistlist['mu'] + jitter[key], wdistlist['wdist'], c=color[key], label=la, marker='^')
+            # ax.plot(wdistlist['mu'] + jitter[key], wdistlist['wdist'], c=color[key], label='$'+label[key]+'$', marker='^')
             yerr = np.vstack([wdistlist['wdist'][:, 1] - wdistlist['wdist'][:, 0], wdistlist['wdist'][:, 2] - wdistlist['wdist'][:, 1]])
-            ax.errorbar(wdistlist['mu'] + jitter[key], wdistlist['wdist'][:, 1], yerr=yerr, label=la, c=color[key], marker='^')
+            ax.errorbar(wdistlist['mu'] + jitter[key], wdistlist['wdist'][:, 1], yerr=yerr, label='$'+label[key]+'$', c=color[key], marker='^')
             ax.fill_between(wdistlist['mu'] + jitter[key], wdistlist['wdist'][:, 0], wdistlist['wdist'][:, 2], fc=color[key], alpha=0.1, color=None)
         ax.set_xlabel(r'$\mu$')
         ax.set_ylabel(r'$W-dist/\mathrm{ns}$')
@@ -182,10 +180,9 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
             if key == 'findpeak' or key == 'threshold' or key == 'fftrans':
                 continue
             rsslist = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
-            la = '$RSS_'+label[key]+'$' if key != 'mcmcrec' else '$RSS_{\mathrm{MCMC}}$'
-            # ax.plot(rsslist['mu'] + jitter[key], rsslist['RSS'], c=color[key], label=la, marker='^')
+            # ax.plot(rsslist['mu'] + jitter[key], rsslist['RSS'], c=color[key], label='$'+label[key]+'$', marker='^')
             yerr = np.vstack([rsslist['RSS'][:, 1] - rsslist['RSS'][:, 0], rsslist['RSS'][:, 2] - rsslist['RSS'][:, 1]])
-            ax.errorbar(rsslist['mu'] + jitter[key], rsslist['RSS'][:, 1], yerr=yerr, label=la, c=color[key], marker='^')
+            ax.errorbar(rsslist['mu'] + jitter[key], rsslist['RSS'][:, 1], yerr=yerr, label='$'+label[key]+'$', c=color[key], marker='^')
             ax.fill_between(rsslist['mu'] + jitter[key], rsslist['RSS'][:, 0], rsslist['RSS'][:, 2], fc=color[key], alpha=0.1, color=None)
         ax.set_xlabel(r'$\mu$')
         ax.set_ylabel(r'$RSS/\mathrm{mV}^{2}$')
@@ -216,10 +213,8 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
         ax = fig.add_subplot(gs[j, i])
         stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == tau) & (mts['lucyddm']['sigma'] == sigma)]
         alpha = 0.05
-        yerr1st = np.vstack([stdlist['std1sttruth']-np.sqrt(np.power(stdlist['std1sttruth'],2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(stdlist['std1sttruth'],2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-stdlist['std1sttruth']])
-        yerrall = np.vstack([stdlist['stdtruth']-np.sqrt(np.power(stdlist['stdtruth'],2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(stdlist['stdtruth'],2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-stdlist['stdtruth']])
-        yerr = np.vstack([stdlist['stdtruth'] / stdlist['std1sttruth'] - (stdlist['stdtruth'] - yerrall[0]) / (stdlist['std1sttruth'] + yerr1st[1]), (stdlist['stdtruth'] + yerrall[1]) / (stdlist['std1sttruth'] - yerr1st[0]) - stdlist['stdtruth'] / stdlist['std1sttruth']])
-        ax.errorbar(stdlist['mu'], stdlist['stdtruth'] / stdlist['std1sttruth'], yerr=yerr, label='$\delta_'+label['tru']+'/\delta_'+label['1st']+'$', marker='^')
+        yerr = stdlist['stdtruth'] / stdlist['std1sttruth'] / np.sqrt(stdlist['N'])
+        ax.errorbar(stdlist['mu'], stdlist['stdtruth'] / stdlist['std1sttruth'], yerr=yerr, label='$\delta_'+deltalabel['tru']+'/\delta_'+deltalabel['1st']+'$', marker='^')
         ax.set_xlabel(r'$\mu$')
         ax.set_ylabel(r'$\mathrm{ratio}$')
         ax.set_title(fr'$\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$')
@@ -236,10 +231,8 @@ tau = 20
 sigma = 10
 stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == tau) & (mts['lucyddm']['sigma'] == sigma)]
 alpha = 0.05
-yerr1st = np.vstack([stdlist['std1sttruth']-np.sqrt(np.power(stdlist['std1sttruth'],2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(stdlist['std1sttruth'],2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-stdlist['std1sttruth']])
-yerrall = np.vstack([stdlist['stdtruth']-np.sqrt(np.power(stdlist['stdtruth'],2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(stdlist['stdtruth'],2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-stdlist['stdtruth']])
-yerr = np.vstack([stdlist['stdtruth'] / stdlist['std1sttruth'] - (stdlist['stdtruth'] - yerrall[0]) / (stdlist['std1sttruth'] + yerr1st[1]), (stdlist['stdtruth'] + yerrall[1]) / (stdlist['std1sttruth'] - yerr1st[0]) - stdlist['stdtruth'] / stdlist['std1sttruth']])
-ax.errorbar(stdlist['mu'], stdlist['stdtruth'] / stdlist['std1sttruth'], yerr=yerr, label='$\delta_'+label['tru']+'/\delta_'+label['1st']+'$', marker='^')
+yerr = stdlist['stdtruth'] / stdlist['std1sttruth'] / np.sqrt(stdlist['N'])
+ax.errorbar(stdlist['mu'], stdlist['stdtruth'] / stdlist['std1sttruth'], yerr=yerr, label='$\delta_'+deltalabel['tru']+'/\delta_'+deltalabel['1st']+'$', marker='^')
 ax.set_xlabel(r'$\mu$')
 ax.set_ylabel(r'$\mathrm{ratio}$')
 ax.set_title(fr'$\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$')
@@ -263,7 +256,7 @@ ax.bar(x, wdist[:, 1], color='b')
 ax.set_ylim(0, math.ceil(wdist[~np.isnan(wdist)].max() + 0.5))
 ax.set_ylabel(r'$\mathrm{Wasserstein}\ \mathrm{Distance}/\mathrm{ns}$')
 ax.set_xticks(x)
-ax.set_xticklabels(['$'+label[key]+'$' if key != 'mcmcrec' else '$\mathrm{MCMC}$' for key in keylist], Fontsize=12)
+ax.set_xticklabels(['$'+label[key]+'$' for key in keylist], Fontsize=12)
 ax.errorbar(x, wdist[:, 1], yerr=dy, fmt='o', ecolor='r', color='b', elinewidth=2, capsize=3)
 ax.set_title(fr'$\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$')
 fig.savefig('Note/figures/summarycharge.pgf')
@@ -274,5 +267,6 @@ plt.close(fig)
 for key in mts.keys():
     print(key.rjust(10) + ' stdchargesuccess mean = {:.04%}'.format((mts[key]['stdchargesuccess'] / mts[key]['N']).mean()))
     print(key.rjust(10) + '  stdchargesuccess min = {:.04%}'.format((mts[key]['stdchargesuccess'] / mts[key]['N']).min()))
-print('mcmcrecwav'.rjust(10) + '   stdwavesuccess mean = {:.04%}'.format((mts['mcmcrec']['stdwavesuccess'] / mts['mcmcrec']['N']).mean()))
-print('mcmcrecwav'.rjust(10) + '    stdwavesuccess min = {:.04%}'.format((mts['mcmcrec']['stdwavesuccess'] / mts['mcmcrec']['N']).min()))
+for m in ['mcmc', 'fbmp']:
+    print((m + 'wave').rjust(10) + '   stdwavesuccess mean = {:.04%}'.format((mts[m]['stdwavesuccess'] / mts[m]['N']).mean()))
+    print((m + 'wave').rjust(10) + '    stdwavesuccess min = {:.04%}'.format((mts[m]['stdwavesuccess'] / mts[m]['N']).min()))

@@ -159,15 +159,6 @@ def findpeak(wave, spe_pre):
         cha = np.array([1])
     return pet, cha
 
-def fbmp(y, spe_pre, tlist, A, p1, sig2s, mus, D, stop=0):
-    xmmse = fbmpr_fxn_reduced(y, A, p1, spe_pre['std'] ** 2, sig2s, mus, D, stop=0)[1][0]
-    pet = tlist[xmmse > 0]
-    cha = xmmse[xmmse > 0] / mus
-    if len(pet) == 0:
-        pet = np.array([np.argmax(y[spe_pre['peak_c']:])])
-        cha = np.array([1])
-    return pet, cha
-
 # @njit
 def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0):
     M, N = A.shape
@@ -355,7 +346,7 @@ def initial_params(wave, spe_pre, Tau, Sigma, gmu, gsigma, Thres, npe, p, nsp, i
 
     window = len(wave)
     mu = np.sum(wave) / gmu
-    n = max(round(mu / math.sqrt(Tau ** 2 + Sigma ** 2)), 1)
+    n = max(math.ceil(mu / math.sqrt(Tau ** 2 + Sigma ** 2)), 1)
 
     tlist = np.sort(np.hstack(tlist[:, None] + np.arange(0, 1, 1 / n)))
     npe_init = np.repeat(npe_init, n) / n
