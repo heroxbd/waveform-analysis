@@ -204,13 +204,13 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0):
             nuxt[T[:p+1, d]] = np.full(p+1, -np.inf)
 
         if max(nu[:, d]) > nu_stop:
-            d_tot = d
+            d_tot = d + 1
             break
     nu = nu[:, :d+1].T.flatten()
 
     dum = np.sort(nu)[::-1]
     indx = np.argsort(nu)[::-1]
-    d_max = math.floor(indx[0] // P)
+    d_max = math.floor(indx[0] // P) + 1
     nu_max = nu[indx[0]]
     num = int(np.sum(nu > nu_max + np.log(psy_thresh)))
     nu_star = nu[indx[:num]]
@@ -310,6 +310,10 @@ def probcharhitt(t0, hitt, probcharge, Tau, Sigma, npe):
     prob = np.sum(prob, axis=1) / np.sum(probcharge, axis=1)
     return prob
 
+def npeprobcharge(charge, npe, gmu, gsigma):
+    prob = np.where(npe > 0, norm.pdf(charge, loc=gmu * npe, scale=gsigma * np.sqrt(npe)) / (1 - norm.cdf(0, loc=gmu * npe, scale=gsigma * np.sqrt(npe))), 0)
+    return prob
+
 def likelihoodt0(hitt, char, gmu, gsigma, Tau, Sigma, npe, mode='charge', is_delta=False):
     b = [0., 600.]
     tlist = np.arange(b[0], b[1] + 1e-6, 0.2)
@@ -320,7 +324,6 @@ def likelihoodt0(hitt, char, gmu, gsigma, Tau, Sigma, npe, mode='charge', is_del
         npe = np.round(char / gmu) + np.tile(np.arange(-npe, npe + 1), (l, 1))
         npe[npe <= 0] = np.nan
         probcharge = npeprobcharge(char, npe, gmu=gmu, gsigma=gsigma)
-        probcharhitt(500, hitt, probcharge, Tau, Sigma, npe)
         logL = lambda t0 : -1 * np.sum(np.log(np.clip(probcharhitt(t0, hitt, probcharge, Tau, Sigma, npe), np.finfo(np.float64).tiny, np.inf)))
         # logL = lambda t0 : -1 * np.sum(np.log(np.clip(convolve_exp_norm(hitt - t0, Tau, Sigma) * (char / gmu), np.finfo(np.float64).tiny, np.inf)))
     elif mode == 'all':
@@ -333,7 +336,7 @@ def likelihoodt0(hitt, char, gmu, gsigma, Tau, Sigma, npe, mode='charge', is_del
         t0delta = abs(opti.fmin_l_bfgs_b(logLvdelta, x0=[tlist[np.argmin(np.abs(logLv_tlist - logL(t0) - 0.5))]], approx_grad=True, bounds=[b], maxfun=500000)[0] - t0)
     return t0, t0delta
 
-def initial_params(wave, spe_pre, Tau, Sigma, gmu, gsigma, Thres, npe, p, nsp, is_t0=False):
+def initial_params(wave, spe_pre, Tau, Sigma, gmu, gsigma, Thres, npe, p, nsp, is_t0=False, is_delta=False):
     hitt, char = lucyddm(wave, spe_pre['spe'])
     hitt, char = clip(hitt, char, Thres)
     char = char / char.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
@@ -347,7 +350,7 @@ def initial_params(wave, spe_pre, Tau, Sigma, gmu, gsigma, Thres, npe, p, nsp, i
     wave = wave[left_wave:right_wave]
 
     window = len(wave)
-    mu = np.sum(wave) / gmu
+    mu = abs(np.sum(wave) / gmu)
     n = max(math.ceil(mu / math.sqrt(Tau ** 2 + Sigma ** 2)), 1)
 
     tlist = np.sort(np.hstack(tlist[:, None] + np.arange(0, 1, 1 / n)))
@@ -358,12 +361,8 @@ def initial_params(wave, spe_pre, Tau, Sigma, gmu, gsigma, Thres, npe, p, nsp, i
     t0_init = None
     t0_init_delta = None
     if is_t0:
-        t0_init, t0_init_delta = likelihoodt0(hitt=hitt, char=char, gmu=gmu, gsigma=gsigma, Tau=Tau, Sigma=Sigma, npe=npe, mode='charge')
+        t0_init, t0_init_delta = likelihoodt0(hitt=hitt, char=char, gmu=gmu, gsigma=gsigma, Tau=Tau, Sigma=Sigma, npe=npe, mode='charge', is_delta=is_delta)
     return A, wave, tlist, t0_init, t0_init_delta, npe_init, mu, n
-
-def npeprobcharge(charge, npe, gmu, gsigma):
-    prob = np.where(npe > 0, norm.pdf(charge, loc=gmu * npe, scale=gsigma * np.sqrt(npe)) / (1 - norm.cdf(0, loc=gmu * npe, scale=gsigma * np.sqrt(npe))), 0)
-    return prob
 
 def stdrmoutlier(array, r):
     arrayrmoutlier = array[np.abs(array - np.mean(array)) < r * np.std(array, ddof=-1)]

@@ -184,7 +184,7 @@ plt.close(fig)
 
 fig = plt.figure()
 ax = fig.add_subplot(111)
-ax.hist(charge['Charge'], bins=100, alpha=0.5, density=True, label='PDF_rec')
+ax.hist(charge['Charge'], bins=100, density=True, label='PDF_rec')
 t = np.arange(0, 1000, 0.1)
 ax.plot(t, norm.pdf(t, loc=gmu, scale=gsigma) / (1 - norm.cdf(0, loc=gmu, scale=gsigma)), label='PDF_tru', color='k')
 ax.set_xlabel('Charge/mV·ns')
