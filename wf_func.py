@@ -310,7 +310,7 @@ def probcharhitt(t0, hitt, probcharge, Tau, Sigma, npe):
     prob = np.sum(prob, axis=1) / np.sum(probcharge, axis=1)
     return prob
 
-def likelihoodt0(hitt, char, gmu, gsigma, Tau, Sigma, npe, mode='charge'):
+def likelihoodt0(hitt, char, gmu, gsigma, Tau, Sigma, npe, mode='charge', is_delta=False):
     b = [0., 600.]
     tlist = np.arange(b[0], b[1] + 1e-6, 0.2)
     if mode == 'charge':
@@ -325,10 +325,12 @@ def likelihoodt0(hitt, char, gmu, gsigma, Tau, Sigma, npe, mode='charge'):
         # logL = lambda t0 : -1 * np.sum(np.log(np.clip(convolve_exp_norm(hitt - t0, Tau, Sigma) * (char / gmu), np.finfo(np.float64).tiny, np.inf)))
     elif mode == 'all':
         logL = lambda t0 : -1 * np.sum(np.log(np.clip(convolve_exp_norm(hitt - t0, Tau, Sigma), np.finfo(np.float64).tiny, np.inf)))
-    logLv = np.vectorize(logL)
-    t0 = opti.fmin_l_bfgs_b(logL, x0=[tlist[np.argmin(logLv(tlist))]], approx_grad=True, bounds=[b], maxfun=500000)[0]
-    logLvdelta = np.vectorize(lambda t : np.abs(logL(t) - logL(t0) - 0.5))
-    t0delta = abs(opti.fmin_l_bfgs_b(logLvdelta, x0=[tlist[np.argmin(logLvdelta(tlist))]], approx_grad=True, bounds=[b], maxfun=500000)[0] - t0)
+    logLv_tlist = np.vectorize(logL)(tlist)
+    t0 = opti.fmin_l_bfgs_b(logL, x0=[tlist[np.argmin(logLv_tlist)]], approx_grad=True, bounds=[b], maxfun=500000)[0]
+    t0delta = None
+    if is_delta:
+        logLvdelta = np.vectorize(lambda t : np.abs(logL(t) - logL(t0) - 0.5))
+        t0delta = abs(opti.fmin_l_bfgs_b(logLvdelta, x0=[tlist[np.argmin(np.abs(logLv_tlist - logL(t0) - 0.5))]], approx_grad=True, bounds=[b], maxfun=500000)[0] - t0)
     return t0, t0delta
 
 def initial_params(wave, spe_pre, Tau, Sigma, gmu, gsigma, Thres, npe, p, nsp, is_t0=False):

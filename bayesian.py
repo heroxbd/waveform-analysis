@@ -67,7 +67,7 @@ if Tau != 0:
     Alpha = 1 / Tau
     Co = (Alpha / 2. * np.exp(Alpha ** 2 * Sigma ** 2 / 2.)).item()
 std = 1.
-Thres = {'mcmc':0.2, 'lucyddm':0.2, 'fbmp':0.2}
+Thres = {'mcmc':0.05, 'lucyddm':0.2, 'fbmp':0.0}
 
 class mNormal(numpyro.distributions.distribution.Distribution):
     arg_constraints = {'pl': numpyro.distributions.constraints.real}
@@ -162,7 +162,7 @@ def time_numpyro(a0, a1):
 
 def fbmp_inference(a0, a1):
     nsp = 4
-    D = 10
+    D = 20
     stime = np.empty(a1 - a0)
     dt = np.zeros((a1 - a0) * window, dtype=opdt)
     d_tot = np.zeros(a1 - a0).astype(int)
@@ -176,12 +176,13 @@ def fbmp_inference(a0, a1):
     # A = np.matmul(A, np.diag(1. / np.sqrt(np.diag(np.matmul(A.T, A)))))
     b = [0., 600.]
     time_fbmp = 0
-    def loglikelihood(t0, tlist, xmmse, psy_star):
+    def loglikelihood(t0, tlist, xmmse, psy_star, mu=1):
         if Tau == 0:
-            pl = 1 / (math.sqrt(2. * math.pi) * Sigma) * np.exp(-((tlist - t0) / Sigma) ** 2 / 2)
+            pl = 1 / (math.sqrt(2. * math.pi) * Sigma) * np.exp(-((tlist - t0) / Sigma) ** 2 / 2) / n * mu
         else:
             pl = Co * (1. - special.erf((Alpha * Sigma ** 2 - (tlist - t0)) / (math.sqrt(2.) * Sigma))) * np.exp(-Alpha * (tlist - t0))
-        logL = special.logsumexp(np.sum(special.logsumexp(np.einsum('ijk->jik', np.stack([norm.logpdf(xmmse, loc=0, scale=std), norm.logpdf(xmmse, loc=gmu, scale=gsigma)])), axis=1, b=np.stack([(1 - pl), pl])), axis=1), axis=0, b=psy_star)
+        # logL = special.logsumexp(np.sum(special.logsumexp(np.einsum('ijk->jik', np.stack([norm.logpdf(xmmse, loc=0, scale=std), norm.logpdf(xmmse, loc=gmu, scale=gsigma)])), axis=1, b=np.stack([(1 - pl), pl])), axis=1), axis=0, b=psy_star)
+        logL = special.logsumexp(np.sum(np.where(xmmse > 1e-6, np.log(pl), np.log(1 - pl)), axis=1), b=psy_star)
         return logL
     for i in range(a0, a1):
         truth = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
@@ -199,11 +200,11 @@ def fbmp_inference(a0, a1):
         xmmse_star_vali = xmmse_star[:, np.sum(xmmse_star, axis=0) > 0] / factor * gmu
         tlist_vali = tlist[np.sum(xmmse_star, axis=0) > 0]
         logL = lambda t0 : -1 * loglikelihood(t0, tlist_vali, xmmse_star_vali, psy_star)
-        logLv = np.vectorize(logL)
         btlist = np.arange(t0_init - 3 * Sigma, t0_init + 3 * Sigma + 1e-6, 0.2)
-        t0 = opti.fmin_l_bfgs_b(logL, x0=[btlist[np.argmin(logLv(btlist))]], approx_grad=True, bounds=[b], maxfun=50000)[0]
+        logLv_btlist = np.vectorize(logL)(btlist)
+        t0 = opti.fmin_l_bfgs_b(logL, x0=[btlist[np.argmin(logLv_btlist)]], approx_grad=True, bounds=[b], maxfun=50000)[0]
         # logLvdelta = np.vectorize(lambda t : np.abs(logL(t) - logL(t0) - 0.5))
-        # t0delta = abs(opti.fmin_l_bfgs_b(logLvdelta, x0=[btlist[np.argmin(logLvdelta(btlist))]], approx_grad=True, bounds=[b], maxfun=50000)[0] - t0)
+        # t0delta = abs(opti.fmin_l_bfgs_b(logLvdelta, x0=[btlist[np.argmin(np.abs(logLv_btlist - logL(t0) - 0.5))]], approx_grad=True, bounds=[b], maxfun=50000)[0] - t0)
 
         stime[i - a0] = t0
         d_tot[i - a0] = d_tot_i
@@ -267,8 +268,8 @@ elif method == 'fbmp':
     ts['tswave'] = np.hstack([result[i][0] for i in range(len(slices))])
     As = np.hstack([result[i][1] for i in range(len(slices))])
     d_tot = np.hstack([result[i][2] for i in range(len(slices))])
-    time_fbmp = np.sum(np.hstack([result[i][3] for i in range(len(slices))])) / args.Ncpu
-    print('FBMP finished, real time {0:.02f}s per core'.format(time_fbmp))
+    time_fbmp = np.hstack([result[i][3] for i in range(len(slices))]).mean()
+    print('FBMP finished, real time {0:.02f}s'.format(time_fbmp))
 
     ff = plt.figure(figsize=(8, 6))
     ax = ff.add_subplot()

@@ -25,7 +25,7 @@ def start_time(a0, a1):
     for i in range(a0, a1):
         hitt = charge[i_cha[i]:i_cha[i+1]]['HitPosInWindow'].astype(np.float64)
         char = charge[i_cha[i]:i_cha[i+1]]['Charge']
-        t0, t0delta = wff.likelihoodt0(hitt, char=char, gmu=gmu, gsigma=gsigma, Tau=Tau, Sigma=Sigma, npe=npe, mode='charge')
+        t0, _ = wff.likelihoodt0(hitt, char=char, gmu=gmu, gsigma=gsigma, Tau=Tau, Sigma=Sigma, npe=npe, mode='charge')
         stime[i - a0] = t0
     return stime
 
