@@ -8,7 +8,6 @@ sigma:=$(shell awk -F',' 'NR == 2 { print $1 }' rc.csv)
 
 erg:=$(filter-out %-00-00,$(shell for i in $(mu); do for j in $(tau); do for k in $(sigma); do echo $${i}-$${j}-$${k}; done; done; done))
 # erg:=05-40-10
-method=lucyddm
 sim:=$(erg:%=waveform/%.h5)
 char:=$(patsubst waveform/%.h5,result/$(method)/char/%.h5,$(sim))
 solu:=$(patsubst waveform/%.h5,result/$(method)/solu/%.h5,$(sim))
@@ -44,13 +43,13 @@ sim : $(sim)
 define bayesian
 result/$(method)/char/%.h5 : waveform/%.h5 spe.h5
 	@mkdir -p $$(dir $$@)
-	python3 bayesian.py $$< --met $(method) -N 50 --ref $$(word 2,$$^) -o $$@ > $$@.log 2>&1
+	python3 bayesian.py $$< --met $(method) -N 100 --ref $$(word 2,$$^) -o $$@ > $$@.log 2>&1
 endef
 
 define fit
 result/$(method)/char/%.h5 : waveform/%.h5 spe.h5
 	@mkdir -p $$(dir $$@)
-	OMP_NUM_THREADS=2 python3 fit.py $$< --met $(method) -N 50 --ref $$(wordlist 2,3,$$^) -o $$@ > $$@.log 2>&1
+	OMP_NUM_THREADS=2 python3 fit.py $$< --met $(method) -N 100 --ref $$(wordlist 2,3,$$^) -o $$@ > $$@.log 2>&1
 endef
 
 define nn
@@ -94,7 +93,7 @@ result/takara/.PreProcess : $(sim) spe.h5
 waveform/%.h5 :
 	@rm -f spe.h5
 	@mkdir -p $(dir $@)
-	python3 toySim.py --mts $* --noi -N 10000 -o $@ > $@.log 2>&1
+	python3 toySim.py --mts $* --noi -N 1000 -o $@ > $@.log 2>&1
 
 spe.h5 : $(sim) ;
 

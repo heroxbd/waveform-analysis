@@ -58,9 +58,9 @@ mtsi = np.sort(mtsi, kind='stable', order=['mu', 'tau', 'sigma'])
 mts = {'findpeak':mtsi.copy(), 'threshold':mtsi.copy(), 'fftrans':mtsi.copy(), 'lucyddm':mtsi.copy(), 'xiaopeip':mtsi.copy(), 'mcmc':mtsi.copy(), 'takara':mtsi.copy(), 'fbmp':mtsi.copy()}
 deltalabel = {'1st':'\mathrm{1st}', 'tru':'\mathrm{Truth}', 'findpeak':'\mathrm{FindPeak}', 'threshold':'\mathrm{Shift}', 'fftrans':'\mathrm{FFT}', 'lucyddm':'\mathrm{LucyDDM}', 'xiaopeip':'\mathrm{Fitting}', 'takara':'\mathrm{CNN}', 'fbmp':'\mathrm{FBMPcha}', 'fbmpwave':'\mathrm{FBMPt0}', 'mcmc':'\mathrm{MCMCcha}', 'mcmcwave':'\mathrm{MCMCt0}'}
 label = {'1st':'\mathrm{1st}', 'tru':'\mathrm{Truth}', 'findpeak':'\mathrm{FindPeak}', 'threshold':'\mathrm{Shift}', 'fftrans':'\mathrm{FFT}', 'lucyddm':'\mathrm{LucyDDM}', 'xiaopeip':'\mathrm{Fitting}', 'takara':'\mathrm{CNN}', 'fbmp':'\mathrm{FBMP}', 'fbmpwave':'\mathrm{FBMP}', 'mcmc':'\mathrm{MCMC}', 'mcmcwave':'\mathrm{MCMC}'}
-color = {'1st':'b', 'tru':'k', 'findpeak':'C1', 'threshold':'C2', 'fftrans':'m', 'lucyddm':'y', 'xiaopeip':'c', 'takara':'C0', 'fbmp':'C4', 'fbmpwave':'C5', 'mcmc':'r', 'mcmcwave':'g'}
-jit = 0.02
-jitter = {'tru':-6 * jit, 'mcmc':-5 * jit, 'fbmp':-4 * jit, 'fbmpwave':-3 * jit, 'lucyddm':-2 * jit, 'takara':-1 * jit, 'mcmcwave':0 * jit, 'xiaopeip':1, 'fftrans':2 * jit, '1st':3 * jit, 'findpeak':4 * jit, 'threshold':5 * jit}
+color = {'1st':'b', 'tru':'k', 'findpeak':'C1', 'threshold':'C2', 'fftrans':'m', 'lucyddm':'y', 'xiaopeip':'c', 'takara':'C0', 'fbmp':'r', 'fbmpwave':'b', 'mcmc':'C4', 'mcmcwave':'C5'}
+jit = 0.05
+jitter = {'tru':-6 * jit, 'mcmc':-5 * jit, 'fbmp':-4 * jit, 'fbmpwave':-3 * jit, 'lucyddm':-2 * jit, 'mcmcwave':-1 * jit, 'xiaopeip':1 * jit, 'takara':0 * jit, 'fftrans':2 * jit, '1st':3 * jit, 'findpeak':4 * jit, 'threshold':5 * jit}
 
 for key in mts.keys():
     for i in range(len(mts[key])):
@@ -73,7 +73,7 @@ for key in mts.keys():
                 time = soluf['starttime'][:]
                 record = distf['Record'][:]
                 start = wavef['SimTruth/T'][:]
-                r = wavef['SimTruth/T'].attrs['r']
+                r = wavef['SimTruth/T'].attrs['r'] * 1.5
             vali = np.abs(time['tscharge'] - start['T0'] - np.mean(time['tscharge'] - start['T0'])) < r * np.std(time['tscharge'] - start['T0'], ddof=-1)
             mts[key][i]['N'] = len(start)
             mts[key][i]['std1sttruth'] = np.std(start['ts1sttruth'] - start['T0'], ddof=-1)
@@ -102,7 +102,7 @@ gsw = gridspec.GridSpec(len(Tau), len(Sigma), figure=figw, left=0.1, right=0.8, 
 figr = plt.figure(figsize=(len(Sigma) * 6, len(Tau) * 4))
 gsr = gridspec.GridSpec(len(Tau), len(Sigma), figure=figr, left=0.1, right=0.8, top=0.95, bottom=0.1, wspace=0.2, hspace=0.3)
 alpha = 0.05
-lim = {'deltadiv':np.tile([0.3, 0.5, 0.], (2, 1)), 'wdist':np.tile([2, 3.5, 7], (2, 1)), 'rss':np.array([[5e3, 3e3, 2e3], [4.5e3, 3e3, 2e3]])}
+lim = {'deltadiv':np.tile([0.3, 0.5, 0.], (2, 1)), 'wdist':np.tile([2, 3.5, 7], (2, 1)), 'rss':np.array([[5.5e3, 3e3, 2e3], [4.5e3, 3e3, 2e3]])}
 keylist = list(mts.keys())
 for sigma, i in zip(Sigma, list(range(len(Sigma)))):
     for tau, j in zip(Tau, list(range(len(Tau)))):
@@ -242,21 +242,19 @@ ax.legend(loc='lower left')
 fig.savefig('Note/figures/2010vs-deltadiv.pgf')
 fig.savefig('Note/figures/2010vs-deltadiv.pdf')
 
-fig = plt.figure(figsize=(4, 4))
-ax = fig.add_subplot()
 x = np.arange(0, len(keylist))
 tau = 20
 sigma = 10
 wdist = np.vstack([mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]['wdist'].mean(axis=0) for key in keylist])
 dy = np.vstack([wdist[:, 1] - wdist[:, 0], wdist[:, 2] - wdist[:, 1]])
-fig = plt.figure()
+fig = plt.figure(figsize=(12, 6))
 # fig.tight_layout()
 ax = fig.add_subplot(111)
 ax.bar(x, wdist[:, 1], color='b')
 ax.set_ylim(0, math.ceil(wdist[~np.isnan(wdist)].max() + 0.5))
 ax.set_ylabel(r'$\mathrm{Wasserstein}\ \mathrm{Distance}/\mathrm{ns}$')
 ax.set_xticks(x)
-ax.set_xticklabels(['$'+label[key]+'$' for key in keylist], Fontsize=12)
+ax.set_xticklabels(['$'+label[key]+'$' for key in keylist])
 ax.errorbar(x, wdist[:, 1], yerr=dy, fmt='o', ecolor='r', color='b', elinewidth=2, capsize=3)
 ax.set_title(fr'$\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$')
 fig.savefig('Note/figures/summarycharge.pgf')

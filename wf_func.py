@@ -336,7 +336,7 @@ def likelihoodt0(hitt, char, gmu, gsigma, Tau, Sigma, npe, mode='charge', is_del
         t0delta = abs(opti.fmin_l_bfgs_b(logLvdelta, x0=[tlist[np.argmin(np.abs(logLv_tlist - logL(t0) - 0.5))]], approx_grad=True, bounds=[b], maxfun=500000)[0] - t0)
     return t0, t0delta
 
-def initial_params(wave, spe_pre, Tau, Sigma, gmu, gsigma, Thres, npe, p, nsp, is_t0=False, is_delta=False):
+def initial_params(wave, spe_pre, Tau, Sigma, gmu, gsigma, Thres, npe, p, nsp, nstd, is_t0=False, is_delta=False):
     hitt, char = lucyddm(wave, spe_pre['spe'])
     hitt, char = clip(hitt, char, Thres)
     char = char / char.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
@@ -344,9 +344,9 @@ def initial_params(wave, spe_pre, Tau, Sigma, gmu, gsigma, Thres, npe, p, nsp, i
     npe_init = np.zeros(len(tlist))
     npe_init[np.isin(tlist, hitt)] = char / gmu
 
-    index_prom = np.hstack([np.argwhere(wave > 3 * spe_pre['std']).flatten(), hitt])
-    left_wave = np.clip(index_prom.min() - round(2 * spe_pre['mar_l']), 0, len(wave) - 1)
-    right_wave = np.clip(index_prom.max() + round(2 * spe_pre['mar_r']), 0, len(wave) - 1)
+    index_prom = np.hstack([np.argwhere(wave > nstd * spe_pre['std']).flatten(), hitt])
+    left_wave = np.clip(index_prom.min() - round(3 * spe_pre['mar_l']), 0, len(wave) - 1)
+    right_wave = np.clip(index_prom.max() + round(3 * spe_pre['mar_r']), 0, len(wave) - 1)
     wave = wave[left_wave:right_wave]
 
     window = len(wave)

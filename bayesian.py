@@ -66,7 +66,7 @@ if Tau != 0:
     Alpha = 1 / Tau
     Co = (Alpha / 2. * np.exp(Alpha ** 2 * Sigma ** 2 / 2.)).item()
 std = 1.
-Thres = {'mcmc':0.05, 'lucyddm':0.2, 'fbmp':0.0}
+Thres = {'mcmc':0.1, 'lucyddm':0.2, 'fbmp':0.0}
 
 def mix01_loglikelihoodt0(As, pl):
     logL = np.sum(special.logsumexp(np.einsum('ijk->jik', np.stack([norm.logpdf(As, loc=0, scale=std / gsigma), norm.logpdf(As, loc=1, scale=gsigma / gmu)])), axis=1, b=np.stack([(1 - pl), pl])), axis=1)
@@ -76,13 +76,15 @@ def b01_loglikelihoodt0(As, pl, thres=1e-6):
     logL = np.sum(np.where(As > thres, np.log(pl), np.log(1 - pl)), axis=1)
     return logL
 
-def loglikelihood(t0, tlist, xmmse, psy_star, c=1):
+def loglikelihood(t0, tlist, xmmse, psy_star, like, c=1):
     if Tau == 0:
         pl = 1 / (math.sqrt(2. * math.pi) * Sigma) * np.exp(-((tlist - t0) / Sigma) ** 2 / 2) * c
     else:
         pl = Co * (1. - special.erf((Alpha * Sigma ** 2 - (tlist - t0)) / (math.sqrt(2.) * Sigma))) * np.exp(-Alpha * (tlist - t0)) * c
-    # logL = special.logsumexp(mix01_loglikelihoodt0(xmmse, pl), axis=0, b=psy_star) # mix01
-    logL = special.logsumexp(b01_loglikelihoodt0(xmmse, pl, thres=Thres[method]), b=psy_star) # Bernoulli01
+    if like == 'mix01':
+        logL = special.logsumexp(mix01_loglikelihoodt0(xmmse, pl), axis=0, b=psy_star) # mix01
+    elif like == 'b01':
+        logL = special.logsumexp(b01_loglikelihoodt0(xmmse, pl, thres=Thres[method]), b=psy_star) # Bernoulli01
     return logL
 
 class mNormal(numpyro.distributions.distribution.Distribution):
@@ -109,7 +111,8 @@ class mNormal(numpyro.distributions.distribution.Distribution):
         return jax.scipy.special.logsumexp(prob, axis=0, b=pl) + jnp.log(2)
 
 def time_numpyro(a0, a1):
-    nsp = 4
+    nsp = 10
+    nstd = -5
     Awindow = int(window * 0.95)
     rng_key = jax.random.PRNGKey(1)
     rng_key, rng_key_ = jax.random.split(rng_key)
@@ -138,7 +141,7 @@ def time_numpyro(a0, a1):
         cid = ent[i]['ChannelID']
         wave = ent[i]['Waveform'].astype(np.float64) * spe_pre[cid]['epulse']
 
-        AV, wave, tlist, t0_init, t0_init_delta, A_init, mu, n = wff.initial_params(wave, spe_pre[cid], Tau, Sigma, gmu, gsigma, Thres['lucyddm'], npe, p, nsp, is_t0=True)
+        AV, wave, tlist, t0_init, t0_init_delta, A_init, mu, n = wff.initial_params(wave, spe_pre[cid], Tau, Sigma, gmu, gsigma, Thres['lucyddm'], npe, p, nsp, nstd, is_t0=True)
         AV = jnp.array(AV)
         wave = jnp.array(wave)
         tlist = jnp.array(tlist)
@@ -163,27 +166,18 @@ def time_numpyro(a0, a1):
             mu = np.array(mu)
             count = count + 1
 
-            # tlist_pan = np.array(tlist)
-            tlist_pan = np.sort(np.hstack(np.arange(window)[:, None] + np.arange(0, 1, 1 / n)))
-            btlist = np.arange(t0_init - 3 * Sigma, t0_init + 3 * Sigma + 1e-6, 0.2)
+            # # tlist_pan = np.array(tlist)
+            # tlist_pan = np.sort(np.hstack(np.arange(window)[:, None] + np.arange(0, 1, 1 / n)))
+            # btlist = np.arange(t0_init - 3 * Sigma, t0_init + 3 * Sigma + 1e-6, 0.2)
 
-            # As = np.zeros((len(A), len(tlist_pan)))
-            # As[:, np.isin(tlist_pan, tlist)] = A
-            # psy_star = np.ones(len(A)) / len(A)
-            # logL = lambda t0 : -1 * loglikelihood(t0, tlist_pan, As, psy_star, mu / n)
+            # As = np.zeros((1, len(tlist_pan)))
+            # As[:, np.isin(tlist_pan, tlist)] = np.mean(A, axis=0)[None, :]
+            # psy_star = np.array([1])
+            # logL = lambda t0 : -1 * loglikelihood(t0, tlist_pan, As[0][None, :], psy_star, like='b01', c=mu / n)
             # logLv_btlist = np.vectorize(logL)(btlist)
-            # t0_t0 = opti.fmin_l_bfgs_b(logL, x0=[btlist[np.argmin(logLv_btlist)]], approx_grad=True, bounds=[b], maxfun=50000)[0]
-            # # logLvdelta = np.vectorize(lambda t : np.abs(logL(t) - logL(t0_t0) - 0.5))
-            # # t0_t0delta = abs(opti.fmin_l_bfgs_b(logLvdelta, x0=[btlist[np.argmin(np.abs(logLv_btlist - logL(t0_t0) - 0.5))]], approx_grad=True, bounds=[b], maxfun=50000)[0] - t0_t0)
-
-            As = np.zeros((1, len(tlist_pan)))
-            As[:, np.isin(tlist_pan, tlist)] = np.mean(A, axis=0)[None, :]
-            psy_star = np.array([1])
-            logL = lambda t0 : -1 * loglikelihood(t0, tlist_pan, As[0][None, :], psy_star, mu / n)
-            logLv_btlist = np.vectorize(logL)(btlist)
-            t0_cha = opti.fmin_l_bfgs_b(logL, x0=[btlist[np.argmin(logLv_btlist)]], approx_grad=True, bounds=[b], maxfun=50000)[0]
-            # logLvdelta = np.vectorize(lambda t : np.abs(logL(t) - logL(t0_cha) - 0.5))
-            # t0_chadelta = abs(opti.fmin_l_bfgs_b(logLvdelta, x0=[btlist[np.argmin(np.abs(logLv_btlist - logL(t0_cha) - 0.5))]], approx_grad=True, bounds=[b], maxfun=50000)[0] - t0_cha)
+            # t0_cha = opti.fmin_l_bfgs_b(logL, x0=[btlist[np.argmin(logLv_btlist)]], approx_grad=True, bounds=[b], maxfun=50000)[0]
+            # # logLvdelta = np.vectorize(lambda t : np.abs(logL(t) - logL(t0_cha) - 0.5))
+            # # t0_chadelta = abs(opti.fmin_l_bfgs_b(logLvdelta, x0=[btlist[np.argmin(np.abs(logLv_btlist - logL(t0_cha) - 0.5))]], approx_grad=True, bounds=[b], maxfun=50000)[0] - t0_cha)
         except:
             t0_t0 = np.array(t0_init)
             t0_cha = np.array(t0_init)
@@ -191,10 +185,11 @@ def time_numpyro(a0, a1):
             A = np.array([A_init])
             print('Failed waveform is TriggerNo = {:05d}, ChannelID = {:02d}, i = {:05d}'.format(ent[i]['TriggerNo'], ent[i]['ChannelID'], i))
         time_mcmc = time_mcmc + time.time() - time_mcmc_start
-        stime_t0[i - a0] = np.mean(t0_t0)
-        stime_cha[i - a0] = t0_cha
         pet, cha = wff.clip(np.array(tlist), np.mean(A, axis=0), Thres[method])
         cha = cha / cha.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
+        t0_cha, _ = wff.likelihoodt0(pet, char=cha, gmu=gmu, gsigma=gsigma, Tau=Tau, Sigma=Sigma, npe=npe, mode='charge')
+        stime_t0[i - a0] = np.mean(t0_t0)
+        stime_cha[i - a0] = t0_cha
         end = start + len(cha)
         dt['HitPosInWindow'][start:end] = pet
         dt['Charge'][start:end] = cha
@@ -207,6 +202,7 @@ def time_numpyro(a0, a1):
 
 def fbmp_inference(a0, a1):
     nsp = 4
+    nstd = 3
     D = 20
     stime_t0 = np.empty(a1 - a0)
     stime_cha = np.empty(a1 - a0)
@@ -227,7 +223,7 @@ def fbmp_inference(a0, a1):
         cid = ent[i]['ChannelID']
         wave = ent[i]['Waveform'].astype(np.float64) * spe_pre[cid]['epulse']
 
-        A, wave_r, tlist, t0_init, t0_init_delta, char_init, mu, n = wff.initial_params(wave, spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, gsigma, Thres['lucyddm'], npe, p, nsp, is_t0=True, is_delta=False)
+        A, wave_r, tlist, t0_init, t0_init_delta, char_init, mu, n = wff.initial_params(wave, spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, gsigma, Thres['lucyddm'], npe, p, nsp, nstd, is_t0=True, is_delta=False)
         time_fbmp_start = time.time()
         A = A / factor
         # A = np.matmul(A, np.diag(1. / np.sqrt(np.diag(np.matmul(A.T, A)))))
@@ -243,14 +239,14 @@ def fbmp_inference(a0, a1):
             pet = tlist[xmmse_most > 0]
             cha = xmmse_most[xmmse_most > 0] / factor
 
-            logL = lambda t0 : -1 * loglikelihood(t0, tlist_pan, As, psy_star, mu / n)
+            logL = lambda t0 : -1 * loglikelihood(t0, tlist_pan, As, psy_star, like='b01', c=mu / n)
             btlist = np.arange(t0_init - 3 * Sigma, t0_init + 3 * Sigma + 1e-6, 0.2)
             logLv_btlist = np.vectorize(logL)(btlist)
             t0_t0 = opti.fmin_l_bfgs_b(logL, x0=[btlist[np.argmin(logLv_btlist)]], approx_grad=True, bounds=[b], maxfun=50000)[0]
             # logLvdelta = np.vectorize(lambda t : np.abs(logL(t) - logL(t0_t0) - 0.5))
             # t0_t0delta = abs(opti.fmin_l_bfgs_b(logLvdelta, x0=[btlist[np.argmin(np.abs(logLv_btlist - logL(t0_t0) - 0.5))]], approx_grad=True, bounds=[b], maxfun=50000)[0] - t0_t0)
 
-            logL = lambda t0 : -1 * loglikelihood(t0, tlist_pan, As[0][None, :], psy_star, mu / n)
+            logL = lambda t0 : -1 * loglikelihood(t0, tlist_pan, As[0][None, :], psy_star, like='b01', c=mu / n)
             logLv_btlist = np.vectorize(logL)(btlist)
             t0_cha = opti.fmin_l_bfgs_b(logL, x0=[btlist[np.argmin(logLv_btlist)]], approx_grad=True, bounds=[b], maxfun=50000)[0]
             # logLvdelta = np.vectorize(lambda t : np.abs(logL(t) - logL(t0_cha) - 0.5))
@@ -262,11 +258,12 @@ def fbmp_inference(a0, a1):
             pet = tlist
             cha = char_init / gmu
 
-        stime_t0[i - a0] = t0_t0
-        stime_cha[i - a0] = t0_cha
         d_tot[i - a0] = d_tot_i
         pet, cha = wff.clip(pet, cha, Thres[method])
         cha = cha / cha.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
+        # t0_cha, _ = wff.likelihoodt0(pet, char=cha, gmu=gmu, gsigma=gsigma, Tau=Tau, Sigma=Sigma, npe=npe, mode='charge')
+        stime_t0[i - a0] = t0_t0
+        stime_cha[i - a0] = t0_cha
         end = start + len(cha)
         dt['HitPosInWindow'][start:end] = pet
         dt['Charge'][start:end] = cha
@@ -306,13 +303,15 @@ if method == 'mcmc':
     ts['tscharge'] = np.hstack([result[i][1] for i in range(len(slices))])
     As = np.hstack([result[i][2] for i in range(len(slices))])
     count = np.sum([result[i][3] for i in range(len(slices))])
-    time_mcmc = np.sum(np.hstack([result[i][4] for i in range(len(slices))])) / len(slices)
+    time_mcmc = np.hstack([result[i][4] for i in range(len(slices))]).mean()
     print('MCMC finished, real time {0:.02f}s'.format(time_mcmc))
     accep = np.hstack([result[i][5] for i in range(len(slices))])
 
     ff = plt.figure(figsize=(8, 6))
     ax = ff.add_subplot()
     ax.hist(accep, bins=np.arange(0, 1+0.02, 0.02), label='accept_prob')
+    ax.set_xlabel('accept_prob')
+    ax.set_ylabel('Count')
     ax.legend(loc='upper left')
     ff.savefig(os.path.splitext(fopt)[0] + '.png')
     plt.close()
@@ -333,6 +332,8 @@ elif method == 'fbmp':
     ax = ff.add_subplot()
     di, ci = np.unique(d_tot, return_counts=True)
     ax.bar(di, ci, label='d_tot')
+    ax.set_xlabel('d_tot')
+    ax.set_ylabel('Count')
     ax.legend()
     ff.savefig(os.path.splitext(fopt)[0] + '.png')
     plt.close()

@@ -34,6 +34,7 @@ Thres = {'xiaopeip':0.2, 'lucyddm':0.2, 'fftrans':0.1, 'findpeak':0.1, 'threshol
 
 def fitting(a, b):
     nsp = 4
+    time_method = 0
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
         ent = ipt['Readout/Waveform'][:]
         pelist = ipt['SimTriggerInfo/PEList'][:]
@@ -50,6 +51,7 @@ def fitting(a, b):
         for i in range(a, b):
             wave = ent[i]['Waveform'].astype(np.float64) * spe_pre[ent[i]['ChannelID']]['epulse']
 
+            time_method_start = time.time()
             if method == 'fbmp':
                 A, wave_r, tlist, t0_init, t0_init_delta, char_init, mu, n = wff.initial_params(wave, spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, gsigma, Thres['lucyddm'], npe, p, nsp)
                 A = A / factor
@@ -69,6 +71,7 @@ def fitting(a, b):
                 pet, cha = wff.threshold(wave, spe_pre[ent[i]['ChannelID']])
             pet, cha = wff.clip(pet, cha, Thres[method])
             cha = cha / cha.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
+            time_method = time_method + time.time() - time_method_start
 
             # truth = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
             # wff.demo(pet, cha, truth, spe_pre[ent[i]['ChannelID']], window, wave, ent[i]['ChannelID'], p, fold='.', ext='.pdf')
@@ -81,7 +84,7 @@ def fitting(a, b):
             start = end
     dt = dt[:end]
     dt = np.sort(dt, kind='stable', order=['TriggerNo', 'ChannelID'])
-    return dt
+    return dt, time_method
 
 spe_pre = wff.read_model(reference[0])
 opdt = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('HitPosInWindow', np.float64), ('Charge', np.float64)])
@@ -107,7 +110,9 @@ cpu_tic = time.process_time()
 
 with Pool(min(args.Ncpu, cpu_count())) as pool:
     select_result = pool.starmap(fitting, slices)
-result = np.hstack(select_result)
+result = np.hstack([select_result[i][0] for i in range(len(slices))])
+time_method = np.hstack([select_result[i][1] for i in range(len(slices))]).mean()
+print(method + ' finished, real time {0:.02f}s'.format(time_method))
 result = np.sort(result, kind='stable', order=['TriggerNo', 'ChannelID'])
 print('Prediction generated, real time {0:.02f}s, cpu time {1:.02f}s'.format(time.time() - tic, time.process_time() - cpu_tic))
 with h5py.File(fopt, 'w') as opt:

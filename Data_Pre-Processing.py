@@ -1,5 +1,6 @@
 import os
 import random
+random.seed(0)
 import argparse
 from multiprocessing import Pool, cpu_count
 from time import time
@@ -80,7 +81,6 @@ start = time()
 h5file = tables.open_file(files[0], 'r')
 twfnum = len(h5file.root.Readout.Waveform)
 h5file.close()
-random.seed(0)
 files = random.sample(files, min(int(1e6/twfnum), len(files)))
 files.sort()
 print('Used files are: ', files)
