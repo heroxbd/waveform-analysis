@@ -12,7 +12,7 @@ $$(analysis_$(1)) : $$(raw_$(1))
 
 $$(firstword $$(analysis_$(1))) : $$(firstwordr $$(raw_$(1)))
 	mkdir -p $$(dir $$@)
-	time python3.8 -u Prediction_Processing_Total.py $$(dir $$<) /mnt/eternity/baseline/run$(1) $(shell ./get_gaintable.py $(1)) -N old1029/ --met charge --device 0 -o $$(dir $$@) -B 15000 > $$(dir $$@)/analysis.log 2>&1
+	time python3.8 -u Prediction_Processing_Total.py $$(dir $$<) /mnt/eternity/baseline/run$(1) $(shell ./get_gaintable.py $(1)) -N new600/ --met charge --device 0 -o $$(dir $$@) -B 19000 >> $$(dir $$@)/analysis.log 2>&1
 
 endef
 

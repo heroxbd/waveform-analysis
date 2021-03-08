@@ -188,6 +188,7 @@ for i in range(len(SLICES) - 1):
         Result = Result.sort_values(by=['TriggerNo', 'ChannelID'])
         Grouped_Result = Result.groupby(by='FileNo')
         print('Prediction generated, real time {0:.4f}s, cpu time {1:.4f}s'.format(time.time() - tic, time.process_time() - cpu_tic))
+        os.system("rm -rf /tmp/miopen-*")
 
         tic = time.time()
         cpu_tic = time.process_time()
