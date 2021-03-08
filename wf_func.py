@@ -306,15 +306,16 @@ def charge(n, gmu, gsigma, thres=0):
     return chargesam
 
 def probcharhitt(t0, hitt, probcharge, Tau, Sigma, npe):
-    prob = np.where(npe > 0, probcharge * np.power(convolve_exp_norm(hitt - t0, Tau, Sigma), npe), 0)
+    prob = np.where(npe >= 0, probcharge * np.power(convolve_exp_norm(hitt - t0, Tau, Sigma), npe), 0)
     prob = np.sum(prob, axis=1) / np.sum(probcharge, axis=1)
     return prob
 
-def npeprobcharge(charge, npe, gmu, gsigma):
-    prob = np.where(npe > 0, norm.pdf(charge, loc=gmu * npe, scale=gsigma * np.sqrt(npe)) / (1 - norm.cdf(0, loc=gmu * npe, scale=gsigma * np.sqrt(npe))), 0)
+def npeprobcharge(charge, npe, gmu, gsigma, s0):
+    scale = np.where(npe != 0, gsigma * np.sqrt(npe), gsigma * np.sqrt(s0))
+    prob = np.where(npe >= 0, norm.pdf(charge, loc=gmu * npe, scale=scale) / (1 - norm.cdf(0, loc=gmu * npe, scale=scale)), 0)
     return prob
 
-def likelihoodt0(hitt, char, gmu, gsigma, Tau, Sigma, npe, mode='charge', is_delta=False):
+def likelihoodt0(hitt, char, gmu, gsigma, Tau, Sigma, npe, s0=None, mode='charge', is_delta=False):
     b = [0., 600.]
     tlist = np.arange(b[0], b[1] + 1e-6, 0.2)
     if mode == 'charge':
@@ -322,8 +323,8 @@ def likelihoodt0(hitt, char, gmu, gsigma, Tau, Sigma, npe, mode='charge', is_del
         char = np.tile(char, (2 * npe + 1, 1)).T
         hitt = np.tile(hitt, (2 * npe + 1, 1)).T
         npe = np.round(char / gmu) + np.tile(np.arange(-npe, npe + 1), (l, 1))
-        npe[npe <= 0] = np.nan
-        probcharge = npeprobcharge(char, npe, gmu=gmu, gsigma=gsigma)
+        npe[npe < 0] = np.nan
+        probcharge = npeprobcharge(char, npe, gmu=gmu, gsigma=gsigma, s0=s0)
         logL = lambda t0 : -1 * np.sum(np.log(np.clip(probcharhitt(t0, hitt, probcharge, Tau, Sigma, npe), np.finfo(np.float64).tiny, np.inf)))
         # logL = lambda t0 : -1 * np.sum(np.log(np.clip(convolve_exp_norm(hitt - t0, Tau, Sigma) * (char / gmu), np.finfo(np.float64).tiny, np.inf)))
     elif mode == 'all':
@@ -361,7 +362,7 @@ def initial_params(wave, spe_pre, Tau, Sigma, gmu, gsigma, Thres, npe, p, nsp, n
     t0_init = None
     t0_init_delta = None
     if is_t0:
-        t0_init, t0_init_delta = likelihoodt0(hitt=hitt, char=char, gmu=gmu, gsigma=gsigma, Tau=Tau, Sigma=Sigma, npe=npe, mode='charge', is_delta=is_delta)
+        t0_init, t0_init_delta = likelihoodt0(hitt=hitt, char=char, gmu=gmu, gsigma=gsigma, Tau=Tau, Sigma=Sigma, npe=npe, s0=spe_pre['std'] / np.linalg.norm(spe_pre['spe']), mode='charge', is_delta=is_delta)
     return A, wave, tlist, t0_init, t0_init_delta, npe_init, mu, n
 
 def stdrmoutlier(array, r):

@@ -87,8 +87,6 @@ def start_time(a0, a1):
     for i in range(a0, a1):
         hitt = pelist[i_pel[i]:i_pel[i+1]]['HitPosInWindow'].astype(np.float64)
         t0, _ = wff.likelihoodt0(hitt, char=None, gmu=gmu, gsigma=gsigma, Tau=Tau, Sigma=Sigma, npe=npe, mode='all')
-        # char = pelist[i_pel[i]:i_pel[i+1]]['Charge']
-        # t0, _ = wff.likelihoodt0(hitt, char=char, gmu=gmu, gsigma=gsigma, Tau=Tau, Sigma=Sigma, npe=npe, mode='all')
         stime[i - a0] = t0
     return stime
 

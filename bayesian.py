@@ -59,6 +59,7 @@ with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
     Sigma = ipt['Readout/Waveform'].attrs['sigma'].item()
     gmu = ipt['SimTriggerInfo/PEList'].attrs['gmu'].item()
     gsigma = ipt['SimTriggerInfo/PEList'].attrs['gsigma'].item()
+    s0 = spe_pre[0]['std'] / np.linalg.norm(spe_pre[0]['spe'])
     npe = ipt['SimTruth/T'].attrs['npe'].item()
 
 p = spe_pre[0]['parameters']
@@ -147,14 +148,13 @@ def time_numpyro(a0, a1):
         tlist = jnp.array(tlist)
         t0_init = jnp.array(t0_init)
         A_init = jnp.array(A_init) + jnp.finfo(jnp.float64).epsneg
-        mu = jnp.array(mu)
 
         time_mcmc_start = time.time()
         nuts_kernel = numpyro.infer.NUTS(model, adapt_step_size=True, init_strategy=numpyro.infer.initialization.init_to_value(values={'t0': t0_init, 'A': A_init}))
         mcmc = numpyro.infer.MCMC(nuts_kernel, num_samples=1000, num_warmup=500, num_chains=1, progress_bar=False, chain_method='sequential', jit_model_args=True)
         try:
             ticrun = time.time()
-            mcmc.run(rng_key, n=n, y=wave, mu=mu, tlist=tlist, AV=AV, t0left=t0_init - 3 * Sigma, t0right=t0_init + 3 * Sigma, extra_fields=('num_steps', 'accept_prob'))
+            mcmc.run(rng_key, n=n, y=wave, mu=Mu, tlist=tlist, AV=AV, t0left=t0_init - 3 * Sigma, t0right=t0_init + 3 * Sigma, extra_fields=('num_steps', 'accept_prob'))
             tocrun = time.time()
             num_leapfrogs = mcmc.get_extra_fields()['num_steps'].sum()
             # print('avg. time for each step :', (tocrun - ticrun) / num_leapfrogs)
@@ -163,7 +163,6 @@ def time_numpyro(a0, a1):
             A = np.array(mcmc.get_samples()['A'])
             if sum(np.sum(A, axis=0) > Thres[method]) == 0:
                 raise ValueError
-            mu = np.array(mu)
             count = count + 1
 
             # # tlist_pan = np.array(tlist)
@@ -173,7 +172,7 @@ def time_numpyro(a0, a1):
             # As = np.zeros((1, len(tlist_pan)))
             # As[:, np.isin(tlist_pan, tlist)] = np.mean(A, axis=0)[None, :]
             # psy_star = np.array([1])
-            # logL = lambda t0 : -1 * loglikelihood(t0, tlist_pan, As[0][None, :], psy_star, like='b01', c=mu / n)
+            # logL = lambda t0 : -1 * loglikelihood(t0, tlist_pan, As[0][None, :], psy_star, like='mix01', c=Mu / n)
             # logLv_btlist = np.vectorize(logL)(btlist)
             # t0_cha = opti.fmin_l_bfgs_b(logL, x0=[btlist[np.argmin(logLv_btlist)]], approx_grad=True, bounds=[b], maxfun=50000)[0]
             # # logLvdelta = np.vectorize(lambda t : np.abs(logL(t) - logL(t0_cha) - 0.5))
@@ -185,9 +184,9 @@ def time_numpyro(a0, a1):
             A = np.array([A_init])
             print('Failed waveform is TriggerNo = {:05d}, ChannelID = {:02d}, i = {:05d}'.format(ent[i]['TriggerNo'], ent[i]['ChannelID'], i))
         time_mcmc = time_mcmc + time.time() - time_mcmc_start
-        pet, cha = wff.clip(np.array(tlist), np.mean(A, axis=0), Thres[method])
-        cha = cha / cha.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
-        t0_cha, _ = wff.likelihoodt0(pet, char=cha, gmu=gmu, gsigma=gsigma, Tau=Tau, Sigma=Sigma, npe=npe, mode='charge')
+        pet = np.array(tlist)
+        cha = np.mean(A, axis=0) * gmu
+        t0_cha, _ = wff.likelihoodt0(pet, char=cha, gmu=gmu, gsigma=gsigma, Tau=Tau, Sigma=Sigma, npe=npe, s0=s0, mode='charge')
         stime_t0[i - a0] = np.mean(t0_t0)
         stime_cha[i - a0] = t0_cha
         end = start + len(cha)
@@ -227,7 +226,7 @@ def fbmp_inference(a0, a1):
         time_fbmp_start = time.time()
         A = A / factor
         # A = np.matmul(A, np.diag(1. / np.sqrt(np.diag(np.matmul(A.T, A)))))
-        xmmse, xmmse_star, psy_star, nu_star, T_star, d_tot_i, d_max = wff.fbmpr_fxn_reduced(wave_r, A, min(1, mu / len(tlist)), spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, D, stop=0)
+        xmmse, xmmse_star, psy_star, nu_star, T_star, d_tot_i, d_max = wff.fbmpr_fxn_reduced(wave_r, A, min(1, Mu / len(tlist)), spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, D, stop=0)
         time_fbmp = time_fbmp + time.time() - time_fbmp_start
 
         # tlist_pan = tlist
@@ -239,14 +238,14 @@ def fbmp_inference(a0, a1):
             pet = tlist[xmmse_most > 0]
             cha = xmmse_most[xmmse_most > 0] / factor
 
-            logL = lambda t0 : -1 * loglikelihood(t0, tlist_pan, As, psy_star, like='b01', c=mu / n)
+            logL = lambda t0 : -1 * loglikelihood(t0, tlist_pan, As, psy_star, like='b01', c=Mu / n)
             btlist = np.arange(t0_init - 3 * Sigma, t0_init + 3 * Sigma + 1e-6, 0.2)
             logLv_btlist = np.vectorize(logL)(btlist)
             t0_t0 = opti.fmin_l_bfgs_b(logL, x0=[btlist[np.argmin(logLv_btlist)]], approx_grad=True, bounds=[b], maxfun=50000)[0]
             # logLvdelta = np.vectorize(lambda t : np.abs(logL(t) - logL(t0_t0) - 0.5))
             # t0_t0delta = abs(opti.fmin_l_bfgs_b(logLvdelta, x0=[btlist[np.argmin(np.abs(logLv_btlist - logL(t0_t0) - 0.5))]], approx_grad=True, bounds=[b], maxfun=50000)[0] - t0_t0)
 
-            logL = lambda t0 : -1 * loglikelihood(t0, tlist_pan, As[0][None, :], psy_star, like='b01', c=mu / n)
+            logL = lambda t0 : -1 * loglikelihood(t0, tlist_pan, As[0][None, :], psy_star, like='b01', c=Mu / n)
             logLv_btlist = np.vectorize(logL)(btlist)
             t0_cha = opti.fmin_l_bfgs_b(logL, x0=[btlist[np.argmin(logLv_btlist)]], approx_grad=True, bounds=[b], maxfun=50000)[0]
             # logLvdelta = np.vectorize(lambda t : np.abs(logL(t) - logL(t0_cha) - 0.5))
@@ -260,8 +259,7 @@ def fbmp_inference(a0, a1):
 
         d_tot[i - a0] = d_tot_i
         pet, cha = wff.clip(pet, cha, Thres[method])
-        cha = cha / cha.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
-        # t0_cha, _ = wff.likelihoodt0(pet, char=cha, gmu=gmu, gsigma=gsigma, Tau=Tau, Sigma=Sigma, npe=npe, mode='charge')
+        cha = cha * gmu
         stime_t0[i - a0] = t0_t0
         stime_cha[i - a0] = t0_cha
         end = start + len(cha)

@@ -14,7 +14,7 @@ psr = argparse.ArgumentParser()
 psr.add_argument('-o', dest='opt', type=str, help='output file')
 psr.add_argument('ipt', type=str, help='input file')
 psr.add_argument('--Ncpu', dest='Ncpu', type=int, default=100)
-psr.add_argument('--ref', type=str, help='reference file')
+psr.add_argument('--ref', type=str, nargs='+', help='reference file')
 args = psr.parse_args()
 
 global_start = time.time()
@@ -25,15 +25,16 @@ def start_time(a0, a1):
     for i in range(a0, a1):
         hitt = charge[i_cha[i]:i_cha[i+1]]['HitPosInWindow'].astype(np.float64)
         char = charge[i_cha[i]:i_cha[i+1]]['Charge']
-        t0, _ = wff.likelihoodt0(hitt, char=char, gmu=gmu, gsigma=gsigma, Tau=Tau, Sigma=Sigma, npe=npe, mode='charge')
+        t0, _ = wff.likelihoodt0(hitt, char=char, gmu=gmu, gsigma=gsigma, Tau=Tau, Sigma=Sigma, npe=npe, s0=s0, mode='charge')
         stime[i - a0] = t0
     return stime
 
-spe_pre = wff.read_model('spe.h5')
-with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as ipt, h5py.File(args.ref, 'r', libver='latest', swmr=True) as ref:
+spe_pre = wff.read_model(args.ref[1])
+with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as ipt, h5py.File(args.ref[0], 'r', libver='latest', swmr=True) as ref:
     npe = ref['SimTruth/T'].attrs['npe']
     gmu = ref['SimTriggerInfo/PEList'].attrs['gmu']
     gsigma = ref['SimTriggerInfo/PEList'].attrs['gsigma']
+    s0 = spe_pre[0]['std'] / np.linalg.norm(spe_pre[0]['spe'])
     method = ipt['photoelectron'].attrs['Method']
     Mu = ipt['photoelectron'].attrs['mu']
     Tau = ipt['photoelectron'].attrs['tau']
@@ -61,6 +62,7 @@ with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as ipt, h5py.File(args
 
         chunk = N // args.Ncpu + 1
         slices = np.vstack((np.arange(0, N, chunk), np.append(np.arange(chunk, N, chunk), N))).T.astype(int).tolist()
+        start_time(0, 10)
         with Pool(min(args.Ncpu, cpu_count())) as pool:
             result = pool.starmap(partial(start_time), slices)
         ts['tscharge'] = np.hstack(result)
