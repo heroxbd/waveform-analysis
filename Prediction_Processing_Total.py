@@ -36,6 +36,13 @@ import awkward as ak
 
 import torch
 torch.no_grad()
+import os
+
+
+def touch(path):
+    with open(path, 'a'):
+        os.utime(path, None)
+
 
 if torch.cuda.is_available() and Device == 'cpu':
     print("WARNING: You have a CUDA device, so you should probably run with --cuda")
@@ -166,8 +173,15 @@ def Forward(channelid) :
 tic = time.time()
 cpu_tic = time.process_time()
 Result = []
+
+while os.path.exists("/tmp/Radeon_lock") :
+    time.sleep(0.1)
+touch("/tmp/Radeon_lock")
 for ch in tqdm(range(30), desc='Predict for each channel') :
     Result.append(Forward(ch))
+torch.cuda.empty_cache()
+os.remove("/tmp/Radeon_lock")
+
 Result = pd.concat(Result)
 Result = Result.sort_values(by=['TriggerNo', 'ChannelID'])
 print('Prediction generated, real time {0:.4f}s, cpu time {1:.4f}s'.format(time.time() - tic, time.process_time() - cpu_tic))
