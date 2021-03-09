@@ -24,7 +24,23 @@ method = args.met
 gaintablefile = args.gain
 Device = args.Device
 
+import os
 import time
+lock_file = "/tmp/Waveformanalysis_lock"
+if os.path.exists(lock_file):
+    with open(lock_file, "r") as lock :
+        process_number = int(lock.readline())
+    process_number += 1
+    print("process {}".format(process_number))
+    with open(lock_file, "w") as lock :
+        lock.write("{}".format(process_number))
+    if process_number == 1 : time.sleep(10)
+    elif process_number == 2 : time.sleep(20)
+else :
+    with open(lock_file, "w") as lock :
+        lock.write("{}".format(0))
+
+
 global_start = time.time()
 cpu_global_start = time.process_time()
 import numpy as np

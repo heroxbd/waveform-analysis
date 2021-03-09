@@ -8,14 +8,13 @@ analysis_$(1)=$$(patsubst raw/run$(1)/%.root,/mnt/eternity/cnn_charge/run$(1)/%.
 
 Analysis : $$(analysis_$(1))
 
-$$(analysis_$(1)) : $$(raw_$(1))
-
-$$(firstword $$(analysis_$(1))) : $$(firstwordr $$(raw_$(1)))
-	mkdir -p $$(dir $$@)
-	time python3.8 -u Prediction_Processing_Total.py $$(dir $$<) /mnt/eternity/baseline/run$(1) $(shell ./get_gaintable.py $(1)) -N new600/ --met charge --device 0 -o $$(dir $$@) -B 19000 >> $$(dir $$@)/analysis.log 2>&1
+/mnt/eternity/cnn_charge/run$(1)/%.h5 : raw/run$(1)/%.root
+	mkdir -p $$(dir $$@)/log
+	time python3 -u Prediction_Processing_Total.py $$^ /mnt/eternity/baseline/run$(1)/$$*.root $(shell ./get_gaintable.py $(1)) -N new600/ --met charge --device 0 -o $$@ -B 10000 >> $$(dir $$@)/log/$$*.log 2>&1
 
 endef
 
+# $(info $(foreach r,$(runNos),$(call Analysis,$(r))))
 $(eval $(foreach r,$(runNos),$(call Analysis,$(r))))
 
 
