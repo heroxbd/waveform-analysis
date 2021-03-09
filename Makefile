@@ -42,7 +42,7 @@ sim : $(sim)
 define bayesian
 result/$(method)/char/%.h5 : waveform/%.h5 spe.h5
 	@mkdir -p $$(dir $$@)
-	python3 bayesian.py $$< --met $(method) -N 100 --ref $$(word 2,$$^) -o $$@ > $$@.log 2>&1
+	OMP_NUM_THREADS=2 python3 bayesian.py $$< --met $(method) -N 100 --ref $$(word 2,$$^) -o $$@ > $$@.log 2>&1
 endef
 
 define fit
@@ -63,10 +63,10 @@ result/$(method)/hist/%.pdf : result/$(method)/dist/%.h5 waveform/%.h5 result/$(
 	python3 draw_dist.py $< --ref $(wordlist 2,4,$^) -o $@ > $@.log 2>&1
 result/$(method)/dist/%.h5 : waveform/%.h5 result/$(method)/char/%.h5 spe.h5
 	@mkdir -p $(dir $@)
-	python3 test_dist.py $(word 2,$^) --ref $< $(word 3,$^) -o $@ > $@.log 2>&1
+	OMP_NUM_THREADS=2 python3 test_dist.py $(word 2,$^) --ref $< $(word 3,$^) -o $@ > $@.log 2>&1
 result/$(method)/solu/%.h5 : result/$(method)/char/%.h5 waveform/%.h5 spe.h5
 	@mkdir -p $(dir $@)
-	python3 toyRec.py $< --ref $(wordlist 2,3,$^) -o $@ > $@.log 2>&1
+	OMP_NUM_THREADS=2 python3 toyRec.py $< --ref $(wordlist 2,3,$^) -o $@ > $@.log 2>&1
 
 vs : rc.csv
 	python3 vs.py --conf $^

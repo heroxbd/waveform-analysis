@@ -68,12 +68,13 @@ if Tau != 0:
     Co = (Alpha / 2. * np.exp(Alpha ** 2 * Sigma ** 2 / 2.)).item()
 std = 1.
 Thres = {'mcmc':0.1, 'lucyddm':0.2, 'fbmp':0.0}
+mix0sigma = 1e-4
 
 def mix01_loglikelihoodt0(As, pl):
-    logL = np.sum(special.logsumexp(np.einsum('ijk->jik', np.stack([norm.logpdf(As, loc=0, scale=std / gsigma), norm.logpdf(As, loc=1, scale=gsigma / gmu)])), axis=1, b=np.stack([(1 - pl), pl])), axis=1)
+    logL = np.sum(special.logsumexp(np.einsum('ijk->jik', np.stack([norm.logpdf(As, loc=0, scale=mix0sigma), norm.logpdf(As, loc=1, scale=gsigma / gmu)])), axis=1, b=np.stack([(1 - pl), pl])), axis=1)
     return logL
 
-def b01_loglikelihoodt0(As, pl, thres=1e-6):
+def b_loglikelihoodt0(As, pl, thres=1e-6):
     logL = np.sum(np.where(As > thres, np.log(pl), np.log(1 - pl)), axis=1)
     return logL
 
@@ -84,8 +85,8 @@ def loglikelihood(t0, tlist, xmmse, psy_star, like, c=1):
         pl = Co * (1. - special.erf((Alpha * Sigma ** 2 - (tlist - t0)) / (math.sqrt(2.) * Sigma))) * np.exp(-Alpha * (tlist - t0)) * c
     if like == 'mix01':
         logL = special.logsumexp(mix01_loglikelihoodt0(xmmse, pl), axis=0, b=psy_star) # mix01
-    elif like == 'b01':
-        logL = special.logsumexp(b01_loglikelihoodt0(xmmse, pl, thres=Thres[method]), b=psy_star) # Bernoulli01
+    elif like == 'b':
+        logL = special.logsumexp(b_loglikelihoodt0(xmmse, pl, thres=Thres[method]), b=psy_star) # Bernoulli
     return logL
 
 class mNormal(numpyro.distributions.distribution.Distribution):
@@ -130,10 +131,10 @@ def time_numpyro(a0, a1):
         t0 = numpyro.sample('t0', numpyro.distributions.Uniform(t0left, t0right))
         if Tau == 0:
             light_curve = numpyro.distributions.Normal(t0, scale=Sigma)
-            pl = numpyro.primitives.deterministic('pl', jnp.exp(light_curve.log_prob(tlist)) / n * mu + jnp.finfo(jnp.float64).epsneg)
+            pl = numpyro.primitives.deterministic('pl', jnp.exp(light_curve.log_prob(tlist)) / n * mu)
         else:
-            pl = numpyro.primitives.deterministic('pl', Co * (1. - jax.scipy.special.erf((Alpha * Sigma ** 2 - (tlist - t0)) / (math.sqrt(2.) * Sigma))) * jnp.exp(-Alpha * (tlist - t0)) / n * mu + jnp.finfo(jnp.float64).epsneg)
-        A = numpyro.sample('A', mNormal(pl, std / gsigma, 1., gsigma / gmu))
+            pl = numpyro.primitives.deterministic('pl', Co * (1. - jax.scipy.special.erf((Alpha * Sigma ** 2 - (tlist - t0)) / (math.sqrt(2.) * Sigma))) * jnp.exp(-Alpha * (tlist - t0)) / n * mu)
+        A = numpyro.sample('A', mNormal(pl, mix0sigma, 1., gsigma / gmu))
         with numpyro.plate('observations', len(y)):
             obs = numpyro.sample('obs', numpyro.distributions.Normal(jnp.matmul(AV, A), scale=std), obs=y)
         return obs
@@ -142,7 +143,7 @@ def time_numpyro(a0, a1):
         cid = ent[i]['ChannelID']
         wave = ent[i]['Waveform'].astype(np.float64) * spe_pre[cid]['epulse']
 
-        AV, wave, tlist, t0_init, t0_init_delta, A_init, mu, n = wff.initial_params(wave, spe_pre[cid], Tau, Sigma, gmu, gsigma, Thres['lucyddm'], npe, p, nsp, nstd, is_t0=True)
+        AV, wave, tlist, t0_init, t0_init_delta, A_init, n = wff.initial_params(wave, spe_pre[cid], Mu, Tau, Sigma, gmu, gsigma, Thres['lucyddm'], npe, p, nsp, nstd, is_t0=True)
         AV = jnp.array(AV)
         wave = jnp.array(wave)
         tlist = jnp.array(tlist)
@@ -151,7 +152,7 @@ def time_numpyro(a0, a1):
 
         time_mcmc_start = time.time()
         nuts_kernel = numpyro.infer.NUTS(model, adapt_step_size=True, init_strategy=numpyro.infer.initialization.init_to_value(values={'t0': t0_init, 'A': A_init}))
-        mcmc = numpyro.infer.MCMC(nuts_kernel, num_samples=1000, num_warmup=500, num_chains=1, progress_bar=False, chain_method='sequential', jit_model_args=True)
+        mcmc = numpyro.infer.MCMC(nuts_kernel, num_samples=1000, num_warmup=1000, num_chains=1, progress_bar=False, chain_method='sequential', jit_model_args=True)
         try:
             ticrun = time.time()
             mcmc.run(rng_key, n=n, y=wave, mu=Mu, tlist=tlist, AV=AV, t0left=t0_init - 3 * Sigma, t0right=t0_init + 3 * Sigma, extra_fields=('num_steps', 'accept_prob'))
@@ -161,8 +162,6 @@ def time_numpyro(a0, a1):
             accep[i - a0] = np.array(mcmc.get_extra_fields()['accept_prob']).mean()
             t0_t0 = np.array(mcmc.get_samples()['t0']).flatten()
             A = np.array(mcmc.get_samples()['A'])
-            if sum(np.sum(A, axis=0) > Thres[method]) == 0:
-                raise ValueError
             count = count + 1
 
             # # tlist_pan = np.array(tlist)
@@ -222,11 +221,11 @@ def fbmp_inference(a0, a1):
         cid = ent[i]['ChannelID']
         wave = ent[i]['Waveform'].astype(np.float64) * spe_pre[cid]['epulse']
 
-        A, wave_r, tlist, t0_init, t0_init_delta, char_init, mu, n = wff.initial_params(wave, spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, gsigma, Thres['lucyddm'], npe, p, nsp, nstd, is_t0=True, is_delta=False)
+        A, wave_r, tlist, t0_init, t0_init_delta, char_init, n = wff.initial_params(wave, spe_pre[ent[i]['ChannelID']], Mu, Tau, Sigma, gmu, gsigma, Thres['lucyddm'], npe, p, nsp, nstd, is_t0=True, is_delta=False)
         time_fbmp_start = time.time()
         A = A / factor
         # A = np.matmul(A, np.diag(1. / np.sqrt(np.diag(np.matmul(A.T, A)))))
-        xmmse, xmmse_star, psy_star, nu_star, T_star, d_tot_i, d_max = wff.fbmpr_fxn_reduced(wave_r, A, min(1, Mu / len(tlist)), spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, D, stop=0)
+        xmmse, xmmse_star, psy_star, nu_star, T_star, d_tot_i, d_max = wff.fbmpr_fxn_reduced(wave_r, A, min(-1e-3+1, Mu / len(tlist)), spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, D, stop=0)
         time_fbmp = time_fbmp + time.time() - time_fbmp_start
 
         # tlist_pan = tlist
@@ -238,14 +237,14 @@ def fbmp_inference(a0, a1):
             pet = tlist[xmmse_most > 0]
             cha = xmmse_most[xmmse_most > 0] / factor
 
-            logL = lambda t0 : -1 * loglikelihood(t0, tlist_pan, As, psy_star, like='b01', c=Mu / n)
+            logL = lambda t0 : -1 * loglikelihood(t0, tlist_pan, As, psy_star, like='mix01', c=Mu / n)
             btlist = np.arange(t0_init - 3 * Sigma, t0_init + 3 * Sigma + 1e-6, 0.2)
             logLv_btlist = np.vectorize(logL)(btlist)
             t0_t0 = opti.fmin_l_bfgs_b(logL, x0=[btlist[np.argmin(logLv_btlist)]], approx_grad=True, bounds=[b], maxfun=50000)[0]
             # logLvdelta = np.vectorize(lambda t : np.abs(logL(t) - logL(t0_t0) - 0.5))
             # t0_t0delta = abs(opti.fmin_l_bfgs_b(logLvdelta, x0=[btlist[np.argmin(np.abs(logLv_btlist - logL(t0_t0) - 0.5))]], approx_grad=True, bounds=[b], maxfun=50000)[0] - t0_t0)
 
-            logL = lambda t0 : -1 * loglikelihood(t0, tlist_pan, As[0][None, :], psy_star, like='b01', c=Mu / n)
+            logL = lambda t0 : -1 * loglikelihood(t0, tlist_pan, As[0][None, :], psy_star, like='mix01', c=Mu / n)
             logLv_btlist = np.vectorize(logL)(btlist)
             t0_cha = opti.fmin_l_bfgs_b(logL, x0=[btlist[np.argmin(logLv_btlist)]], approx_grad=True, bounds=[b], maxfun=50000)[0]
             # logLvdelta = np.vectorize(lambda t : np.abs(logL(t) - logL(t0_cha) - 0.5))

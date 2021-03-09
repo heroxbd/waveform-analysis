@@ -337,7 +337,7 @@ def likelihoodt0(hitt, char, gmu, gsigma, Tau, Sigma, npe, s0=None, mode='charge
         t0delta = abs(opti.fmin_l_bfgs_b(logLvdelta, x0=[tlist[np.argmin(np.abs(logLv_tlist - logL(t0) - 0.5))]], approx_grad=True, bounds=[b], maxfun=500000)[0] - t0)
     return t0, t0delta
 
-def initial_params(wave, spe_pre, Tau, Sigma, gmu, gsigma, Thres, npe, p, nsp, nstd, is_t0=False, is_delta=False):
+def initial_params(wave, spe_pre, Mu, Tau, Sigma, gmu, gsigma, Thres, npe, p, nsp, nstd, is_t0=False, is_delta=False):
     hitt, char = lucyddm(wave, spe_pre['spe'])
     hitt, char = clip(hitt, char, Thres)
     char = char / char.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
@@ -351,8 +351,7 @@ def initial_params(wave, spe_pre, Tau, Sigma, gmu, gsigma, Thres, npe, p, nsp, n
     wave = wave[left_wave:right_wave]
 
     window = len(wave)
-    mu = abs(np.sum(wave) / gmu)
-    n = max(math.ceil(mu / math.sqrt(Tau ** 2 + Sigma ** 2)), 1)
+    n = max(math.ceil(Mu / math.sqrt(Tau ** 2 + Sigma ** 2)), 1)
 
     tlist = np.sort(np.hstack(tlist[:, None] + np.arange(0, 1, 1 / n)))
     npe_init = np.repeat(npe_init, n) / n
@@ -363,7 +362,7 @@ def initial_params(wave, spe_pre, Tau, Sigma, gmu, gsigma, Thres, npe, p, nsp, n
     t0_init_delta = None
     if is_t0:
         t0_init, t0_init_delta = likelihoodt0(hitt=hitt, char=char, gmu=gmu, gsigma=gsigma, Tau=Tau, Sigma=Sigma, npe=npe, s0=spe_pre['std'] / np.linalg.norm(spe_pre['spe']), mode='charge', is_delta=is_delta)
-    return A, wave, tlist, t0_init, t0_init_delta, npe_init, mu, n
+    return A, wave, tlist, t0_init, t0_init_delta, npe_init, n
 
 def stdrmoutlier(array, r):
     arrayrmoutlier = array[np.abs(array - np.mean(array)) < r * np.std(array, ddof=-1)]
