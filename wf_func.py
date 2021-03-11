@@ -19,6 +19,7 @@ import matplotlib.gridspec as gridspec
 from mpl_axes_aligner import align
 import h5py
 from scipy.interpolate import interp1d
+from sklearn.linear_model import orthogonal_mp
 from numba import njit
 import warnings
 warnings.filterwarnings('ignore')
@@ -115,6 +116,10 @@ def lucyddm(waveform, spe_pre):
         else:
             wave_deconv = new_wave_deconv
     return np.arange(0, len(waveform) - 9), wave_deconv[9:]
+
+def omp(wave, A, tlist, factor):
+    coef = orthogonal_mp(A, wave[:, None])
+    return tlist, coef * factor
 
 def waveformfft(wave, spe_pre):
     w = savgol_filter(wave, 11, 2)

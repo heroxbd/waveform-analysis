@@ -15,7 +15,6 @@ from scipy.stats import chi2
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from matplotlib import cm
-from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.colors import ListedColormap
 import matplotlib.gridspec as gridspec
 
@@ -60,7 +59,7 @@ deltalabel = {'1st':'\mathrm{1st}', 'tru':'\mathrm{Truth}', 'findpeak':'\mathrm{
 label = {'1st':'\mathrm{1st}', 'tru':'\mathrm{Truth}', 'findpeak':'\mathrm{FindPeak}', 'threshold':'\mathrm{Shift}', 'fftrans':'\mathrm{FFT}', 'lucyddm':'\mathrm{LucyDDM}', 'xiaopeip':'\mathrm{Fitting}', 'takara':'\mathrm{CNN}', 'fbmp':'\mathrm{FBMP}', 'fbmpwave':'\mathrm{FBMP}', 'mcmc':'\mathrm{MCMC}', 'mcmcwave':'\mathrm{MCMC}'}
 color = {'1st':'b', 'tru':'k', 'findpeak':'C1', 'threshold':'C2', 'fftrans':'m', 'lucyddm':'y', 'xiaopeip':'c', 'takara':'C0', 'fbmp':'r', 'fbmpwave':'b', 'mcmc':'C4', 'mcmcwave':'C5'}
 jit = 0.05
-jitter = {'tru':-6 * jit, 'mcmc':-5 * jit, 'fbmp':-4 * jit, 'fbmpwave':-3 * jit, 'lucyddm':-2 * jit, 'mcmcwave':-1 * jit, 'xiaopeip':1 * jit, 'takara':0 * jit, 'fftrans':2 * jit, '1st':3 * jit, 'findpeak':4 * jit, 'threshold':5 * jit}
+jitter = {'mcmc':-6 * jit, 'tru':-5 * jit, 'fbmp':-4 * jit, 'fbmpwave':-3 * jit, 'lucyddm':-2 * jit, 'mcmcwave':-1 * jit, 'xiaopeip':1 * jit, 'takara':0 * jit, 'fftrans':2 * jit, '1st':3 * jit, 'findpeak':4 * jit, 'threshold':5 * jit}
 
 for key in mts.keys():
     for i in range(len(mts[key])):
@@ -94,15 +93,15 @@ rhigh = np.array([[np.max(mts[key]['RSS'])] for key in mts.keys()])
 rhigh = np.max(rhigh[~np.isnan(rhigh)]) * 1.05
 
 figd = plt.figure(figsize=(len(Sigma) * 6, len(Tau) * 4))
-gsd = gridspec.GridSpec(len(Tau), len(Sigma), figure=figd, left=0.1, right=0.8, top=0.95, bottom=0.1, wspace=0.2, hspace=0.3)
+gsd = gridspec.GridSpec(len(Tau), len(Sigma), figure=figd, left=0.1, right=0.8, top=0.95, bottom=0.1, wspace=0.3, hspace=0.3)
 figdd = plt.figure(figsize=(len(Sigma) * 6, len(Tau) * 4))
-gsdd = gridspec.GridSpec(len(Tau), len(Sigma), figure=figd, left=0.1, right=0.8, top=0.95, bottom=0.1, wspace=0.2, hspace=0.3)
+gsdd = gridspec.GridSpec(len(Tau), len(Sigma), figure=figd, left=0.1, right=0.8, top=0.95, bottom=0.1, wspace=0.3, hspace=0.3)
 figw = plt.figure(figsize=(len(Sigma) * 6, len(Tau) * 4))
-gsw = gridspec.GridSpec(len(Tau), len(Sigma), figure=figw, left=0.1, right=0.8, top=0.95, bottom=0.1, wspace=0.2, hspace=0.3)
+gsw = gridspec.GridSpec(len(Tau), len(Sigma), figure=figw, left=0.1, right=0.8, top=0.95, bottom=0.1, wspace=0.3, hspace=0.3)
 figr = plt.figure(figsize=(len(Sigma) * 6, len(Tau) * 4))
-gsr = gridspec.GridSpec(len(Tau), len(Sigma), figure=figr, left=0.1, right=0.8, top=0.95, bottom=0.1, wspace=0.2, hspace=0.3)
+gsr = gridspec.GridSpec(len(Tau), len(Sigma), figure=figr, left=0.1, right=0.8, top=0.95, bottom=0.1, wspace=0.3, hspace=0.3)
 alpha = 0.05
-lim = {'deltadiv':np.tile([0.3, 0.5, 0.], (2, 1)), 'wdist':np.tile([2, 3.5, 7], (2, 1)), 'rss':np.array([[5.5e3, 3e3, 2e3], [4.5e3, 3e3, 2e3]])}
+lim = {'deltadiv':np.tile([0.3, 0.5, 0.], (2, 1)), 'wdist':np.tile([2, 3.5, 7], (2, 1)), 'rss':np.array([[0.7e3, 2.5e3, 2e3], [1.5e3, 2.5e3, 2e3]])}
 keylist = list(mts.keys())
 for sigma, i in zip(Sigma, list(range(len(Sigma)))):
     for tau, j in zip(Tau, list(range(len(Tau)))):
@@ -195,19 +194,23 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
             ax.legend(loc='upper left', bbox_to_anchor=(1., 1.5))
 figd.savefig('Note/figures/vs-delta.pgf')
 figd.savefig('Note/figures/vs-delta.pdf')
+figd.savefig('Note/figures/vs-delta.png')
 plt.close(figd)
 figdd.savefig('Note/figures/vs-deltamethodsdiv.pgf')
 figdd.savefig('Note/figures/vs-deltamethodsdiv.pdf')
+figdd.savefig('Note/figures/vs-deltamethodsdiv.png')
 plt.close(figdd)
 figw.savefig('Note/figures/vs-wdist.pgf')
 figw.savefig('Note/figures/vs-wdist.pdf')
+figw.savefig('Note/figures/vs-wdist.png')
 plt.close(figw)
 figr.savefig('Note/figures/vs-rss.pgf')
 figr.savefig('Note/figures/vs-rss.pdf')
+figr.savefig('Note/figures/vs-rss.png')
 plt.close(figr)
 
 fig = plt.figure(figsize=(len(Sigma) * 6, len(Tau) * 4))
-gs = gridspec.GridSpec(len(Tau), len(Sigma), figure=fig, left=0.1, right=0.95, top=0.95, bottom=0.1, wspace=0.2, hspace=0.3)
+gs = gridspec.GridSpec(len(Tau), len(Sigma), figure=fig, left=0.1, right=0.95, top=0.95, bottom=0.1, wspace=0.3, hspace=0.3)
 for sigma, i in zip(Sigma, list(range(len(Sigma)))):
     for tau, j in zip(Tau, list(range(len(Tau)))):
         ax = fig.add_subplot(gs[j, i])
@@ -223,6 +226,7 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
         ax.legend(loc='lower left')
 fig.savefig('Note/figures/vs-deltadiv.pgf')
 fig.savefig('Note/figures/vs-deltadiv.pdf')
+fig.savefig('Note/figures/vs-deltadiv.png')
 plt.close(fig)
 
 fig = plt.figure(figsize=(6, 6))
@@ -241,6 +245,7 @@ ax.grid()
 ax.legend(loc='lower left')
 fig.savefig('Note/figures/2010vs-deltadiv.pgf')
 fig.savefig('Note/figures/2010vs-deltadiv.pdf')
+fig.savefig('Note/figures/2010vs-deltadiv.png')
 
 x = np.arange(0, len(keylist))
 tau = 20
@@ -259,6 +264,7 @@ ax.errorbar(x, wdist[:, 1], yerr=dy, fmt='o', ecolor='r', color='b', elinewidth=
 ax.set_title(fr'$\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$')
 fig.savefig('Note/figures/summarycharge.pgf')
 fig.savefig('Note/figures/summarycharge.pdf')
+fig.savefig('Note/figures/summarycharge.png')
 fig.clf()
 plt.close(fig)
 

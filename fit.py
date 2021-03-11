@@ -30,7 +30,7 @@ fopt = args.opt
 reference = args.ref
 method = args.met
 
-Thres = {'xiaopeip':0.2, 'lucyddm':0.2, 'fftrans':0.1, 'findpeak':0.1, 'threshold':0.1}
+Thres = {'xiaopeip':0.2, 'lucyddm':0.2, 'fftrans':0.1, 'findpeak':0.1, 'threshold':0.1, 'omp':0}
 
 def fitting(a, b):
     nsp = 4
@@ -52,12 +52,7 @@ def fitting(a, b):
             wave = ent[i]['Waveform'].astype(np.float64) * spe_pre[ent[i]['ChannelID']]['epulse']
 
             time_method_start = time.time()
-            if method == 'fbmp':
-                A, wave_r, tlist, t0_init, t0_init_delta, char_init, mu, n = wff.initial_params(wave, spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, gsigma, Thres['lucyddm'], npe, p, nsp)
-                A = A / factor
-                # A = np.matmul(A, np.diag(1. / np.sqrt(np.diag(np.matmul(A.T, A)))))
-                pet, cha = wff.fbmp(wave_r, spe_pre[ent[i]['ChannelID']], tlist, A, mu / len(tlist), gsigma ** 2 * factor / gmu, factor, 10, stop=0)
-            elif method == 'xiaopeip':
+            if method == 'xiaopeip':
 #                 pet, cha, ped = wff.xiaopeip(wave, spe_pre[ent[i]['ChannelID']])
 #                 wave = wave - ped
                 pet, cha = wff.xiaopeip(wave, spe_pre[ent[i]['ChannelID']])
