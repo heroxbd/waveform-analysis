@@ -5,15 +5,17 @@ The $W_{d}$ summary of all methods is plotted in \ref{fig:chargesummary}, with a
 
 \begin{figure}[H]
     \centering
-    \scalebox{0.5}{\input{figures/summarycharge.pgf}}
+    \scalebox{0.7}{\input{figures/summarycharge.pgf}}
     \caption{\label{fig:chargesummary} $W_{d}$ of methods, $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$}
 \end{figure}
 
-It is apparent that FindPeak, Shift and FFT are second-rate among all 8 methods, so we will only discuss other 5 methods below. 
+It is apparent that FindPeak, Shift, and FFT are second-rate among all 8 methods, so we will only discuss the other 5 methods below. 
 
 % Figure of Merits
 
-The $W_{d}$ summary of 5 methods (LucyDDM, Fitting, MCMC, CNN, FBMP) is plotted in \ref{fig:wdistsummary}, with all dataset parameters combination. The errorbar shows 5 to 95 percentile of Wasserstein distance distribution. Wasserstein distance of all 5 methods are approaching each other when $\mu$ increases. 
+The $W_{d}$ summary of 5 methods (LucyDDM, Fitting, MCMC, CNN, FBMP) is plotted in \ref{fig:wdistsummary}, with all dataset parameters combination. The errorbar shows 5 to 95 percentile of Wasserstein distance distribution. Wasserstein distances of all 5 methods are approaching each other when $\mu$ increases. 
+
+We can see that as method CNN uses Wasserstein distance as loss directly during training, its Wasserstein distance is the smallest. While Fitting treats RSS as its loss, FBMP obtains the least RSS among 5 methods (see formula~\ref{fig:rsssummary}) and CNN follows. 
 
 \begin{figure}[H]
     \centering
@@ -21,15 +23,13 @@ The $W_{d}$ summary of 5 methods (LucyDDM, Fitting, MCMC, CNN, FBMP) is plotted 
     \caption{\label{fig:wdistsummary} $W_{d}$ of methods, error bar 5--95 percentile ($q_{rec}$)}
 \end{figure}
 
-We can see that as method CNN uses Wasserstein distance as loss directly during trainin, its Wasserstein distance is the smallest. While Fitting treats RSS as its loss, FBMP obtains the least RSS among 5 methods (see formula~\ref{fig:rsssummary}) and CNN follows. 
-
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/vs-rss.pgf}}
     \caption{\label{fig:rsssummary} RSS of methods, error bar 5--95 percentile ($q_{rec}$)}
 \end{figure}
 
-The timing resolution $\delta$ using waveform analysis results (charge $q_{rec}$) of these methods are computed and collected. The $t_{0}$ reconstruction process is also MLE, which introduced by formula \eqref{eq:likelihood}. Additionally, MCMC can provide estimation of $t_{0}$ directly, which is also collected, and FBMP provides dozens of samples of $q$, which allow us to derive MLE estimation of $t_{0}$. The comparison between timeing resolution using the first PE, all PE and the 5 methods is shown in figure~\ref{fig:deltamethods}. 
+The timing resolution $\delta$ using waveform analysis results (charge $q_{rec}$) of these methods are computed and collected. The $t_{0}$ reconstruction process is also MLE, which introduced by formula \eqref{eq:likelihood}. Additionally, MCMC can provide an estimation of $t_{0}$ directly, which is also collected, and FBMP provides dozens of samples of $q$, which allows us to derive MLE estimation of $t_{0}$. The comparison between timing resolution using the first PE, all PE, and the 5 methods is shown in figure~\ref{fig:deltamethods}. 
 
 \begin{figure}[H]
     \centering
@@ -37,34 +37,34 @@ The timing resolution $\delta$ using waveform analysis results (charge $q_{rec}$
     \caption{\label{fig:deltamethods} Timing resolution $\delta$ of methods}
 \end{figure}
 
-In the figure, $\mathrm{MCMCcha}$ corresponds to reconstruction with recorded $q_{rec}$ during sampling and $\mathrm{MCMCt0}$ corresponds to reconstruction with $t_{0}$, which is directly collected in MCMC method. $\mathrm{FBMPcha}$ corresponds to reconstruction with maximum posterior probability model's $q_{rec}$ and $\mathrm{FBMPt0}$ corresponds to estimation of $t_{0}$ with all samples provided by FBMP. 
-
-All 5 methods (LucyDDM, Fitting, MCMC, CNN) provide better timing resolution $\delta$ than only using the first PE during construction. 
-
-% Fitting & Posterior charge distribution
-
-The charge of reconstruction, $q_{rec}$, result distribution when $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$ shows in figure (see figure~\ref{fig:recchargehist}). 
-
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/recchargehist.pgf}}
     \caption{\label{fig:recchargehist}  $q_{rec}$ distribution, $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$}
 \end{figure}
 
-The steep edge near 0 in these distributions is resulted from optimized cut of original $q_{rec}$, which is intended for remove fragment values of $q_{rec}$. But as we can see in figure~\ref{fig:recchargehist}, the charge distribution of LucyDDM, Fitting, CNN and MCMC are severely distorted, while the charge distribution of FBMP almost retains the shape of original (or prior) distribution of charge. 
+In the figure, $\mathrm{MCMCcha}$ corresponds to reconstruction with recorded $q_{rec}$ during sampling and $\mathrm{MCMCt0}$ corresponds to reconstruction with $t_{0}$, which is directly collected in MCMC method. $\mathrm{FBMPcha}$ corresponds to reconstruction with maximum posterior probability model's $q_{rec}$ and $\mathrm{FBMPt0}$ corresponds to estimation of $t_{0}$ with all samples provided by FBMP. 
 
-The main reason is that during optimization of Wasserstein distance between $q_{rec}(t)$ and $q_{tru}(t)$ (e.g. CNN) or RSS between the origin wave $v_{w}(t)$ and reconstructed wave $v_{r}(t)$ (e.g. Fitting and LucyDDM), the total number of hittime which is the degree of freedom (DOF) of parameters is a constant, and the question is not treated as a sparse regression problem. So a lot of parameters in $q$ turn out to be fragment values, which distorte the $q_{rec}$ distribution. So reduction of DOF before estimation of parameters in FBMP give relatively good results in sparsity. 
+All 5 methods (LucyDDM, Fitting, MCMC, CNN, FBMP) provide better timing resolution $\delta$ than only using the first PE during construction. 
+
+% Fitting & Posterior charge distribution
+
+The charge of reconstruction, $q_{rec}$, result distribution when $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$ shows in figure (see figure~\ref{fig:recchargehist}). 
+
+The steep edge near 0 in these distributions results from the cut of the original $q_{rec}$, which is intended to remove fragment values of $q_{rec}$. But as we can see in figure~\ref{fig:recchargehist}, the charge distribution of LucyDDM, Fitting, CNN, and MCMC are severely distorted, while the charge distribution of FBMP partly retains the shape of the original (or prior) distribution of charge and only some skewing persists. 
+
+During optimization of Wasserstein distance between $q_{rec}(t)$ and $q_{tru}(t)$ (e.g. CNN) or RSS between the origin wave $v_{w}(t)$ and reconstructed wave $v_{r}(t)$ (e.g. Fitting and LucyDDM), the total number of hittime which is the degree of freedom (DOF) of parameters is a constant, and the analysis process is not treated as a sparse regression problem. So a lot of parameters in $q$ turn out to be fragment values, which distorts the $q_{rec}$ distribution. So the reduction of DOF before estimation of parameters in FBMP gives relatively good results in sparsity, though it is still noticeable that the skewness of charge distribution of FBMP persists. 
 
 % Bayesian
 
-The origin waveform $v_{w}(t)$ is contaminated by gaussian noise, the optimization of single loss might be disturbed by degeneracy of reconstruction results, which means for different $q'_{rec}(t)$ and $q''_{rec}(t)$, the W-dist or RSS can result in the identity or very close. So it is adequate if we can obtain several samples from parameter space of $q$, and even superior if we can give posterior probability of these samples. Additionally, the expansibility of Bayesian method will allow us retain sufficient information in subsequent steps such as event reconstruction. 
+As the origin waveform $v_{w}(t)$ is contaminated by Gaussian noise, the optimization of single loss might be disturbed by the degeneracy of reconstruction results, which means for different $q_{rec}(t)$, the W-dist or RSS can result in the identity or very close. So it is adequate if we can obtain several samples from parameter space of $q$, and even superior if we can give a posterior probability of these samples. Additionally, the expansibility of the Bayesian method will allow us to retain sufficient information in subsequent steps such as event reconstruction. 
 
 % Time bin
 
-But as we see, the reconstruction results of hittime, $t_{rec}$, are discrete value (time bin edges in a DAQ window). To obtain continuous value of $t_{rec}$ may result to better analysis results. 
+But as we see, the reconstruction results of hittime, $t_{rec}$, are discrete values (time bin edges in a DAQ window). To obtain continuous values of $t_{rec}$ may result in better analysis results. 
 
 % Pedestal
 
-The calculation of pedestal of waveform is not included in this work, which is a potential future work to do. 
+The evaluation of the pedestal of waveforms is not included in this work, which is a potential future work to do. 
 
 % section Discussion (end)

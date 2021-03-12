@@ -8,12 +8,12 @@
 
 \subsection{Methods}
 
-Waveform analysis algorithms are presented below, separately. It is worth mentioning that the hittime in our waveform analysis results is discrete value (time bin edges in a DAQ window). 
+Waveform analysis algorithms are presented below, separately. It is worth mentioning that the hittime in our waveform analysis results is discrete values (time bin edges in a DAQ window). 
 
 \subsubsection{Find peak}
 \label{sec:findpeak}
 
-First intuitive method is the find peak method. We first smooth the input waveform using Savitzky–Golay filter to alleviate the obstruction of electron noise. Then we find the peak of the smoothed waveform and move the peaks leftward. The shifted voltage is now promotional to reconstructed charge $q_{rec}(t)$ related with corresponding hittime. The leftward distance we moved, $\Delta t$ is the peak time of SPE response $v_{spe}$, described by formula \eqref{eq:dayaspe}. Finally the charge are normalized to retain the consistency with total charge which is the integration of the waveform. The demonstration here shows a result with W-dist = 1.96ns. 
+The first intuitive method is the find peak method. We first smooth the input waveform using Savitzky–Golay filter to alleviate the obstruction of electron noise. Then we find the peak of the smoothed waveform and move the peaks leftward. The shifted voltage is now promotional to reconstructed charge $q_{rec}(t)$ related with the corresponding hittime. The leftward distance we moved, $\Delta t$ is the peak time of SPE response $v_{spe}$, described by formula \eqref{eq:dayaspe}. Finally, the charge is normalized to retain the consistency with the total charge which is the integration of the waveform. The demonstration here shows a result with W-dist = 1.96ns. 
 
 \begin{figure}[H]
     \centering
@@ -23,7 +23,7 @@ First intuitive method is the find peak method. We first smooth the input wavefo
 
 \subsubsection{Waveform shift}
 
-A threshold $v_{th}$ is settled with respect to electronics noise in simulation data. In waveform shift method, first we locate waveform voltage, $v_{w}(t)$, which exceeds $v_{th}$. Then we shift the exceeding part leftward. The $\Delta t$ we move is the same as find peak method in section \ref{sec:findpeak}. Finally we treat the normalized exceeding part as $q_{rec}(t)$, to maintain the charge integral of waveforms. The demonstration here shows a result with W-dist = 5.58ns. 
+A threshold $v_{th}$ is settled with respect to electronics noise in simulation data. In waveform shift method, first we locate waveform voltage, $v_{w}(t)$, which exceeds $v_{th}$. Then we shift the exceeding part leftward. The $\Delta t$ we move is the same as the find peak method in section \ref{sec:findpeak}. Finally, we treat the normalized exceeding part as $q_{rec}(t)$, to maintain the charge integral of waveforms. The demonstration here shows a result with W-dist = 5.58ns. 
 
 \begin{figure}[H]
     \centering
@@ -50,7 +50,7 @@ The demonstration here shows a result with W-dist = 1.77ns.
 
 \subsubsection{Lucy direct demodulation}
 
-Lucy-Richardson direct demodulation (LucyDDM) is a non linear iteration method, to calculate the deconvolution of signals. It has been used in astronomy \cite{li_richardson-lucy_2019}, image processing and many other fields. Lucy direct demodulation has an advantage against Fourier deconvolution which is a constraint that $q_{rec}(t)$ must be larger than 0. 
+Lucy-Richardson direct demodulation (LucyDDM) is a non-linear iteration method, to calculate the deconvolution of signals. It has been used in astronomy \cite{li_richardson-lucy_2019}, image processing, and many other fields. Lucy direct demodulation has an advantage against Fourier deconvolution which is a constraint that $q_{rec}(t)$ must be larger than 0. 
 
 In $n$-th iteration, the calculation shows in \eqref{eq:lucy-inter} where $v^{*}_{spe}$ is flipped $v_{spe}$. 
 \begin{align}
@@ -58,7 +58,7 @@ In $n$-th iteration, the calculation shows in \eqref{eq:lucy-inter} where $v^{*}
     q_{rec}^{(n)} &= q_{rec}^{(n-1)} \cdot \left(\frac{v_{w}}{q_{rec}^{(n-1)} \otimes v_{spe}} \otimes v^{*}_{spe}\right) \label{eq:lucy-inter}
 \end{align}
 
-Iteration will stop when two adjacent loop give very close results. The demonstration here shows a result with W-dist = 0.95ns. 
+Iteration will stop when two adjacent loops give very close results. The demonstration here shows a result with W-dist = 0.95ns. 
 
 \begin{figure}[H]
     \centering
@@ -75,7 +75,7 @@ Waveform is the convolution of $v_{spe}$ and $q_{rec}(t)$ (see formula~\eqref{eq
     L &= L(v_{r}, v_{w}) = L(q_{rec}, v_{spe}, v_{w}) = \mathrm{RSS}(v_{w}, q_{rec} \otimes v_{spe}) \label{eq:loss-rss}
 \end{align}
 
-In fitting process, the parameter are $q_{rec}(t)$ in each discrete hittime $t$. The complete information hided in origin waveform is disturbed by electronics noise and pile-up. The loss (see formula~\ref{eq:loss-rss}) which we optimize in fitting is the residual sum of squares (RSS) between the origin wave $v_{w}(t)$ and reconstructed wave $v_{r}(t)$ according to the parameters. The parameters will tend to be preciser when the reconstructed wave approaching to the origin wave. 
+In fitting process, the parameter are $q_{rec}(t)$ in each discrete hittime $t$. The complete information hidden in the original wave is disturbed by electronics noise and pile-up. The loss (see formula~\ref{eq:loss-rss}) which we optimize in fitting is the residual sum of squares (RSS) between the original wave $v_{w}(t)$ and reconstructed wave $v_{r}(t)$ according to the parameters. The parameters will tend to be preciser when the reconstructed wave approaching the original wave. 
 
 Fitting program is implemented with Limited-memory BFGS with bound constraint \cite{byrd_limited_1995} (L-BFGS-B). L-BFGS-B has an advantage that the $q_{rec}$ are constrained to be larger than 0. The demonstration here shows a result with W-dist = 0.67ns. 
 
@@ -106,11 +106,11 @@ The result reconstructing $q_{rec}$ when $\mu=5, \tau=20\mathrm{ns}, \sigma=10\m
 
 \subsubsection{MCMC}
 
-The typical variable optimization methods such as L-BFGS-B depends on gradient evaluation and their iteration stops when gradient is smaller than a certain tiny value, following the convention in the field of numerical calculation. In some circumstances the fitting result may stuck in local minimum rather than global minimum. Hamiltonian Monte Carlo (HMC), which is a version of Markov Chain Monte Carlo (MCMC) method, has potential to overcome this difficulty. 
+The typical variable optimization methods such as L-BFGS-B depend on gradient evaluation and their iteration stops when the gradient is smaller than a certain tiny value, following the convention in the field of numerical calculation. In some circumstances, the fitting result may be stuck in local minimum rather than global minimum. Hamiltonian Monte Carlo (HMC), which is a version of the Markov Chain Monte Carlo (MCMC) method, has the potential to overcome this difficulty. 
 
-HMC is a efficient MCMC method for achieving samples from a distribution for which direct sampling is difficult, especially efficient dealing high dimensional variables \cite{neal_mcmc_2012}, for example, $q$ in waveform analysis. An program based on HMC is developed intending to sample from the posterior distribution of $q$, as well as $t_{0}$. The samples derived by HMC can usually be approximately ergodic in the posterior distribution, so the global minimum will be obtain with large sampling set. 
+HMC is an efficient MCMC method for achieving samples from a distribution for which direct sampling is difficult, especially efficient dealing with high dimensional variables \cite{neal_mcmc_2012}, for example, $q$ in waveform analysis. A program based on HMC is developed intending to sample from the posterior distribution of $q$, as well as $t_{0}$. The samples derived by HMC can usually be approximately ergodic in the posterior distribution, so the global minimum will be obtained with a large sampling set. 
 
-The model and prior distribution is defined below: 
+The model and prior distribution are defined below: 
 
 \begin{align}
     t_{0} &\sim \mathrm{Uniform}(0, L_{w}) \\
@@ -122,7 +122,7 @@ The model and prior distribution is defined below:
 
 where $t_{0}$ is the starting time of time profile and $L_{w}$ is nothing but a upper limit of $t_{0}$. $P_{q}(t_{i})$ is the equivalent charge expectation in time interval $[t_{i}, t_{i}+\mathrm{d}t]$, where $\mathrm{d}t$ is a man-made small time interval depends on the precision required. $q$ follow the probability Normal mixture distribution, whose probability density function (PDF) is $\mathrm{Mix}\mathcal{N}$ in \eqref{eq:mixnormal}. Given $q$, using function $F_{w}(q)$ is the rebuilt waveform expectation. 
 
-We use NumPyro \cite{phan2019composable}, a graceful probabilistic programming library, to build the model and sample. One of sampling result shows in figure~\ref{fig:mcmcrec-t0hist}. 
+We use NumPyro \cite{phan2019composable}, a graceful probabilistic programming library, to build the model and sample. One of the sampling results shows in figure~\ref{fig:mcmcrec-t0hist}. 
 
 \begin{figure}[H]
 \begin{minipage}[t]{.5\textwidth}
@@ -148,9 +148,9 @@ We can see during MCMC sampling, the charge w.r.t. time, $q_{rec}$, is also coll
 % Network structure
 Advances in neural networks have brought breakthroughs in various domains like Computer Vision and Natural Language Processing. As an efficient composition with weighted additions and pointwise nonlinearities, the method has prevailed against most of the traditional algorithms in pattern recognition tasks. In our experiment, we introduced a multi-layer convolutional neural network (CNN) to process time-sensitive signals from detector outputs. Based on the Physics nature that a detector signal (PMT outputs) do only have a local correlation with recent incoming particles (photons incidents), we chose convolutional setups with a moderate total width coverage. From a view of information, a broader coverage by an output neuron's receptive field on its related area will contribute to higher accuracy, while redundant connections could only lead to excessive computation and lower processing speed. As a result, a wise setup should try to cover all relevant signal areas exclusively while cutting off every connection unnecessary, balancing the speed and accuracy from the two mentioned effects.
 
-A similar trade-off also exists in the depth of the neural network. A deeper network could provide more complex combinations to all detected features, and the computation complexity of result calculation changes linearly with the depth. With the existence of advanced structure like residual connection and strategies like batch-norm, depth in training is never a problem. However, to cut the computation in massive experimental data, a network should be relatively shallow. Detector signals are relatively similar and peak-shaped. Such a simple pattern does not require many layers to recognize. A good design for the task is a network with 4 to 6 layers. Deeper structures may bring a slight improvement in precision but will introduce a considerable increase in processing cost.
+A similar trade-off also exists in the depth of the neural network. A deeper network could provide more complex combinations to all detected features, and the computation complexity of result calculation changes linearly with the depth. With the existence of advanced structures like residual connection and strategies like batch-norm, depth in training is never a problem. However, to cut the computation in massive experimental data, a network should be relatively shallow. Detector signals are relatively similar and peak-shaped. Such a simple pattern does not require many layers to recognize. A good design for the task is a network with 4 to 6 layers. Deeper structures may bring a slight improvement in precision but will introduce a considerable increase in processing cost.
 
-A CNN is developed to analys the waveform. Here is the structure of CNN which has 5 convolutional layer (see figure~\ref{fig:struct}). The length of data remains the same. 
+A CNN is developed to analyze the waveform. Here is the structure of CNN which has 5 convolutional layers (see figure~\ref{fig:struct}). The length of data remains the same. 
 
 % Processing workflow
 
@@ -159,19 +159,19 @@ The complete workflow of data processing consists of two stages, data training a
 
 % Loss function
 
-A critical issue matters the network training is the loss function. Particle incidence only happens in a small proportion of time channels within a recorded sequence, which means the outputs and related truth are always sparse. While operating with ineffective loss functions, training processes always ends up in local optimal of constant output due to the sparsity. Also, in practice, the form of loss function influence heavily on the final prediction performance. 
+A critical issue matters the network training is the loss function. Particle incidence only happens in a small proportion of time channels within a recorded sequence, which means the outputs and related truth are always sparse. While operating with ineffective loss functions, training processes always end up in local optimal of constant output due to the sparsity. Also, in practice, the form of loss function influences heavily on the final prediction performance. 
 
-A well-designed loss function should meet two requirements as follows: it should handle the sparsity, and it should give a fair judgement to the output in training. A qualified loss function could work on either sequence values or normalized distributions. In pursuit of time precision, a good algorithm should encourage correct predictions in the close neighbourhoods of their corresponding truth, while punishing outputs that are incorrect or inaccurate in time. While working on the sequence outputs, such a mechanism is easy to implement but hard to arrange appropriately. It is hard to find a fair arrangement of punishment weight matching all circumstance. On the other hand, statistical distances and divergences could assess the difference in distribution but are hard to implement in a trainable form for backpropagation. 
+A well-designed loss function should meet two requirements as follows: it should handle the sparsity, and it should give a fair judgment to the output in training. A qualified loss function could work on either sequence values or normalized distributions. In pursuit of time precision, a good algorithm should encourage correct predictions in the close neighborhoods of their corresponding truth, while punishing outputs that are incorrect or inaccurate in time. While working on the sequence outputs, such a mechanism is easy to implement but hard to arrange appropriately. It is hard to find a fair arrangement of punishment weight matching all circumstances. On the other hand, statistical distances and divergences could assess the difference in distribution but are hard to implement in a trainable form for backpropagation. 
 
 To tackle the mentioned difficulties, efforts of our work have established feasible, robust solutions with guaranteed performance and convergence for each case of processing. We will describe the details of the method in the following section.
 
 \emph{Value-based Reconstruction Loss}
 % Introductory Photos should be added to this part.
-To cope with sparsity in value-based processing, we have introduced a reconstruction procedure to build up a waveform based on its corresponding particle incidences. By introducing a reverse process after neural network computing, one could define the loss function on a denser wave domain instead of the original incidence domain. Expression of the reconstruction is arbitrary but should fit the paired relationship expressed by data samples. Typically, one should add a training process to fit the parameters in construction expressions before training the predicting neural networks.
+To cope with sparsity in value-based processing, we have introduced a reconstruction procedure to build up a waveform based on its corresponding particle incidences. By introducing a reverse process after neural network computing, one could define the loss function on a denser wave domain instead of the original incidence domain. The expression of the reconstruction is arbitrary but should fit the paired relationship expressed by data samples. Typically, one should add a training process to fit the parameters in construction expressions before training the predicting neural networks.
 %<Add an algorithm description here>
 
 \emph{CDF Wasserstein Loss}
-A direct implementation of judgement metrics into loss function is often difficult. To deal with sparsity and encourage time accuracy, we established the loss function on the cumulative distribution functions (CDF) of normalized outputs. The form of cumulative sums could build a connection between sequence prediction and its previous values, making optimization through history possible. Moreover, the first Wasserstein distance between two 1D distributions is equivalent to the norm-1 difference of two corresponding CDFs. The optimal transport amount described by this metric is a reliable measurement standard to all distribution differences, including cases in our application.
+A direct implementation of judgment metrics into loss function is often difficult. To deal with sparsity and encourage time accuracy, we established the loss function on the cumulative distribution functions (CDF) of normalized outputs. The form of cumulative sums could build a connection between sequence prediction and its previous values, making optimization through history possible. Moreover, the first Wasserstein distance between two 1D distributions is equivalent to the norm-1 difference of two corresponding CDFs. The optimal transport amount described by this metric is a reliable measurement standard for all distribution differences, including cases in our application. 
 
 \begin{figure}[H]
 \begin{minipage}[b]{.4\textwidth}
@@ -217,21 +217,21 @@ The result reconstructing $q_{rec}$ when $\mu=5, \tau=20\mathrm{ns}, \sigma=10\m
 
 \subsubsection{FBMP}
 
-Fast Bayesian Matching Pursuit (FBMP) is a parameters estimation method for sparse linear models \cite{schniter_fast_nodate}. The linear sparse model in waveform analysis is given by equation~\eqref{eq:fbmpmodel}:
+Fast Bayesian Matching Pursuit (FBMP) is a parameters estimation method for sparse linear models \cite{schniter_fast_nodate}. The linear sparse model in waveform analysis is given by equation~\eqref{eq:fbmpmodel}: 
 
 \begin{align}
     v_{w} &= F_{w}(q) = \boldsymbol{A}\cdot \boldsymbol{q} \label{eq:fbmpmodel} \\
     \hat{\boldsymbol{s}}_{*} &\triangleq \mathrm{argmax}\,p(\boldsymbol{s}|\boldsymbol{y}) \label{eq:map}
 \end{align}
 
-in which $A$ is a matrix derived from SPE response~\eqref{eq:dayaspe}. $\boldsymbol{q}$ is the charge vector of PE with length $N$, in which most elements are zeros. FBMP algorithm select model before estimation of $q$. For a certain model, $\boldsymbol{s}$ is model selection vector contains only 0 and 1. Only if $s_{n}=1$, $q_{n}\neq0$, where $\{q_{n}\}_{n=0}^{N-1}$. Implementing the maximum a posteriori (MAP) model-vector estimate (given by~\eqref{eq:map}), a repeated greedy search (RGS) is performed to get a set of dominant models, $\mathcal{S}_{*}$, in the parameter space of $\boldsymbol{s}$. RGS will stop after a controlled number of steps, as we believe the search for dominant models set is sufficient enough. Additionally, a linear algebra trick reduces the complexity of the algorithm \cite{schniter_fast_nodate}. Finally, a set of dominant models $\mathcal{S}_{*}$ and its corresponding set of posterior probability, as well as estimations of $\boldsymbol{q}$ for each model in $\mathcal{S}_{*}$, are collected to be the approximation of sparse posterior estimation of $\boldsymbol{q}$. We use the charge estimation of the maximum posterior probability model as the waveform analysis result. 
+in which $A$ is a matrix derived from SPE response~\eqref{eq:dayaspe}. $\boldsymbol{q}$ is the charge vector of PE with length $N$, in which most elements are zeros. FBMP algorithm select model before estimation of $q$. For a certain model, $\boldsymbol{s}$ is a model selection vector that contains only 0 and 1. Only if $s_{n}=1$, $q_{n}\neq0$, where $\{q_{n}\}_{n=0}^{N-1}$. Implementing the maximum a posteriori (MAP) model-vector estimate (given by~\eqref{eq:map}), a repeated greedy search (RGS) is performed to get a set of dominant models, $\mathcal{S}_{*}$, in the parameter space of $\boldsymbol{s}$. RGS will stop after a controlled number of steps, as we believe the search for dominant models set is sufficient enough. Additionally, a linear algebra trick reduces the complexity of the algorithm \cite{schniter_fast_nodate}. Finally, a set of dominant models $\mathcal{S}_{*}$ and its corresponding set of posterior probability, as well as estimations of $\boldsymbol{q}$ for each model in $\mathcal{S}_{*}$, are collected to be the approximation of sparse posterior estimation of $\boldsymbol{q}$. We use the charge estimation of the maximum posterior probability model as the waveform analysis result. 
 
-The figure~\ref{fig:fbmp} shows one of the FBMP result. We can see the origin waveform $v_{w}$ and reconstructed waveform $v_{r}$ are very similar. The reconstructed and truth $q_{rec}$ are also similar. 
+The figure~\ref{fig:fbmp} shows one of the FBMP results. We can see the origin waveform $v_{w}$ and reconstructed waveform $v_{r}$ are very similar. The reconstructed and truth $q_{rec}$ are also similar. 
 
 \begin{figure}[H]
     \centering
-    \scalebox{0.4}{\input{figures/demoe2c0.pgf}}
-    \caption{\label{fig:fbmp} FBMP, W-dist = 0.27}
+    \scalebox{0.45}{\input{figures/demoe2c0.pgf}}
+    \caption{\label{fig:fbmp} FBMP Demo, W-dist = 0.27}
 \end{figure}
 
 The result reconstructing $q_{rec}$ when $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$ shows in figure. (see figure~\ref{fig:fbmp-hist}) The overall result of W-dist reconstructing $q_{rec}$ shows in figure (see figure~\ref{fig:fbmp-npe}). 
@@ -253,11 +253,11 @@ The result reconstructing $q_{rec}$ when $\mu=5, \tau=20\mathrm{ns}, \sigma=10\m
 \end{minipage}
 \end{figure}
 
-It is noted that one of deconvolution method can be used for FBMP initialization, where we reduce $N$ regarding to deconvolution results. In the test of FBMP we use LucyDDM as initializer. 
+It is noted that one of the deconvolution methods can be used for FBMP initialization, where we reduce $N$ regarding deconvolution results. In the test of FBMP, we use LucyDDM as the initializer. 
 
 \subsection{Program Efficiency}
 
-The efficiency of 5 good performance methods on our simulation dataset show in table~\ref{fig:efficiency}. The CNN is faster than Lucy direct demodulation and FBMP, and much faster than fitting, while Lucy direct demodulation and FBMP are commensurable. When we reduce accuracy requirement of these methods except CNN, such as decreasing the number of iteration (for LucyDDM and Fitting) or the sampling amount (for FBMP and MCMC), the time these methods consume will decrease. The time consumed by FBMP contains initialization time of LucyDDM initializer. 
+The efficiency of 5 good performance methods on our simulation dataset show in table~\ref{fig:efficiency}. The CNN is faster than Lucy direct demodulation and FBMP, and much faster than fitting, while Lucy direct demodulation and FBMP are commensurable. When we reduce the accuracy requirement of these methods except CNN, such as decreasing the number of iteration (for LucyDDM and Fitting) or the sampling amount (for FBMP and MCMC), the time these methods consume will decrease. The time consumed by FBMP contains the initialization time of LucyDDM initializer. 
 
 \begin{table}[H]
     \centering

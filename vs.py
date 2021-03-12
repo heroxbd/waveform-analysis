@@ -92,13 +92,13 @@ whigh = np.max(whigh[~np.isnan(whigh)]) * 1.05
 rhigh = np.array([[np.max(mts[key]['RSS'])] for key in mts.keys()])
 rhigh = np.max(rhigh[~np.isnan(rhigh)]) * 1.05
 
-figd = plt.figure(figsize=(len(Sigma) * 6, len(Tau) * 4))
+figd = plt.figure(figsize=(len(Sigma) * 6, len(Tau) * 3))
 gsd = gridspec.GridSpec(len(Tau), len(Sigma), figure=figd, left=0.1, right=0.8, top=0.95, bottom=0.1, wspace=0.3, hspace=0.3)
-figdd = plt.figure(figsize=(len(Sigma) * 6, len(Tau) * 4))
+figdd = plt.figure(figsize=(len(Sigma) * 6, len(Tau) * 3))
 gsdd = gridspec.GridSpec(len(Tau), len(Sigma), figure=figd, left=0.1, right=0.8, top=0.95, bottom=0.1, wspace=0.3, hspace=0.3)
-figw = plt.figure(figsize=(len(Sigma) * 6, len(Tau) * 4))
+figw = plt.figure(figsize=(len(Sigma) * 6, len(Tau) * 3))
 gsw = gridspec.GridSpec(len(Tau), len(Sigma), figure=figw, left=0.1, right=0.8, top=0.95, bottom=0.1, wspace=0.3, hspace=0.3)
-figr = plt.figure(figsize=(len(Sigma) * 6, len(Tau) * 4))
+figr = plt.figure(figsize=(len(Sigma) * 6, len(Tau) * 3))
 gsr = gridspec.GridSpec(len(Tau), len(Sigma), figure=figr, left=0.1, right=0.8, top=0.95, bottom=0.1, wspace=0.3, hspace=0.3)
 alpha = 0.05
 lim = {'deltadiv':np.tile([0.3, 0.5, 0.], (2, 1)), 'wdist':np.tile([2, 3.5, 7], (2, 1)), 'rss':np.array([[0.7e3, 2.5e3, 2e3], [1.5e3, 2.5e3, 2e3]])}
@@ -209,7 +209,7 @@ figr.savefig('Note/figures/vs-rss.pdf')
 figr.savefig('Note/figures/vs-rss.png')
 plt.close(figr)
 
-fig = plt.figure(figsize=(len(Sigma) * 6, len(Tau) * 4))
+fig = plt.figure(figsize=(len(Sigma) * 6, len(Tau) * 3))
 gs = gridspec.GridSpec(len(Tau), len(Sigma), figure=fig, left=0.1, right=0.95, top=0.95, bottom=0.1, wspace=0.3, hspace=0.3)
 for sigma, i in zip(Sigma, list(range(len(Sigma)))):
     for tau, j in zip(Tau, list(range(len(Tau)))):
@@ -252,7 +252,7 @@ tau = 20
 sigma = 10
 wdist = np.vstack([mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]['wdist'].mean(axis=0) for key in keylist])
 dy = np.vstack([wdist[:, 1] - wdist[:, 0], wdist[:, 2] - wdist[:, 1]])
-fig = plt.figure(figsize=(12, 6))
+fig = plt.figure(figsize=(8, 4))
 # fig.tight_layout()
 ax = fig.add_subplot(111)
 ax.bar(x, wdist[:, 1], color='b')
