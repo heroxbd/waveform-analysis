@@ -29,7 +29,7 @@ We can see that as method CNN uses Wasserstein distance as loss directly during 
     \caption{\label{fig:rsssummary} RSS of methods, error bar 5--95 percentile ($q_{rec}$)}
 \end{figure}
 
-The timing resolution $\delta$ using waveform analysis results (charge $q_{rec}$) of these methods are computed and collected. The $t_{0}$ reconstruction process is also MLE, which introduced by formula \eqref{eq:likelihood}. Additionally, MCMC can provide an estimation of $t_{0}$ directly, which is also collected, and FBMP provides dozens of samples of $q$, which allows us to derive MLE estimation of $t_{0}$. The comparison between timing resolution using the first PE, all PE, and the 5 methods is shown in figure~\ref{fig:deltamethods}. 
+The timing resolution $\delta$ using waveform analysis results (charge $q_{rec}$) of these methods are computed and collected. The $t_{0}$ reconstruction process is also MLE, which introduced by the formula \eqref{eq:likelihood}. Additionally, MCMC can provide an estimation of $t_{0}$ directly, which is also collected, and FBMP provides dozens of samples of $q$, which allows us to derive MLE estimation of $t_{0}$. The comparison between timing resolution using the first PE, all PE, and the 5 methods is shown in figure~\ref{fig:deltamethods}. 
 
 \begin{figure}[H]
     \centering
@@ -43,7 +43,7 @@ The timing resolution $\delta$ using waveform analysis results (charge $q_{rec}$
     \caption{\label{fig:recchargehist}  $q_{rec}$ distribution, $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$}
 \end{figure}
 
-In the figure, $\mathrm{MCMCcha}$ corresponds to reconstruction with recorded $q_{rec}$ during sampling and $\mathrm{MCMCt0}$ corresponds to reconstruction with $t_{0}$, which is directly collected in MCMC method. $\mathrm{FBMPcha}$ corresponds to reconstruction with maximum posterior probability model's $q_{rec}$ and $\mathrm{FBMPt0}$ corresponds to estimation of $t_{0}$ with all samples provided by FBMP. 
+In the figure, $\mathrm{MCMCcha}$ corresponds to reconstruction with recorded $q_{rec}$ during sampling and $\mathrm{MCMCt0}$ corresponds to reconstruction with $t_{0}$, which is directly collected in the MCMC method. $\mathrm{FBMPcha}$ corresponds to reconstruction with maximum posterior probability model's $q_{rec}$ and $\mathrm{FBMPt0}$ corresponds to the estimation of $t_{0}$ with all samples provided by FBMP. 
 
 All 5 methods (LucyDDM, Fitting, MCMC, CNN, FBMP) provide better timing resolution $\delta$ than only using the first PE during construction. 
 
@@ -57,7 +57,7 @@ During optimization of Wasserstein distance between $q_{rec}(t)$ and $q_{tru}(t)
 
 % Bayesian
 
-As the origin waveform $v_{w}(t)$ is contaminated by Gaussian noise, the optimization of single loss might be disturbed by the degeneracy of reconstruction results, which means for different $q_{rec}(t)$, the W-dist or RSS can result in the identity or very close. So it is adequate if we can obtain several samples from parameter space of $q$, and even superior if we can give a posterior probability of these samples. Additionally, the expansibility of the Bayesian method will allow us to retain sufficient information in subsequent steps such as event reconstruction. 
+As the origin waveform $v_{w}(t)$ is contaminated by Gaussian noise, the optimization a of single loss might be disturbed by the degeneracy of reconstruction results, which means for different $q_{rec}(t)$, the W-dist or RSS can result in the identity or very close. So it is adequate if we can obtain several samples from parameter space of $q$, and even superior if we can give the posterior probability of these samples. Additionally, the expansibility of the Bayesian method will allow us to retain sufficient information in subsequent steps such as event reconstruction. 
 
 % Time bin
 

@@ -1,6 +1,6 @@
 A figure of merit to distinguish the difference between reconstruction results and the truth is crucial. In many cases, the reconstruction result and truth can both be regarded as sampling results from some form of probability distribution. Here we introduce Wasserstein distance as a figure of merit that can contribute to the improvement of timing resolution. 
 
-Suppose $P(X)$ and $Q(X)$ are 2 probability density function of random variable $X$. There are many ways to measure the difference (distance) between $P(X)$ and $Q(X)$: 
+Suppose $P(X)$ and $Q(X)$ are 2 probability density functions of random variable $X$. There are many ways to measure the difference (distance) between $P(X)$ and $Q(X)$: 
 
 \begin{minipage}{.3\textwidth}
 \begin{align*}
@@ -18,7 +18,7 @@ Suppose $P(X)$ and $Q(X)$ are 2 probability density function of random variable 
 \end{figure}
 \end{minipage}
 
-But these distances have certain shortcomings. First, they cannot compare a discrete distribution with a continuous distribution. Second, they are not sensitive to timing: as the graph shows, the L2 distances between the distribution of $a,b_{1}$ and $a,b_{2}$ is both 0.25, but the shape of the $b_{1}$ and $b_{2}$ distribution is very different (see figure~\ref{fig:l2}). 
+But these distances have certain shortcomings. First, they cannot compare a discrete distribution with a continuous distribution. Second, they are not sensitive to timing: as the graph shows, the L2 distances between the distribution of $a,b_{1}$ and $a,b_{2}$ are both 0.25, but the shape of the $b_{1}$ and $b_{2}$ distribution is very different (see figure~\ref{fig:l2}). 
 
 \label{sub:Wasserstein distance}
 \begin{minipage}{.45\textwidth}

@@ -33,7 +33,7 @@ A threshold $v_{th}$ is settled with respect to electronics noise in simulation 
 
 \subsubsection{Fourier deconvolution}
 
-Third method is Fourier transform deconvolution. Assuming that the waveform is the convolution of $v_{spe}$ and $q(t)$, the Fast Fourier transform (FFT) of $v_{w}$ and $v_{spe}$ are computed. A rectangular filter, $f$, is implemented. Then we compute the inverse FFT of the quotient between filtered FFT of $v_{w}$ and FFT of $v_{spe}$. We pick out positive value from inverse FFT result, and normalize them to obtain $q_{rec}(t)$. The process is shown in formula \eqref{eq:fft}. 
+Third method is Fourier transform deconvolution. Assuming that the waveform is the convolution of $v_{spe}$ and $q(t)$, the Fast Fourier transform (FFT) of $v_{w}$ and $v_{spe}$ are computed. A rectangular filter, $f$, is implemented. Then we compute the inverse FFT of the quotient between filtered FFT of $v_{w}$ and FFT of $v_{spe}$. We pick out positive values from inverse FFT result, and normalize them to obtain $q_{rec}(t)$. The process is shown in formula \eqref{eq:fft}. 
 
 \begin{equation}
     q_{rec}(t) = \mathcal{F}^{-1}\{\frac{f[\mathcal{F}(v_{w})]}{\mathcal{F}(v_{spe})}\}
@@ -52,7 +52,7 @@ The demonstration here shows a result with W-dist = 1.77ns.
 
 Lucy-Richardson direct demodulation (LucyDDM) is a non-linear iteration method, to calculate the deconvolution of signals. It has been used in astronomy \cite{li_richardson-lucy_2019}, image processing, and many other fields. Lucy direct demodulation has an advantage against Fourier deconvolution which is a constraint that $q_{rec}(t)$ must be larger than 0. 
 
-In $n$-th iteration, the calculation shows in \eqref{eq:lucy-inter} where $v^{*}_{spe}$ is flipped $v_{spe}$. 
+In the $n$-th iteration, the calculation shows in \eqref{eq:lucy-inter} where $v^{*}_{spe}$ is flipped $v_{spe}$. 
 \begin{align}
     q_{rec}^{(0)} &= \frac{v_{w}}{\sum v_{spe}} \\
     q_{rec}^{(n)} &= q_{rec}^{(n-1)} \cdot \left(\frac{v_{w}}{q_{rec}^{(n-1)} \otimes v_{spe}} \otimes v^{*}_{spe}\right) \label{eq:lucy-inter}
@@ -75,9 +75,9 @@ Waveform is the convolution of $v_{spe}$ and $q_{rec}(t)$ (see formula~\eqref{eq
     L &= L(v_{r}, v_{w}) = L(q_{rec}, v_{spe}, v_{w}) = \mathrm{RSS}(v_{w}, q_{rec} \otimes v_{spe}) \label{eq:loss-rss}
 \end{align}
 
-In fitting process, the parameter are $q_{rec}(t)$ in each discrete hittime $t$. The complete information hidden in the original wave is disturbed by electronics noise and pile-up. The loss (see formula~\ref{eq:loss-rss}) which we optimize in fitting is the residual sum of squares (RSS) between the original wave $v_{w}(t)$ and reconstructed wave $v_{r}(t)$ according to the parameters. The parameters will tend to be preciser when the reconstructed wave approaching the original wave. 
+In fitting process, the parameters are $q_{rec}(t)$ in each discrete hittime $t$. The complete information hidden in the original wave is disturbed by electronics noise and pile-up. The loss (see formula~\ref{eq:loss-rss}) which we optimize in fitting is the residual sum of squares (RSS) between the original wave $v_{w}(t)$ and reconstructed wave $v_{r}(t)$ according to the parameters. The parameters will tend to be preciser when the reconstructed wave approaching the original wave. 
 
-Fitting program is implemented with Limited-memory BFGS with bound constraint \cite{byrd_limited_1995} (L-BFGS-B). L-BFGS-B has an advantage that the $q_{rec}$ are constrained to be larger than 0. The demonstration here shows a result with W-dist = 0.67ns. 
+The fitting program is implemented with Limited-memory BFGS with bound constraint \cite{byrd_limited_1995} (L-BFGS-B). L-BFGS-B has an advantage that the $q_{rec}$ are constrained to be larger than 0. The demonstration here shows a result with W-dist = 0.67ns. 
 
 \begin{figure}[H]
     \centering
@@ -85,7 +85,7 @@ Fitting program is implemented with Limited-memory BFGS with bound constraint \c
     \caption{Fitting Demo, W-dist = 0.67ns}
 \end{figure}
 
-The result reconstructing $q_{rec}$ when $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$ shows in figure. (see figure~\ref{fig:fitting-hist}) The overall result of W-dist reconstructing $q_{rec}$ shows in figure (see figure~\ref{fig:fitting-npe}). 
+The result reconstructing $q_{rec}$ when $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$ shows in figure. (see figure~\ref{fig:fitting-hist}) The overall result of W-dist reconstructing $q_{rec}$ shows in the figure (see figure~\ref{fig:fitting-npe}). 
 
 \begin{figure}[H]
 \begin{minipage}[t]{.5\textwidth}
@@ -120,7 +120,7 @@ The model and prior distribution are defined below:
     \mathrm{Mix}\mathcal{N}(q(t_{i}) | P_{q}(t_{i}), \mu_{g}, \sigma_{g}^{2}) &= (1 - P_{q}(t_{i}))\delta(q(t_{i})) + P_{q}(t_{i})\mathcal{N}(q(t_{i}) | \mu_{g}, \sigma_{g}^{2}) \label{eq:mixnormal}
 \end{align}
 
-where $t_{0}$ is the starting time of time profile and $L_{w}$ is nothing but a upper limit of $t_{0}$. $P_{q}(t_{i})$ is the equivalent charge expectation in time interval $[t_{i}, t_{i}+\mathrm{d}t]$, where $\mathrm{d}t$ is a man-made small time interval depends on the precision required. $q$ follow the probability Normal mixture distribution, whose probability density function (PDF) is $\mathrm{Mix}\mathcal{N}$ in \eqref{eq:mixnormal}. Given $q$, using function $F_{w}(q)$ is the rebuilt waveform expectation. 
+where $t_{0}$ is the starting time of time profile and $L_{w}$ is nothing but an upper limit of $t_{0}$. $P_{q}(t_{i})$ is the equivalent charge expectation in time interval $[t_{i}, t_{i}+\mathrm{d}t]$, where $\mathrm{d}t$ is a man-made small time interval depends on the precision required. $q$ follow the probability Normal mixture distribution, whose probability density function (PDF) is $\mathrm{Mix}\mathcal{N}$ in \eqref{eq:mixnormal}. Given $q$, using function $F_{w}(q)$ is the rebuilt waveform expectation. 
 
 We use NumPyro \cite{phan2019composable}, a graceful probabilistic programming library, to build the model and sample. One of the sampling results shows in figure~\ref{fig:mcmcrec-t0hist}. 
 
@@ -194,9 +194,9 @@ A direct implementation of judgment metrics into loss function is often difficul
 \end{figure}
 
 % Result
-In the training process, we trained CNN for each PMT channel. The loss which is Wasserstein distance during training show in figure~\ref{fig:loss}. 
+In the training process, we trained CNN for each PMT channel. The loss which is Wasserstein distance during training shows in figure~\ref{fig:loss}. 
 
-The result reconstructing $q_{rec}$ when $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$ shows in figure (see figure~\ref{fig:cnn-hist}). The overall result of W-dist reconstructing $q_{rec}$ shows in figure (see figure~\ref{fig:cnn-npe}). The result shows that CNN is the best for reconstruction of $q_{rec}(t)$. 
+The result reconstructing $q_{rec}$ when $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$ shows in figure (see figure~\ref{fig:cnn-hist}). The overall result of W-dist reconstructing $q_{rec}$ shows in figure (see figure~\ref{fig:cnn-npe}). 
 
 \begin{figure}[H]
 \begin{minipage}[t]{.5\textwidth}
@@ -226,7 +226,7 @@ Fast Bayesian Matching Pursuit (FBMP) is a parameters estimation method for spar
 
 in which $A$ is a matrix derived from SPE response~\eqref{eq:dayaspe}. $\boldsymbol{q}$ is the charge vector of PE with length $N$, in which most elements are zeros. FBMP algorithm select model before estimation of $q$. For a certain model, $\boldsymbol{s}$ is a model selection vector that contains only 0 and 1. Only if $s_{n}=1$, $q_{n}\neq0$, where $\{q_{n}\}_{n=0}^{N-1}$. Implementing the maximum a posteriori (MAP) model-vector estimate (given by~\eqref{eq:map}), a repeated greedy search (RGS) is performed to get a set of dominant models, $\mathcal{S}_{*}$, in the parameter space of $\boldsymbol{s}$. RGS will stop after a controlled number of steps, as we believe the search for dominant models set is sufficient enough. Additionally, a linear algebra trick reduces the complexity of the algorithm \cite{schniter_fast_nodate}. Finally, a set of dominant models $\mathcal{S}_{*}$ and its corresponding set of posterior probability, as well as estimations of $\boldsymbol{q}$ for each model in $\mathcal{S}_{*}$, are collected to be the approximation of sparse posterior estimation of $\boldsymbol{q}$. We use the charge estimation of the maximum posterior probability model as the waveform analysis result. 
 
-The figure~\ref{fig:fbmp} shows one of the FBMP results. We can see the origin waveform $v_{w}$ and reconstructed waveform $v_{r}$ are very similar. The reconstructed and truth $q_{rec}$ are also similar. 
+Figure~\ref{fig:fbmp} shows one of the FBMP results. We can see the origin waveform $v_{w}$ and reconstructed waveform $v_{r}$ are very similar. The reconstructed and truth $q_{rec}$ are also similar. 
 
 \begin{figure}[H]
     \centering
@@ -234,7 +234,7 @@ The figure~\ref{fig:fbmp} shows one of the FBMP results. We can see the origin w
     \caption{\label{fig:fbmp} FBMP Demo, W-dist = 0.27}
 \end{figure}
 
-The result reconstructing $q_{rec}$ when $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$ shows in figure. (see figure~\ref{fig:fbmp-hist}) The overall result of W-dist reconstructing $q_{rec}$ shows in figure (see figure~\ref{fig:fbmp-npe}). 
+The result reconstructing $q_{rec}$ when $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$ shows in figure. (see figure~\ref{fig:fbmp-hist}) The overall result of W-dist reconstructing $q_{rec}$ shows in the figure (see figure~\ref{fig:fbmp-npe}). 
 
 \begin{figure}[H]
 \begin{minipage}[t]{.5\textwidth}
