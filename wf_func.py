@@ -36,6 +36,8 @@ plt.rcParams['text.usetex'] = True
 plt.rcParams['pgf.texsystem'] = 'pdflatex'
 plt.rcParams['axes.unicode_minus'] = False
 
+nshannon = 5
+
 def xiaopeip(wave, spe_pre, eta=0):
     l = len(wave)
     flag = 1
@@ -111,7 +113,7 @@ def lucyddm(waveform, spe_pre):
     while True:
         relative_blur = waveform / np.convolve(wave_deconv, spe, mode='same')
         new_wave_deconv = wave_deconv * np.convolve(relative_blur, spe_mirror, mode='same')
-        if np.max(np.abs(wave_deconv[9:] - new_wave_deconv[9:])) < 1e-4:
+        if np.max(np.abs(wave_deconv[9:] - new_wave_deconv[9:])) < 1e-3:
             break
         else:
             wave_deconv = new_wave_deconv
@@ -231,7 +233,13 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0):
 
     return xmmse, xmmse_star, psy_star, nu_star, T_star, d_tot, d_max
 
-def read_model(spe_path):
+def shannon_interpolation(w, n):
+    t = np.arange(0, len(w), 1 / n)
+    l = np.arange(len(w))
+    y = np.sum(np.sinc(t[:, None] - l) * w, axis=1)
+    return y
+
+def read_model(spe_path, n):
     with h5py.File(spe_path, 'r', libver='latest', swmr=True) as speFile:
         cid = speFile['SinglePE'].attrs['ChannelID']
         epulse = speFile['SinglePE'].attrs['Epulse']
@@ -254,9 +262,9 @@ def read_model(spe_path):
             mar_l = opti.fsolve(fl, x0=np.sum(spe[i][:peak_c] < 5 * std[i]))[0]
             fr = interp1d(np.arange(0, len(spe[i]) - peak_c), 5 * std[i] - spe[i][peak_c:])
             mar_r = t - (opti.fsolve(fr, x0=np.sum(spe[i][peak_c:] > 5 * std[i]))[0] + peak_c)
-            spe_pre_i = {'spe':spe[i], 'epulse':epulse, 'peak_c':peak_c, 'mar_l':mar_l, 'mar_r':mar_r, 'std':std[i], 'parameters':p[i]}
+            ax.plot(spe[i])
+            spe_pre_i = {'spe':interp1d(np.arange(len(spe[i])), spe[i])(np.arange(0, len(spe[i]) - 1, 1 / n)), 'epulse':epulse, 'peak_c':peak_c * n, 'mar_l':mar_l * n, 'mar_r':mar_r * n, 'std':std[i], 'parameters':p[i]}
             spe_pre.update({cid[i]:spe_pre_i})
-            ax.plot(spe_pre[cid[i]]['spe'])
         ax.grid()
         ax.set_xlabel(r'$Time/\mathrm{ns}$')
         ax.set_ylabel(r'$Voltage/\mathrm{mV}$')
@@ -342,25 +350,26 @@ def likelihoodt0(hitt, char, gmu, gsigma, Tau, Sigma, npe, s0=None, mode='charge
         t0delta = abs(opti.fmin_l_bfgs_b(logLvdelta, x0=[tlist[np.argmin(np.abs(logLv_tlist - logL(t0) - 0.5))]], approx_grad=True, bounds=[b], maxfun=500000)[0] - t0)
     return t0, t0delta
 
-def initial_params(wave, spe_pre, Mu, Tau, Sigma, gmu, gsigma, Thres, npe, p, nsp, nstd, is_t0=False, is_delta=False):
-    hitt, char = lucyddm(wave, spe_pre['spe'])
+def initial_params(wave, spe_pre, Mu, Tau, Sigma, gmu, gsigma, Thres, npe, p, nsp, nstd, is_t0=False, is_delta=False, nshannon=1):
+    hitt, char = lucyddm(wave[::nshannon], spe_pre['spe'][::nshannon])
     hitt, char = clip(hitt, char, Thres)
-    char = char / char.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
-    tlist = np.unique(np.floor(np.clip(np.hstack(hitt[:, None] + np.arange(-nsp, nsp+1)), 0, len(wave) - 1)))
-    npe_init = np.zeros(len(tlist))
-    npe_init[np.isin(tlist, hitt)] = char / gmu
+    char = char / char.sum() * np.clip(np.abs(wave[::nshannon].sum()), 1e-6, np.inf)
+    tlist = np.unique(np.clip(np.hstack(hitt[:, None] + np.arange(-nsp, nsp+1)), 0, len(wave[::nshannon]) - 1))
 
-    index_prom = np.hstack([np.argwhere(wave > nstd * spe_pre['std']).flatten(), hitt])
-    left_wave = np.clip(index_prom.min() - round(3 * spe_pre['mar_l']), 0, len(wave) - 1)
-    right_wave = np.clip(index_prom.max() + round(3 * spe_pre['mar_r']), 0, len(wave) - 1)
+    index_prom = np.hstack([np.argwhere(wave > nstd * spe_pre['std']).flatten(), hitt * nshannon])
+    left_wave = round(np.clip(index_prom.min() - 3 * spe_pre['mar_l'], 0, len(wave) - 1))
+    right_wave = round(np.clip(index_prom.max() + 3 * spe_pre['mar_r'], 0, len(wave) - 1))
     wave = wave[left_wave:right_wave]
 
-    window = len(wave)
     n = max(math.ceil(Mu / math.sqrt(Tau ** 2 + Sigma ** 2)), 1)
 
-    tlist = np.sort(np.hstack(tlist[:, None] + np.arange(0, 1, 1 / n)))
+    npe_init = np.zeros(len(tlist))
+    npe_init[np.isin(tlist, hitt)] = char / gmu
+    # npe_init = np.repeat(npe_init, n * nshannon) / (n * nshannon)
+    # tlist = np.unique(np.sort(np.hstack(tlist[:, None] + np.linspace(0, 1, n * nshannon, endpoint=False))))
     npe_init = np.repeat(npe_init, n) / n
-    t_auto = np.arange(left_wave, right_wave)[:, None] - tlist
+    tlist = np.unique(np.sort(np.hstack(tlist[:, None] + np.linspace(0, 1, n, endpoint=False))))
+    t_auto = (np.arange(left_wave, right_wave) / nshannon)[:, None] - tlist
     A = p[2] * np.exp(-1 / 2 * (np.log((t_auto + np.abs(t_auto)) * (1 / p[0] / 2)) * (1 / p[1])) ** 2)
 
     t0_init = None
@@ -374,7 +383,7 @@ def stdrmoutlier(array, r):
     std = np.std(arrayrmoutlier, ddof=-1)
     return std, len(arrayrmoutlier)
 
-def demo(pet_sub, cha_sub, tth, spe_pre, window, wave, cid, p, full=False, fold='Note/figures', ext='.pgf'):
+def demo(pet_sub, cha_sub, tth, spe_pre, window, wave, cid, p, full=False, fold='Note/figures', ext='.pgf', n=1):
     penum = len(tth)
     print('PEnum is {}'.format(penum))
     pan = np.arange(window)
@@ -387,12 +396,12 @@ def demo(pet_sub, cha_sub, tth, spe_pre, window, wave, cid, p, full=False, fold=
     distl = 'cdiff'
     edist = cha_sub.sum() - cha_ans.sum()
     print('truth HitPosInWindow = {}, Weight = {}'.format(pet_ans, cha_ans))
-    wav_ans = np.sum([np.where(pan > pet_ans[j], spe(pan - pet_ans[j], tau=p[0], sigma=p[1], A=p[2]) * cha_ans[j] / spe_pre['spe'].sum(), 0) for j in range(len(pet_ans))], axis=0)
+    wav_ans = np.sum([np.where(pan > pet_ans[j], spe(pan - pet_ans[j], tau=p[0], sigma=p[1], A=p[2]) * cha_ans[j] / spe_pre['spe'].sum() * n, 0) for j in range(len(pet_ans))], axis=0)
     print('truth Resi-norm = {}'.format(np.linalg.norm(wave - wav_ans)))
     print('HitPosInWindow = {}, Weight = {}'.format(pet_sub, cha_sub))
     wdist = scipy.stats.wasserstein_distance(pet_ans, pet_sub, u_weights=cha_ans, v_weights=cha_sub)
     print('wdist = {}, '.format(wdist) + distl + ' = {}'.format(edist))
-    wav_sub = np.sum([np.where(pan > pet_sub[j], spe(pan - pet_sub[j], tau=p[0], sigma=p[1], A=p[2]) * cha_sub[j] / spe_pre['spe'].sum(), 0) for j in range(len(pet_sub))], axis=0)
+    wav_sub = np.sum([np.where(pan > pet_sub[j], spe(pan - pet_sub[j], tau=p[0], sigma=p[1], A=p[2]) * cha_sub[j] / spe_pre['spe'].sum() * n, 0) for j in range(len(pet_sub))], axis=0)
     print('Resi-norm = {}'.format(np.linalg.norm(wave - wav_sub)))
 
     fig = plt.figure(figsize=(10, 10))
@@ -449,7 +458,7 @@ def demo(pet_sub, cha_sub, tth, spe_pre, window, wave, cid, p, full=False, fold=
     # fig.tight_layout()
     gs = gridspec.GridSpec(1, 1, figure=fig, left=0.1, right=0.85, top=0.95, bottom=0.15, wspace=0.4, hspace=0.5)
     ax = fig.add_subplot(gs[0, 0])
-    ax.plot(spe_pre['spe'], c='b')
+    ax.plot(np.arange(len(spe_pre['spe'])) / n, spe_pre['spe'], c='b')
     ax.grid()
     ax.set_xlabel('$t/\mathrm{ns}$')
     ax.set_ylabel('$Voltage/\mathrm{mV}$')

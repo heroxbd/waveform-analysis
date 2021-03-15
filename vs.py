@@ -93,13 +93,13 @@ rhigh = np.array([[np.max(mts[key]['RSS'])] for key in mts.keys()])
 rhigh = np.max(rhigh[~np.isnan(rhigh)]) * 1.05
 
 figd = plt.figure(figsize=(len(Sigma) * 6, len(Tau) * 3))
-gsd = gridspec.GridSpec(len(Tau), len(Sigma), figure=figd, left=0.1, right=0.8, top=0.95, bottom=0.1, wspace=0.3, hspace=0.3)
+gsd = gridspec.GridSpec(len(Tau), len(Sigma), figure=figd, left=0.1, right=0.8, top=0.95, bottom=0.1, wspace=0.3, hspace=0.35)
 figdd = plt.figure(figsize=(len(Sigma) * 6, len(Tau) * 3))
-gsdd = gridspec.GridSpec(len(Tau), len(Sigma), figure=figd, left=0.1, right=0.8, top=0.95, bottom=0.1, wspace=0.3, hspace=0.3)
+gsdd = gridspec.GridSpec(len(Tau), len(Sigma), figure=figd, left=0.1, right=0.8, top=0.95, bottom=0.1, wspace=0.3, hspace=0.35)
 figw = plt.figure(figsize=(len(Sigma) * 6, len(Tau) * 3))
-gsw = gridspec.GridSpec(len(Tau), len(Sigma), figure=figw, left=0.1, right=0.8, top=0.95, bottom=0.1, wspace=0.3, hspace=0.3)
+gsw = gridspec.GridSpec(len(Tau), len(Sigma), figure=figw, left=0.1, right=0.8, top=0.95, bottom=0.1, wspace=0.3, hspace=0.35)
 figr = plt.figure(figsize=(len(Sigma) * 6, len(Tau) * 3))
-gsr = gridspec.GridSpec(len(Tau), len(Sigma), figure=figr, left=0.1, right=0.8, top=0.95, bottom=0.1, wspace=0.3, hspace=0.3)
+gsr = gridspec.GridSpec(len(Tau), len(Sigma), figure=figr, left=0.1, right=0.8, top=0.95, bottom=0.1, wspace=0.3, hspace=0.35)
 alpha = 0.05
 lim = {'deltadiv':np.tile([0.3, 0.5, 0.], (2, 1)), 'wdist':np.tile([2, 3.5, 7], (2, 1)), 'rss':np.array([[0.7e3, 2.5e3, 2e3], [1.5e3, 2.5e3, 2e3]])}
 keylist = list(mts.keys())
@@ -210,7 +210,7 @@ figr.savefig('Note/figures/vs-rss.png')
 plt.close(figr)
 
 fig = plt.figure(figsize=(len(Sigma) * 6, len(Tau) * 3))
-gs = gridspec.GridSpec(len(Tau), len(Sigma), figure=fig, left=0.1, right=0.95, top=0.95, bottom=0.1, wspace=0.3, hspace=0.3)
+gs = gridspec.GridSpec(len(Tau), len(Sigma), figure=fig, left=0.1, right=0.95, top=0.95, bottom=0.1, wspace=0.3, hspace=0.35)
 for sigma, i in zip(Sigma, list(range(len(Sigma)))):
     for tau, j in zip(Tau, list(range(len(Tau)))):
         ax = fig.add_subplot(gs[j, i])

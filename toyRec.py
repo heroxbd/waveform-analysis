@@ -29,7 +29,7 @@ def start_time(a0, a1):
         stime[i - a0] = t0
     return stime
 
-spe_pre = wff.read_model(args.ref[1])
+spe_pre = wff.read_model(args.ref[1], wff.nshannon)
 with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as ipt, h5py.File(args.ref[0], 'r', libver='latest', swmr=True) as ref:
     npe = ref['SimTruth/T'].attrs['npe']
     gmu = ref['SimTriggerInfo/PEList'].attrs['gmu']

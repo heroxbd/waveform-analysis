@@ -49,7 +49,7 @@ def wpdist(a, b):
         dt['RSS_recon'][c] = np.power(wav_sub - wave, 2).sum()
     return dt
 
-spe_pre = wff.read_model(args.ref[1])
+spe_pre = wff.read_model(args.ref[1], 1)
 with h5py.File(fref, 'r', libver='latest', swmr=True) as ref, h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
     df_ans = ref['SimTriggerInfo']['PEList'][:]
     df_wav = ref['Readout']['Waveform'][:]

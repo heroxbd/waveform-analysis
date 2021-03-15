@@ -45,7 +45,8 @@ fopt = args.opt
 reference = args.ref
 method = args.met
 
-spe_pre = wff.read_model(reference)
+nshannon = wff.nshannon
+spe_pre = wff.read_model(reference, nshannon)
 with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
     ent = ipt['Readout/Waveform'][:]
     pelist = ipt['SimTriggerInfo/PEList'][:]
@@ -91,7 +92,7 @@ def loglikelihood(t0, tlist, xmmse, psy_star, like, c=1):
 
 class mNormal(numpyro.distributions.distribution.Distribution):
     arg_constraints = {'pl': numpyro.distributions.constraints.real}
-    support = numpyro.distributions.constraints.positive
+    support = numpyro.distributions.constraints.real
     reparametrized_params = ['pl']
 
     def __init__(self, pl, s, mu, sigma, validate_args=None):
@@ -109,10 +110,10 @@ class mNormal(numpyro.distributions.distribution.Distribution):
         logprob1 = self.norm1.log_prob(value)
         prob = jnp.vstack([logprob0, logprob1])
         pl = jnp.vstack([(1 - self.pl), self.pl])
-        return jax.scipy.special.logsumexp(prob, axis=0, b=pl) + jnp.log(2)
+        return jax.scipy.special.logsumexp(prob, axis=0, b=pl)
 
 def time_numpyro(a0, a1):
-    nsp = 10
+    nsp = 100
     nstd = -5
     Awindow = int(window * 0.95)
     rng_key = jax.random.PRNGKey(1)
@@ -120,6 +121,7 @@ def time_numpyro(a0, a1):
     stime_t0 = np.empty(a1 - a0)
     stime_cha = np.empty(a1 - a0)
     accep = np.full(a1 - a0, np.nan)
+    mix0ratio = np.full(a1 - a0, np.nan)
     dt = np.zeros((a1 - a0) * Awindow * 2, dtype=opdt)
     start = 0
     end = 0
@@ -142,7 +144,7 @@ def time_numpyro(a0, a1):
         cid = ent[i]['ChannelID']
         wave = ent[i]['Waveform'].astype(np.float64) * spe_pre[cid]['epulse']
 
-        AV, wave, tlist, t0_init, t0_init_delta, A_init, n = wff.initial_params(wave, spe_pre[cid], Mu, Tau, Sigma, gmu, gsigma, Thres['lucyddm'], npe, p, nsp, nstd, is_t0=True)
+        AV, wave, tlist, t0_init, t0_init_delta, A_init, n = wff.initial_params(wave, spe_pre[cid], Mu, Tau, Sigma, gmu, gsigma, Thres['lucyddm'], npe, p, nsp, nstd, is_t0=True, nshannon=nshannon)
         AV = jnp.array(AV)
         wave = jnp.array(wave)
         tlist = jnp.array(tlist)
@@ -165,7 +167,7 @@ def time_numpyro(a0, a1):
             count = count + 1
 
             # # tlist_pan = np.array(tlist)
-            # tlist_pan = np.sort(np.hstack(np.arange(window)[:, None] + np.arange(0, 1, 1 / n)))
+            # tlist_pan = np.sort(np.unique(np.hstack(np.arange(0, window * nshannon)[:, None] + np.arange(0, 1, 1 / n)))) / nshannon
             # btlist = np.arange(t0_init - 3 * Sigma, t0_init + 3 * Sigma + 1e-6, 0.2)
 
             # As = np.zeros((1, len(tlist_pan)))
@@ -185,6 +187,7 @@ def time_numpyro(a0, a1):
         time_mcmc = time_mcmc + time.time() - time_mcmc_start
         pet = np.array(tlist)
         cha = np.mean(A, axis=0)
+        mix0ratio[i - a0] = (np.abs(cha) < 5 * mix0sigma).sum() / len(cha)
         pet, cha = wff.clip(pet, cha, 0)
         cha = cha * gmu
         t0_cha, _ = wff.likelihoodt0(pet, char=cha, gmu=gmu, gsigma=gsigma, Tau=Tau, Sigma=Sigma, npe=npe, s0=s0, mode='charge')
@@ -198,7 +201,7 @@ def time_numpyro(a0, a1):
         start = end
     dt = dt[:end]
     dt = np.sort(dt, kind='stable', order=['TriggerNo', 'ChannelID'])
-    return stime_t0, stime_cha, dt, count, time_mcmc, accep
+    return stime_t0, stime_cha, dt, count, time_mcmc, accep, mix0ratio
 
 def fbmp_inference(a0, a1):
     nsp = 4
@@ -212,19 +215,14 @@ def fbmp_inference(a0, a1):
     start = 0
     end = 0
     factor = np.linalg.norm(spe_pre[0]['spe'])
-    tlist = np.arange(0, window - len(spe_pre[0]['spe']))
-    t_auto = np.arange(window)[:, None] - tlist
-    A = p[2] * np.exp(-1 / 2 * np.power((np.log((t_auto + np.abs(t_auto)) * (1 / p[0] / 2)) * (1 / p[1])), 2))
-    A = A / factor
-    # A = np.matmul(A, np.diag(1. / np.sqrt(np.diag(np.matmul(A.T, A)))))
     b = [0., 600.]
     time_fbmp = 0
     for i in range(a0, a1):
         truth = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
         cid = ent[i]['ChannelID']
-        wave = ent[i]['Waveform'].astype(np.float64) * spe_pre[cid]['epulse']
+        wave = wff.shannon_interpolation(ent[i]['Waveform'].astype(np.float64) * spe_pre[cid]['epulse'], nshannon)
 
-        A, wave_r, tlist, t0_init, t0_init_delta, char_init, n = wff.initial_params(wave, spe_pre[ent[i]['ChannelID']], Mu, Tau, Sigma, gmu, gsigma, Thres['lucyddm'], npe, p, nsp, nstd, is_t0=True, is_delta=False)
+        A, wave_r, tlist, t0_init, t0_init_delta, char_init, n = wff.initial_params(wave, spe_pre[ent[i]['ChannelID']], Mu, Tau, Sigma, gmu, gsigma, Thres['lucyddm'], npe, p, nsp, nstd, is_t0=True, is_delta=False, nshannon=nshannon)
         time_fbmp_start = time.time()
         A = A / factor
         # A = np.matmul(A, np.diag(1. / np.sqrt(np.diag(np.matmul(A.T, A)))))
@@ -232,7 +230,7 @@ def fbmp_inference(a0, a1):
         time_fbmp = time_fbmp + time.time() - time_fbmp_start
 
         # tlist_pan = tlist
-        tlist_pan = np.sort(np.hstack(np.arange(window)[:, None] + np.arange(0, 1, 1 / n)))
+        tlist_pan = np.sort(np.unique(np.hstack(np.arange(0, window * nshannon)[:, None] + np.arange(0, 1, 1 / n)))) / nshannon
         As = np.zeros((len(xmmse_star), len(tlist_pan)))
         As[:, np.isin(tlist_pan, tlist)] = np.clip(xmmse_star, 0, np.inf) / factor
         if sum(np.sum(As, axis=0) > 0):
@@ -240,14 +238,14 @@ def fbmp_inference(a0, a1):
             pet = tlist[xmmse_most > 0]
             cha = xmmse_most[xmmse_most > 0] / factor
 
-            logL = lambda t0 : -1 * loglikelihood(t0, tlist_pan, As, psy_star, like='mix01', c=Mu / n)
+            logL = lambda t0 : -1 * loglikelihood(t0, tlist_pan, As, psy_star, like='mix01', c=Mu / (n * nshannon))
             btlist = np.arange(t0_init - 3 * Sigma, t0_init + 3 * Sigma + 1e-6, 0.2)
             logLv_btlist = np.vectorize(logL)(btlist)
             t0_t0 = opti.fmin_l_bfgs_b(logL, x0=[btlist[np.argmin(logLv_btlist)]], approx_grad=True, bounds=[b], maxfun=50000)[0]
             # logLvdelta = np.vectorize(lambda t : np.abs(logL(t) - logL(t0_t0) - 0.5))
             # t0_t0delta = abs(opti.fmin_l_bfgs_b(logLvdelta, x0=[btlist[np.argmin(np.abs(logLv_btlist - logL(t0_t0) - 0.5))]], approx_grad=True, bounds=[b], maxfun=50000)[0] - t0_t0)
 
-            logL = lambda t0 : -1 * loglikelihood(t0, tlist_pan, As[0][None, :], psy_star, like='mix01', c=Mu / n)
+            logL = lambda t0 : -1 * loglikelihood(t0, tlist_pan, As[0][None, :], psy_star, like='mix01', c=Mu / (n * nshannon))
             logLv_btlist = np.vectorize(logL)(btlist)
             t0_cha = opti.fmin_l_bfgs_b(logL, x0=[btlist[np.argmin(logLv_btlist)]], approx_grad=True, bounds=[b], maxfun=50000)[0]
             # logLvdelta = np.vectorize(lambda t : np.abs(logL(t) - logL(t0_cha) - 0.5))
@@ -308,11 +306,17 @@ if method == 'mcmc':
     time_mcmc = np.hstack([result[i][4] for i in range(len(slices))]).mean()
     print('MCMC finished, real time {0:.02f}s'.format(time_mcmc))
     accep = np.hstack([result[i][5] for i in range(len(slices))])
+    mix0ratio = np.hstack([result[i][6] for i in range(len(slices))])
 
-    ff = plt.figure(figsize=(8, 6))
-    ax = ff.add_subplot()
+    ff = plt.figure(figsize=(16, 6))
+    ax = ff.add_subplot(121)
     ax.hist(accep, bins=np.arange(0, 1+0.02, 0.02), label='accept_prob')
     ax.set_xlabel('accept_prob')
+    ax.set_ylabel('Count')
+    ax.legend(loc='upper left')
+    ax = ff.add_subplot(122)
+    ax.hist(mix0ratio, bins=np.arange(0, 1+0.02, 0.02), label='mix0ratio')
+    ax.set_xlabel('mix0ratio')
     ax.set_ylabel('Count')
     ax.legend(loc='upper left')
     ff.savefig(os.path.splitext(fopt)[0] + '.png')
@@ -343,9 +347,10 @@ elif method == 'fbmp':
     ax.bar(di, ci, label='d_max')
     ax.set_xlabel('d_max')
     ax.set_ylabel('Count')
-    ax.legend()
+    ax.legend(loc='upper center')
     ff.savefig(os.path.splitext(fopt)[0] + '.png')
     plt.close()
+
     As = np.sort(As, kind='stable', order=['TriggerNo', 'ChannelID'])
 
 print('Prediction generated, real time {0:.02f}s, cpu time {1:.02f}s'.format(time.time() - tic, time.process_time() - cpu_tic))

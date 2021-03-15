@@ -13,6 +13,7 @@ from numpy.lib import recfunctions
 import scipy.optimize as optimize
 import scipy.interpolate as interpolate
 from scipy.stats import poisson, uniform, norm, chi2
+from scipy import integrate
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
@@ -36,7 +37,7 @@ npe = 3
 gmu = 160.
 gsigma = 40.
 p = [8., 0.5, 24.]
-p[2] = p[2] * gmu / np.sum(wff.spe(np.arange(window), tau=p[0], sigma=p[1], A=p[2]))
+p[2] = p[2] * gmu / integrate.quad(lambda t : wff.spe(np.array([t]), tau=p[0], sigma=p[1], A=p[2]), 0, 100)[0]
 std = 1.
 
 def sampling(a0, a1, mu, tau, sigma):
