@@ -239,7 +239,7 @@ def shannon_interpolation(w, n):
     y = np.sum(np.sinc(t[:, None] - l) * w, axis=1)
     return y
 
-def read_model(spe_path, n):
+def read_model(spe_path, n=1):
     with h5py.File(spe_path, 'r', libver='latest', swmr=True) as speFile:
         cid = speFile['SinglePE'].attrs['ChannelID']
         epulse = speFile['SinglePE'].attrs['Epulse']

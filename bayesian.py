@@ -206,7 +206,7 @@ def time_numpyro(a0, a1):
 def fbmp_inference(a0, a1):
     nsp = 4
     nstd = 3
-    D = 20
+    D = 100
     stime_t0 = np.empty(a1 - a0)
     stime_cha = np.empty(a1 - a0)
     dt = np.zeros((a1 - a0) * window, dtype=opdt)
@@ -220,7 +220,8 @@ def fbmp_inference(a0, a1):
     for i in range(a0, a1):
         truth = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
         cid = ent[i]['ChannelID']
-        wave = wff.shannon_interpolation(ent[i]['Waveform'].astype(np.float64) * spe_pre[cid]['epulse'], nshannon)
+        # wave = wff.shannon_interpolation(ent[i]['Waveform'].astype(np.float64) * spe_pre[cid]['epulse'], nshannon)
+        wave = ent[i]['Waveform'].astype(np.float64) * spe_pre[cid]['epulse']
 
         A, wave_r, tlist, t0_init, t0_init_delta, char_init, n = wff.initial_params(wave, spe_pre[ent[i]['ChannelID']], Mu, Tau, Sigma, gmu, gsigma, Thres['lucyddm'], npe, p, nsp, nstd, is_t0=True, is_delta=False, nshannon=nshannon)
         time_fbmp_start = time.time()
@@ -230,7 +231,8 @@ def fbmp_inference(a0, a1):
         time_fbmp = time_fbmp + time.time() - time_fbmp_start
 
         # tlist_pan = tlist
-        tlist_pan = np.sort(np.unique(np.hstack(np.arange(0, window * nshannon)[:, None] + np.arange(0, 1, 1 / n)))) / nshannon
+        # tlist_pan = np.sort(np.unique(np.hstack(np.arange(0, window * nshannon)[:, None] + np.arange(0, 1, 1 / n)))) / nshannon
+        tlist_pan = np.sort(np.unique(np.hstack(np.arange(0, window)[:, None] + np.arange(0, 1, 1 / n)))) / nshannon
         As = np.zeros((len(xmmse_star), len(tlist_pan)))
         As[:, np.isin(tlist_pan, tlist)] = np.clip(xmmse_star, 0, np.inf) / factor
         if sum(np.sum(As, axis=0) > 0):

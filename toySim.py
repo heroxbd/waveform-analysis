@@ -45,13 +45,13 @@ def sampling(a0, a1, mu, tau, sigma):
     npe = poisson.ppf(1 - uniform.rvs(scale=1-poisson.cdf(0, mu), size=a1 - a0), mu).astype(int)
     t0 = np.random.uniform(100., 500., size=a1 - a0)
     sams = [np.vstack((wff.time(npe[i], tau, sigma) + t0[i], wff.charge(npe[i], gmu=gmu, gsigma=gsigma, thres=0))).T for i in range(a1 - a0)]
-    wdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('Waveform', np.int16, window)])
+    wdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('Waveform', np.int16, window * wff.nshannon)])
     waves = np.empty(a1 - a0).astype(wdtp)
-    pan = np.arange(window)
+    pan = np.arange(0, window, 1 / wff.nshannon)
     for i in range(a1 - a0):
         wave = np.sum([np.where(pan > sams[i][j, 0], wff.spe(pan - sams[i][j, 0], tau=p[0], sigma=p[1], A=p[2]) * sams[i][j, 1] / gmu, 0) for j in range(len(sams[i]))], axis=0)
         if args.noi:
-            wave = wave + np.random.normal(0, std, size=window)
+            wave = wave + np.random.normal(0, std, size=window * wff.nshannon)
         waves[i]['Waveform'] = np.around(wave).astype(np.int16)
     tdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('T0', np.float64)])
     t = np.empty(a1 - a0).astype(tdtp)
