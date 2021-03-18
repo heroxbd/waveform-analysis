@@ -32,8 +32,6 @@ method = args.met
 
 Thres = {'xiaopeip':0.2, 'lucyddm':0.2, 'fftrans':0.1, 'findpeak':0.1, 'threshold':0.1, 'omp':0}
 
-n = 1
-
 def fitting(a, b):
     nsp = 4
     time_method = 0
@@ -44,15 +42,8 @@ def fitting(a, b):
         start = 0
         end = 0
         p = spe_pre[0]['parameters']
-        factor = np.linalg.norm(spe_pre[0]['spe'])
-        tlist = np.arange(0, window - len(spe_pre[0]['spe']))
-        t_auto = np.arange(window)[:, None] - tlist
-        A = p[2] * np.exp(-1 / 2 * np.power((np.log((t_auto + np.abs(t_auto)) * (1 / p[0] / 2)) * (1 / p[1])), 2))
-        A = A / factor
-        # A = np.matmul(A, np.diag(1. / np.sqrt(np.diag(np.matmul(A.T, A)))))
         for i in range(a, b):
-            wave = ent[i]['Waveform'].astype(np.float64) * spe_pre[ent[i]['ChannelID']]['epulse']
-            wave = wff.shannon_interpolation(wave, n)
+            wave = ent[i]['Waveform'].astype(np.float64)[::wff.nshannon] * spe_pre[ent[i]['ChannelID']]['epulse']
 
             time_method_start = time.time()
             if method == 'xiaopeip':
@@ -67,13 +58,12 @@ def fitting(a, b):
                 pet, cha = wff.findpeak(wave, spe_pre[ent[i]['ChannelID']])
             elif method == 'threshold':
                 pet, cha = wff.threshold(wave, spe_pre[ent[i]['ChannelID']])
-            pet, cha = wff.clip(pet, cha, Thres[method] / n)
-            cha = cha / cha.sum() * np.clip(np.abs(wave.sum()) / n, 1e-6, np.inf)
-            pet = pet / n
+            pet, cha = wff.clip(pet, cha, Thres[method])
+            cha = cha / cha.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
             time_method = time_method + time.time() - time_method_start
 
-            # truth = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
-            # wff.demo(pet, cha, truth, spe_pre[ent[i]['ChannelID']], window, ent[i]['Waveform'].astype(np.float64) * spe_pre[ent[i]['ChannelID']]['epulse'], ent[i]['ChannelID'], p, fold='.', ext='.pdf', n=n)
+            truth = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
+            wff.demo(pet, cha, truth, spe_pre[ent[i]['ChannelID']], window, wave, ent[i]['ChannelID'], p, fold='.', ext='.pdf')
 
             end = start + len(cha)
             dt['HitPosInWindow'][start:end] = pet
@@ -85,12 +75,12 @@ def fitting(a, b):
     dt = np.sort(dt, kind='stable', order=['TriggerNo', 'ChannelID'])
     return dt, time_method
 
-spe_pre = wff.read_model(reference[0], n)
+spe_pre = wff.read_model(reference[0], 1)
 opdt = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('HitPosInWindow', np.float64), ('Charge', np.float64)])
 with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
     l = len(ipt['Readout/Waveform'])
     print('{} waveforms will be computed'.format(l))
-    window = len(ipt['Readout/Waveform'][0]['Waveform'])
+    window = int(len(ipt['Readout/Waveform'][0]['Waveform']) / wff.nshannon)
     assert window >= len(spe_pre[0]['spe']), 'Single PE too long which is {}'.format(len(spe_pre[0]['spe']))
     Mu = ipt['Readout/Waveform'].attrs['mu']
     Tau = ipt['Readout/Waveform'].attrs['tau']
