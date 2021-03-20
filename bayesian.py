@@ -45,14 +45,14 @@ fopt = args.opt
 reference = args.ref
 method = args.met
 
-spe_pre = wff.read_model(reference, wff.nshannon)
+spe_pre = wff.read_model(reference, 1)
 with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
     ent = ipt['Readout/Waveform'][:]
     pelist = ipt['SimTriggerInfo/PEList'][:]
     t0_truth = ipt['SimTruth/T'][:]
     N = len(ent)
     print('{} waveforms will be computed'.format(N))
-    window = len(ent[0]['Waveform'])
+    window = len(ent[0]['Waveform'][::wff.nshannon])
     assert window >= len(spe_pre[0]['spe']), 'Single PE too long which is {}'.format(len(spe_pre[0]['spe']))
     Mu = ipt['Readout/Waveform'].attrs['mu'].item()
     Tau = ipt['Readout/Waveform'].attrs['tau'].item()
@@ -67,7 +67,7 @@ if Tau != 0:
     Alpha = 1 / Tau
     Co = (Alpha / 2. * np.exp(Alpha ** 2 * Sigma ** 2 / 2.)).item()
 std = 1.
-Thres = {'mcmc':0.1, 'lucyddm':0.2, 'fbmp':0.0}
+Thres = {'mcmc':0.1, 'lucyddm':0.1, 'fbmp':0.0}
 mix0sigma = 1e-4
 
 def mix01_loglikelihoodt0(As, pl):
@@ -143,7 +143,8 @@ def time_numpyro(a0, a1):
         cid = ent[i]['ChannelID']
         wave = ent[i]['Waveform'].astype(np.float64) * spe_pre[cid]['epulse']
 
-        AV, wave, tlist, t0_init, t0_init_delta, A_init, n = wff.initial_params(wave, spe_pre[cid], Mu, Tau, Sigma, gmu, gsigma, Thres['lucyddm'], npe, p, nsp, nstd, is_t0=True, nshannon=wff.nshannon)
+        n = max(math.ceil(Mu / math.sqrt(Tau ** 2 + Sigma ** 2)), 1)
+        AV, wave, tlist, t0_init, t0_init_delta, A_init = wff.initial_params(wave, spe_pre[cid], Mu, Tau, Sigma, gmu, gsigma, Thres['lucyddm'], npe, p, nsp, nstd, is_t0=True, n=n, nshannon=1)
         AV = jnp.array(AV)
         wave = jnp.array(wave)
         tlist = jnp.array(tlist)
@@ -221,7 +222,8 @@ def fbmp_inference(a0, a1):
         cid = ent[i]['ChannelID']
         wave = ent[i]['Waveform'].astype(np.float64) * spe_pre[cid]['epulse']
 
-        A, wave_r, tlist, t0_init, t0_init_delta, char_init, n = wff.initial_params(wave, spe_pre[ent[i]['ChannelID']], Mu, Tau, Sigma, gmu, gsigma, Thres['lucyddm'], npe, p, nsp, nstd, is_t0=True, is_delta=False, nshannon=wff.nshannon)
+        n = max(math.ceil(Mu / math.sqrt(Tau ** 2 + Sigma ** 2)), 1)
+        A, wave_r, tlist, t0_init, t0_init_delta, char_init = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Mu, Tau, Sigma, gmu, gsigma, Thres['lucyddm'], npe, p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
         time_fbmp_start = time.time()
         A = np.matmul(A, np.diag(1. / np.sqrt(np.diag(np.matmul(A.T, A)))))
         xmmse, xmmse_star, psy_star, nu_star, T_star, d_tot_i, d_max_i = wff.fbmpr_fxn_reduced(wave_r, A, min(-1e-3+1, Mu / len(tlist)), spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, D, stop=0)

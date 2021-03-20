@@ -36,6 +36,7 @@ def my_cmap():
 mycmp = my_cmap()
 with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as distfile:
     dt = distfile['Record'][:]
+    dtwavesnum = dt['ChannelID'] + len(np.unique(dt['ChannelID'])) * dt['TriggerNo']
     method = distfile['Record'].attrs['Method']
 
 pdf = PdfPages(args.opt)
@@ -136,6 +137,7 @@ with h5py.File(args.ref[0], 'r', libver='latest', swmr=True) as wavef, h5py.File
     start = wavef['SimTruth/T'][:]
     time = soluf['starttime'][:]
     charge = charf['photoelectron'][:]
+    chargewavesnum = charge['ChannelID'] + len(np.unique(charge['ChannelID'])) * charge['TriggerNo']
     gmu = wavef['SimTriggerInfo/PEList'].attrs['gmu']
     gsigma = wavef['SimTriggerInfo/PEList'].attrs['gsigma']
 
@@ -203,6 +205,8 @@ for i in range(l):
         rss_truth = dt['RSS_truth'][dt['NPE'] == i+1]
         charged = dt['chargediff'][dt['NPE'] == i+1]
         deltarss = rss_recon - rss_truth
+        cha = charge['Charge'][np.isin(chargewavesnum, dtwavesnum[dt['NPE'] == i+1])]
+
         fig = plt.figure()
         gs = gridspec.GridSpec(2, 2, figure=fig, left=0.05, right=0.95, top=0.9, bottom=0.1, wspace=0.15, hspace=0.2)
         ax0 = fig.add_subplot(gs[0, 0])
@@ -214,9 +218,18 @@ for i in range(l):
         ax2 = fig.add_subplot(gs[1, 0])
         ax2.hist(charged, bins=np.arange(charged.min(), charged.max()+2+1e-6, 2))
         ax2.set_xlabel(r'$Charge-diff/\mathrm{mV}\cdot\mathrm{ns}$')
+
         ax3 = fig.add_subplot(gs[1, 1])
-        ax3.hist(deltarss, bins=np.arange(deltarss.min(), deltarss.max()+5+1e-6, 5))
-        ax3.set_xlabel(r'$RSS_{recon} - RSS_{truth}/\mathrm{mV}^{2}$')
+        ax3.hist(cha, bins=np.arange(0, 600, 5), density=True, label='PDF_rec')
+        t = np.arange(0, 1000, 0.1)
+        ax3.plot(t, norm.pdf(t, loc=gmu, scale=gsigma) / (1 - norm.cdf(0, loc=gmu, scale=gsigma)), label='PDF_tru', color='k')
+        ax3.set_xlabel(r'$Charge/\mathrm{mV\cdot ns}^{2}$')
+        ax3.set_xlim(0, 500)
+        ax3.legend()
+
+        # ax3 = fig.add_subplot(gs[1, 1])
+        # ax3.hist(deltarss, bins=np.arange(deltarss.min(), deltarss.max()+5+1e-6, 5))
+        # ax3.set_xlabel(r'$RSS_{recon} - RSS_{truth}/\mathrm{mV}^{2}$')
         fig.suptitle(args.ipt.split('/')[-1] + ' ' + r'$N_{pe}$' + ' = {:.0f}'.format(i+1) + ' ' + 'count = {}'.format(sum(dt['NPE'] == i+1)))
         pdf.savefig(fig)
         plt.close(fig)

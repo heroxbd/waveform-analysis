@@ -351,7 +351,7 @@ def likelihoodt0(hitt, char, gmu, gsigma, Tau, Sigma, npe, s0=None, mode='charge
         t0delta = abs(opti.fmin_l_bfgs_b(logLvdelta, x0=[tlist[np.argmin(np.abs(logLv_tlist - logL(t0) - 0.5))]], approx_grad=True, bounds=[b], maxfun=500000)[0] - t0)
     return t0, t0delta
 
-def initial_params(wave, spe_pre, Mu, Tau, Sigma, gmu, gsigma, Thres, npe, p, nsp, nstd, is_t0=False, is_delta=False, nshannon=1):
+def initial_params(wave, spe_pre, Mu, Tau, Sigma, gmu, gsigma, Thres, npe, p, nsp, nstd, is_t0=False, is_delta=False, n=1, nshannon=1):
     hitt, char = lucyddm(savgol_filter(wave[::nshannon], 11, 4), spe_pre['spe'][::nshannon])
     hitt, char = clip(hitt, char, Thres)
     char = char / char.sum() * np.clip(np.abs(wave[::nshannon].sum()), 1e-6, np.inf)
@@ -361,9 +361,6 @@ def initial_params(wave, spe_pre, Mu, Tau, Sigma, gmu, gsigma, Thres, npe, p, ns
     left_wave = round(np.clip(index_prom.min() - 3 * spe_pre['mar_l'], 0, len(wave) - 1))
     right_wave = round(np.clip(index_prom.max() + 3 * spe_pre['mar_r'], 0, len(wave) - 1))
     wave = wave[left_wave:right_wave]
-
-    n = max(math.ceil(Mu / math.sqrt(Tau ** 2 + Sigma ** 2)), 1)
-#     n = n * nshannon
 
     npe_init = np.zeros(len(tlist))
     npe_init[np.isin(tlist, hitt)] = char / gmu
@@ -376,7 +373,7 @@ def initial_params(wave, spe_pre, Mu, Tau, Sigma, gmu, gsigma, Thres, npe, p, ns
     t0_init_delta = None
     if is_t0:
         t0_init, t0_init_delta = likelihoodt0(hitt=hitt, char=char, gmu=gmu, gsigma=gsigma, Tau=Tau, Sigma=Sigma, npe=npe, s0=spe_pre['std'] / np.linalg.norm(spe_pre['spe'][::nshannon]), mode='charge', is_delta=is_delta)
-    return A, wave, tlist, t0_init, t0_init_delta, npe_init, n
+    return A, wave, tlist, t0_init, t0_init_delta, npe_init
 
 def stdrmoutlier(array, r):
     arrayrmoutlier = array[np.abs(array - np.mean(array)) < r * np.std(array, ddof=-1)]
