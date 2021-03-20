@@ -1,80 +1,73 @@
-\section{Towards Timing Resolution} % (fold)
+\section{Data Setup} % (fold)
 \label{sec:toyMC}
 
-\subsection{PMT waveform}
+\subsection{Single PE Response}
 
-The incident particle, no matter we welcome or not, reacts with the material and deposit energy in the detector. During the de-excitation process, an indeterminate number of photons are emitted from the vertex of the event and the trajectory of the incident particle. A certain proportion of these photons are collected by the PMTs. The time distribution of collected PEs is time profile. 
+The incident particle reacts with the material and deposit energy in the detector. During the de-excitation process, a random number of photons are emitted along the trajectory of the incident particle. A certain proportion of these photons are collected by the PMTs. The timing distribution of the emitted photons is the \textit{light curve}. 
 
-Typical PMT response includes several individual processes. First, single photon hits on the surface of PMT, and transmission happens in the glass window and photoelectron (PE) conversion happens on the photocathode. Then PE is collected by the first dynode. Finally, the amplification of electrons between dynodes provides a measurable electrical signal. So a single incoming photon has a certain probability to be observed via PMT voltage (see figure~\ref{fig:spe}), which is a Bernoulli process. But if the hittime of photons is very short, shorter the data acquisition (DAQ) window, the PE's voltage response will pile-up (see figure~\ref{fig:pile}) and discrimination of these PE will be difficult, as well as the waveform analysis. Pile-up will significantly worsen timing resolution. 
+Typical PMT response includes several individual processes. First, single photon hits on the surface of PMT, and transmission happens in the glass window and photoelectron (PE) conversion happens on the photocathode. Then PE is collected by the first dynode. Finally, the amplification of electrons between dynodes provides a measurable electrical signal. A single incoming photon has a certain probability to be observed via PMT voltage (see figure~\ref{fig:spe}), obeying Bernoulli distribution. Several PEs could pile up in the DAQ time window, as illustrated in Figure~\ref{fig:pile}.  Failing to separate them can worse the timing resolution.
 
 \begin{figure}[H]
-\begin{minipage}[b]{.5\textwidth}
-\begin{figure}[H]
+  \begin{subfigure}{.33\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/spe.pgf}}
     \caption{\label{fig:spe} SPE response of PMT}
-\end{figure}
-\end{minipage}
-\begin{minipage}[b]{.5\textwidth}
-\begin{figure}[H]
+  \end{subfigure}
+  \begin{subfigure}{.33\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/wave.pgf}}
     \caption{\label{fig:pile} Pile-up in PMT waveform}
+  \end{subfigure}
+  \begin{subfigure}{.33\textwidth}
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/profile.pgf}}
+    \caption{\label{fig:time-pro} Light curve $\tau$=20ns $\sigma$=10ns}
+  \end{subfigure}
+  \caption{A single PE induces a voltage pulse as in \subref{fig:spe}.  They arrive at PMTs under timing distributions such as that in \subref{fig:time-pro}, and pile up like \subref{fig:pile}.}
 \end{figure}
-\end{minipage}
-\end{figure}
 
-The data acquisition system will digitalize the time and voltage of recorded PMT output. Most of the time, when handling PMT waveform, we record the time of the first PE according to the threshold of voltage, $v_{th}$, and total charge in a DAQ window. The voltage which is higher than a certain threshold is assumed to be the consequence of photoelectron. The total charge is the integration of the waveform. Charge induced single photoelectron (SPE) can be a wide distribution (usually truncated normal distribution, mean is $\mu_{g}$, the standard deviation is $\sigma_{g}$) rather than a single value (see the black curve in figure~\ref{fig:recchargehist}). In these practical scenarios, one waveform is converted to a pair of numbers. More detailed information on the waveform was lost. 
+The data acquisition system digitizes a time series of voltages output from a PMT. We usually record the time of the first PE according to the threshold of voltage, $V_\mathrm{th}$, and total charge in a DAQ window. The voltage which is higher than a certain threshold is assumed to be the consequence of photoelectron. The total charge is the integration of the waveform. Charge induced single photoelectron (SPE) can be a wide distribution (usually truncated normal distribution, mean is $\mu_{g}$, the standard deviation is $\sigma_{g}$) rather than a single value (see the black curve in figure~\ref{fig:recchargehist}). In these practical scenarios, one waveform is converted to a pair of numbers. More detailed information on the waveform was lost. 
 
-\subsection{toy Monte Carlo}
+\subsection{Light Curve}
 
-Currently, there are two successful detector materials: water (heavy water) and liquid scintillator. The time profile of the scintillation light is always described as several components with different decay times and Cherenkov light is always described as $\delta$ function \cite{ludhova_particle_2020}. 
+There are two successful detector materials: water (heavy water) and liquid scintillator. The light curve of the scintillation light is described as several components with different decay times and Cherenkov light is always described as $\delta$ function~\cite{ludhova_particle_2020}. 
 
-In toy MC, we describe the light transmit process using a hypothetical parameterized time profile model. We assume the time profile of the liquid scintillator is an exponential function convoluted by a gaussian function \cite{li_separation_2016} caused by the transit time spread (TTS) of PMT, with the form in the formula \eqref{eq:time-pro} where $\tau$ is the decay time and $\sigma$ is the TTS while $t_{0}$ is the starting time of time profile which account for the unknown beginning time of light emission. Figure~\ref{fig:time-pro} where $t_{0}=0$ shows the shape of time profile. 
+In toy MC, we describe the light transmit process using a hypothetical parameterized light curve. We assume the light curve of the liquid scintillator is an exponential function convoluted by a gaussian function \cite{li_separation_2016} caused by the transit time spread (TTS) of PMT, with the form in the formula \eqref{eq:time-pro} where $\tau$ is the decay time and $\sigma$ is the TTS while $t_{0}$ is the starting time of light curve which account for the unknown beginning time of light emission. Figure~\ref{fig:time-pro} where $t_{0}=0$ shows the shape of light curve. 
 
 % \begin{figure}[H]
-\begin{minipage}{.4\textwidth}
 \begin{align}
     P_{t}(t) = \frac{1}{\tau}e^{-\frac{t - t_{0}}{\tau}} \otimes \mathcal{N}(\sigma^{2})
     \label{eq:time-pro}
 \end{align}
-\end{minipage}
-\begin{minipage}{.6\textwidth}
-\begin{figure}[H]
-    \centering
-    \resizebox{\textwidth}{!}{\input{figures/profile.pgf}}
-    \caption{\label{fig:time-pro} Time profile, $\tau$=20ns $\sigma$=10ns}
-\end{figure}
-\end{minipage}
 % \end{figure}
 
-Here we discuss the configuration and process of simulation in toy MC. The total number of PE in a DAQ window (in a single waveform), $N_{pe}$, is sampled from a Truncated Poisson distribution ($N_{pe}=0$ samples are abandoned) with expectation $\mu$. The hittime $t_{tru}$ of each PE is sampled from the time profile $P_{t}(t)$ of the liquid scintillator. The charge of each PE $q_{tru}$ is sampled from parameterized calibration result, which can be described as a truncated normal distribution with probability distribution function \eqref{eq:truncated}. The simulation datasets are the combination of hittime $t_{tru}$ and charge of PE, $q_{tru}$. 
+The total number of PEs in a single waveform, $N_\mathrm{PE}$, is sampled from a zero-trucated Poisson distribution with expectation $\mu$. The hittime $t$ of each PE is sampled from the light curve $P_{t}(t)$. The charge of each PE $q$ is sampled from a truncated normal distribution in \eqref{eq:truncated}. The simulation datasets are the combination of $t$ and $q$.
 
 \begin{equation}
     P_{q}(q) = A\cdot\mathcal{N}(\mu_{q},\sigma_{q}^{2}),\,(q>0)
     \label{eq:truncated}
 \end{equation}
 
-The single photonelectron response is described as the formula \eqref{eq:dayaspe} \cite{jetter_pmt_2012}. An gaussian noise is added to waveform after sampling $t_{tru}$ and $q_{tru}$. 
+The single photonelectron response is described as the formula \eqref{eq:dayaspe} \cite{jetter_pmt_2012}. An gaussian noise is added to waveform after sampling $t$ and $q$. 
 
 The typical combination of decay time ($\tau$) and transit time spread ($\sigma$) are listed in the figure (see figure~\ref{fig:deltamethods}). We take the value of $\tau$ according to typical liquid scintillator used in JUNO \cite{ludhova_particle_2020}. For every combination of PE number expectation $\mu$, decay time $\tau$ and TTS $\sigma$, a sample set (size $N=10,000$) is generated to estimate the timing resolution $\delta$. 
 
 \begin{equation}
-    V(t) = V_{0}\exp\left(-\frac{1}{2}\left(\frac{\ln(t/\tau)}{\sigma}\right)^{2}\right)
+    V(t) = V_{0}\exp\left[-\frac{1}{2}\left(\frac{\ln(t/\tau)}{\sigma}\right)^{2}\right]
     \label{eq:dayaspe}
 \end{equation}
 
-We can use Maximum Likelihood Estimation (MLE) to estimate $t_{0}$ in formula \eqref{eq:time-pro}, which is the starting time of time profile, using charge $q$ and corresponding hittime. The difference between real starting time $t_{0tru}$ and reconstructed starting time $t_{0rec}$ are collected to produce the starting time residual ($\Delta t_{0}=t_{0rec}-t_{0tru}$) distribution. The time resolution $\delta$ is the standard deviation (STD) of the starting time residual distribution. The likelihood $\mathcal{L}$ defined in MLE is formula \eqref{eq:likelihood}. 
+We can use Maximum Likelihood Estimation (MLE) to estimate $t_{0}$ in formula \eqref{eq:time-pro}, which is the starting time of light curve, using charge $q$ and corresponding hittime. The difference between real starting time $t_{0tru}$ and reconstructed starting time $\hat{t}_0$ are collected to produce the starting time residual ($\Delta t_{0}=\hat{t}_0-t_0$) distribution. The time resolution $\delta$ is the standard deviation of the starting time residual distribution. The likelihood $\mathcal{L}$ defined in MLE is formula \eqref{eq:likelihood}. 
 
 \begin{align}
-    \mathcal{L}(t_{0}) &= \Pi_{i=0}^{N_{pe}}\left(\sum_{j=a}^{b}[P_{i}(q_{i},j)(P_{t}(t_{i}))^{j}]\right)
+    \mathcal{L}(t_{0}) &= e^{-\mu}\Pi_{i=0}^{N_\mathrm{PE}}\left(\sum_{j=a}^{b}[P_{i}(q_{i},j)(P_{t}(t_{i}))^{j}]\right)
     \label{eq:likelihood} \\
     P_{i}(q_{i},j) &= \frac{P_{q}(q_{i}|j)}{\sum_{j=a}^{b}P_{q}(q_{i}|j)}
 \end{align}
 
 For reconstructed hittime and charge produced by waveform analysis algorithms, each charge $q$ is registered to a single hittime $t$, but the number of PE at a single hittime is uncertain. $P_{i}(q_{i},j)$ is the posterior probability if the number of PE is $j$ with charge $q_{i}$. $a$ and $b$ are the upper and lower bound estimation of the number of PE $j$. 
 
-The estimation result of $t_{0}$ using only simulated data is shown in figure~\ref{fig:reso-diff}, where $\delta_{1st}$ and $\delta_{all}$ are timing resolution using the first PE and all PE when reconstruction, respectively. The vertical axis is the ratio, $\delta_{all}/\delta_{1st}$. Because time resolution estimation here is only based on simulated data, the result will reveal the advantage of using detailed information of all PE. It is distinct that the timing resolution is smaller when reconstructing rise time using all PE. 
+The estimation result of $t_{0}$ using simulated data is shown in figure~\ref{fig:reso-diff}, where $\delta_{1st}$ and $\delta_{all}$ are timing resolution using the first PE and all PE when reconstruction, respectively. The vertical axis is the ratio, $\delta_{all}/\delta_{1st}$. Because time resolution estimation here is only based on simulated data, the result will reveal the advantage of using detailed information of all PE. It is distinct that the timing resolution is smaller when reconstructing rise time using all PE. 
 
 \begin{figure}[H]
     \centering
@@ -82,31 +75,28 @@ The estimation result of $t_{0}$ using only simulated data is shown in figure~\r
     \caption{\label{fig:reso-diff} Timing resolution improved by waveform analysis, $\tau$=20ns $\sigma$=10ns}
 \end{figure}
 
-Before taking a deep look into the methods, input and output need to be defined. The input for waveform analysis is pedestal subtracted PMT waveform (see figure~\ref{fig:input}), and the output is the $q_{rec}$ sequence (see figure~\ref{fig:output}), which is interpreted as an approximation of time profile. 
+Before taking a deep look into the methods, input and output need to be defined. The input for waveform analysis is pedestal subtracted PMT waveform (see figure~\ref{fig:input}), and the output is the $q_{rec}$ sequence (see figure~\ref{fig:output}), which is interpreted as an approximation of light curve. 
 
 \begin{figure}[H]
-\begin{minipage}[b]{.5\textwidth}
-\begin{figure}[H]
+  \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/wave.pgf}}
-    \caption{\label{fig:input} Data input}
-\end{figure}
-\end{minipage}
-\begin{minipage}[b]{.5\textwidth}
-\begin{figure}[H]
+    \caption{\label{fig:input} input}
+  \end{subfigure}
+  \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/charge.pgf}}
-    \caption{\label{fig:output} Data output}
-\end{figure}
-\end{minipage}
+    \caption{\label{fig:output} output}
+  \end{subfigure}
+  \caption{Waveform analysis takes PMT waveform as input and infer the timing and charge of the PEs in the output.}
 \end{figure}
 
-The histogram of $N_{pe}$ when $\mu=5$ shows in the figure (see figure~\ref{fig:penum}). 
+The histogram of $N_\mathrm{PE}$ when $\mu=5$ shows in the figure (see figure~\ref{fig:penum}). 
 
 \begin{figure}[H]
     \centering
     \scalebox{0.4}{\input{figures/penum.pgf}}
-    \caption{\label{fig:penum} $N_{pe}$ histogram}
+    \caption{\label{fig:penum} $N_\mathrm{PE}$ histogram}
 \end{figure}
 
 % section Towards Timing Resolution (end)
