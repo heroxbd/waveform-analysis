@@ -1,4 +1,4 @@
-\section{Algorithm and Performance} % (fold)
+\section{Algorithms and Performance} % (fold)
 \label{sec:algorithm}
 
 \subsection{Wasserstein distance}
@@ -6,11 +6,11 @@
 
 \input{fom}
 
-\subsection{Methods}
-
 Waveform analysis algorithms are presented below, separately. It is worth mentioning that the hittime in our waveform analysis results is discrete values (time bin edges in a DAQ window). 
 
-\subsubsection{Find peak}
+\subsection{Heuristic Methods}
+
+\subsubsection{Peak Finding}
 \label{sec:findpeak}
 
 The first intuitive method is the find peak method. We first smooth the input waveform using Savitzky–Golay filter to alleviate the obstruction of electron noise. Then we find the peak of the smoothed waveform and move the peaks leftward. The shifted voltage is now promotional to reconstructed charge $q_{rec}(t)$ related with the corresponding hittime. The leftward distance we moved, $\Delta t$ is the peak time of SPE response $v_{spe}$, described by formula \eqref{eq:dayaspe}. Finally, the charge is normalized to retain the consistency with the total charge which is the integration of the waveform. The demonstration here shows a result with W-dist = 1.96ns. 
@@ -21,7 +21,7 @@ The first intuitive method is the find peak method. We first smooth the input wa
     \caption{Find Peak Method Demo, W-dist = 1.96ns}
 \end{figure}
 
-\subsubsection{Waveform shift}
+\subsubsection{Waveform Shifting}
 
 A threshold $v_{th}$ is settled with respect to electronics noise in simulation data. In waveform shift method, first we locate waveform voltage, $v_{w}(t)$, which exceeds $v_{th}$. Then we shift the exceeding part leftward. The $\Delta t$ we move is the same as the find peak method in section \ref{sec:findpeak}. Finally, we treat the normalized exceeding part as $q_{rec}(t)$, to maintain the charge integral of waveforms. The demonstration here shows a result with W-dist = 5.58ns. 
 
@@ -31,7 +31,8 @@ A threshold $v_{th}$ is settled with respect to electronics noise in simulation 
     \caption{Waveform Shift Method Demo, W-dist = 5.58ns}
 \end{figure}
 
-\subsubsection{Fourier deconvolution}
+\subsection{Deconvolution}
+\subsubsection{Fourier Deconvolution}
 
 Third method is Fourier transform deconvolution. Assuming that the waveform is the convolution of $v_{spe}$ and $q(t)$, the Fast Fourier transform (FFT) of $v_{w}$ and $v_{spe}$ are computed. A rectangular filter, $f$, is implemented. Then we compute the inverse FFT of the quotient between filtered FFT of $v_{w}$ and FFT of $v_{spe}$. We pick out positive values from inverse FFT result, and normalize them to obtain $q_{rec}(t)$. The process is shown in formula \eqref{eq:fft}. 
 
@@ -48,7 +49,7 @@ The demonstration here shows a result with W-dist = 1.77ns.
     \caption{Fourier Deconvolution Demo, W-dist = 1.77ns}
 \end{figure}
 
-\subsubsection{Lucy direct demodulation}
+\subsubsection{Lucy Direct Demodulation}
 
 Lucy-Richardson direct demodulation (LucyDDM) is a non-linear iteration method, to calculate the deconvolution of signals. It has been used in astronomy \cite{li_richardson-lucy_2019}, image processing, and many other fields. Lucy direct demodulation has an advantage against Fourier deconvolution which is a constraint that $q_{rec}(t)$ must be larger than 0. 
 
@@ -66,84 +67,7 @@ Iteration will stop when two adjacent loops give very close results. The demonst
     \caption{Lucy direct demodulation Demo, W-dist = 0.95ns}
 \end{figure}
 
-\subsubsection{Fitting}
-
-Waveform is the convolution of $v_{spe}$ and $q_{rec}(t)$ (see formula~\eqref{eq:wave-con}). 
-
-\begin{align}
-    v_{w} &= q_{rec} \otimes v_{spe} \label{eq:wave-con} \\
-    L &= L(v_{r}, v_{w}) = L(q_{rec}, v_{spe}, v_{w}) = \mathrm{RSS}(v_{w}, q_{rec} \otimes v_{spe}) \label{eq:loss-rss}
-\end{align}
-
-In fitting process, the parameters are $q_{rec}(t)$ in each discrete hittime $t$. The complete information hidden in the original wave is disturbed by electronics noise and pile-up. The loss (see formula~\ref{eq:loss-rss}) which we optimize in fitting is the residual sum of squares (RSS) between the original wave $v_{w}(t)$ and reconstructed wave $v_{r}(t)$ according to the parameters. The parameters will tend to be preciser when the reconstructed wave approaching the original wave. 
-
-The fitting program is implemented with Limited-memory BFGS with bound constraint \cite{byrd_limited_1995} (L-BFGS-B). L-BFGS-B has an advantage that the $q_{rec}$ are constrained to be larger than 0. The demonstration here shows a result with W-dist = 0.67ns. 
-
-\begin{figure}[H]
-    \centering
-    \scalebox{0.4}{\input{figures/xiaopeip.pgf}}
-    \caption{Fitting Demo, W-dist = 0.67ns}
-\end{figure}
-
-The result reconstructing $q_{rec}$ when $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$ shows in figure. (see figure~\ref{fig:fitting-hist}) The overall result of W-dist reconstructing $q_{rec}$ shows in the figure (see figure~\ref{fig:fitting-npe}). 
-
-\begin{figure}[H]
-\begin{minipage}[t]{.5\textwidth}
-\begin{figure}[H]
-    \centering
-    \resizebox{\textwidth}{!}{\input{figures/xiaopeipchargehist.pgf}}
-    \caption{\label{fig:fitting-hist} $W_{d}$ Histogram \& Boxplot, $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$, method is Fitting}
-\end{figure}
-\end{minipage}
-\begin{minipage}[t]{.5\textwidth}
-\begin{figure}[H]
-    \centering
-    \resizebox{\textwidth}{!}{\input{figures/xiaopeipchargestats.pgf}}
-    \caption{\label{fig:fitting-npe} $W_{d}$ vs $N_{pe}$, method is Fitting}
-\end{figure}
-\end{minipage}
-\end{figure}
-
-\subsubsection{MCMC}
-
-The typical variable optimization methods such as L-BFGS-B depend on gradient evaluation and their iteration stops when the gradient is smaller than a certain tiny value, following the convention in the field of numerical calculation. In some circumstances, the fitting result may be stuck in local minimum rather than global minimum. Hamiltonian Monte Carlo (HMC), which is a version of the Markov Chain Monte Carlo (MCMC) method, has the potential to overcome this difficulty. 
-
-HMC is an efficient MCMC method for achieving samples from a distribution for which direct sampling is difficult, especially efficient dealing with high dimensional variables \cite{neal_mcmc_2012}, for example, $q$ in waveform analysis. A program based on HMC is developed intending to sample from the posterior distribution of $q$, as well as $t_{0}$. The samples derived by HMC can usually be approximately ergodic in the posterior distribution, so the global minimum will be obtained with a large sampling set. 
-
-The model and prior distribution are defined below: 
-
-\begin{align}
-    t_{0} &\sim \mathrm{Uniform}(0, L_{w}) \\
-    P_{q}(t_{i}) &= \mu \cdot P_{t}(t_{i}) \\
-    q(t_{i}) &\sim \mathrm{Mix}\mathcal{N}(P_{q}(t_{i}), \mu_{g}, \sigma_{g}^{2}) \\
-    v_{w}(t_{i}) &\sim \mathcal{N}(F_{w}(q), \sigma_{w}^{2}) \\
-    \mathrm{Mix}\mathcal{N}(q(t_{i}) | P_{q}(t_{i}), \mu_{g}, \sigma_{g}^{2}) &= (1 - P_{q}(t_{i}))\delta(q(t_{i})) + P_{q}(t_{i})\mathcal{N}(q(t_{i}) | \mu_{g}, \sigma_{g}^{2}) \label{eq:mixnormal}
-\end{align}
-
-where $t_{0}$ is the starting time of time profile and $L_{w}$ is nothing but an upper limit of $t_{0}$. $P_{q}(t_{i})$ is the equivalent charge expectation in time interval $[t_{i}, t_{i}+\mathrm{d}t]$, where $\mathrm{d}t$ is a man-made small time interval depends on the precision required. $q$ follow the probability Normal mixture distribution, whose probability density function (PDF) is $\mathrm{Mix}\mathcal{N}$ in \eqref{eq:mixnormal}. Given $q$, using function $F_{w}(q)$ is the rebuilt waveform expectation. 
-
-We use NumPyro \cite{phan2019composable}, a graceful probabilistic programming library, to build the model and sample. One of the sampling results shows in figure~\ref{fig:mcmcrec-t0hist}. 
-
-\begin{figure}[H]
-\begin{minipage}[t]{.5\textwidth}
-\begin{figure}[H]
-    \centering
-    \resizebox{\textwidth}{!}{\input{figures/mcmcrect0hist.pgf}}
-    \caption{\label{fig:mcmcrec-t0hist} $\Delta t_{0}$ Histogram, $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$, method is MCMC}
-\end{figure}
-\end{minipage}
-\begin{minipage}[t]{.5\textwidth}
-\begin{figure}[H]
-    \centering
-    \resizebox{\textwidth}{!}{\input{figures/mcmcrecchargehist.pgf}}
-    \caption{\label{fig:mcmcrec-chargehist} $W_{d}$ Histogram, $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$, method is MCMC}
-\end{figure}
-\end{minipage}
-\end{figure}
-
-We can see during MCMC sampling, the charge w.r.t. time, $q_{rec}$, is also collected. The result reconstructing $q_{rec}$ when $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$ shows in figure (see figure~\ref{fig:mcmcrec-chargehist}). 
-
-\subsubsection{CNN}
+\subsection{Convolutional Neuron Networks}
 
 % Network structure
 Advances in neural networks have brought breakthroughs in various domains like Computer Vision and Natural Language Processing. As an efficient composition with weighted additions and pointwise nonlinearities, the method has prevailed against most of the traditional algorithms in pattern recognition tasks. In our experiment, we introduced a multi-layer convolutional neural network (CNN) to process time-sensitive signals from detector outputs. Based on the Physics nature that a detector signal (PMT outputs) do only have a local correlation with recent PE, we chose convolutional setups with a moderate total width coverage. From a view of information, a broader coverage by an output neuron's receptive field on its related area will contribute to higher accuracy, while redundant connections could only lead to excessive computation and lower processing speed. As a result, a wise setup should try to cover all relevant signal areas exclusively while cutting off every connection unnecessary, balancing the speed and accuracy from the two mentioned effects.
@@ -217,7 +141,85 @@ The result reconstructing $q_{rec}$ when $\mu=5, \tau=20\mathrm{ns}, \sigma=10\m
 \end{minipage}
 \end{figure}
 
-\subsubsection{FBMP}
+\subsection{Fitting}
+\subsubsection{Gradient Descent}
+
+Waveform is the convolution of $v_{spe}$ and $q_{rec}(t)$ (see formula~\eqref{eq:wave-con}). 
+
+\begin{align}
+    v_{w} &= q_{rec} \otimes v_{spe} \label{eq:wave-con} \\
+    L &= L(v_{r}, v_{w}) = L(q_{rec}, v_{spe}, v_{w}) = \mathrm{RSS}(v_{w}, q_{rec} \otimes v_{spe}) \label{eq:loss-rss}
+\end{align}
+
+In fitting process, the parameters are $q_{rec}(t)$ in each discrete hittime $t$. The complete information hidden in the original wave is disturbed by electronics noise and pile-up. The loss (see formula~\ref{eq:loss-rss}) which we optimize in fitting is the residual sum of squares (RSS) between the original wave $v_{w}(t)$ and reconstructed wave $v_{r}(t)$ according to the parameters. The parameters will tend to be preciser when the reconstructed wave approaching the original wave. 
+
+The fitting program is implemented with Limited-memory BFGS with bound constraint \cite{byrd_limited_1995} (L-BFGS-B). L-BFGS-B has an advantage that the $q_{rec}$ are constrained to be larger than 0. The demonstration here shows a result with W-dist = 0.67ns. 
+
+\begin{figure}[H]
+    \centering
+    \scalebox{0.4}{\input{figures/xiaopeip.pgf}}
+    \caption{Fitting Demo, W-dist = 0.67ns}
+\end{figure}
+
+The result reconstructing $q_{rec}$ when $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$ shows in figure. (see figure~\ref{fig:fitting-hist}) The overall result of W-dist reconstructing $q_{rec}$ shows in the figure (see figure~\ref{fig:fitting-npe}). 
+
+\begin{figure}[H]
+\begin{minipage}[t]{.5\textwidth}
+\begin{figure}[H]
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/xiaopeipchargehist.pgf}}
+    \caption{\label{fig:fitting-hist} $W_{d}$ Histogram \& Boxplot, $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$, method is Fitting}
+\end{figure}
+\end{minipage}
+\begin{minipage}[t]{.5\textwidth}
+\begin{figure}[H]
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/xiaopeipchargestats.pgf}}
+    \caption{\label{fig:fitting-npe} $W_{d}$ vs $N_{pe}$, method is Fitting}
+\end{figure}
+\end{minipage}
+\end{figure}
+
+\subsubsection{Markov Chain Monte Carlo}
+
+The typical variable optimization methods such as L-BFGS-B depend on gradient evaluation and their iteration stops when the gradient is smaller than a certain tiny value, following the convention in the field of numerical calculation. In some circumstances, the fitting result may be stuck in local minimum rather than global minimum. Hamiltonian Monte Carlo (HMC), which is a version of the Markov Chain Monte Carlo (MCMC) method, has the potential to overcome this difficulty. 
+
+HMC is an efficient MCMC method for achieving samples from a distribution for which direct sampling is difficult, especially efficient dealing with high dimensional variables \cite{neal_mcmc_2012}, for example, $q$ in waveform analysis. A program based on HMC is developed intending to sample from the posterior distribution of $q$, as well as $t_{0}$. The samples derived by HMC can usually be approximately ergodic in the posterior distribution, so the global minimum will be obtained with a large sampling set. 
+
+The model and prior distribution are defined below: 
+
+\begin{align}
+    t_{0} &\sim \mathrm{Uniform}(0, L_{w}) \\
+    P_{q}(t_{i}) &= \mu \cdot P_{t}(t_{i}) \\
+    q(t_{i}) &\sim \mathrm{Mix}\mathcal{N}(P_{q}(t_{i}), \mu_{g}, \sigma_{g}^{2}) \\
+    v_{w}(t_{i}) &\sim \mathcal{N}(F_{w}(q), \sigma_{w}^{2}) \\
+    \mathrm{Mix}\mathcal{N}(q(t_{i}) | P_{q}(t_{i}), \mu_{g}, \sigma_{g}^{2}) &= (1 - P_{q}(t_{i}))\delta(q(t_{i})) + P_{q}(t_{i})\mathcal{N}(q(t_{i}) | \mu_{g}, \sigma_{g}^{2}) \label{eq:mixnormal}
+\end{align}
+
+where $t_{0}$ is the starting time of time profile and $L_{w}$ is nothing but an upper limit of $t_{0}$. $P_{q}(t_{i})$ is the equivalent charge expectation in time interval $[t_{i}, t_{i}+\mathrm{d}t]$, where $\mathrm{d}t$ is a man-made small time interval depends on the precision required. $q$ follow the probability Normal mixture distribution, whose probability density function (PDF) is $\mathrm{Mix}\mathcal{N}$ in \eqref{eq:mixnormal}. Given $q$, using function $F_{w}(q)$ is the rebuilt waveform expectation. 
+
+We use NumPyro \cite{phan2019composable}, a graceful probabilistic programming library, to build the model and sample. One of the sampling results shows in figure~\ref{fig:mcmcrec-t0hist}. 
+
+\begin{figure}[H]
+\begin{minipage}[t]{.5\textwidth}
+\begin{figure}[H]
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/mcmcrect0hist.pgf}}
+    \caption{\label{fig:mcmcrec-t0hist} $\Delta t_{0}$ Histogram, $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$, method is MCMC}
+\end{figure}
+\end{minipage}
+\begin{minipage}[t]{.5\textwidth}
+\begin{figure}[H]
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/mcmcrecchargehist.pgf}}
+    \caption{\label{fig:mcmcrec-chargehist} $W_{d}$ Histogram, $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$, method is MCMC}
+\end{figure}
+\end{minipage}
+\end{figure}
+
+We can see during MCMC sampling, the charge w.r.t. time, $q_{rec}$, is also collected. The result reconstructing $q_{rec}$ when $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$ shows in figure (see figure~\ref{fig:mcmcrec-chargehist}). 
+
+\subsubsection{Fast Bayesian Matching Pursuit}
 
 Fast Bayesian Matching Pursuit (FBMP) is a parameters estimation method for sparse linear models \cite{schniter_fast_nodate}. The linear sparse model in waveform analysis is given by equation~\eqref{eq:fbmpmodel}: 
 
