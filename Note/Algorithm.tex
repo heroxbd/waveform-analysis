@@ -36,7 +36,7 @@ A threshold $V_\mathrm{th}$ is settled with respect to electronics noise in simu
 \subsection{Deconvolution}
 \subsubsection{Fourier Deconvolution}
 
-Third method is Fourier transform deconvolution. Assuming that the waveform is the convolution of $V_\mathrm{PE}(t)$ and $q(t)$, the Fast Fourier transform (FFT) of $w(t)$ and $V_\mathrm{PE}(t)$ are computed. A rectangular filter, $f$, is implemented. Then we compute the inverse FFT of the quotient between filtered FFT of $w(t)$ and FFT of $V_\mathrm{PE}(t)$. We pick out positive values from inverse FFT result, and normalize them to obtain $\hat{q}(t)$. The process is shown in formula \eqref{eq:fft}. 
+Third method is Fourier transform deconvolution. Assuming that the waveform is the convolution of $V_\mathrm{PE}(t)$ and $q(t)$, the Fast Fourier transform (FFT) of $w(t)$ and $V_\mathrm{PE}(t)$ are computed. A rectangular filter, $f$, is implemented. Then we compute the inverse FFT of the quotient between filtered FFT of $w(t)$ and FFT of $V_\mathrm{PE}(t)$. We pick out positive values from inverse FFT result, and normalize them to obtain $\hat{q}(t)$. The process is shown in \eqref{eq:fft}. 
 
 \begin{equation}
     \hat{q}(t) = \mathcal{F}^{-1}\{\frac{f[\mathcal{F}(w(t))]}{\mathcal{F}(V_\mathrm{PE}(t))}\}
@@ -146,17 +146,17 @@ The result reconstructing $\hat{q}$ when $\mu=5, \tau=20\mathrm{ns}, \sigma=10\m
 \end{minipage}
 \end{figure}
 
-\subsection{Fitting}
+\subsection{Regression Analysis}
 \subsubsection{Gradient Descent}
 
 Waveform is the convolution of $V_\mathrm{PE}(t)$ and $\hat{q}(t)$ (see formula~\eqref{eq:wave-con}). 
 
 \begin{align}
     w(t) &= \hat{q} \otimes V_\mathrm{PE}(t) \label{eq:wave-con} \\
-    L &= L(v_{r}, w(t)) = L(\hat{q}, V_\mathrm{PE}(t), w(t)) = \mathrm{RSS}(w(t), \hat{q} \otimes V_\mathrm{PE}(t)) \label{eq:loss-rss}
+    L &= L(\hat{w}(t), w(t)) = L(\hat{q}, V_\mathrm{PE}(t), w(t)) = \mathrm{RSS}(w(t), \hat{q} \otimes V_\mathrm{PE}(t)) \label{eq:loss-rss}
 \end{align}
 
-In the fitting process, the parameters are $\hat{q}(t)$ in each discrete hittime $t$. The complete information hidden in the original wave is disturbed by electronics noise and pile-up. The loss (see formula~\ref{eq:loss-rss}) which we optimize in fitting is the residual sum of squares (RSS) between the original wave $w(t)$ and reconstructed wave $v_{r}(t)$ according to the parameters. The parameters will tend to be preciser when the reconstructed wave approaching the original wave. 
+In the fitting process, the parameters are $\hat{q}(t)$ in each discrete hittime $t$. The complete information hidden in the original wave is disturbed by electronics noise and pile-up. The loss (see formula~\ref{eq:loss-rss}) which we optimize in fitting is the residual sum of squares (RSS) between the original wave $w(t)$ and reconstructed wave $\hat{w}(t)$ according to the parameters. The parameters will tend to be preciser when the reconstructed wave approaching the original wave. 
 
 The fitting program is implemented with Limited-memory BFGS with bound constraint \cite{byrd_limited_1995} (L-BFGS-B). L-BFGS-B has an advantage that the $\hat{q}$ are constrained to be larger than 0. The demonstration here shows a result with $D_w = \SI{0.67}{ns}$.
 
@@ -226,20 +226,19 @@ We can see during MCMC sampling, the charge w.r.t. time, $\hat{q}$, is also coll
 
 \subsubsection{Fast Bayesian Matching Pursuit}
 
-Fast Bayesian Matching Pursuit (FBMP) is a parameters estimation method for sparse linear models~\cite{schniter_fast_nodate}. The linear sparse model in waveform analysis is given by equation~\eqref{eq:fbmpmodel}: 
+Fast Bayesian Matching Pursuit (FBMP) is a parameters estimation method for sparse linear models~\cite{schniter_fast_nodate}. The linear sparse model in waveform analysis is given by \eqref{eq:fbmpmodel}: 
 
 \begin{align}
-    w(t) &= F_{w}(q) = \boldsymbol{A}\cdot \boldsymbol{q} \label{eq:fbmpmodel} \\
-    \hat{\boldsymbol{s}}_{*} &\triangleq \mathrm{argmax}\,p(\boldsymbol{s}|\boldsymbol{y}) \label{eq:map}
+    w(t) &= F_{w}(q) = \vec{A}\cdot \vec{q} \label{eq:fbmpmodel} \\
+    \hat{\vec{s}}_{*} &\triangleq \mathrm{argmax}\,p(\vec{s}|\vec{y}) \label{eq:map}
 \end{align}
+in which $A$ is a matrix derived from SPE response~\eqref{eq:dayaspe}. $\vec{q}$ is the charge vector of PE with length $N$, in which most elements are zeros. FBMP algorithm select model before estimation of $q$. For a certain model, $\vec{s}$ is a model selection vector that contains only 0 and 1. Only if $s_{n}=1$, $q_{n}\neq0$, where $\{q_{n}\}_{n=0}^{N-1}$. Implementing the maximum a posteriori (MAP) model-vector estimate (given by~\eqref{eq:map}), a repeated greedy search (RGS) is performed to get a set of dominant models, $\mathcal{S}_{*}$, in the parameter space of $\vec{s}$. RGS will stop after a controlled number of steps, as we believe the search for dominant models set is sufficient enough. Additionally, a linear algebra trick reduces the complexity of the algorithm \cite{schniter_fast_nodate}. Finally, a set of dominant models $\mathcal{S}_{*}$ and its corresponding set of posterior probability, as well as estimations of $\vec{q}$ for each model in $\mathcal{S}_{*}$, are collected to be the approximation of sparse posterior estimation of $\vec{q}$. We use the charge estimation of the maximum posterior probability model as the waveform analysis result. 
 
-in which $A$ is a matrix derived from SPE response~\eqref{eq:dayaspe}. $\boldsymbol{q}$ is the charge vector of PE with length $N$, in which most elements are zeros. FBMP algorithm select model before estimation of $q$. For a certain model, $\boldsymbol{s}$ is a model selection vector that contains only 0 and 1. Only if $s_{n}=1$, $q_{n}\neq0$, where $\{q_{n}\}_{n=0}^{N-1}$. Implementing the maximum a posteriori (MAP) model-vector estimate (given by~\eqref{eq:map}), a repeated greedy search (RGS) is performed to get a set of dominant models, $\mathcal{S}_{*}$, in the parameter space of $\boldsymbol{s}$. RGS will stop after a controlled number of steps, as we believe the search for dominant models set is sufficient enough. Additionally, a linear algebra trick reduces the complexity of the algorithm \cite{schniter_fast_nodate}. Finally, a set of dominant models $\mathcal{S}_{*}$ and its corresponding set of posterior probability, as well as estimations of $\boldsymbol{q}$ for each model in $\mathcal{S}_{*}$, are collected to be the approximation of sparse posterior estimation of $\boldsymbol{q}$. We use the charge estimation of the maximum posterior probability model as the waveform analysis result. 
-
-Figure~\ref{fig:fbmp} shows one of the FBMP results. We can see the origin waveform $w(t)$ and reconstructed waveform $v_{r}$ are very similar. The reconstructed and truth $\hat{q}$ are also similar. 
+Figure~\ref{fig:fbmp} shows one of the FBMP results. We can see the origin waveform $w(t)$ and reconstructed waveform $\hat{w}(t)$ are very similar. The reconstructed and truth $\hat{q}$ are also similar. 
 
 \begin{figure}[H]
     \centering
-    \scalebox{0.45}{\input{figures/demoe2c0.pgf}}
+    \scalebox{0.4}{\input{figures/demoe2c0.pgf}}
     \caption{\label{fig:fbmp} FBMP Demo, $D_w = \SI{0.27}{ns}$}
 \end{figure}
 
@@ -271,13 +270,13 @@ The efficiency of 5 good performance methods on our simulation dataset show in t
 \begin{table}[H]
     \centering
     \caption{\label{fig:efficiency} Reconstruction Efficiency.}
-    \begin{tabular}{c|c}
+    \begin{tabular}{cc}
         \hline
         & Performance/$10^{5}$Waveform \\
         \hline
         CNN & 7.5s (GPU\tablefootnote{one graphics card of NVIDIA\textsuperscript{\textregistered} Tesla\textsuperscript{\textregistered} K80.}) \\
         FBMP & 432.7s (CPU\tablefootnote{100 CPU cores of AMD EYPC\texttrademark\ 7702}) \\
-        Fitting & 1072.5s (CPU) \\
+        Gradient Descent & 1072.5s (CPU) \\
         LucyDDM & 362.7s (CPU) \\
         MCMC & 15539.1s (CPU) \\
         \hline
