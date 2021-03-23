@@ -6,66 +6,71 @@
 
 \input{fom}
 
-Waveform analysis algorithms are presented below, separately. It is worth mentioning that the hittime in our waveform analysis results is discrete values (time bin edges in a DAQ window). 
+Waveform analysis algorithms are presented below, separately. The hittime in our waveform analysis results is discrete values (time bin edges in a DAQ window). 
 
 \subsection{Heuristic Methods}
 
 \subsubsection{Peak Finding}
 \label{sec:findpeak}
 
-The first intuitive method is the find peak method. We first smooth the input waveform using Savitzky–Golay filter to alleviate the obstruction of electron noise. Then we find the peak of the smoothed waveform and move the peaks leftward. The shifted voltage is now promotional to reconstructed charge $q_{rec}(t)$ related with the corresponding hittime. The leftward distance we moved, $\Delta t$ is the peak time of SPE response $v_{spe}$, described by formula \eqref{eq:dayaspe}. Finally, the charge is normalized to retain the consistency with the total charge which is the integration of the waveform. The demonstration here shows a result with W-dist = 1.96ns. 
+The first intuitive method is the find peak method. We first smooth the input waveform using Savitzky–Golay filter to alleviate the obstruction of electron noise. Then we find the peak of the smoothed waveform and move the peaks leftward. The shifted voltage is now promotional to reconstructed charge $\hat{q}(t)$ related with the corresponding hittime. The leftward distance we moved, $\Delta t$ is the peak time of SPE response $V_\mathrm{PE}(t)$, described by formula \eqref{eq:dayaspe}. Finally, the charge is normalized to retain the consistency with the total charge which is the integration of the waveform. The demonstration here shows a result with $D_w = \SI{1.96}{ns}$. 
 
 \begin{figure}[H]
+  \begin{subfigure}{0.5\textwidth}
     \centering
     \scalebox{0.4}{\input{figures/findpeak.pgf}}
-    \caption{Find Peak Method Demo, W-dist = 1.96ns}
+    \caption{Peak finding: $D_w = \SI{1.96}{ns}$}
+  \end{subfigure}
+  \begin{subfigure}{0.5\textwidth}
+    \centering
+    \scalebox{0.4}{\input{figures/threshold.pgf}}
+    \caption{Waveform shifting: $D_w = \SI{5.58}{ns}$}
+  \end{subfigure}
+  \caption{Heuristic methods demonstrations.}
 \end{figure}
 
 \subsubsection{Waveform Shifting}
 
-A threshold $v_{th}$ is settled with respect to electronics noise in simulation data. In waveform shift method, first we locate waveform voltage, $v_{w}(t)$, which exceeds $v_{th}$. Then we shift the exceeding part leftward. The $\Delta t$ we move is the same as the find peak method in section \ref{sec:findpeak}. Finally, we treat the normalized exceeding part as $q_{rec}(t)$, to maintain the charge integral of waveforms. The demonstration here shows a result with W-dist = 5.58ns. 
-
-\begin{figure}[H]
-    \centering
-    \scalebox{0.4}{\input{figures/threshold.pgf}}
-    \caption{Waveform Shift Method Demo, W-dist = 5.58ns}
-\end{figure}
+A threshold $V_\mathrm{th}$ is settled with respect to electronics noise in simulation data. In waveform shift method, first we locate waveform voltage, $w(t)$, which exceeds $V_\mathrm{th}$. Then we shift the exceeding part leftward. The $\Delta t$ we move is the same as the find peak method in section \ref{sec:findpeak}. Finally, we treat the normalized exceeding part as $\hat{q}(t)$, to maintain the charge integral of waveforms. The demonstration here shows a result with $D_w = \SI{5.58}{ns}$.
 
 \subsection{Deconvolution}
 \subsubsection{Fourier Deconvolution}
 
-Third method is Fourier transform deconvolution. Assuming that the waveform is the convolution of $v_{spe}$ and $q(t)$, the Fast Fourier transform (FFT) of $v_{w}$ and $v_{spe}$ are computed. A rectangular filter, $f$, is implemented. Then we compute the inverse FFT of the quotient between filtered FFT of $v_{w}$ and FFT of $v_{spe}$. We pick out positive values from inverse FFT result, and normalize them to obtain $q_{rec}(t)$. The process is shown in formula \eqref{eq:fft}. 
+Third method is Fourier transform deconvolution. Assuming that the waveform is the convolution of $V_\mathrm{PE}(t)$ and $q(t)$, the Fast Fourier transform (FFT) of $w(t)$ and $V_\mathrm{PE}(t)$ are computed. A rectangular filter, $f$, is implemented. Then we compute the inverse FFT of the quotient between filtered FFT of $w(t)$ and FFT of $V_\mathrm{PE}(t)$. We pick out positive values from inverse FFT result, and normalize them to obtain $\hat{q}(t)$. The process is shown in formula \eqref{eq:fft}. 
 
 \begin{equation}
-    q_{rec}(t) = \mathcal{F}^{-1}\{\frac{f[\mathcal{F}(v_{w})]}{\mathcal{F}(v_{spe})}\}
+    \hat{q}(t) = \mathcal{F}^{-1}\{\frac{f[\mathcal{F}(w(t))]}{\mathcal{F}(V_\mathrm{PE}(t))}\}
     \label{eq:fft}
 \end{equation}
 
-The demonstration here shows a result with W-dist = 1.77ns. 
+The demonstration here shows a result with $D_w = \SI{1.77}{ns}$. 
 
 \begin{figure}[H]
+  \begin{subfigure}{0.5\textwidth}
     \centering
     \scalebox{0.4}{\input{figures/fftrans.pgf}}
-    \caption{Fourier Deconvolution Demo, W-dist = 1.77ns}
+    \caption{Fourier deconvolution: $D_w = \SI{1.77}{ns}$}
+  \end{subfigure}
+  \begin{subfigure}{0.5\textwidth}
+    \centering
+    \scalebox{0.4}{\input{figures/lucyddm.pgf}}
+    \caption{Lucy direct demodulation: $D_w = \SI{0.95}{ns}$}
+  \end{subfigure}
+  \caption{Deconvolution demonstrations.}
 \end{figure}
+
 
 \subsubsection{Lucy Direct Demodulation}
 
-Lucy-Richardson direct demodulation (LucyDDM) is a non-linear iteration method, to calculate the deconvolution of signals. It has been used in astronomy \cite{li_richardson-lucy_2019}, image processing, and many other fields. Lucy direct demodulation has an advantage against Fourier deconvolution which is a constraint that $q_{rec}(t)$ must be larger than 0. 
+Lucy-Richardson direct demodulation (LucyDDM) is a non-linear iteration method, to calculate the deconvolution of signals. It has been used in astronomy \cite{li_richardson-lucy_2019}, image processing, and many other fields. Lucy direct demodulation has an advantage against Fourier deconvolution which is a constraint that $\hat{q}(t)$ must be larger than 0. 
 
-In the $n$-th iteration, the calculation shows in \eqref{eq:lucy-inter} where $v^{*}_{spe}$ is flipped $v_{spe}$. 
+In the $n$-th iteration, the calculation shows in \eqref{eq:lucy-inter} where $v^{*}_{spe}$ is flipped $V_\mathrm{PE}(t)$. 
 \begin{align}
-    q_{rec}^{(0)} &= \frac{v_{w}}{\sum v_{spe}} \\
-    q_{rec}^{(n)} &= q_{rec}^{(n-1)} \cdot \left(\frac{v_{w}}{q_{rec}^{(n-1)} \otimes v_{spe}} \otimes v^{*}_{spe}\right) \label{eq:lucy-inter}
+    \hat{q}^{(0)} &= \frac{w(t)}{\sum V_\mathrm{PE}(t)} \\
+    \hat{q}^{(n)} &= \hat{q}^{(n-1)} \cdot \left(\frac{w(t)}{\hat{q}^{(n-1)} \otimes V_\mathrm{PE}(t)} \otimes v^{*}_{spe}\right) \label{eq:lucy-inter}
 \end{align}
 
-Iteration will stop when two adjacent loops give very close results. The demonstration here shows a result with W-dist = 0.95ns. 
-
-\begin{figure}[H]
-    \centering
-    \scalebox{0.4}{\input{figures/lucyddm.pgf}}
-    \caption{Lucy direct demodulation Demo, W-dist = 0.95ns}
-\end{figure}
+Iteration will stop when two adjacent loops give very close results. The demonstration here shows a result with $D_w = \SI{0.95}{ns}$. 
 
 \subsection{Convolutional Neuron Networks}
 
@@ -78,7 +83,7 @@ A CNN is developed to analyze the waveform. Here is the structure of CNN which h
 
 % Processing workflow
 
-The complete workflow of data processing consists of two stages, data training and predicting. Data training is a task of supervised learning.  Based on paired data examples, the goal is to find an efficient mapping from detector waves to PE incidents with backpropagation methods. In the training process, a loss function judges the difference between training outputs and their referenced truth, and the training process is to minimize the loss. The product of network training is a function that creates desired outputs from inputs. By directly putting waveforms as inputs, one can get demanded outputs from a trained network in prediction.
+The complete workflow of data processing consists of two stages, data training and predicting. Data training is a task of supervised learning.  Based on paired data examples, the goal is to find an efficient mapping from detector waveforms to PE with backpropagation methods. In the training process, a loss function judges the difference between training outputs and their referenced truth, and the training process is to minimize the loss. The product of network training is a function that creates desired outputs from inputs. By directly putting waveforms as inputs, one can get demanded outputs from a trained network in prediction.
 %<Add a workflow description here>
 
 % Loss function
@@ -122,7 +127,7 @@ As Wasserstein distance is the distance between two probability distributions, t
 % Result
 In the training process, we trained CNN for each PMT channel. The loss which is Wasserstein distance during training shows in figure~\ref{fig:loss}. 
 
-The result reconstructing $q_{rec}$ when $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$ shows in figure (see figure~\ref{fig:cnn-hist}). The overall result of W-dist reconstructing $q_{rec}$ shows in figure (see figure~\ref{fig:cnn-npe}). 
+The result reconstructing $\hat{q}$ when $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$ shows in figure (see figure~\ref{fig:cnn-hist}). The overall result of $D_w$ reconstructing $\hat{q}$ shows in figure (see figure~\ref{fig:cnn-npe}). 
 
 \begin{figure}[H]
 \begin{minipage}[t]{.5\textwidth}
@@ -144,24 +149,24 @@ The result reconstructing $q_{rec}$ when $\mu=5, \tau=20\mathrm{ns}, \sigma=10\m
 \subsection{Fitting}
 \subsubsection{Gradient Descent}
 
-Waveform is the convolution of $v_{spe}$ and $q_{rec}(t)$ (see formula~\eqref{eq:wave-con}). 
+Waveform is the convolution of $V_\mathrm{PE}(t)$ and $\hat{q}(t)$ (see formula~\eqref{eq:wave-con}). 
 
 \begin{align}
-    v_{w} &= q_{rec} \otimes v_{spe} \label{eq:wave-con} \\
-    L &= L(v_{r}, v_{w}) = L(q_{rec}, v_{spe}, v_{w}) = \mathrm{RSS}(v_{w}, q_{rec} \otimes v_{spe}) \label{eq:loss-rss}
+    w(t) &= \hat{q} \otimes V_\mathrm{PE}(t) \label{eq:wave-con} \\
+    L &= L(v_{r}, w(t)) = L(\hat{q}, V_\mathrm{PE}(t), w(t)) = \mathrm{RSS}(w(t), \hat{q} \otimes V_\mathrm{PE}(t)) \label{eq:loss-rss}
 \end{align}
 
-In fitting process, the parameters are $q_{rec}(t)$ in each discrete hittime $t$. The complete information hidden in the original wave is disturbed by electronics noise and pile-up. The loss (see formula~\ref{eq:loss-rss}) which we optimize in fitting is the residual sum of squares (RSS) between the original wave $v_{w}(t)$ and reconstructed wave $v_{r}(t)$ according to the parameters. The parameters will tend to be preciser when the reconstructed wave approaching the original wave. 
+In the fitting process, the parameters are $\hat{q}(t)$ in each discrete hittime $t$. The complete information hidden in the original wave is disturbed by electronics noise and pile-up. The loss (see formula~\ref{eq:loss-rss}) which we optimize in fitting is the residual sum of squares (RSS) between the original wave $w(t)$ and reconstructed wave $v_{r}(t)$ according to the parameters. The parameters will tend to be preciser when the reconstructed wave approaching the original wave. 
 
-The fitting program is implemented with Limited-memory BFGS with bound constraint \cite{byrd_limited_1995} (L-BFGS-B). L-BFGS-B has an advantage that the $q_{rec}$ are constrained to be larger than 0. The demonstration here shows a result with W-dist = 0.67ns. 
+The fitting program is implemented with Limited-memory BFGS with bound constraint \cite{byrd_limited_1995} (L-BFGS-B). L-BFGS-B has an advantage that the $\hat{q}$ are constrained to be larger than 0. The demonstration here shows a result with $D_w = \SI{0.67}{ns}$.
 
 \begin{figure}[H]
     \centering
     \scalebox{0.4}{\input{figures/xiaopeip.pgf}}
-    \caption{Fitting Demo, W-dist = 0.67ns}
+    \caption{Fitting Demo, $D_w = \SI{0.67}{ns}$}
 \end{figure}
 
-The result reconstructing $q_{rec}$ when $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$ shows in figure. (see figure~\ref{fig:fitting-hist}) The overall result of W-dist reconstructing $q_{rec}$ shows in the figure (see figure~\ref{fig:fitting-npe}). 
+The result reconstructing $\hat{q}$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{10}{ns}$ shows in figure. (see figure~\ref{fig:fitting-hist}) The overall result of $D_w$ reconstructing $\hat{q}$ shows in the figure (see figure~\ref{fig:fitting-npe}). 
 
 \begin{figure}[H]
 \begin{minipage}[t]{.5\textwidth}
@@ -192,13 +197,13 @@ The model and prior distribution are defined below:
     t_{0} &\sim \mathrm{Uniform}(0, L_{w}) \\
     P_{q}(t_{i}) &= \mu \cdot P_{t}(t_{i}) \\
     q(t_{i}) &\sim \mathrm{Mix}\mathcal{N}(P_{q}(t_{i}), \mu_{g}, \sigma_{g}^{2}) \\
-    v_{w}(t_{i}) &\sim \mathcal{N}(F_{w}(q), \sigma_{w}^{2}) \\
+    w(t_{i}) &\sim \mathcal{N}(F_{w}(q), \sigma_{w}^{2}) \\
     \mathrm{Mix}\mathcal{N}(q(t_{i}) | P_{q}(t_{i}), \mu_{g}, \sigma_{g}^{2}) &= (1 - P_{q}(t_{i}))\delta(q(t_{i})) + P_{q}(t_{i})\mathcal{N}(q(t_{i}) | \mu_{g}, \sigma_{g}^{2}) \label{eq:mixnormal}
 \end{align}
 
 where $t_{0}$ is the starting time of time profile and $L_{w}$ is nothing but an upper limit of $t_{0}$. $P_{q}(t_{i})$ is the equivalent charge expectation in time interval $[t_{i}, t_{i}+\mathrm{d}t]$, where $\mathrm{d}t$ is a man-made small time interval depends on the precision required. $q$ follow the probability Normal mixture distribution, whose probability density function (PDF) is $\mathrm{Mix}\mathcal{N}$ in \eqref{eq:mixnormal}. Given $q$, using function $F_{w}(q)$ is the rebuilt waveform expectation. 
 
-We use NumPyro \cite{phan2019composable}, a graceful probabilistic programming library, to build the model and sample. One of the sampling results shows in figure~\ref{fig:mcmcrec-t0hist}. 
+We use NumPyro \cite{phan2019composable}, a graceful probabilistic programming library, to build the model and sample. One of the sampling results shows in Fig.~\ref{fig:mcmcrec-t0hist}. 
 
 \begin{figure}[H]
 \begin{minipage}[t]{.5\textwidth}
@@ -217,28 +222,28 @@ We use NumPyro \cite{phan2019composable}, a graceful probabilistic programming l
 \end{minipage}
 \end{figure}
 
-We can see during MCMC sampling, the charge w.r.t. time, $q_{rec}$, is also collected. The result reconstructing $q_{rec}$ when $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$ shows in figure (see figure~\ref{fig:mcmcrec-chargehist}). 
+We can see during MCMC sampling, the charge w.r.t. time, $\hat{q}$, is also collected. The result reconstructing $\hat{q}$ when $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$ shows in figure (see figure~\ref{fig:mcmcrec-chargehist}). 
 
 \subsubsection{Fast Bayesian Matching Pursuit}
 
-Fast Bayesian Matching Pursuit (FBMP) is a parameters estimation method for sparse linear models \cite{schniter_fast_nodate}. The linear sparse model in waveform analysis is given by equation~\eqref{eq:fbmpmodel}: 
+Fast Bayesian Matching Pursuit (FBMP) is a parameters estimation method for sparse linear models~\cite{schniter_fast_nodate}. The linear sparse model in waveform analysis is given by equation~\eqref{eq:fbmpmodel}: 
 
 \begin{align}
-    v_{w} &= F_{w}(q) = \boldsymbol{A}\cdot \boldsymbol{q} \label{eq:fbmpmodel} \\
+    w(t) &= F_{w}(q) = \boldsymbol{A}\cdot \boldsymbol{q} \label{eq:fbmpmodel} \\
     \hat{\boldsymbol{s}}_{*} &\triangleq \mathrm{argmax}\,p(\boldsymbol{s}|\boldsymbol{y}) \label{eq:map}
 \end{align}
 
 in which $A$ is a matrix derived from SPE response~\eqref{eq:dayaspe}. $\boldsymbol{q}$ is the charge vector of PE with length $N$, in which most elements are zeros. FBMP algorithm select model before estimation of $q$. For a certain model, $\boldsymbol{s}$ is a model selection vector that contains only 0 and 1. Only if $s_{n}=1$, $q_{n}\neq0$, where $\{q_{n}\}_{n=0}^{N-1}$. Implementing the maximum a posteriori (MAP) model-vector estimate (given by~\eqref{eq:map}), a repeated greedy search (RGS) is performed to get a set of dominant models, $\mathcal{S}_{*}$, in the parameter space of $\boldsymbol{s}$. RGS will stop after a controlled number of steps, as we believe the search for dominant models set is sufficient enough. Additionally, a linear algebra trick reduces the complexity of the algorithm \cite{schniter_fast_nodate}. Finally, a set of dominant models $\mathcal{S}_{*}$ and its corresponding set of posterior probability, as well as estimations of $\boldsymbol{q}$ for each model in $\mathcal{S}_{*}$, are collected to be the approximation of sparse posterior estimation of $\boldsymbol{q}$. We use the charge estimation of the maximum posterior probability model as the waveform analysis result. 
 
-Figure~\ref{fig:fbmp} shows one of the FBMP results. We can see the origin waveform $v_{w}$ and reconstructed waveform $v_{r}$ are very similar. The reconstructed and truth $q_{rec}$ are also similar. 
+Figure~\ref{fig:fbmp} shows one of the FBMP results. We can see the origin waveform $w(t)$ and reconstructed waveform $v_{r}$ are very similar. The reconstructed and truth $\hat{q}$ are also similar. 
 
 \begin{figure}[H]
     \centering
     \scalebox{0.45}{\input{figures/demoe2c0.pgf}}
-    \caption{\label{fig:fbmp} FBMP Demo, W-dist = 0.27}
+    \caption{\label{fig:fbmp} FBMP Demo, $D_w = \SI{0.27}{ns}$}
 \end{figure}
 
-The result reconstructing $q_{rec}$ when $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$ shows in figure. (see figure~\ref{fig:fbmp-hist}) The overall result of W-dist reconstructing $q_{rec}$ shows in the figure (see figure~\ref{fig:fbmp-npe}). 
+The result of reconstructed $\hat{q}$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{10}{ns}$ are shown in Fig.~\ref{fig:fbmp-hist}. The overall result of $D_w$ reconstructing $\hat{q}$ shows in Fig.~\ref{fig:fbmp-npe}). 
 
 \begin{figure}[H]
 \begin{minipage}[t]{.5\textwidth}
@@ -265,31 +270,19 @@ The efficiency of 5 good performance methods on our simulation dataset show in t
 
 \begin{table}[H]
     \centering
-    \caption{\label{fig:efficiency} Reconstruction Efficiency}
+    \caption{\label{fig:efficiency} Reconstruction Efficiency.}
     \begin{tabular}{c|c}
         \hline
         & Performance/$10^{5}$Waveform \\
         \hline
-        CNN & 7.5s (GPU) \\
-        \hline
-        FBMP & 432.7s (CPU) \\
-        \hline
+        CNN & 7.5s (GPU\tablefootnote{one graphics card of NVIDIA\textsuperscript{\textregistered} Tesla\textsuperscript{\textregistered} K80.}) \\
+        FBMP & 432.7s (CPU\tablefootnote{100 CPU cores of AMD EYPC\texttrademark\ 7702}) \\
         Fitting & 1072.5s (CPU) \\
-        \hline
         LucyDDM & 362.7s (CPU) \\
-        \hline
         MCMC & 15539.1s (CPU) \\
         \hline
     \end{tabular}
 \end{table}
 \hspace{4mm}
-
-The hardware we used listed here: 
-\begin{center}
-\begin{itemize}
-    \item GPU: Using one graphic card of NVIDIA\textsuperscript{\textregistered} Tesla\textsuperscript{\textregistered} K80
-    \item CPU: Using 100 CPU cores of AMD EYPC\texttrademark\ 7702
-\end{itemize}
-\end{center}
 
 % section Algorithm (end)

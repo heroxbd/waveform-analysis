@@ -50,12 +50,12 @@ The total number of PEs in a single waveform, $N_\mathrm{PE}$, is sampled from a
 
 The single photonelectron response is described as the formula \eqref{eq:dayaspe} \cite{jetter_pmt_2012}. An gaussian noise is added to waveform after sampling $t$ and $q$. 
 
-The typical combination of decay time ($\tau$) and transit time spread ($\sigma$) are listed in the figure (see figure~\ref{fig:deltamethods}). We take the value of $\tau$ according to typical liquid scintillator used in JUNO \cite{ludhova_particle_2020}. For every combination of PE number expectation $\mu$, decay time $\tau$ and TTS $\sigma$, a sample set (size $N=10,000$) is generated to estimate the timing resolution $\delta$. 
-
 \begin{equation}
-    V(t) = V_{0}\exp\left[-\frac{1}{2}\left(\frac{\ln(t/\tau)}{\sigma}\right)^{2}\right]
+    V_\mathrm{PE}(t) = V_{0}\exp\left[-\frac{1}{2}\left(\frac{\ln(t/\tau)}{\sigma}\right)^{2}\right]
     \label{eq:dayaspe}
 \end{equation}
+
+The typical combination of decay time ($\tau$) and transit time spread ($\sigma$) are listed in the figure (see figure~\ref{fig:deltamethods}). We take the value of $\tau$ according to typical liquid scintillator used in JUNO \cite{ludhova_particle_2020}. For every combination of PE number expectation $\mu$, decay time $\tau$ and TTS $\sigma$, a sample set (size $N=10,000$) is generated to estimate the timing resolution $\delta$. 
 
 We can use Maximum Likelihood Estimation (MLE) to estimate $t_{0}$ in formula \eqref{eq:time-pro}, which is the starting time of light curve, using charge $q$ and corresponding hittime. The difference between real starting time $t_{0tru}$ and reconstructed starting time $\hat{t}_0$ are collected to produce the starting time residual ($\Delta t_{0}=\hat{t}_0-t_0$) distribution. The time resolution $\delta$ is the standard deviation of the starting time residual distribution. The likelihood $\mathcal{L}$ defined in MLE is formula \eqref{eq:likelihood}. 
 
@@ -81,12 +81,12 @@ Before taking a deep look into the methods, input and output need to be defined.
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/wave.pgf}}
-    \caption{\label{fig:input} input}
+    \caption{\label{fig:input} Input}
   \end{subfigure}
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/charge.pgf}}
-    \caption{\label{fig:output} output}
+    \caption{\label{fig:output} Output}
   \end{subfigure}
   \caption{Waveform analysis takes PMT waveform as input and infer the timing and charge of the PEs in the output.}
 \end{figure}

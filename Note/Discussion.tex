@@ -1,7 +1,7 @@
-\section{Discussion} % (fold)
+\section{Summary and Discussion} % (fold)
 \label{sec:discussion}
 
-The $W_{d}$ summary of all methods is plotted in \ref{fig:chargesummary}, with all dataset parameters $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$. The errorbar shows 5 to 95 percentile of Wasserstein distance distribution. 
+The $W_{d}$ summary of all methods is plotted in Fig.~\ref{fig:chargesummary}, with all dataset parameters $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{10}{ns}$. The errorbar shows 5 to 95 percentile of Wasserstein distance distribution. 
 
 \begin{figure}[H]
     \centering
@@ -20,16 +20,16 @@ We can see that as method CNN uses Wasserstein distance as loss directly during 
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/vs-wdist.pgf}}
-    \caption{\label{fig:wdistsummary} $W_{d}$ of methods, error bar 5--95 percentile ($q_{rec}$)}
+    \caption{\label{fig:wdistsummary} $W_{d}$ of methods, error bar 5--95 percentile ($\hat{q}$)}
 \end{figure}
 
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/vs-rss.pgf}}
-    \caption{\label{fig:rsssummary} RSS of methods, error bar 5--95 percentile ($q_{rec}$)}
+    \caption{\label{fig:rsssummary} RSS of methods, error bar 5--95 percentile ($\hat{q}$)}
 \end{figure}
 
-The timing resolution $\delta$ using waveform analysis results (charge $q_{rec}$) of these methods are computed and collected. The $t_{0}$ reconstruction process is also MLE, which introduced by the formula \eqref{eq:likelihood}. Additionally, MCMC can provide an estimation of $t_{0}$ directly, which is also collected, and FBMP provides dozens of samples of $q$, which allows us to derive MLE estimation of $t_{0}$. The comparison between timing resolution using the first PE, all PE, and the 5 methods is shown in figure~\ref{fig:deltamethods}. 
+The timing resolution $\delta$ using waveform analysis results (charge $\hat{q}$) of these methods are computed and collected. The $t_{0}$ reconstruction process is also MLE, which introduced by the formula \eqref{eq:likelihood}. Additionally, MCMC can provide an estimation of $t_{0}$ directly, which is also collected, and FBMP provides dozens of samples of $q$, which allows us to derive MLE estimation of $t_{0}$. The comparison between timing resolution using the first PE, all PE, and the 5 methods is shown in figure~\ref{fig:deltamethods}. 
 
 \begin{figure}[H]
     \centering
@@ -40,28 +40,28 @@ The timing resolution $\delta$ using waveform analysis results (charge $q_{rec}$
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/recchargehist.pgf}}
-    \caption{\label{fig:recchargehist}  $q_{rec}$ distribution, $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$}
+    \caption{\label{fig:recchargehist}  $\hat{q}$ distribution, $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{10}{ns}$}
 \end{figure}
 
-In the figure, $\mathrm{MCMCcha}$ corresponds to reconstruction with recorded $q_{rec}$ during sampling and $\mathrm{MCMCt0}$ corresponds to reconstruction with $t_{0}$, which is directly collected in the MCMC method. $\mathrm{FBMPcha}$ corresponds to reconstruction with maximum posterior probability model's $q_{rec}$ and $\mathrm{FBMPt0}$ corresponds to the estimation of $t_{0}$ with all samples provided by FBMP. 
+In the figure, $\mathrm{MCMCcha}$ corresponds to reconstruction with recorded $\hat{q}$ during sampling and $\mathrm{MCMCt0}$ corresponds to reconstruction with $t_{0}$, which is directly collected in the MCMC method. $\mathrm{FBMPcha}$ corresponds to reconstruction with maximum posterior probability model's $\hat{q}$ and $\mathrm{FBMPt0}$ corresponds to the estimation of $t_{0}$ with all samples provided by FBMP. 
 
 All 5 methods (LucyDDM, Fitting, MCMC, CNN, FBMP) provide better timing resolution $\delta$ than only using the first PE during construction. 
 
 % Fitting & Posterior charge distribution
 
-The charge of reconstruction, $q_{rec}$, result distribution when $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$ shows in figure (see figure~\ref{fig:recchargehist}). 
+The charge of reconstruction, $\hat{q}$, result distribution when $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$ shows in figure (see figure~\ref{fig:recchargehist}). 
 
-The steep edge near 0 in these distributions results from the cut of the original $q_{rec}$, which is intended to remove fragment values of $q_{rec}$. But as we can see in figure~\ref{fig:recchargehist}, the charge distribution of LucyDDM, Fitting, CNN, and MCMC are severely distorted, while the charge distribution of FBMP partly retains the shape of the original (or prior) distribution of charge and only some skewing persists. 
+The steep edge near 0 in these distributions results from the cut of the original $\hat{q}$, which is intended to remove fragment values of $\hat{q}$. But as we can see in figure~\ref{fig:recchargehist}, the charge distribution of LucyDDM, Fitting, CNN, and MCMC are severely distorted, while the charge distribution of FBMP partly retains the shape of the original (or prior) distribution of charge and only some skewing persists. 
 
-During optimization of Wasserstein distance between $q_{rec}(t)$ and $q_{tru}(t)$ (e.g. CNN) or RSS between the origin wave $v_{w}(t)$ and reconstructed wave $v_{r}(t)$ (e.g. Fitting and LucyDDM), the total number of hittime which is the degree of freedom (DOF) of parameters is a constant, and the analysis process is not treated as a sparse regression problem. So a lot of parameters in $q$ turn out to be fragment values, which distorts the $q_{rec}$ distribution. So the reduction of DOF before estimation of parameters in FBMP gives relatively good results in sparsity, though it is still noticeable that the skewness of charge distribution of FBMP persists. 
+During optimization of Wasserstein distance between $\hat{q}(t)$ and $q_{tru}(t)$ (e.g. CNN) or RSS between the origin wave $v_{w}(t)$ and reconstructed wave $v_{r}(t)$ (e.g. Fitting and LucyDDM), the total number of hittime which is the degree of freedom (DOF) of parameters is a constant, and the analysis process is not treated as a sparse regression problem. So a lot of parameters in $q$ turn out to be fragment values, which distorts the $\hat{q}$ distribution. So the reduction of DOF before estimation of parameters in FBMP gives relatively good results in sparsity, though it is still noticeable that the skewness of charge distribution of FBMP persists. 
 
 % Bayesian
 
-As the origin waveform $v_{w}(t)$ is contaminated by Gaussian noise, the optimization a of single loss might be disturbed by the degeneracy of reconstruction results, which means for different $q_{rec}(t)$, the W-dist or RSS can result in the identity or very close. So it is adequate if we can obtain several samples from parameter space of $q$, and even superior if we can give the posterior probability of these samples. Additionally, the expansibility of the Bayesian method will allow us to retain sufficient information in subsequent steps such as event reconstruction. 
+As the origin waveform $v_{w}(t)$ is contaminated by Gaussian noise, the optimization a of single loss might be disturbed by the degeneracy of reconstruction results, which means for different $\hat{q}(t)$, the W-dist or RSS can result in the identity or very close. So it is adequate if we can obtain several samples from parameter space of $q$, and even superior if we can give the posterior probability of these samples. Additionally, the expansibility of the Bayesian method will allow us to retain sufficient information in subsequent steps such as event reconstruction. 
 
 % Time bin
 
-But as we see, the reconstruction results of hittime, $t_{rec}$, are discrete values (time bin edges in a DAQ window). To obtain continuous values of $t_{rec}$ may result in better analysis results. The results in the study show that when using refined time bins, the time resolution, the sparsity of reconstructed PEs, and all figures of merits (Wasserstein distance and RSS) are better, however, a lost efficiency. 
+But as we see, the reconstruction results of hittime, $\hat{t}$, are discrete values (time bin edges in a DAQ window). To obtain continuous values of $\hat{t}$ may result in better analysis results. The results in the study show that when using refined time bins, the time resolution, the sparsity of reconstructed PEs, and all figures of merits (Wasserstein distance and RSS) are better, however, a lost efficiency. 
 
 % Pedestal & Hardware
 
