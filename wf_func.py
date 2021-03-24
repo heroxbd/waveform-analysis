@@ -333,14 +333,14 @@ def likelihoodt0(hitt, char, gmu, gsigma, Tau, Sigma, npe, s0=None, mode='charge
     b = [0., 600.]
     tlist = np.arange(b[0], b[1] + 1e-6, 0.2)
     if mode == 'charge':
-        l = len(hitt)
-        char = np.tile(char, (2 * npe + 1, 1)).T
-        hitt = np.tile(hitt, (2 * npe + 1, 1)).T
-        npe = np.round(char / gmu) + np.tile(np.arange(-npe, npe + 1), (l, 1))
-        npe[npe < 0] = np.nan
-        probcharge = npeprobcharge(char, npe, gmu=gmu, gsigma=gsigma, s0=s0)
-        logL = lambda t0 : -1 * np.sum(np.log(np.clip(probcharhitt(t0, hitt, probcharge, Tau, Sigma, npe), np.finfo(np.float64).tiny, np.inf)))
-        # logL = lambda t0 : -1 * np.sum(np.log(np.clip(convolve_exp_norm(hitt - t0, Tau, Sigma) * (char / gmu), np.finfo(np.float64).tiny, np.inf)))
+        # l = len(hitt)
+        # char = np.tile(char, (2 * npe + 1, 1)).T
+        # hitt = np.tile(hitt, (2 * npe + 1, 1)).T
+        # npe = np.round(char / gmu) + np.tile(np.arange(-npe, npe + 1), (l, 1))
+        # npe[npe < 0] = np.nan
+        # probcharge = npeprobcharge(char, npe, gmu=gmu, gsigma=gsigma, s0=s0)
+        # logL = lambda t0 : -1 * np.sum(np.log(np.clip(probcharhitt(t0, hitt, probcharge, Tau, Sigma, npe), np.finfo(np.float64).tiny, np.inf)))
+        logL = lambda t0 : -1 * np.sum(np.log(np.clip(convolve_exp_norm(hitt - t0, Tau, Sigma), np.finfo(np.float64).tiny, np.inf)) * char / gmu)
     elif mode == 'all':
         logL = lambda t0 : -1 * np.sum(np.log(np.clip(convolve_exp_norm(hitt - t0, Tau, Sigma), np.finfo(np.float64).tiny, np.inf)))
     logLv_tlist = np.vectorize(logL)(tlist)

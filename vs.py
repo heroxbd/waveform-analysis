@@ -210,7 +210,7 @@ figr.savefig('Note/figures/vs-rss.png')
 plt.close(figr)
 
 fig = plt.figure(figsize=(len(Sigma) * 6, len(Tau) * 3))
-gs = gridspec.GridSpec(len(Tau), len(Sigma), figure=fig, left=0.1, right=0.95, top=0.95, bottom=0.1, wspace=0.3, hspace=0.35)
+gs = gridspec.GridSpec(len(Tau), len(Sigma), figure=fig, left=0.1, right=0.8, top=0.95, bottom=0.1, wspace=0.3, hspace=0.35)
 for sigma, i in zip(Sigma, list(range(len(Sigma)))):
     for tau, j in zip(Tau, list(range(len(Tau)))):
         ax = fig.add_subplot(gs[j, i])
@@ -223,29 +223,12 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
         ax.set_title(fr'$\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$')
         ax.set_ylim(0.3, 1.1)
         ax.grid()
-        ax.legend(loc='lower left')
+        if i == len(Sigma) - 1 and j == len(Tau) - 1:
+            ax.legend(loc='upper left', bbox_to_anchor=(1., 1.5))
 fig.savefig('Note/figures/vs-deltadiv.pgf')
 fig.savefig('Note/figures/vs-deltadiv.pdf')
 fig.savefig('Note/figures/vs-deltadiv.png')
 plt.close(fig)
-
-fig = plt.figure(figsize=(6, 6))
-ax = fig.add_subplot()
-tau = 20
-sigma = 10
-stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == tau) & (mts['lucyddm']['sigma'] == sigma)]
-alpha = 0.05
-yerr = stdlist['stdtruth'] / stdlist['std1sttruth'] / np.sqrt(stdlist['N'])
-ax.errorbar(stdlist['mu'], stdlist['stdtruth'] / stdlist['std1sttruth'], yerr=yerr, label='$\delta_'+deltalabel['tru']+'/\delta_'+deltalabel['1st']+'$', marker='^')
-ax.set_xlabel(r'$\mu$')
-ax.set_ylabel(r'$\mathrm{ratio}$')
-ax.set_title(fr'$\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$')
-ax.set_ylim(0.3, 1.1)
-ax.grid()
-ax.legend(loc='lower left')
-fig.savefig('Note/figures/2010vs-deltadiv.pgf')
-fig.savefig('Note/figures/2010vs-deltadiv.pdf')
-fig.savefig('Note/figures/2010vs-deltadiv.png')
 
 x = np.arange(0, len(keylist))
 tau = 20
