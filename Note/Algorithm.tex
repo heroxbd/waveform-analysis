@@ -13,17 +13,17 @@ Waveform analysis algorithms are presented below, separately. The hittime in our
 \subsubsection{Peak Finding}
 \label{sec:findpeak}
 
-The first intuitive method is the find peak method. We first smooth the input waveform using Savitzky–Golay filter to alleviate the obstruction of electron noise. Then we find the peak of the smoothed waveform and move the peaks leftward. The shifted voltage is now promotional to reconstructed charge $\hat{q}(t)$ related with the corresponding hittime. The leftward distance we moved, $\Delta t$ is the peak time of SPE response $V_\mathrm{PE}(t)$, described by formula \eqref{eq:dayaspe}. Finally, the charge is normalized to retain the consistency with the total charge which is the integration of the waveform. The demonstration here shows a result with $D_w = \SI{1.96}{ns}$. 
+The first intuitive method is to find peaks in Savitzky-Golay smoothed waveforms.  A minus shift $\Delta t$ is applied to peak positions $t_i$ to minimize $D_w$ according to the shape of SPE response $V_\mathrm{PE}(t)$ in \eqref{eq:dayaspe}.   The reconstructed charges $\hat{q}_i$ of $t_i$ are proportional to the peak voltages, which are normalized to the total charge by integration of the waveform. A demonstration shown in Fig.~\ref{fig:peak} has $D_w = \SI{1.96}{ns}$. 
 
 \begin{figure}[H]
   \begin{subfigure}{0.5\textwidth}
     \centering
-    \scalebox{0.4}{\input{figures/findpeak.pgf}}
-    \caption{Peak finding: $D_w = \SI{1.96}{ns}$}
+    \scalebox{0.36}{\input{figures/findpeak.pgf}}
+    \caption{\label{fig:peak}Peak finding: $D_w = \SI{1.96}{ns}$}
   \end{subfigure}
   \begin{subfigure}{0.5\textwidth}
     \centering
-    \scalebox{0.4}{\input{figures/threshold.pgf}}
+    \scalebox{0.36}{\input{figures/threshold.pgf}}
     \caption{Waveform shifting: $D_w = \SI{5.58}{ns}$}
   \end{subfigure}
   \caption{Heuristic methods demonstrations.}
@@ -39,7 +39,7 @@ A threshold $V_\mathrm{th}$ is settled with respect to electronics noise in simu
 Third method is Fourier transform deconvolution. Assuming that the waveform is the convolution of $V_\mathrm{PE}(t)$ and $q(t)$, the Fast Fourier transform (FFT) of $w(t)$ and $V_\mathrm{PE}(t)$ are computed. A rectangular filter, $f$, is implemented. Then we compute the inverse FFT of the quotient between filtered FFT of $w(t)$ and FFT of $V_\mathrm{PE}(t)$. We pick out positive values from inverse FFT result, and normalize them to obtain $\hat{q}(t)$. The process is shown in \eqref{eq:fft}. 
 
 \begin{equation}
-    \hat{q}(t) = \mathcal{F}^{-1}\{\frac{f[\mathcal{F}(w(t))]}{\mathcal{F}(V_\mathrm{PE}(t))}\}
+    \hat{q}(t) = \mathcal{F}^{-1}\left\{\frac{f[\mathcal{F}(w(t))]}{\mathcal{F}(V_\mathrm{PE}(t))}\right\}
     \label{eq:fft}
 \end{equation}
 
@@ -48,12 +48,12 @@ The demonstration here shows a result with $D_w = \SI{1.77}{ns}$.
 \begin{figure}[H]
   \begin{subfigure}{0.5\textwidth}
     \centering
-    \scalebox{0.4}{\input{figures/fftrans.pgf}}
+    \scalebox{0.36}{\input{figures/fftrans.pgf}}
     \caption{Fourier deconvolution: $D_w = \SI{1.77}{ns}$}
   \end{subfigure}
   \begin{subfigure}{0.5\textwidth}
     \centering
-    \scalebox{0.4}{\input{figures/lucyddm.pgf}}
+    \scalebox{0.36}{\input{figures/lucyddm.pgf}}
     \caption{Lucy direct demodulation: $D_w = \SI{0.95}{ns}$}
   \end{subfigure}
   \caption{Deconvolution demonstrations.}
