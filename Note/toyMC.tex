@@ -57,9 +57,10 @@ The single photonelectron response is described as the formula \eqref{eq:dayaspe
 
 The typical combination of decay time ($\tau$) and transit time spread ($\sigma$) are listed in Fig.~\ref{fig:reso-diff}. We take the value of $\tau$ according to typical liquid scintillator used in JUNO \cite{ludhova_particle_2020}. For every combination of PE number expectation $\mu$, decay time $\tau$ and TTS $\sigma$, a sample set (size $N=10,000$) is generated to estimate the timing resolution $\delta$. 
 
-We can use Maximum Likelihood Estimation (MLE) to estimate $t_{0}$ in formula \eqref{eq:time-pro}, which is the starting time of light curve, using charge $q$ and corresponding hittime. The difference between real starting time $t_{0tru}$ and reconstructed starting time $\hat{t}_0$ are collected to produce the starting time residual ($\Delta t_{0}=\hat{t}_0-t_0$) distribution. The time resolution $\delta$ is the standard deviation of the starting time residual distribution. The likelihood $\mathcal{L}$ defined in MLE is formula \eqref{eq:likelihood}. 
+We can use Maximum Likelihood Estimation (MLE) to estimate $t_{0}$ in formula \eqref{eq:time-pro}, which is the starting time of light curve, using charge $q$ and corresponding hittime. The difference between real starting time $t_{0tru}$ and reconstructed starting time $\hat{t}_0$ are collected to produce the starting time residual ($\Delta t_{0}=\hat{t}_0-t_0$) distribution. The time resolution $\delta$ is the standard deviation of the starting time residual distribution, which is formula \eqref{eq:resolution}. The likelihood $\mathcal{L}$ defined in MLE is formula \eqref{eq:likelihood}. 
 
 \begin{align}
+    \delta &= s_{\Delta t_{0}} \label{eq:resolution} \\
     \mathcal{L}(t_{0}) &= e^{-\mu}\Pi_{i=0}^{N_\mathrm{PE}}\left(\sum_{j=a}^{b}[P_{i}(q_{i},j)(P_{t}(t_{i}))^{j}]\right)
     \label{eq:likelihood} \\
     P_{i}(q_{i},j) &= \frac{P_{q}(q_{i}|j)}{\sum_{j=a}^{b}P_{q}(q_{i}|j)}
