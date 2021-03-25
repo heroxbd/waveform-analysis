@@ -1,12 +1,26 @@
 \section{Summary and Discussion} % (fold)
 \label{sec:discussion}
 
-The $W_{d}$ summary of all methods is plotted in Fig.~\ref{fig:chargesummary}, with all dataset parameters $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{10}{ns}$. The errorbar shows 5 to 95 percentile of Wasserstein distance distribution. 
+% Likelihood
+
+Formula \eqref{eq:likelihood} is the likelihood to estimate $t_{0}$ in formula \eqref{eq:time-pro}. But $q_{i}$ is the charge in each time bin $t_{i}$ rather the number of PE. 
+
+\begin{align}
+    \mathcal{L}(t_{0}) &= e^{-\mu}\Pi_{i=0}^{N_\mathrm{PE}}\left(\sum_{j=a}^{b}[P_{i}(q_{i},j)(P_{t}(t_{i}))^{j}]\right)
+    \label{eq:originlikelihood} \\
+    P_{i}(q_{i},j) &= \frac{P_{q}(q_{i}|j)}{\sum_{j=a}^{b}P_{q}(q_{i}|j)}
+\end{align}
+
+For reconstructed hittime and charge produced by waveform analysis algorithms, each charge $q$ is registered to a single hittime $t$, but the number of PE at a single hittime is uncertain. $P_{i}(q_{i},j)$ is the posterior probability if the number of PE is $j$ with charge $q_{i}$. $a$ and $b$ are the upper and lower bound estimation of the number of PE $j$. 
+
+% Methods
+
+The $W_{d}$ summary of all methods is plotted in Fig.~\ref{fig:chargesummary}, with all dataset parameters $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$. The errorbar shows 5 to 95 percentile of Wasserstein distance distribution. 
 
 \begin{figure}[H]
     \centering
-    \scalebox{0.7}{\input{figures/summarycharge.pgf}}
-    \caption{\label{fig:chargesummary} $W_{d}$ of methods with light curve $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{10}{ns}$}
+    \scalebox{0.6}{\input{figures/summarycharge.pgf}}
+    \caption{\label{fig:chargesummary} $W_{d}$ of methods with light curve $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$}
 \end{figure}
 
 It is apparent that FindPeak, Shift, and FFT are second-rate among all 8 methods, so we will only discuss the other 5 methods below. 
@@ -33,14 +47,14 @@ The timing resolution $\delta$ using waveform analysis results (charge $\hat{q}$
 
 \begin{figure}[H]
     \centering
-    \resizebox{\textwidth}{!}{\input{figures/vs-delta.pgf}}
-    \caption{\label{fig:deltamethods} Timing resolution $\delta$ of methods}
+    \resizebox{\textwidth}{!}{\input{figures/vs-deltamethodsdiv.pgf}}
+    \caption{\label{fig:deltamethods} Timing resolution ratio $\delta_{all}/\delta_{1st}$ of methods}
 \end{figure}
 
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/recchargehist.pgf}}
-    \caption{\label{fig:recchargehist}  $\hat{q}$ distribution, $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{10}{ns}$}
+    \caption{\label{fig:recchargehist}  $\hat{q}$ distribution, $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$}
 \end{figure}
 
 In the figure, $\mathrm{MCMCcha}$ corresponds to reconstruction with recorded $\hat{q}$ during sampling and $\mathrm{MCMCt0}$ corresponds to reconstruction with $t_{0}$, which is directly collected in the MCMC method. $\mathrm{FBMPcha}$ corresponds to reconstruction with maximum posterior probability model's $\hat{q}$ and $\mathrm{FBMPt0}$ corresponds to the estimation of $t_{0}$ with all samples provided by FBMP. 

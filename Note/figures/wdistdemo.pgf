@@ -21,6 +21,7 @@
 %%   \import{<path to file>}{<filename>.pgf}
 %%
 %% Matplotlib used the following preamble
+%%   \usepackage[detect-all,locale=DE]{siunitx}
 %%
 \begingroup%
 \makeatletter%

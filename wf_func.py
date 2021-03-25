@@ -35,8 +35,13 @@ plt.rcParams['lines.linewidth'] = 2.0
 plt.rcParams['text.usetex'] = True
 plt.rcParams['pgf.texsystem'] = 'pdflatex'
 plt.rcParams['axes.unicode_minus'] = False
+pgf_with_latex = {'pgf.preamble': [
+#         r'\usepackage[utf8x]{inputenc}',
+        r'\usepackage[detect-all,locale=DE]{siunitx}',
+        ]}
+plt.rcParams.update(pgf_with_latex)
 
-nshannon = 10
+nshannon = 1
 
 def xiaopeip(wave, spe_pre, eta=0):
     l = len(wave)
@@ -267,8 +272,8 @@ def read_model(spe_path, n=1):
             spe_pre_i = {'spe':interp1d(np.arange(len(spe[i])), spe[i])(np.arange(0, len(spe[i]) - 1, 1 / n)), 'epulse':epulse, 'peak_c':peak_c * n, 'mar_l':mar_l * n, 'mar_r':mar_r * n, 'std':std[i], 'parameters':p[i]}
             spe_pre.update({cid[i]:spe_pre_i})
         ax.grid()
-        ax.set_xlabel(r'$Time/\mathrm{ns}$')
-        ax.set_ylabel(r'$Voltage/\mathrm{mV}$')
+        ax.set_xlabel(r'$\mathrm{Time}/\si{ns}$')
+        ax.set_ylabel(r'$\mathrm{Voltage}/\si{mV}$')
         fig.savefig('Note/figures/pmtspe.pgf')
         fig.savefig('Note/figures/pmtspe.pdf')
         plt.close()
@@ -388,7 +393,7 @@ def demo(pet_sub, cha_sub, tth, spe_pre, window, wave, cid, p, full=False, fold=
     cha_ans = tth['Charge']
     pet_ans = np.unique(pet_ans_0)
     cha_ans = np.array([np.sum(cha_ans[pet_ans_0 == i]) for i in pet_ans])
-    ylabel = '$Charge/\mathrm{mV}\cdot\mathrm{ns}$'
+    ylabel = r'$\mathrm{Charge}/\si{mV\cdot ns}$'
     distd = '(W/ns,C/mV*ns)'
     distl = 'cdiff'
     edist = cha_sub.sum() - cha_ans.sum()
@@ -407,7 +412,7 @@ def demo(pet_sub, cha_sub, tth, spe_pre, window, wave, cid, p, full=False, fold=
     ax0.plot(pan, wave, c='b', label='origin wave')
     ax0.plot(pan, wav_ans, c='k', label='truth wave')
     ax0.plot(pan, wav_sub, c='g', label='recon wave')
-    ax0.set_ylabel('$Voltage/\mathrm{mV}$')
+    ax0.set_ylabel('$\mathrm{Voltage}/\si{mV}$')
     ax0.hlines(5 * spe_pre['std'], 0, window, color='c', label='threshold')
     ax0.set_xticklabels([])
     ax0.set_ylim(min(wave)-5, max(wave)+5)
@@ -437,8 +442,8 @@ def demo(pet_sub, cha_sub, tth, spe_pre, window, wave, cid, p, full=False, fold=
     ax2.grid()
     ax3 = fig.add_axes((.1, .1, .85, .1))
     ax3.scatter(pan, wav_sub - wave, c='k', label='residual wave', marker='.')
-    ax3.set_xlabel('$t/\mathrm{ns}$')
-    ax3.set_ylabel('$Voltage/\mathrm{mV}$')
+    ax3.set_xlabel('$\mathrm{t}/\si{ns}$')
+    ax3.set_ylabel('$\mathrm{Voltage}/\si{mV}$')
     ax3.set_xlim(ax0.get_xlim())
     dh = int((max(np.abs(wav_sub - wave))//5+1)*5)
     ax3.set_yticks(np.linspace(-dh, dh, int(2*dh//5+1)))

@@ -127,14 +127,14 @@ As Wasserstein distance is the distance between two probability distributions, t
 % Result
 In the training process, we trained CNN for each PMT channel. The loss which is Wasserstein distance during training shows in figure~\ref{fig:loss}. 
 
-The result reconstructing $\hat{q}$ when $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$ shows in figure (see figure~\ref{fig:cnn-hist}). The overall result of $D_w$ reconstructing $\hat{q}$ shows in figure (see figure~\ref{fig:cnn-npe}). 
+The result reconstructing $\hat{q}$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ shows in figure (see figure~\ref{fig:cnn-hist}). The overall result of $D_w$ reconstructing $\hat{q}$ shows in figure (see figure~\ref{fig:cnn-npe}). 
 
 \begin{figure}[H]
 \begin{minipage}[t]{.5\textwidth}
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/takarachargehist.pgf}}
-    \caption{\label{fig:cnn-hist} $W_{d}$ Histogram \& Boxplot, $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$, method is CNN}
+    \caption{\label{fig:cnn-hist} $W_{d}$ Histogram \& Boxplot, $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$, method is CNN}
 \end{figure}
 \end{minipage}
 \begin{minipage}[t]{.5\textwidth}
@@ -166,14 +166,14 @@ The fitting program is implemented with Limited-memory BFGS with bound constrain
     \caption{Fitting Demo, $D_w = \SI{0.67}{ns}$}
 \end{figure}
 
-The result reconstructing $\hat{q}$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{10}{ns}$ shows in figure. (see figure~\ref{fig:fitting-hist}) The overall result of $D_w$ reconstructing $\hat{q}$ shows in the figure (see figure~\ref{fig:fitting-npe}). 
+The result reconstructing $\hat{q}$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ shows in figure. (see figure~\ref{fig:fitting-hist}) The overall result of $D_w$ reconstructing $\hat{q}$ shows in the figure (see figure~\ref{fig:fitting-npe}). 
 
 \begin{figure}[H]
 \begin{minipage}[t]{.5\textwidth}
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/xiaopeipchargehist.pgf}}
-    \caption{\label{fig:fitting-hist} $W_{d}$ Histogram \& Boxplot, $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$, method is Fitting}
+    \caption{\label{fig:fitting-hist} $W_{d}$ Histogram \& Boxplot, $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$, method is Fitting}
 \end{figure}
 \end{minipage}
 \begin{minipage}[t]{.5\textwidth}
@@ -210,19 +210,19 @@ We use NumPyro \cite{phan2019composable}, a graceful probabilistic programming l
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/mcmcrect0hist.pgf}}
-    \caption{\label{fig:mcmcrec-t0hist} $\Delta t_{0}$ Histogram, $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$, method is MCMC}
+    \caption{\label{fig:mcmcrec-t0hist} $\Delta t_{0}$ Histogram, $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$, method is MCMC}
 \end{figure}
 \end{minipage}
 \begin{minipage}[t]{.5\textwidth}
 \begin{figure}[H]
     \centering
-    \resizebox{\textwidth}{!}{\input{figures/mcmcrecchargehist.pgf}}
-    \caption{\label{fig:mcmcrec-chargehist} $W_{d}$ Histogram, $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$, method is MCMC}
+    \resizebox{\textwidth}{!}{\input{figures/mcmcchargehist.pgf}}
+    \caption{\label{fig:mcmcrec-chargehist} $W_{d}$ Histogram, $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$, method is MCMC}
 \end{figure}
 \end{minipage}
 \end{figure}
 
-We can see during MCMC sampling, the charge w.r.t. time, $\hat{q}$, is also collected. The result reconstructing $\hat{q}$ when $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$ shows in figure (see figure~\ref{fig:mcmcrec-chargehist}). 
+We can see during MCMC sampling, the charge w.r.t. time, $\hat{q}$, is also collected. The result reconstructing $\hat{q}$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ shows in figure (see figure~\ref{fig:mcmcrec-chargehist}). 
 
 \subsubsection{Fast Bayesian Matching Pursuit}
 
@@ -238,18 +238,18 @@ Figure~\ref{fig:fbmp} shows one of the FBMP results. We can see the origin wavef
 
 \begin{figure}[H]
     \centering
-    \scalebox{0.4}{\input{figures/demoe2c0.pgf}}
+    \scalebox{0.4}{\input{figures/demoe5c0.pgf}}
     \caption{\label{fig:fbmp} FBMP Demo, $D_w = \SI{0.27}{ns}$}
 \end{figure}
 
-The result of reconstructed $\hat{q}$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{10}{ns}$ are shown in Fig.~\ref{fig:fbmp-hist}. The overall result of $D_w$ reconstructing $\hat{q}$ shows in Fig.~\ref{fig:fbmp-npe}). 
+The result of reconstructed $\hat{q}$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ are shown in Fig.~\ref{fig:fbmp-hist}. The overall result of $D_w$ reconstructing $\hat{q}$ shows in Fig.~\ref{fig:fbmp-npe}). 
 
 \begin{figure}[H]
 \begin{minipage}[t]{.5\textwidth}
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/fbmpchargehist.pgf}}
-    \caption{\label{fig:fbmp-hist} $W_{d}$ Histogram \& Boxplot, $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$, method is FBMP}
+    \caption{\label{fig:fbmp-hist} $W_{d}$ Histogram \& Boxplot, $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$, method is FBMP}
 \end{figure}
 \end{minipage}
 \begin{minipage}[t]{.5\textwidth}

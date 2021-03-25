@@ -222,7 +222,7 @@ def fbmp_inference(a0, a1):
         cid = ent[i]['ChannelID']
         wave = ent[i]['Waveform'].astype(np.float64) * spe_pre[cid]['epulse']
 
-        n = max(math.ceil(Mu / math.sqrt(Tau ** 2 + Sigma ** 2)), 1)
+        n = max(math.ceil(Mu / math.sqrt(Tau ** 2 + Sigma ** 2)) * 10, 1)
         A, wave_r, tlist, t0_init, t0_init_delta, char_init = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Mu, Tau, Sigma, gmu, gsigma, Thres['lucyddm'], npe, p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
         time_fbmp_start = time.time()
         A = np.matmul(A, np.diag(1. / np.sqrt(np.diag(np.matmul(A.T, A)))))
