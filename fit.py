@@ -30,7 +30,7 @@ fopt = args.opt
 reference = args.ref
 method = args.met
 
-Thres = {'xiaopeip':0.2, 'lucyddm':0.2, 'fftrans':0.1, 'findpeak':0.1, 'threshold':0.1, 'omp':0}
+Thres = {'xiaopeip':0.2, 'lucyddm':0.2, 'fftrans':0.1, 'findpeak':0.1, 'threshold':0, 'omp':0}
 
 def fitting(a, b):
     nsp = 4
@@ -62,8 +62,8 @@ def fitting(a, b):
             cha = cha / cha.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
             time_method = time_method + time.time() - time_method_start
 
-            truth = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
-            wff.demo(pet, cha, truth, spe_pre[ent[i]['ChannelID']], window, wave, ent[i]['ChannelID'], p, fold='.', ext='.pdf')
+            # truth = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
+            # wff.demo(pet, cha, truth, spe_pre[ent[i]['ChannelID']], window, wave, ent[i]['ChannelID'], p, fold='.', ext='.pdf')
 
             end = start + len(cha)
             dt['HitPosInWindow'][start:end] = pet

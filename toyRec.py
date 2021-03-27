@@ -7,6 +7,7 @@ import h5py
 import numpy as np
 from numpy.lib import recfunctions
 import scipy.optimize as opti
+from scipy.interpolate import interp1d
 
 import wf_func as wff
 
@@ -25,11 +26,12 @@ def start_time(a0, a1):
     for i in range(a0, a1):
         hitt = charge[i_cha[i]:i_cha[i+1]]['HitPosInWindow'].astype(np.float64)
         char = charge[i_cha[i]:i_cha[i+1]]['Charge']
-        t0, _ = wff.likelihoodt0(hitt, char=char, gmu=gmu, gsigma=gsigma, Tau=Tau, Sigma=Sigma, npe=npe, s0=s0, mode='charge')
+        t0, _ = wff.likelihoodt0(hitt, char=char, gmu=gmu, gsigma=gsigma, Tau=Tau, Sigma=Sigma, npe=npe, ft=interp1d(t, b / b.sum(), fill_value=0, bounds_error=False), s0=s0, mode='charge')
         stime[i - a0] = t0
     return stime
 
 spe_pre = wff.read_model(args.ref[1], wff.nshannon)
+p = spe_pre[0]['parameters']
 with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as ipt, h5py.File(args.ref[0], 'r', libver='latest', swmr=True) as ref:
     npe = ref['SimTruth/T'].attrs['npe']
     gmu = ref['SimTriggerInfo/PEList'].attrs['gmu']
@@ -52,6 +54,7 @@ with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as ipt, h5py.File(args
     tc['ChannelID'] = charge['ChannelID']
     tc = np.unique(tc)
     if 'starttime' in ipt:
+    # if False:
         ts = ipt['starttime'][:]
     else:
         sdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('tscharge', np.float64), ('tswave', np.float64)])
@@ -62,7 +65,9 @@ with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as ipt, h5py.File(args
 
         chunk = N // args.Ncpu + 1
         slices = np.vstack((np.arange(0, N, chunk), np.append(np.arange(chunk, N, chunk), N))).T.astype(int).tolist()
-        start_time(0, 10)
+        t = np.arange(-100, 1000, 0.2)
+        s = np.arange(-100, 300, 0.2)
+        b = (wff.convolve_exp_norm(s, Tau, Sigma)[:, None] * wff.spe(t - s[:, None], tau=p[0], sigma=p[1], A=p[2])).sum(axis=0)
         with Pool(min(args.Ncpu, cpu_count())) as pool:
             result = pool.starmap(partial(start_time), slices)
         ts['tscharge'] = np.hstack(result)

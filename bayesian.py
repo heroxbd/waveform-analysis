@@ -25,7 +25,9 @@ import numpyro
 numpyro.set_platform('cpu')
 # numpyro.set_host_device_count(2)
 # import numpyro.contrib.tfp.distributions
+import matplotlib
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 
 import wf_func as wff
 
@@ -67,7 +69,7 @@ if Tau != 0:
     Alpha = 1 / Tau
     Co = (Alpha / 2. * np.exp(Alpha ** 2 * Sigma ** 2 / 2.)).item()
 std = 1.
-Thres = {'mcmc':0.1, 'lucyddm':0.1, 'fbmp':0.0}
+Thres = {'mcmc':0.1, 'lucyddm':0.1, 'fbmp':1e-6}
 mix0sigma = 1e-4
 
 def mix01_loglikelihoodt0(As, pl):
@@ -206,7 +208,7 @@ def time_numpyro(a0, a1):
 def fbmp_inference(a0, a1):
     nsp = 4
     nstd = 3
-    D = 100
+    D = 1000
     stime_t0 = np.empty(a1 - a0)
     stime_cha = np.empty(a1 - a0)
     dt = np.zeros((a1 - a0) * window, dtype=opdt)
@@ -227,6 +229,13 @@ def fbmp_inference(a0, a1):
         time_fbmp_start = time.time()
         A = np.matmul(A, np.diag(1. / np.sqrt(np.diag(np.matmul(A.T, A)))))
         xmmse, xmmse_star, psy_star, nu_star, T_star, d_tot_i, d_max_i = wff.fbmpr_fxn_reduced(wave_r, A, min(-1e-3+1, Mu / len(tlist)), spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, D, stop=0)
+        # xmmse = np.zeros_like(tlist)
+        # hitm = np.repeat(np.around(truth['HitPosInWindow'][:, None] * n) / n, len(tlist), axis=1)
+        # xmmse = (np.repeat(truth['Charge'][:, None], len(tlist), axis=1) * (hitm == tlist)).sum(axis=0) * factor / gmu
+        # xmmse_star = xmmse[None, :]
+        # psy_star = np.array([1])
+        # d_tot_i = 0
+        # d_max_i = 0
         time_fbmp = time_fbmp + time.time() - time_fbmp_start
 
         # tlist_pan = tlist
@@ -238,14 +247,14 @@ def fbmp_inference(a0, a1):
             pet = tlist[xmmse_most > 0]
             cha = xmmse_most[xmmse_most > 0] / factor
 
-            logL = lambda t0 : -1 * loglikelihood(t0, tlist_pan, As, psy_star, like='mix01', c=Mu / n)
+            logL = lambda t0 : -1 * loglikelihood(t0, tlist_pan, As, psy_star, like='b', c=Mu / n)
             btlist = np.arange(t0_init - 3 * Sigma, t0_init + 3 * Sigma + 1e-6, 0.2)
             logLv_btlist = np.vectorize(logL)(btlist)
             t0_t0 = opti.fmin_l_bfgs_b(logL, x0=[btlist[np.argmin(logLv_btlist)]], approx_grad=True, bounds=[b], maxfun=50000)[0]
             # logLvdelta = np.vectorize(lambda t : np.abs(logL(t) - logL(t0_t0) - 0.5))
             # t0_t0delta = abs(opti.fmin_l_bfgs_b(logLvdelta, x0=[btlist[np.argmin(np.abs(logLv_btlist - logL(t0_t0) - 0.5))]], approx_grad=True, bounds=[b], maxfun=50000)[0] - t0_t0)
 
-            logL = lambda t0 : -1 * loglikelihood(t0, tlist_pan, As[0][None, :], psy_star, like='mix01', c=Mu / n)
+            logL = lambda t0 : -1 * loglikelihood(t0, tlist_pan, As[0][None, :], psy_star, like='b', c=Mu / n)
             logLv_btlist = np.vectorize(logL)(btlist)
             t0_cha = opti.fmin_l_bfgs_b(logL, x0=[btlist[np.argmin(logLv_btlist)]], approx_grad=True, bounds=[b], maxfun=50000)[0]
             # logLvdelta = np.vectorize(lambda t : np.abs(logL(t) - logL(t0_cha) - 0.5))
@@ -308,6 +317,8 @@ if method == 'mcmc':
     accep = np.hstack([result[i][5] for i in range(len(slices))])
     mix0ratio = np.hstack([result[i][6] for i in range(len(slices))])
 
+    matplotlib.use('Agg')
+    matplotlib.rcParams.update(matplotlib.rcParamsDefault)
     ff = plt.figure(figsize=(16, 6))
     ax = ff.add_subplot(121)
     ax.hist(accep, bins=np.arange(0, 1+0.02, 0.02), label='accept_prob')
@@ -335,19 +346,27 @@ elif method == 'fbmp':
     time_fbmp = np.hstack([result[i][5] for i in range(len(slices))]).mean()
     print('FBMP finished, real time {0:.02f}s'.format(time_fbmp))
 
+    matplotlib.use('Agg')
+    matplotlib.rcParams.update(matplotlib.rcParamsDefault)
     ff = plt.figure(figsize=(16, 6))
     ax = ff.add_subplot(121)
-    di, ci = np.unique(d_tot, return_counts=True)
-    ax.bar(di, ci, label='d_tot')
+    # di, ci = np.unique(d_tot, return_counts=True)
+    # ax.bar(di, ci, label='d_tot')
+    ax.hist(d_tot, bins=np.arange(0, d_tot.max() + 20, 20), label='d_tot')
     ax.set_xlabel('d_tot')
     ax.set_ylabel('Count')
+    ax.set_ylim(0.5, N)
+    ax.set_yscale('log')
     ax.legend(loc='upper center')
     ax = ff.add_subplot(122)
-    di, ci = np.unique(d_max, return_counts=True)
-    ax.bar(di, ci, label='d_max')
+    # di, ci = np.unique(d_max, return_counts=True)
+    # ax.bar(di, ci, label='d_max')
+    ax.hist(d_tot, bins=np.arange(0, d_max.max() + 20, 20), label='d_max')
     ax.set_xlabel('d_max')
     ax.set_ylabel('Count')
-    ax.legend(loc='upper center')
+    ax.set_ylim(0.5, N)
+    ax.set_yscale('log')
+    ax.legend(loc='upper right')
     ff.savefig(os.path.splitext(fopt)[0] + '.png')
     plt.close()
 

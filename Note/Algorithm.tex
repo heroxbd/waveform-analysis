@@ -13,7 +13,7 @@ Waveform analysis algorithms are presented below, separately. The hittime in our
 \subsubsection{Peak Finding}
 \label{sec:findpeak}
 
-The first intuitive method is to find peaks in Savitzky-Golay smoothed waveforms.  A minus shift $\Delta t$ is applied to peak positions $t_i$ to minimize $D_w$ according to the shape of SPE response $V_\mathrm{PE}(t)$ in \eqref{eq:dayaspe}.   The reconstructed charges $\hat{q}_i$ of $t_i$ are proportional to the peak voltages, which are normalized to the total charge by integration of the waveform. A demonstration shown in Fig.~\ref{fig:peak} has $D_w = \SI{1.96}{ns}$. 
+The first intuitive method is to find peaks in Savitzky-Golay \cite{savitzky_smoothing_1964} smoothed waveforms.  A minus shift $\Delta t$ is applied to peak positions $t_i$ to minimize $D_w$ according to the shape of SPE response $V_\mathrm{PE}(t)$ in \eqref{eq:dayaspe}.   The reconstructed charges $\hat{q}_i$ of $t_i$ are proportional to the peak voltages, which are normalized to the total charge by integration of the waveform. A demonstration shown in Fig.~\ref{fig:peak} has $D_w = \SI{1.96}{ns}$. 
 
 \begin{figure}[H]
   \begin{subfigure}{0.5\textwidth}

@@ -36,8 +36,7 @@ plt.rcParams['text.usetex'] = True
 plt.rcParams['pgf.texsystem'] = 'pdflatex'
 plt.rcParams['axes.unicode_minus'] = False
 pgf_with_latex = {'pgf.preamble': [
-#         r'\usepackage[utf8x]{inputenc}',
-        r'\usepackage[detect-all,locale=DE]{siunitx}',
+        r'\usepackage[detect-all,locale=DE]{siunitx}'
         ]}
 plt.rcParams.update(pgf_with_latex)
 
@@ -319,6 +318,7 @@ def spe(t, tau, sigma, A):
     t0 = t[t > np.finfo(np.float64).tiny]
     s[t > np.finfo(np.float64).tiny] = A * np.exp(-1 / 2 * (np.log(t0 / tau) * np.log(t0 / tau) / sigma / sigma))
     return s
+#     return np.where(t == 0, 1, 0)
 
 def charge(n, gmu, gsigma, thres=0):
     chargesam = norm.ppf(1 - uniform.rvs(scale=1-norm.cdf(thres, loc=gmu, scale=gsigma), size=n), loc=gmu, scale=gsigma)
@@ -334,7 +334,7 @@ def npeprobcharge(charge, npe, gmu, gsigma, s0):
     prob = np.where(npe >= 0, norm.pdf(charge, loc=gmu * npe, scale=scale) / (1 - norm.cdf(0, loc=gmu * npe, scale=scale)), 0)
     return prob
 
-def likelihoodt0(hitt, char, gmu, gsigma, Tau, Sigma, npe, s0=None, mode='charge', is_delta=False):
+def likelihoodt0(hitt, char, gmu, gsigma, Tau, Sigma, npe, ft=None, s0=None, mode='charge', is_delta=False):
     b = [0., 600.]
     tlist = np.arange(b[0], b[1] + 1e-6, 0.2)
     if mode == 'charge':
@@ -346,6 +346,7 @@ def likelihoodt0(hitt, char, gmu, gsigma, Tau, Sigma, npe, s0=None, mode='charge
         # probcharge = npeprobcharge(char, npe, gmu=gmu, gsigma=gsigma, s0=s0)
         # logL = lambda t0 : -1 * np.sum(np.log(np.clip(probcharhitt(t0, hitt, probcharge, Tau, Sigma, npe), np.finfo(np.float64).tiny, np.inf)))
         logL = lambda t0 : -1 * np.sum(np.log(np.clip(convolve_exp_norm(hitt - t0, Tau, Sigma), np.finfo(np.float64).tiny, np.inf)) * char / gmu)
+        # logL = lambda t0 : -1 * np.sum(np.log(np.clip(ft(hitt - t0), np.finfo(np.float64).tiny, np.inf)) * char / gmu)
     elif mode == 'all':
         logL = lambda t0 : -1 * np.sum(np.log(np.clip(convolve_exp_norm(hitt - t0, Tau, Sigma), np.finfo(np.float64).tiny, np.inf)))
     logLv_tlist = np.vectorize(logL)(tlist)
