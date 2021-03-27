@@ -9,34 +9,37 @@
 Waveform analysis algorithms are presented below, separately. The hittime in our waveform analysis results is discrete values (time bin edges in a DAQ window). 
 
 \subsection{Heuristic Methods}
+By directly extracting waveform features, heuristic methods are straightforward to implement and thus widely used. 
 
-\subsubsection{Peak Finding}
-\label{sec:findpeak}
-
-The first intuitive method is to find peaks in Savitzky-Golay \cite{savitzky_smoothing_1964} smoothed waveforms.  A minus shift $\Delta t$ is applied to peak positions $t_i$ to minimize $D_w$ according to the shape of SPE response $V_\mathrm{PE}(t)$ in \eqref{eq:dayaspe}.   The reconstructed charges $\hat{q}_i$ of $t_i$ are proportional to the peak voltages, which are normalized to the total charge by integration of the waveform. A demonstration shown in Fig.~\ref{fig:peak} has $D_w = \SI{1.96}{ns}$. 
+\subsubsection{Waveform Shifting}
+\label{sec:shifting}
+A threshold $V_\mathrm{th}$ is selected with respect to electronics noise in the waveforms. Waveform entries $w(t_i)$ exceeding $V_\mathrm{th}$ are selected and shifted by $\Delta t$ according to the shape of SPE response $V_\mathrm{PE}(t)$ in \eqref{eq:dayaspe}. $\hat{q}_i$ are made proportional $w(t_i)$ and normalized to total charge by integration of the waveform.  Waveform shifting does minimal analysis and serves as a baseline method.  The demonstration in Fig.~\ref{fig:shifting} gives $D_w = \SI{5.58}{ns}$.
 
 \begin{figure}[H]
+  \begin{subfigure}{0.5\textwidth}
+    \centering
+    \scalebox{0.36}{\input{figures/threshold.pgf}}
+    \caption{\label{fig:shifting}Waveform shifting: $D_w = \SI{5.58}{ns}$}
+  \end{subfigure}
   \begin{subfigure}{0.5\textwidth}
     \centering
     \scalebox{0.36}{\input{figures/findpeak.pgf}}
     \caption{\label{fig:peak}Peak finding: $D_w = \SI{1.96}{ns}$}
   \end{subfigure}
-  \begin{subfigure}{0.5\textwidth}
-    \centering
-    \scalebox{0.36}{\input{figures/threshold.pgf}}
-    \caption{Waveform shifting: $D_w = \SI{5.58}{ns}$}
-  \end{subfigure}
   \caption{Heuristic methods demonstrations.}
 \end{figure}
 
-\subsubsection{Waveform Shifting}
+\subsubsection{Peak Finding}
+\label{sec:findpeak}
 
-A threshold $V_\mathrm{th}$ is settled with respect to electronics noise in simulation data. In waveform shift method, first we locate waveform voltage, $w(t)$, which exceeds $V_\mathrm{th}$. Then we shift the exceeding part leftward. The $\Delta t$ we move is the same as the find peak method in section \ref{sec:findpeak}. Finally, we treat the normalized exceeding part as $\hat{q}(t)$, to maintain the charge integral of waveforms. The demonstration here shows a result with $D_w = \SI{5.58}{ns}$.
+In the peak finding method, local maxima are extracted in Savitzky-Golay smoothed waveforms.  A minus shift $\Delta t$ is applied to peak positions $t_i$ to minimize $D_w$ considering SPE response $V_\mathrm{PE}(t)$ in \eqref{eq:dayaspe}. The reconstructed charges $\hat{q}_i$ of $t_i$ are proportional to the peak voltages, which are normalized to the total charge by integration of the waveform.  This works well for lower PE counts. When PE's pile-up closely, peaks overlaps and cannot be extracted reliably. A demonstration shown in Fig.~\ref{fig:peak} has $D_w = \SI{1.96}{ns}$. 
 
 \subsection{Deconvolution}
+While heuristic methods extract only a timing shift, deconvolution methods exploit the full SPE shape.  Deconvolution can accommodation overshoots and is selected by JUNO prototype to measure charges~\cite{zhang_comparison_2019}.
+
 \subsubsection{Fourier Deconvolution}
 
-Third method is Fourier transform deconvolution. Assuming that the waveform is the convolution of $V_\mathrm{PE}(t)$ and $q(t)$, the Fast Fourier transform (FFT) of $w(t)$ and $V_\mathrm{PE}(t)$ are computed. A rectangular filter, $f$, is implemented. Then we compute the inverse FFT of the quotient between filtered FFT of $w(t)$ and FFT of $V_\mathrm{PE}(t)$. We pick out positive values from inverse FFT result, and normalize them to obtain $\hat{q}(t)$. The process is shown in \eqref{eq:fft}. 
+Fourier deconvolution is the simplest form of this category.  Assuming the waveform is the convolution of $V_\mathrm{PE}(t)$ and $q(t)$, the Fast Fourier transform (FFT) of $w(t)$ and $V_\mathrm{PE}(t)$ are computed. A rectangular filter, $f$, is implemented. Then we compute the inverse FFT of the quotient between filtered FFT of $w(t)$ and FFT of $V_\mathrm{PE}(t)$. We pick out positive values from inverse FFT result, and normalize them to obtain $\hat{q}(t)$. The process is shown in \eqref{eq:fft}. 
 
 \begin{equation}
     \hat{q}(t) = \mathcal{F}^{-1}\left\{\frac{f[\mathcal{F}(w(t))]}{\mathcal{F}(V_\mathrm{PE}(t))}\right\}
