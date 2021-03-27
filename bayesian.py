@@ -209,8 +209,8 @@ def fbmp_inference(a0, a1):
     nsp = 4
     nstd = 3
     D = 1000
-    stime_t0 = np.empty(a1 - a0)
-    stime_cha = np.empty(a1 - a0)
+    stime_t0 = np.empty((a1 - a0, 2))
+    stime_cha = np.empty((a1 - a0, 2))
     dt = np.zeros((a1 - a0) * window, dtype=opdt)
     d_tot = np.zeros(a1 - a0).astype(int)
     d_max = np.zeros(a1 - a0).astype(int)
@@ -224,7 +224,7 @@ def fbmp_inference(a0, a1):
         cid = ent[i]['ChannelID']
         wave = ent[i]['Waveform'].astype(np.float64) * spe_pre[cid]['epulse']
 
-        n = max(math.ceil(Mu / math.sqrt(Tau ** 2 + Sigma ** 2)) * 10, 1)
+        n = max(math.ceil(Mu / math.sqrt(Tau ** 2 + Sigma ** 2)) * 1, 1)
         A, wave_r, tlist, t0_init, t0_init_delta, char_init = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Mu, Tau, Sigma, gmu, gsigma, Thres['lucyddm'], npe, p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
         time_fbmp_start = time.time()
         A = np.matmul(A, np.diag(1. / np.sqrt(np.diag(np.matmul(A.T, A)))))
@@ -253,15 +253,23 @@ def fbmp_inference(a0, a1):
             t0_t0 = opti.fmin_l_bfgs_b(logL, x0=[btlist[np.argmin(logLv_btlist)]], approx_grad=True, bounds=[b], maxfun=50000)[0]
             # logLvdelta = np.vectorize(lambda t : np.abs(logL(t) - logL(t0_t0) - 0.5))
             # t0_t0delta = abs(opti.fmin_l_bfgs_b(logLvdelta, x0=[btlist[np.argmin(np.abs(logLv_btlist - logL(t0_t0) - 0.5))]], approx_grad=True, bounds=[b], maxfun=50000)[0] - t0_t0)
+            logL = lambda t0 : -1 * np.sum(special.logsumexp((np.log(np.clip(wff.convolve_exp_norm(tlist_pan - t0, Tau, Sigma), np.finfo(np.float64).tiny, np.inf))[None, :] * As).sum(axis=1), b=psy_star))
+            logLv_btlist = np.vectorize(logL)(btlist)
+            t0_t0_dw = opti.fmin_l_bfgs_b(logL, x0=[btlist[np.argmin(logLv_btlist)]], approx_grad=True, bounds=[b], maxfun=50000)[0]
 
             logL = lambda t0 : -1 * loglikelihood(t0, tlist_pan, As[0][None, :], psy_star, like='b', c=Mu / n)
             logLv_btlist = np.vectorize(logL)(btlist)
             t0_cha = opti.fmin_l_bfgs_b(logL, x0=[btlist[np.argmin(logLv_btlist)]], approx_grad=True, bounds=[b], maxfun=50000)[0]
             # logLvdelta = np.vectorize(lambda t : np.abs(logL(t) - logL(t0_cha) - 0.5))
             # t0_chadelta = abs(opti.fmin_l_bfgs_b(logLvdelta, x0=[btlist[np.argmin(np.abs(logLv_btlist - logL(t0_cha) - 0.5))]], approx_grad=True, bounds=[b], maxfun=50000)[0] - t0_cha)
+            logL = lambda t0 : -1 * np.sum(np.log(np.clip(wff.convolve_exp_norm(tlist_pan - t0, Tau, Sigma), np.finfo(np.float64).tiny, np.inf)) * As[0][None, :])
+            logLv_btlist = np.vectorize(logL)(btlist)
+            t0_cha_dw = opti.fmin_l_bfgs_b(logL, x0=[btlist[np.argmin(logLv_btlist)]], approx_grad=True, bounds=[b], maxfun=50000)[0]
         else:
             t0_t0 = t0_init
             t0_cha = t0_init
+            t0_t0_dw = t0_init
+            t0_cha_dw = t0_init
             d_tot_i = 0
             d_max_i = 0
             pet = tlist
@@ -271,8 +279,10 @@ def fbmp_inference(a0, a1):
         d_max[i - a0] = d_max_i
         pet, cha = wff.clip(pet, cha, Thres[method])
         cha = cha * gmu
-        stime_t0[i - a0] = t0_t0
-        stime_cha[i - a0] = t0_cha
+        stime_t0[i - a0][0] = t0_t0
+        stime_cha[i - a0][0] = t0_cha
+        stime_t0[i - a0][1] = t0_t0_dw
+        stime_cha[i - a0][1] = t0_cha_dw
         end = start + len(cha)
         dt['HitPosInWindow'][start:end] = pet
         dt['Charge'][start:end] = cha
@@ -299,17 +309,17 @@ e_pel = ent['TriggerNo'] * Chnum + ent['ChannelID']
 e_pel, i_pel = np.unique(e_pel, return_index=True)
 i_pel = np.append(i_pel, len(ent))
 
-sdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('tscharge', np.float64), ('tswave', np.float64)])
-ts = np.zeros(N, dtype=sdtp)
-ts['TriggerNo'] = ent['TriggerNo']
-ts['ChannelID'] = ent['ChannelID']
 opdt = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('HitPosInWindow', np.float64), ('Charge', np.float64)])
 
 if method == 'mcmc':
+    sdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('tscharge', np.float64), ('tswave', np.float64)])
+    ts = np.zeros(N, dtype=sdtp)
+    ts['TriggerNo'] = ent['TriggerNo']
+    ts['ChannelID'] = ent['ChannelID']
     with Pool(min(args.Ncpu, cpu_count())) as pool:
         result = pool.starmap(partial(time_numpyro), slices)
-    ts['tswave'] = np.hstack([result[i][0] for i in range(len(slices))])
-    ts['tscharge'] = np.hstack([result[i][1] for i in range(len(slices))])
+    ts['tswave'] = np.vstack([result[i][0] for i in range(len(slices))])
+    ts['tscharge'] = np.vstack([result[i][1] for i in range(len(slices))])
     As = np.hstack([result[i][2] for i in range(len(slices))])
     count = np.sum([result[i][3] for i in range(len(slices))])
     time_mcmc = np.hstack([result[i][4] for i in range(len(slices))]).mean()
@@ -336,10 +346,14 @@ if method == 'mcmc':
     As = np.sort(As, kind='stable', order=['TriggerNo', 'ChannelID'])
     print('Successful MCMC ratio is {:.4%}'.format(count / N))
 elif method == 'fbmp':
+    sdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('tscharge', np.float64, 2), ('tswave', np.float64, 2)])
+    ts = np.zeros(N, dtype=sdtp)
+    ts['TriggerNo'] = ent['TriggerNo']
+    ts['ChannelID'] = ent['ChannelID']
     with Pool(min(args.Ncpu, cpu_count())) as pool:
         result = pool.starmap(partial(fbmp_inference), slices)
-    ts['tswave'] = np.hstack([result[i][0] for i in range(len(slices))])
-    ts['tscharge'] = np.hstack([result[i][1] for i in range(len(slices))])
+    ts['tswave'] = np.vstack([result[i][0] for i in range(len(slices))])
+    ts['tscharge'] = np.vstack([result[i][1] for i in range(len(slices))])
     As = np.hstack([result[i][2] for i in range(len(slices))])
     d_tot = np.hstack([result[i][3] for i in range(len(slices))])
     d_max = np.hstack([result[i][4] for i in range(len(slices))])
@@ -352,7 +366,7 @@ elif method == 'fbmp':
     ax = ff.add_subplot(121)
     # di, ci = np.unique(d_tot, return_counts=True)
     # ax.bar(di, ci, label='d_tot')
-    ax.hist(d_tot, bins=np.arange(0, d_tot.max() + 20, 20), label='d_tot')
+    ax.hist(d_tot, bins=np.linspace(0, d_tot.max(), 20), label='d_tot')
     ax.set_xlabel('d_tot')
     ax.set_ylabel('Count')
     ax.set_ylim(0.5, N)
@@ -361,7 +375,7 @@ elif method == 'fbmp':
     ax = ff.add_subplot(122)
     # di, ci = np.unique(d_max, return_counts=True)
     # ax.bar(di, ci, label='d_max')
-    ax.hist(d_tot, bins=np.arange(0, d_max.max() + 20, 20), label='d_max')
+    ax.hist(d_tot, bins=np.linspace(0, d_tot.max(), 20), label='d_max')
     ax.set_xlabel('d_max')
     ax.set_ylabel('Count')
     ax.set_ylim(0.5, N)
