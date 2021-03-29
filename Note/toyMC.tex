@@ -1,5 +1,7 @@
-\section{Data Setup} % (fold)
+\section{Motivation} % (fold)
 \label{sec:toyMC}
+
+In this section, we discuss why waveform analysis is crucial for timing measurements in PMT-based experiments. 
 
 \subsection{Light Curve}
 In the PMT-based experiments, a particle interact with and deposit energy into the detector along its trajectory. Part of the deposited energy becomes visible as Cherenkov or scintillation photons.  The timing distribution of the emitted photons is called the \textit{light curve}.  A scintillation light curve of is modeled as a mixture of several exponential components with different decay rates~\cite{ludhova_particle_2020}.  Cherenkov light curve is essentially instantaneous, modeled by a Dirac $\delta(t)$ function.
@@ -44,53 +46,26 @@ where $\tau_\mathrm{PE}=\SI{8}{ns}$, $\sigma_\mathrm{PE}=\SI{0.5}{ns}$ are shape
   \label{eq:1}
   w(t) = \sum_{i=1}^{N_\mathrm{PE}} q_i V_\mathrm{PE}(t-t_i) + \epsilon(t)
 \end{equation}
-where $N_\mathrm{PE}$ is the number of PEs obeying Poisson distribution with expectation $\mu$, $t_i$ is the hittime of the $i$-th PE sampled from the light curve $\Phi(t)$ in \eqref{eq:time-pro} and Fig.~\ref{fig:time-pro}, $q_i$ is the relative charge of the $i$-th PE from a normal distribution $\mathcal{N}(1,\sigma_{q}^2)$, and $\epsilon(t)$ is a Gaussian white noise.  A waveform example is illustrated in Fig.~\ref{fig:pile}.
+where $N_\mathrm{PE}$ is the number of PEs obeying Poisson distribution with expectation $\mu$, $t_i$ is the hittime of the $i$-th PE sampled from the light curve $\Phi(t)$ in \eqref{eq:time-pro} and Fig.~\ref{fig:time-pro}, $q_i$ is the relative charge of the $i$-th PE from a Gaussian $\mathcal{N}(1,\sigma_{q}^2)$, and $\epsilon(t)$ is a Gaussian white noise.  A waveform example is illustrated in Fig.~\ref{fig:pile}.
 
 \subsection{Timing Measurement}
-Failing to separate them can worse the timing resolution.
+Obviously in Fig.~\ref{fig:pile}, pile-ups and noises hinder resolution of PEs from a waveform.  A widely used compromise is to extract the waveform rising edge $T_1$ over a voltage threshold $V_\mathrm{th}$ and a total charge $Q$ by integration, reducing $w(t)$ into a pair of numbers $(T_1, Q)$.
 
-We usually record the time of the first PE according to the threshold of voltage, $V_\mathrm{th}$, and total charge in a DAQ window. The voltage which is higher than a certain threshold is assumed to be the consequence of photoelectron. The total charge is the integration of the waveform. Charge induced single photoelectron (SPE) can be a wide distribution (usually truncated normal distribution, mean is $\mu_{g}$, the standard deviation is $\sigma_{g}$) rather than a single value (see the black curve in figure~\ref{fig:recchargehist}). In these practical scenarios, one waveform is converted to a pair of numbers. More detailed information on the waveform was lost. 
+Timing measurement of $t_0$ in \eqref{eq:time-pro} is the key to vertex reconstruction and particle identification.  For $T_1$-$Q$ reduction, $t_0$ is estimated by $\hat{t}_\mathrm{1st} = T_1$. $\hat{t}_\mathrm{1st}$ is biased and subject to corrections based on $N_\mathrm{PE}$ expectation $\mu$.  $\sigma_\mathrm{1st}$, the standard deviation of $\hat{t}_\mathrm{1st} - t_0$, reflects the timing resolution of $T_1$-$Q$ reduction when the knowledge of $\mu$ is exact.
 
-The typical combination of decay time ($\tau$) and transit time spread ($\sigma$) are listed in Fig.~\ref{fig:reso-diff}. We take the value of $\tau$ according to typical liquid scintillator used in JUNO \cite{ludhova_particle_2020}. For every combination of PE number expectation $\mu$, decay time $\tau$ and TTS $\sigma$, a sample set (size $N=10,000$) is generated to estimate the timing resolution $\delta$. 
+A perfect measurement of $t_i$ gives an ideal maximum likelihood estimator $\hat{t}_\mathrm{ALL}$ using all the PEs,
+\begin{equation}
+  \label{eq:2}
+  \hat{t}_\mathrm{ALL} = \underset{t_0}{\arg \max} \prod_{i=1}^{N_\mathrm{PE}} \Phi(t-t_0-t_i).
+\end{equation}
+The corresponding $\sigma_\mathrm{ALL}$ is the lower limit of any timing measurement.  Situations when $\sigma_\mathrm{1st} > \sigma_\mathrm{ALL}$ necessitate more sophisticated waveform analysis methods.
 
-The estimation result of $t_{0}$ using simulated data is shown in figure~\ref{fig:reso-diff}, where $\delta_{\mathrm{1st}}$ and $\delta_{\mathrm{all}}$ are timing resolution using the first PE and all PE when reconstruction, respectively. The vertical axis is the ratio, $\delta_{\mathrm{all}}/\delta_{\mathrm{1st}}$. Because time resolution estimation here is only based on simulated data, the result will reveal the advantage of using detailed information of all PE. It is distinct that the timing resolution is smaller when reconstructing rise time using all PE. 
+Combinations of $\tau$ and $\sigma$ in the light curve~\eqref{eq:time-pro} are investigated under a scan of $\mu$ \numrange{0}{30}. For scintillation paired with ultra-fast PMTs, $\tau \gg \sigma$.  $\tau \ll \sigma$ is the Cherenkov case.  The $\tau=20, \sigma=5$ case represents a standard scintillation experiment like JUNO~\cite{ludhova_particle_2020}.  For every triple of $(\tau, \sigma, \mu)$, a sample of $10,000$ waveforms is generated for timing resolution estimation.
 
+Figure~\ref{fig:reso-diff} shows that $\sigma_{\mathrm{1st}}=\sigma_{\mathrm{ALL}}$ when $\mu \to 0$ or $\tau \gg \sigma$, which explains the widespread utilization of the $T_1$-$Q$ reduction.  When $\mu \to 0$ there is at most 1 PE in a waveform.  When $\tau \gg \sigma$, the light curve $\Phi(t)$ is an exponential whose $\hat{t}_\mathrm{ALL}$ in \eqref{eq:2} is exactly $\hat{t}_\mathrm{1st}$.  Nevertheless, even when $\mu < 1$, $\sigma_{\mathrm{1st}} - \sigma_{\mathrm{ALL}}$ is noticeable for $\sigma > 0$ cases, covering standard Cherenkov and scintillation experiments with non-negligible PMT TTS.
 \begin{figure}[H]
     \centering
     \scalebox{0.5}{\input{figures/vs-deltadiv.pgf}}
     \caption{\label{fig:reso-diff} Timing resolution improved by waveform analysis}
 \end{figure}
-
-We can use Maximum Likelihood Estimation (MLE) to estimate $t_{0}$ in formula \eqref{eq:time-pro}, which is the starting time of light curve, using charge $q$ and corresponding hittime. The difference between real starting time $t_{0tru}$ and reconstructed starting time $\hat{t}_0$ are collected to produce the starting time residual ($\Delta t_{0}=\hat{t}_0-t_0$) distribution. The time resolution $\delta$ is the standard deviation, $s$, of the starting time residual distribution, which is formula \eqref{eq:resolution}. The likelihood $\mathcal{L}$ defined in MLE is formula \eqref{eq:likelihood}. 
-
-\begin{align}
-  \delta &= s_{\Delta t_{0}} = s_{\hat{t}_0-t_0} \label{eq:resolution} \\
-  \mathcal{L}(t_{0}) &= e^{-\mu}\Pi_{i=0}^{N}P_{t}(t_{i})^{q_{i}} \label{eq:likelihood}
-\end{align}
-
-
-Before taking a deep look into the methods, input and output need to be defined. The input for waveform analysis is pedestal subtracted PMT waveform (see figure~\ref{fig:input}), and the output is the $q_{rec}$ sequence (see figure~\ref{fig:output}), which is interpreted as an approximation of light curve. 
-
-\begin{figure}[H]
-  \begin{subfigure}{.5\textwidth}
-    \centering
-    \resizebox{\textwidth}{!}{\input{figures/wave.pgf}}
-    \caption{\label{fig:input} Input}
-  \end{subfigure}
-  \begin{subfigure}{.5\textwidth}
-    \centering
-    \resizebox{\textwidth}{!}{\input{figures/charge.pgf}}
-    \caption{\label{fig:output} Output}
-  \end{subfigure}
-  \caption{Waveform analysis takes PMT waveform as input and infer the timing and charge of the PEs in the output.}
-\end{figure}
-
-The histogram of $N_\mathrm{PE}$ when $\mu=5$ shows in the figure (see figure~\ref{fig:penum}). 
-
-\begin{figure}[H]
-    \centering
-    \scalebox{0.4}{\input{figures/penum.pgf}}
-    \caption{\label{fig:penum} $N_\mathrm{PE}$ histogram}
-\end{figure}
-
 % section Towards Timing Resolution (end)

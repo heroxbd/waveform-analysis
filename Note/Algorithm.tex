@@ -4,6 +4,28 @@
 \subsection{Wasserstein distance}
 \label{sec:W-dist}
 
+Before taking a deep look into the methods, input and output need to be defined. The input for waveform analysis is pedestal subtracted PMT waveform (see figure~\ref{fig:input}), and the output is the $q_{rec}$ sequence (see figure~\ref{fig:output}), which is interpreted as an approximation of light curve. 
+
+\begin{figure}[H]
+  \begin{subfigure}{.5\textwidth}
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/wave.pgf}}
+    \caption{\label{fig:input} Input}
+  \end{subfigure}
+  \begin{subfigure}{.5\textwidth}
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/charge.pgf}}
+    \caption{\label{fig:output} Output}
+  \end{subfigure}
+  \caption{Waveform analysis takes PMT waveform as input and infer the timing and charge of the PEs in the output.}
+\end{figure}
+
+The likelihood $\mathcal{L}$ defined in MLE is formula \eqref{eq:likelihood}. 
+
+\begin{align}
+  \mathcal{L}(t_{0}) &= e^{-\mu}\Pi_{i=0}^{N}P_{t}(t_{i})^{q_{i}} \label{eq:likelihood}
+\end{align}
+
 \input{fom}
 
 Waveform analysis algorithms are presented below, separately. The hittime in our waveform analysis results is discrete values (time bin edges in a DAQ window). 
