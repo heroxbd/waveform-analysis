@@ -25,7 +25,7 @@ import matplotlib
 matplotlib.use('pgf')
 
 plt.style.use('default')
-plt.rcParams['font.size'] = 15
+plt.rcParams['font.size'] = 12
 
 psr = argparse.ArgumentParser()
 psr.add_argument('--conf', type=str, help='configuration of tau & sigma')
@@ -79,17 +79,17 @@ for key in mts.keys():
                 record = distf['Record'][:]
                 start = wavef['SimTruth/T'][:]
                 r = wavef['SimTruth/T'].attrs['r'] * 1.5
-            vali = np.abs(time['tscharge'] - start['T0'] - np.mean(time['tscharge'] - start['T0'])) < r * np.std(time['tscharge'] - start['T0'], ddof=-1)
+            vali = np.abs(time['tscharge'] if time['tscharge'].ndim == 1 else time['tscharge'][:, 1] - start['T0'] - np.mean(time['tscharge'] if time['tscharge'].ndim == 1 else time['tscharge'][:, 1] - start['T0'])) < r * np.std(time['tscharge'] if time['tscharge'].ndim == 1 else time['tscharge'][:, 1] - start['T0'], ddof=-1)
             mts[key][i]['N'] = len(start)
             mts[key][i]['std1sttruth'] = np.std(start['ts1sttruth'] - start['T0'], ddof=-1)
             mts[key][i]['stdtruth'] = np.std(start['tstruth'] - start['T0'], ddof=-1)
-            mts[key][i]['stdcharge'], mts[key][i]['stdchargesuccess'] = wff.stdrmoutlier(time['tscharge'][vali] - start['T0'][vali], r)
+            mts[key][i]['stdcharge'], mts[key][i]['stdchargesuccess'] = wff.stdrmoutlier(time['tscharge'] - start['T0'] if time['tscharge'].ndim == 1 else time['tscharge'][:, 1] - start['T0'], r)
             mts[key][i]['bias1sttruth'] = np.mean(start['ts1sttruth'] - start['T0'])
             mts[key][i]['biastruth'] = np.mean(start['tstruth'] - start['T0'])
-            mts[key][i]['biascharge'] = np.mean(time['tscharge'][vali] - start['T0'][vali])
+            mts[key][i]['biascharge'] = np.mean((time['tscharge'] if time['tscharge'].ndim == 1 else time['tscharge'][:, 1])[vali] - start['T0'][vali])
             if not np.any(np.isnan(time['tswave'][vali])):
-                mts[key][i]['stdwave'], mts[key][i]['stdwavesuccess'] = wff.stdrmoutlier(time['tswave'] - start['T0'], r)
-                mts[key][i]['biaswave'] = np.mean(time['tswave'][vali] - start['T0'][vali])
+                mts[key][i]['stdwave'], mts[key][i]['stdwavesuccess'] = wff.stdrmoutlier(time['tswave'] - start['T0'] if time['tscharge'].ndim == 1 else time['tswave'][:, 1] - start['T0'], r)
+                mts[key][i]['biaswave'] = np.mean((time['tswave'] if time['tscharge'].ndim == 1 else time['tswave'][:, 1])[vali] - start['T0'][vali])
             mts[key][i]['wdist'] = np.insert(np.percentile(record['wdist'][vali], [5, 95]), 1, record['wdist'][vali].mean())
             mts[key][i]['RSS'] = np.insert(np.percentile(record['RSS'][vali], [5, 95]), 1, record['RSS'][vali].mean())
         except:
@@ -102,15 +102,15 @@ whigh = np.max(whigh[~np.isnan(whigh)]) * 1.05
 rhigh = np.array([[np.max(mts[key]['RSS'])] for key in mts.keys()])
 rhigh = np.max(rhigh[~np.isnan(rhigh)]) * 1.05
 
-figd = plt.figure(figsize=(len(Tau) * 6, len(Sigma) * 5))
+figd = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 4.5))
 gsd = gridspec.GridSpec(len(Sigma), len(Tau), figure=figd, left=0.1, right=0.8, top=0.93, bottom=0.1, wspace=0.3, hspace=0.35)
-figb = plt.figure(figsize=(len(Tau) * 6, len(Sigma) * 5))
+figb = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 4.5))
 gsb = gridspec.GridSpec(len(Sigma), len(Tau), figure=figd, left=0.1, right=0.8, top=0.93, bottom=0.1, wspace=0.3, hspace=0.35)
-figdd = plt.figure(figsize=(len(Tau) * 6, len(Sigma) * 5))
+figdd = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 4.5))
 gsdd = gridspec.GridSpec(len(Sigma), len(Tau), figure=figd, left=0.1, right=0.8, top=0.93, bottom=0.1, wspace=0.3, hspace=0.35)
-figw = plt.figure(figsize=(len(Tau) * 6, len(Sigma) * 5))
+figw = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 4.5))
 gsw = gridspec.GridSpec(len(Sigma), len(Tau), figure=figw, left=0.1, right=0.8, top=0.93, bottom=0.1, wspace=0.3, hspace=0.35)
-figr = plt.figure(figsize=(len(Tau) * 6, len(Sigma) * 5))
+figr = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 4.5))
 gsr = gridspec.GridSpec(len(Sigma), len(Tau), figure=figr, left=0.1, right=0.8, top=0.93, bottom=0.1, wspace=0.3, hspace=0.35)
 alpha = 0.05
 lim = {'deltadiv':np.tile([0.3, 0.5, 0.], (2, 1)), 'wdist':np.tile([2, 3.5, 7], (2, 1)), 'rss':np.array([[0.7e3, 2.5e3, 2e3], [1.5e3, 2.5e3, 2e3]])}
@@ -170,7 +170,7 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
         # ax.plot(stdlist['mu'] + jitter['tru'], stdlist['stdtruth'] / stdlist['std1sttruth'], label='$\delta_'+deltalabel['tru']+'/\delta_'+deltalabel['1st']+'$', c=color['tru'], marker=marker['tru'])
         for k in range(len(keylist)):
             key = keylist[k]
-            if key == 'findpeak' or key == 'threshold' or key == 'fftrans':
+            if key == 'findpeak' or key == 'fftrans':
                 continue
             stdlistkey = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
             yerr = stdlistkey['stdcharge'] / stdlist['std1sttruth'] / np.sqrt(stdlistkey['N'])
@@ -249,9 +249,10 @@ figr.savefig('Note/figures/vs-rss.png')
 plt.close(figr)
 
 alpha = 0.05
-marker = itertools.cycle(('p', 'o', 'v', '^', '<', '>', '*', 's'))
+marker = [['s', '^']]
+colors = [['r', 'b']]
 fig = plt.figure(figsize=(12, 5))
-gs = gridspec.GridSpec(1, 2, figure=fig, left=0.1, right=0.9, top=0.93, bottom=0.1, wspace=0.3, hspace=0.35)
+gs = gridspec.GridSpec(1, 2, figure=fig, left=0.1, right=0.9, top=0.93, bottom=0.15, wspace=0.3, hspace=0.35)
 ax = fig.add_subplot(gs[0, 0])
 std1sttruth = np.empty(len(stdlist['mu']))
 stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == Tau[0]) & (mts['lucyddm']['sigma'] == Sigma[0])]
@@ -266,15 +267,15 @@ for mu, i in zip(stdlist['mu'], list(range(len(stdlist['mu'])))):
     ts1sttruth = np.array([np.min(sams[j]) for j in range(N)])
     std1sttruth[i] = np.std(ts1sttruth - t0, ddof=-1)
 yerr = np.vstack([std1sttruth-np.sqrt(np.power(std1sttruth,2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(std1sttruth,2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-std1sttruth])
-ax.errorbar(stdlist['mu'], std1sttruth, yerr=yerr, label='$\delta_'+deltalabel['tru']+fr',\,\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$', marker=next(marker))
-ax.errorbar(stdlist['mu'], std1sttruth, yerr=yerr, label='$\delta_'+deltalabel['1st']+fr',\,\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$', marker=next(marker), linestyle='dashed')
+ax.errorbar(stdlist['mu'], std1sttruth, yerr=yerr, label='$\delta_'+deltalabel['tru']+fr',\,\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$', marker='o', color='g')
+ax.errorbar(stdlist['mu'], std1sttruth, yerr=yerr, label='$\delta_'+deltalabel['1st']+fr',\,\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$', marker='o', color='g', linestyle='dashed')
 for sigma, i in zip(Sigma, list(range(len(Sigma)))):
     for tau, j in zip(Tau, list(range(len(Tau)))):
         stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == tau) & (mts['lucyddm']['sigma'] == sigma)]
         yerrall = np.vstack([stdlist['stdtruth']-np.sqrt(np.power(stdlist['stdtruth'],2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(stdlist['stdtruth'],2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-stdlist['stdtruth']])
         yerr1st = np.vstack([stdlist['std1sttruth']-np.sqrt(np.power(stdlist['std1sttruth'],2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(stdlist['std1sttruth'],2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-stdlist['std1sttruth']])
-        ax.errorbar(stdlist['mu'], stdlist['stdtruth'], yerr=yerrall, label='$\delta_'+deltalabel['tru']+fr',\,\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$', marker=next(marker))
-        ax.errorbar(stdlist['mu'], stdlist['std1sttruth'], yerr=yerr1st, label='$\delta_'+deltalabel['1st']+fr',\,\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$', marker=next(marker), linestyle='dashed')
+        ax.errorbar(stdlist['mu'], stdlist['stdtruth'], yerr=yerrall, label='$\delta_'+deltalabel['tru']+fr',\,\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$', marker=marker[i][j], color=colors[i][j])
+        ax.errorbar(stdlist['mu'], stdlist['std1sttruth'], yerr=yerr1st, label='$\delta_'+deltalabel['1st']+fr',\,\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$', marker=marker[i][j], color=colors[i][j], linestyle='dashed')
 ax.set_xlabel(r'$\mu$')
 ax.set_ylabel(r'$\delta/\mathrm{ns}$')
 ax.grid()
@@ -284,12 +285,12 @@ sigma = 0
 tau = Tau[1]
 stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == Tau[0]) & (mts['lucyddm']['sigma'] == Sigma[0])]
 yerr = std1sttruth / std1sttruth / np.sqrt(stdlist['N'])
-ax.errorbar(stdlist['mu'], std1sttruth / std1sttruth, yerr=yerr, label='$\delta_'+deltalabel['tru']+'/\delta_'+deltalabel['1st']+fr',\,\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$', marker=next(marker))
+ax.errorbar(stdlist['mu'], std1sttruth / std1sttruth, yerr=yerr, label='$\delta_'+deltalabel['tru']+'/\delta_'+deltalabel['1st']+fr',\,\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$', marker='o', color='g')
 for sigma, i in zip(Sigma, list(range(len(Sigma)))):
     for tau, j in zip(Tau, list(range(len(Tau)))):
         stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == tau) & (mts['lucyddm']['sigma'] == sigma)]
         yerr = stdlist['stdtruth'] / stdlist['std1sttruth'] / np.sqrt(stdlist['N'])
-        ax.errorbar(stdlist['mu'], stdlist['stdtruth'] / stdlist['std1sttruth'], yerr=yerr, label='$\delta_'+deltalabel['tru']+'/\delta_'+deltalabel['1st']+fr',\,\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$', marker=next(marker))
+        ax.errorbar(stdlist['mu'], stdlist['stdtruth'] / stdlist['std1sttruth'], yerr=yerr, label='$\delta_'+deltalabel['tru']+'/\delta_'+deltalabel['1st']+fr',\,\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$', marker=marker[i][j], color=colors[i][j])
 ax.set_xlabel(r'$\mu$')
 ax.set_ylabel(r'$\mathrm{ratio}$')
 ax.set_ylim(0.3, 1.3)

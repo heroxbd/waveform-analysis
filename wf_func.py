@@ -334,6 +334,22 @@ def npeprobcharge(charge, npe, gmu, gsigma, s0):
     prob = np.where(npe >= 0, norm.pdf(charge, loc=gmu * npe, scale=scale) / (1 - norm.cdf(0, loc=gmu * npe, scale=scale)), 0)
     return prob
 
+def mix01_loglikelihoodt0(As, pl):
+    logL = np.sum(special.logsumexp(np.einsum('ijk->jik', np.stack([norm.logpdf(As, loc=0, scale=mix0sigma), norm.logpdf(As, loc=1, scale=gsigma / gmu)])), axis=1, b=np.stack([(1 - pl), pl])), axis=1)
+    return logL
+
+def b_loglikelihoodt0(As, pl, thres=1e-6):
+    logL = np.sum(np.where(As > thres, np.log(pl), np.log(1 - pl)), axis=1)
+    return logL
+
+def loglikelihood(t0, tlist, xmmse, psy_star, like, thres, Tau, Sigma, c):
+    pl = convolve_exp_norm(tlist - t0, Tau, Sigma) * c
+    if like == 'mix01':
+        logL = special.logsumexp(mix01_loglikelihoodt0(xmmse, pl), axis=0, b=psy_star) # mix01
+    elif like == 'b':
+        logL = special.logsumexp(b_loglikelihoodt0(xmmse, pl, thres=thres), b=psy_star) # Bernoulli
+    return logL
+
 def likelihoodt0(hitt, char, gmu, gsigma, Tau, Sigma, npe, ft=None, s0=None, mode='charge', is_delta=False):
     b = [0., 600.]
     tlist = np.arange(b[0], b[1] + 1e-6, 0.2)

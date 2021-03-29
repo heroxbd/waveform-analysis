@@ -165,30 +165,30 @@ m = np.mean(start['tstruth'] - start['T0'])
 ax1.set_title(fr'$\delta_{{1sttru}}={s:.02f},\mathrm{{bias}}={m:.02f}$')
 
 ax2 = fig.add_subplot(gs[1, 0])
-ax2.hist(time['tscharge'] - start['T0'] if method != 'fbmp' else time['tscharge'][:, 0] - start['T0'], bins=100, label=r'$t_{charge} - t_{0}$')
+ax2.hist(time['tscharge'] - start['T0'] if time['tscharge'].ndim == 1 else time['tscharge'][:, 0] - start['T0'], bins=100, label=r'$t_{charge} - t_{0}$')
 ax2.set_xlabel(r'$t_{charge} - t_{0}/\mathrm{ns}$')
 ax2.set_ylabel(r'$Count$')
 ax2.set_yscale('log')
 ax2.legend()
-s = np.std(time['tscharge'] - start['T0'] if method != 'fbmp' else time['tscharge'][:, 0] - start['T0'], ddof=-1)
-m = np.mean(time['tscharge'] - start['T0'] if method != 'fbmp' else time['tscharge'][:, 0] - start['T0'])
+s = np.std(time['tscharge'] - start['T0'] if time['tscharge'].ndim == 1 else time['tscharge'][:, 0] - start['T0'], ddof=-1)
+m = np.mean(time['tscharge'] - start['T0'] if time['tscharge'].ndim == 1 else time['tscharge'][:, 0] - start['T0'])
 ax2.set_title(fr'$\delta_{{charge}}={s:.02f},\mathrm{{bias}}={m:.02f}$')
 
 if not np.all(np.isnan(time['tswave'])):
     ax3 = fig.add_subplot(gs[1, 1])
-    ax3.hist(time['tswave'] - start['T0'] if method != 'fbmp' else time['tswave'][:, 0] - start['T0'], bins=100, label=r'$t_{wave} - t_{0}$')
+    ax3.hist(time['tswave'] - start['T0'] if time['tscharge'].ndim == 1 else time['tswave'][:, 0] - start['T0'], bins=100, label=r'$t_{wave} - t_{0}$')
     ax3.set_xlabel(r'$t_{wave} - t_{0}/\mathrm{ns}$')
     ax3.set_ylabel(r'$Count$')
     ax3.set_yscale('log')
     ax3.legend()
-    s = np.std(time['tswave'] - start['T0'] if method != 'fbmp' else time['tswave'][:, 0] - start['T0'], ddof=-1)
-    m = np.mean(time['tswave'] - start['T0'] if method != 'fbmp' else time['tswave'][:, 0] - start['T0'])
+    s = np.std(time['tswave'] - start['T0'] if time['tscharge'].ndim == 1 else time['tswave'][:, 0] - start['T0'], ddof=-1)
+    m = np.mean(time['tswave'] - start['T0'] if time['tscharge'].ndim == 1 else time['tswave'][:, 0] - start['T0'])
     ax3.set_title(fr'$\delta_{{wave}}={s:.02f},\mathrm{{bias}}={m:.02f}$')
 
 pdf.savefig(fig)
 plt.close(fig)
 
-if method == 'fbmp':
+if time['tscharge'].ndim == 2:
     fig = plt.figure()
     gs = gridspec.GridSpec(2, 2, figure=fig, left=0.1, right=0.95, top=0.9, bottom=0.1, wspace=0.2, hspace=0.3)
 
@@ -202,15 +202,16 @@ if method == 'fbmp':
     m = np.mean(time['tscharge'][:, 1] - start['T0'])
     ax2.set_title(fr'$\delta_{{charge}}={s:.02f},\mathrm{{bias}}={m:.02f}$')
 
-    ax3 = fig.add_subplot(gs[1, 1])
-    ax3.hist(time['tswave'][:, 1] - start['T0'], bins=100, label=r'$t_{wave} - t_{0}$')
-    ax3.set_xlabel(r'$t_{wave} - t_{0}/\mathrm{ns}$')
-    ax3.set_ylabel(r'$Count$')
-    ax3.set_yscale('log')
-    ax3.legend()
-    s = np.std(time['tswave'][:, 1] - start['T0'], ddof=-1)
-    m = np.mean(time['tswave'][:, 1] - start['T0'])
-    ax3.set_title(fr'$\delta_{{wave}}={s:.02f},\mathrm{{bias}}={m:.02f}$')
+    if not np.all(np.isnan(time['tswave'])):
+        ax3 = fig.add_subplot(gs[1, 1])
+        ax3.hist(time['tswave'][:, 1] - start['T0'], bins=100, label=r'$t_{wave} - t_{0}$')
+        ax3.set_xlabel(r'$t_{wave} - t_{0}/\mathrm{ns}$')
+        ax3.set_ylabel(r'$Count$')
+        ax3.set_yscale('log')
+        ax3.legend()
+        s = np.std(time['tswave'][:, 1] - start['T0'], ddof=-1)
+        m = np.mean(time['tswave'][:, 1] - start['T0'])
+        ax3.set_title(fr'$\delta_{{wave}}={s:.02f},\mathrm{{bias}}={m:.02f}$')
 
     pdf.savefig(fig)
     plt.close(fig)
