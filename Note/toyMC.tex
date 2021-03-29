@@ -4,12 +4,12 @@
 \subsection{Light Curve}
 In the PMT-based experiments, a particle interact with and deposit energy into the detector along its trajectory. Part of the deposited energy becomes visible as Cherenkov or scintillation photons.  The timing distribution of the emitted photons is called the \textit{light curve}.  A scintillation light curve of is modeled as a mixture of several exponential components with different decay rates~\cite{ludhova_particle_2020}.  Cherenkov light curve is essentially instantaneous, modeled by a Dirac $\delta(t)$ function.
 
-Photons captured by a PMT are affected by transit time spread (TTS).  In our Monte Carlo setup, the effective light curve $\Phi(t)$ at PMT is modeled as an exponential distribution convoluted with a gaussian~\cite{li_separation_2016}, known as \textit{ex-Gaussian} or \textit{exponentially modified gaussian},
+Photons captured by a PMT are affected by transit time spread (TTS).  In our Monte Carlo setup, the effective light curve $\Phi(t)$ at PMT is modeled as an exponential distribution convoluted with a Gaussian~\cite{li_separation_2016}, known as \textit{ex-Gaussian} or \textit{exponentially modified Gaussian},
 \begin{align}
     \Phi(t) = \frac{1}{2\tau} \exp\left(\frac{\sigma^2}{2\tau^2}-\frac{t-t_0}{\tau}\right) \left[1 - \erf\left( \frac{\sigma}{\sqrt{2}\tau} - \frac{t-t_0}{\sqrt{2}\sigma} \right)\right]
     \label{eq:time-pro}
 \end{align}
-where $t_0$ is when the exponential starts and $\tau$ is its decay life time.  $\sigma$ encodes the timing uncertainty mainly from TTS.  $\Phi(t)$ of Cherenkov light is a pure gaussian without the exponential.  Figure~\ref{fig:time-pro} gives several examples of $\Phi(t)$.
+where $t_0$ is when the exponential starts and $\tau$ is its decay life time.  $\sigma$ encodes the timing uncertainty mainly from TTS.  $\Phi(t)$ of Cherenkov light is a pure Gaussian without the exponential~($\tau\to0$).  Figure~\ref{fig:time-pro} gives several examples of $\Phi(t)$.
 
 \begin{figure}
   \centering
@@ -45,7 +45,7 @@ The total number of PEs in a single waveform, $N_\mathrm{PE}$, is sampled from a
     \label{eq:truncated}
 \end{equation}
 
-The single photonelectron response is described as the formula \eqref{eq:dayaspe} \cite{jetter_pmt_2012}. An gaussian noise is added to waveform after sampling $t$ and $q$. 
+The single photonelectron response is described as the formula \eqref{eq:dayaspe} \cite{jetter_pmt_2012}. An Gaussian noise is added to waveform after sampling $t$ and $q$. 
 
 \begin{equation}
     V_\mathrm{PE}(t) = V_{0}\exp\left[-\frac{1}{2}\left(\frac{\ln(t/\tau)}{\sigma}\right)^{2}\right]
