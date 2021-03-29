@@ -20,7 +20,7 @@ Before taking a deep look into the methods, input and output need to be defined.
   \caption{Waveform analysis takes PMT waveform as input and infer the timing and charge of the PEs in the output.}
 \end{figure}
 
-The likelihood $\mathcal{L}$ defined in MLE is formula \eqref{eq:likelihood}. 
+We can use Maximum Likelihood Estimation (MLE) to estimate $t_{0}$ in formula \eqref{eq:time-pro}, which is the starting time of light curve, using charge $q$ and corresponding hittime.  The likelihood $\mathcal{L}$ defined in MLE is formula \eqref{eq:likelihood}. 
 
 \begin{align}
   \mathcal{L}(t_{0}) &= e^{-\mu}\Pi_{i=0}^{N}P_{t}(t_{i})^{q_{i}} \label{eq:likelihood}
