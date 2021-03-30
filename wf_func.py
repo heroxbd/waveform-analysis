@@ -398,20 +398,20 @@ def demo(pet_sub, cha_sub, tth, spe_pre, window, wave, cid, p, full=False, fold=
     print('PEnum is {}'.format(penum))
     pan = np.arange(window)
     pet_ans_0 = tth['HitPosInWindow']
-    cha_ans = tth['Charge']
+    cha_ans = tth['Charge'] / spe_pre['spe'].sum()
     pet_ans = np.unique(pet_ans_0)
     cha_ans = np.array([np.sum(cha_ans[pet_ans_0 == i]) for i in pet_ans])
-    ylabel = r'$\mathrm{Charge}/\si{mV\cdot ns}$'
+    ylabel = r'$\mathrm{Charge}$'
     distd = '(W/ns,C/mV*ns)'
     distl = 'cdiff'
-    edist = cha_sub.sum() - cha_ans.sum()
+    edist = (cha_sub.sum() - cha_ans.sum()) * spe_pre['spe'].sum()
     print('truth HitPosInWindow = {}, Weight = {}'.format(pet_ans, cha_ans))
-    wav_ans = np.sum([np.where(pan > pet_ans[j], spe(pan - pet_ans[j], tau=p[0], sigma=p[1], A=p[2]) * cha_ans[j] / spe_pre['spe'].sum(), 0) for j in range(len(pet_ans))], axis=0)
+    wav_ans = np.sum([np.where(pan > pet_ans[j], spe(pan - pet_ans[j], tau=p[0], sigma=p[1], A=p[2]) * cha_ans[j], 0) for j in range(len(pet_ans))], axis=0)
     print('truth Resi-norm = {}'.format(np.linalg.norm(wave - wav_ans)))
     print('HitPosInWindow = {}, Weight = {}'.format(pet_sub, cha_sub))
     wdist = scipy.stats.wasserstein_distance(pet_ans, pet_sub, u_weights=cha_ans, v_weights=cha_sub)
     print('wdist = {}, '.format(wdist) + distl + ' = {}'.format(edist))
-    wav_sub = np.sum([np.where(pan > pet_sub[j], spe(pan - pet_sub[j], tau=p[0], sigma=p[1], A=p[2]) * cha_sub[j] / spe_pre['spe'].sum(), 0) for j in range(len(pet_sub))], axis=0)
+    wav_sub = np.sum([np.where(pan > pet_sub[j], spe(pan - pet_sub[j], tau=p[0], sigma=p[1], A=p[2]) * cha_sub[j], 0) for j in range(len(pet_sub))], axis=0)
     print('Resi-norm = {}'.format(np.linalg.norm(wave - wav_sub)))
 
     fig = plt.figure(figsize=(10, 10))
@@ -436,7 +436,7 @@ def demo(pet_sub, cha_sub, tth, spe_pre, window, wave, cid, p, full=False, fold=
     ax1.set_xticklabels([])
     ax1.set_xlim(ax0.get_xlim())
     ax1.set_ylim(0, max(max(cha_ans), max(cha_sub))*1.1)
-    ax1.set_yticks(np.arange(0, max(max(cha_ans), max(cha_sub)), 50))
+    ax1.set_yticks(np.arange(0, max(max(cha_ans), max(cha_sub)), 0.2))
     ax1.legend(loc=1)
     ax1.grid()
     ax2 = fig.add_axes((.1, .7, .85, .2))
@@ -445,7 +445,7 @@ def demo(pet_sub, cha_sub, tth, spe_pre, window, wave, cid, p, full=False, fold=
     ax2.set_xticklabels([])
     ax2.set_xlim(ax0.get_xlim())
     ax2.set_ylim(0, max(max(cha_ans), max(cha_sub))*1.1)
-    ax2.set_yticks(np.arange(0, max(max(cha_ans), max(cha_sub)), 50))
+    ax2.set_yticks(np.arange(0, max(max(cha_ans), max(cha_sub)), 0.2))
     ax2.legend(loc=1)
     ax2.grid()
     ax3 = fig.add_axes((.1, .1, .85, .1))
