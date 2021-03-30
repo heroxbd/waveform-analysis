@@ -3,7 +3,7 @@
 
 % Likelihood
 
-Formula \eqref{eq:likelihood} is the likelihood to estimate $t_{0}$ in formula \eqref{eq:time-pro}. But $q_{i}$ is the charge in each time bin $t_{i}$ rather the number of PE. 
+Formula \eqref{eq:pseudo} is the likelihood to estimate $t_{0}$ in formula \eqref{eq:time-pro}. But $q_{i}$ is the charge in each time bin $t_{i}$ rather the number of PE. 
 
 \begin{align}
     \mathcal{L}(t_{0}) &= e^{-\mu}\Pi_{i=0}^{N_\mathrm{PE}}\left(\sum_{j=a}^{b}[P_{i}(q_{i},j)(P_{t}(t_{i}))^{j}]\right)
@@ -43,7 +43,7 @@ We can see that as method CNN uses Wasserstein distance as loss directly during 
     \caption{\label{fig:rsssummary} RSS of methods, error bar 5--95 percentile ($\hat{q}$)}
 \end{figure}
 
-The timing resolution $\delta$ using waveform analysis results (charge $\hat{q}$) of these methods are computed and collected. The $t_{0}$ reconstruction process is also MLE, which introduced by the formula \eqref{eq:likelihood}. Additionally, MCMC can provide an estimation of $t_{0}$ directly, which is also collected, and FBMP provides dozens of samples of $q$, which allows us to derive MLE estimation of $t_{0}$. The comparison between timing resolution using the first PE, all PE, and the 5 methods is shown in figure~\ref{fig:deltamethods}. 
+The timing resolution $\delta$ using waveform analysis results (charge $\hat{q}$) of these methods are computed and collected. The $t_{0}$ reconstruction process is also MLE, which introduced by the formula \eqref{eq:pseudo}. Additionally, MCMC can provide an estimation of $t_{0}$ directly, which is also collected, and FBMP provides dozens of samples of $q$, which allows us to derive MLE estimation of $t_{0}$. The comparison between timing resolution using the first PE, all PE, and the 5 methods is shown in figure~\ref{fig:deltamethods}. 
 
 \begin{figure}[H]
     \centering
