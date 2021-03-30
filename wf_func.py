@@ -25,7 +25,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 matplotlib.use('pgf')
-plt.style.use('classic')
+plt.style.use('default')
 plt.rcParams['savefig.dpi'] = 100
 plt.rcParams['figure.dpi'] = 100
 plt.rcParams['font.size'] = 20
@@ -273,7 +273,6 @@ def read_model(spe_path, n=1):
         ax.grid()
         ax.set_xlabel(r'$\mathrm{Time}/\si{ns}$')
         ax.set_ylabel(r'$\mathrm{Voltage}/\si{mV}$')
-        fig.savefig('Note/figures/pmtspe.pgf')
         fig.savefig('Note/figures/pmtspe.pdf')
         plt.close()
     return spe_pre

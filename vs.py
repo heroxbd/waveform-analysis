@@ -24,7 +24,6 @@ import wf_func as wff
 import matplotlib
 matplotlib.use('pgf')
 
-plt.style.use('default')
 plt.rcParams['font.size'] = 12
 
 psr = argparse.ArgumentParser()
@@ -34,9 +33,9 @@ args = psr.parse_args()
 with open(args.conf) as f:
     f_csv = csv.reader(f, delimiter=' ')
     Tau = next(f_csv)
-    Tau = [int(i) for i in Tau]
+    Tau = [float(i) for i in Tau]
     Sigma = next(f_csv)
-    Sigma = [int(i) for i in Sigma]
+    Sigma = [float(i) for i in Sigma]
 
 filelist = os.listdir('result/lucyddm/solu')
 filelist = [f for f in filelist if f[0] != '.' and os.path.splitext(f)[-1] == '.h5']
@@ -60,8 +59,8 @@ mtsi['RSS'] = np.nan
 mtsi = np.sort(mtsi, kind='stable', order=['mu', 'tau', 'sigma'])
 
 mts = {'findpeak':mtsi.copy(), 'threshold':mtsi.copy(), 'fftrans':mtsi.copy(), 'lucyddm':mtsi.copy(), 'xiaopeip':mtsi.copy(), 'mcmc':mtsi.copy(), 'takara':mtsi.copy(), 'fbmp':mtsi.copy()}
-deltalabel = {'1st':'\mathrm{1st}', 'tru':'\mathrm{all}', 'findpeak':'\mathrm{FindPeak}', 'threshold':'\mathrm{Shift}', 'fftrans':'\mathrm{FFT}', 'lucyddm':'\mathrm{LucyDDM}', 'xiaopeip':'\mathrm{Fitting}', 'takara':'\mathrm{CNN}', 'fbmp':'\mathrm{FBMPcha}', 'fbmpwave':'\mathrm{FBMPt0}', 'mcmc':'\mathrm{MCMCcha}', 'mcmcwave':'\mathrm{MCMCt0}'}
-label = {'1st':'\mathrm{1st}', 'tru':'\mathrm{all}', 'findpeak':'\mathrm{FindPeak}', 'threshold':'\mathrm{Shift}', 'fftrans':'\mathrm{FFT}', 'lucyddm':'\mathrm{LucyDDM}', 'xiaopeip':'\mathrm{Fitting}', 'takara':'\mathrm{CNN}', 'fbmp':'\mathrm{FBMP}', 'fbmpwave':'\mathrm{FBMP}', 'mcmc':'\mathrm{MCMC}', 'mcmcwave':'\mathrm{MCMC}'}
+deltalabel = {'1st':'\mathrm{1st}', 'tru':'\mathrm{ALL}', 'findpeak':'\mathrm{FindPeak}', 'threshold':'\mathrm{Shift}', 'fftrans':'\mathrm{FFT}', 'lucyddm':'\mathrm{LucyDDM}', 'xiaopeip':'\mathrm{Fitting}', 'takara':'\mathrm{CNN}', 'fbmp':'\mathrm{FBMPcha}', 'fbmpwave':'\mathrm{FBMPt0}', 'mcmc':'\mathrm{MCMCcha}', 'mcmcwave':'\mathrm{MCMCt0}'}
+label = {'1st':'\mathrm{1st}', 'tru':'\mathrm{ALL}', 'findpeak':'\mathrm{FindPeak}', 'threshold':'\mathrm{Shift}', 'fftrans':'\mathrm{FFT}', 'lucyddm':'\mathrm{LucyDDM}', 'xiaopeip':'\mathrm{Fitting}', 'takara':'\mathrm{CNN}', 'fbmp':'\mathrm{FBMP}', 'fbmpwave':'\mathrm{FBMP}', 'mcmc':'\mathrm{MCMC}', 'mcmcwave':'\mathrm{MCMC}'}
 marker = {'1st':'s', 'tru':'h', 'findpeak':',', 'threshold':'1', 'fftrans':'+', 'lucyddm':'p', 'xiaopeip':'*', 'takara':'X', 'fbmp':'o', 'fbmpwave':'^', 'mcmc':'x', 'mcmcwave':'>'}
 color = {'1st':'b', 'tru':'k', 'findpeak':'C1', 'threshold':'C2', 'fftrans':'m', 'lucyddm':'y', 'xiaopeip':'c', 'takara':'C0', 'fbmp':'r', 'fbmpwave':'b', 'mcmc':'C4', 'mcmcwave':'C5'}
 jit = 0.05
@@ -132,9 +131,9 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
             stdlist = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
             yerrcha = np.vstack([stdlist['stdcharge']-np.sqrt(np.power(stdlist['stdcharge'],2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(stdlist['stdcharge'],2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-stdlist['stdcharge']])
             ax.errorbar(stdlist['mu'] + jitter[key], stdlist['stdcharge'], yerr=yerrcha, c=color[key], label='$\delta_'+deltalabel[key]+'$', marker=marker[key])
-        ax.set_xlabel(r'$\mu$')
-        ax.set_ylabel(r'$\delta/\mathrm{ns}$')
-        ax.set_title(fr'$\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$')
+        ax.set_xlabel(r'$N_{\mathrm{PE}}\ \mathrm{expectation}\ \mu$')
+        ax.set_ylabel(r'$\delta/\si{ns}$')
+        ax.set_title(fr'$\tau={tau}\si{{ns}},\,\sigma={sigma}\si{{ns}}$')
         # ax.set_yscale('log')
         ax.grid()
         if i == len(Sigma) - 1 and j == len(Tau) - 1:
@@ -155,9 +154,9 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
             stdlist = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
             yerrcha = np.vstack([stdlist['biascharge']-t.ppf(1-alpha/2, stdlist['N'])*stdlist['stdcharge']/np.sqrt(stdlist['N']), t.ppf(1-alpha/2, stdlist['N'])*stdlist['stdcharge']/np.sqrt(stdlist['N'])-stdlist['biascharge']])
             ax.errorbar(stdlist['mu'] + jitter[key], stdlist['biascharge'], yerr=yerrcha, c=color[key], label='$\mathrm{bias}_'+deltalabel[key]+'$', marker=marker[key])
-        ax.set_xlabel(r'$\mu$')
-        ax.set_ylabel(r'$\mathrm{bias}/\mathrm{ns}$')
-        ax.set_title(fr'$\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$')
+        ax.set_xlabel(r'$N_{\mathrm{PE}}\ \mathrm{expectation}\ \mu$')
+        ax.set_ylabel(r'$\mathrm{bias}/\si{ns}$')
+        ax.set_title(fr'$\tau={tau}\si{{ns}},\,\sigma={sigma}\si{{ns}}$')
         # ax.set_yscale('log')
         ax.grid()
         if i == len(Sigma) - 1 and j == len(Tau) - 1:
@@ -181,9 +180,9 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
             yerrwav = stdlistwav['stdcharge'] / stdlist['std1sttruth'] / np.sqrt(stdlistwav['N'])
             ax.errorbar(stdlistwav['mu'] + jitter[m + 'wave'], stdlistwav['stdwave'] / stdlist['std1sttruth'], yerr=yerrwav, label='$\delta_'+deltalabel[m + 'wave']+'/\delta_'+deltalabel['1st']+'$', c=color[m + 'wave'], marker=marker[m + 'wave'])
             # ax.plot(stdlistwav['mu'] + jitter[m + 'wave'], stdlistwav['stdwave'] / stdlist['std1sttruth'], label='$\delta_'+deltalabel[m + 'wave']+'/\delta_'+deltalabel['1st']+'$', c=color[m + 'wave'], marker=marker[m + 'wave'])
-        ax.set_xlabel(r'$\mu$')
+        ax.set_xlabel(r'$N_{\mathrm{PE}}\ \mathrm{expectation}\ \mu$')
         ax.set_ylabel(r'$ratio$')
-        ax.set_title(fr'$\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$')
+        ax.set_title(fr'$\tau={tau}\si{{ns}},\,\sigma={sigma}\si{{ns}}$')
         ax.set_ylim(lim['deltadiv'][i, j], 1.01)
         ax.grid()
         if i == len(Sigma) - 1 and j == len(Tau) - 1:
@@ -199,9 +198,9 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
             yerr = np.vstack([wdistlist['wdist'][:, 1] - wdistlist['wdist'][:, 0], wdistlist['wdist'][:, 2] - wdistlist['wdist'][:, 1]])
             ax.errorbar(wdistlist['mu'] + jitter[key], wdistlist['wdist'][:, 1], yerr=yerr, label='$'+label[key]+'$', c=color[key], marker=marker[key])
             ax.fill_between(wdistlist['mu'] + jitter[key], wdistlist['wdist'][:, 0], wdistlist['wdist'][:, 2], fc=color[key], alpha=0.1, color=None)
-        ax.set_xlabel(r'$\mu$')
-        ax.set_ylabel(r'$W-dist/\mathrm{ns}$')
-        ax.set_title(fr'$\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$')
+        ax.set_xlabel(r'$N_{\mathrm{PE}}\ \mathrm{expectation}\ \mu$')
+        ax.set_ylabel(r'$W-dist/\si{ns}$')
+        ax.set_title(fr'$\tau={tau}\si{{ns}},\,\sigma={sigma}\si{{ns}}$')
         ax.set_ylim(0, lim['wdist'][i, j])
         # ax.set_yscale('log')
         ax.grid()
@@ -218,9 +217,9 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
             yerr = np.vstack([rsslist['RSS'][:, 1] - rsslist['RSS'][:, 0], rsslist['RSS'][:, 2] - rsslist['RSS'][:, 1]])
             ax.errorbar(rsslist['mu'] + jitter[key], rsslist['RSS'][:, 1], yerr=yerr, label='$'+label[key]+'$', c=color[key], marker=marker[key])
             ax.fill_between(rsslist['mu'] + jitter[key], rsslist['RSS'][:, 0], rsslist['RSS'][:, 2], fc=color[key], alpha=0.1, color=None)
-        ax.set_xlabel(r'$\mu$')
-        ax.set_ylabel(r'$RSS/\mathrm{mV}^{2}$')
-        ax.set_title(fr'$\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$')
+        ax.set_xlabel(r'$N_{\mathrm{PE}}\ \mathrm{expectation}\ \mu$')
+        ax.set_ylabel(r'$RSS/\si{mV}^{2}$')
+        ax.set_title(fr'$\tau={tau}\si{{ns}},\,\sigma={sigma}\si{{ns}}$')
         ax.set_ylim(0, lim['rss'][i, j])
         # ax.set_yscale('log')
         ax.yaxis.get_major_formatter().set_powerlimits((0, 1))
@@ -251,8 +250,8 @@ plt.close(figr)
 alpha = 0.05
 marker = [['s', '^']]
 colors = [['r', 'b']]
-fig = plt.figure(figsize=(12, 5))
-gs = gridspec.GridSpec(1, 2, figure=fig, left=0.1, right=0.9, top=0.93, bottom=0.15, wspace=0.3, hspace=0.35)
+fig = plt.figure(figsize=(8, 4))
+gs = gridspec.GridSpec(1, 2, figure=fig, left=0.1, right=0.85, top=0.93, bottom=0.15, wspace=0.25, hspace=0.2)
 ax = fig.add_subplot(gs[0, 0])
 std1sttruth = np.empty(len(stdlist['mu']))
 stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == Tau[0]) & (mts['lucyddm']['sigma'] == Sigma[0])]
@@ -267,35 +266,37 @@ for mu, i in zip(stdlist['mu'], list(range(len(stdlist['mu'])))):
     ts1sttruth = np.array([np.min(sams[j]) for j in range(N)])
     std1sttruth[i] = np.std(ts1sttruth - t0, ddof=-1)
 yerr = np.vstack([std1sttruth-np.sqrt(np.power(std1sttruth,2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(std1sttruth,2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-std1sttruth])
-ax.errorbar(stdlist['mu'], std1sttruth, yerr=yerr, label='$\delta_'+deltalabel['tru']+fr',\,\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$', marker='o', color='g')
-ax.errorbar(stdlist['mu'], std1sttruth, yerr=yerr, label='$\delta_'+deltalabel['1st']+fr',\,\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$', marker='o', color='g', linestyle='dashed')
+ax.errorbar(stdlist['mu'], std1sttruth, yerr=yerr, label='$\delta_'+deltalabel['tru']+fr',\,\tau={tau}\si{{ns}},\,\sigma={sigma}\si{{ns}}$', marker='o', color='g')
+ax.errorbar(stdlist['mu'], std1sttruth, yerr=yerr, label='$\delta_'+deltalabel['1st']+fr',\,\tau={tau}\si{{ns}},\,\sigma={sigma}\si{{ns}}$', marker='o', color='g', linestyle='dashed')
 for sigma, i in zip(Sigma, list(range(len(Sigma)))):
     for tau, j in zip(Tau, list(range(len(Tau)))):
         stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == tau) & (mts['lucyddm']['sigma'] == sigma)]
         yerrall = np.vstack([stdlist['stdtruth']-np.sqrt(np.power(stdlist['stdtruth'],2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(stdlist['stdtruth'],2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-stdlist['stdtruth']])
         yerr1st = np.vstack([stdlist['std1sttruth']-np.sqrt(np.power(stdlist['std1sttruth'],2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(stdlist['std1sttruth'],2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-stdlist['std1sttruth']])
-        ax.errorbar(stdlist['mu'], stdlist['stdtruth'], yerr=yerrall, label='$\delta_'+deltalabel['tru']+fr',\,\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$', marker=marker[i][j], color=colors[i][j])
-        ax.errorbar(stdlist['mu'], stdlist['std1sttruth'], yerr=yerr1st, label='$\delta_'+deltalabel['1st']+fr',\,\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$', marker=marker[i][j], color=colors[i][j], linestyle='dashed')
-ax.set_xlabel(r'$\mu$')
-ax.set_ylabel(r'$\delta/\mathrm{ns}$')
+        ax.errorbar(stdlist['mu'], stdlist['stdtruth'], yerr=yerrall, marker=marker[i][j], color=colors[i][j])
+        ax.errorbar(stdlist['mu'], stdlist['std1sttruth'], yerr=yerr1st, marker=marker[i][j], color=colors[i][j], linestyle='dashed')
+ax.set_xlabel(r'$N_{\mathrm{PE}}\ \mathrm{expectation}\ \mu$')
+ax.set_ylabel(r'$\mathrm{timing\ resolution}/\si{ns}$')
 ax.grid()
-ax.legend(loc='upper right')
+# ax.legend(loc='upper right')
 ax = fig.add_subplot(gs[0, 1])
 sigma = 0
 tau = Tau[1]
 stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == Tau[0]) & (mts['lucyddm']['sigma'] == Sigma[0])]
 yerr = std1sttruth / std1sttruth / np.sqrt(stdlist['N'])
-ax.errorbar(stdlist['mu'], std1sttruth / std1sttruth, yerr=yerr, label='$\delta_'+deltalabel['tru']+'/\delta_'+deltalabel['1st']+fr',\,\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$', marker='o', color='g')
+ax.errorbar(stdlist['mu'], std1sttruth / std1sttruth, yerr=yerr, label=fr'$(20,0)$', marker='o', color='g')
 for sigma, i in zip(Sigma, list(range(len(Sigma)))):
     for tau, j in zip(Tau, list(range(len(Tau)))):
         stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == tau) & (mts['lucyddm']['sigma'] == sigma)]
+        sigma = int(sigma)
+        tau = int(tau)
         yerr = stdlist['stdtruth'] / stdlist['std1sttruth'] / np.sqrt(stdlist['N'])
-        ax.errorbar(stdlist['mu'], stdlist['stdtruth'] / stdlist['std1sttruth'], yerr=yerr, label='$\delta_'+deltalabel['tru']+'/\delta_'+deltalabel['1st']+fr',\,\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$', marker=marker[i][j], color=colors[i][j])
-ax.set_xlabel(r'$\mu$')
-ax.set_ylabel(r'$\mathrm{ratio}$')
-ax.set_ylim(0.3, 1.3)
+        ax.errorbar(stdlist['mu'], stdlist['stdtruth'] / stdlist['std1sttruth'], yerr=yerr, label=fr'$({tau},{sigma})$', marker=marker[i][j], color=colors[i][j])
+ax.set_xlabel(r'$N_{\mathrm{PE}}\ \mathrm{expectation}\ \mu$')
+ax.set_ylabel(r'$\mathrm{\sigma_\mathrm{ALL}/\sigma_\mathrm{1st}\ ratio}$')
+ax.set_ylim(0.3, 1.1)
 ax.grid()
-ax.legend(loc='upper right')
+ax.legend(title=r'$(\tau, \sigma)/\si{ns}$', bbox_to_anchor=(1., 0.9))
 fig.savefig('Note/figures/vs-deltadiv.pgf')
 fig.savefig('Note/figures/vs-deltadiv.pdf')
 fig.savefig('Note/figures/vs-deltadiv.png')
@@ -311,11 +312,11 @@ fig.tight_layout()
 ax = fig.add_subplot(111)
 ax.bar(x, wdist[:, 1], color='b')
 ax.set_ylim(0, math.ceil(wdist[~np.isnan(wdist)].max() + 0.5))
-ax.set_ylabel(r'$\mathrm{Wasserstein}\ \mathrm{Distance}/\mathrm{ns}$')
+ax.set_ylabel(r'$\mathrm{Wasserstein\ Distance}/\si{ns}$')
 ax.set_xticks(x)
 ax.set_xticklabels(['$'+label[key]+'$' for key in keylist])
 ax.errorbar(x, wdist[:, 1], yerr=dy, fmt='o', ecolor='r', color='b', elinewidth=2, capsize=3)
-ax.set_title(fr'$\tau={tau}\mathrm{{ns}},\,\sigma={sigma}\mathrm{{ns}}$')
+ax.set_title(fr'$\tau={tau}\si{{ns}},\,\sigma={sigma}\si{{ns}}$')
 fig.savefig('Note/figures/summarycharge.pgf')
 fig.savefig('Note/figures/summarycharge.pdf')
 fig.savefig('Note/figures/summarycharge.png')

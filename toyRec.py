@@ -24,6 +24,8 @@ cpu_global_start = time.process_time()
 def start_time(a0, a1):
     stime = np.empty((a1 - a0, 2))
     for i in range(a0, a1):
+        hitt = charge[i_cha[i]:i_cha[i+1]]['HitPosInWindow'].astype(np.float64)
+        char = charge[i_cha[i]:i_cha[i+1]]['Charge']
         As = np.zeros(len(tlist_pan))
         As[np.isin(tlist_pan, hitt)] = np.clip(char, 0, np.inf) / gmu
         logL = lambda t0 : -1 * wff.loglikelihood(t0, tlist_pan, As[None, :], np.array([1]), 'b', 0, Tau, Sigma, Mu / n)
@@ -31,8 +33,6 @@ def start_time(a0, a1):
         logLv_btlist = np.vectorize(logL)(btlist)
         t0 = opti.fmin_l_bfgs_b(logL, x0=[btlist[np.argmin(logLv_btlist)]], approx_grad=True, bounds=[[0., 600.]], maxfun=50000)[0]
         stime[i - a0][0] = t0
-        hitt = charge[i_cha[i]:i_cha[i+1]]['HitPosInWindow'].astype(np.float64)
-        char = charge[i_cha[i]:i_cha[i+1]]['Charge']
         t0, _ = wff.likelihoodt0(hitt, char=char, gmu=gmu, gsigma=gsigma, Tau=Tau, Sigma=Sigma, npe=npe, ft=interp1d(t, b / b.sum(), fill_value=0, bounds_error=False), s0=s0, mode='charge')
         stime[i - a0][1] = t0
     return stime
