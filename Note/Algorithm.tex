@@ -28,8 +28,7 @@ One idea to plug $\hat{t}_i$ into \eqref{eq:2} is to interpret $\hat{q}_i$ as we
   \label{eq:pseudo}
   \hat{t}_\mathrm{KL} = \arg\underset{t_0}{\max} \prod_{i=1}^{\hat{N}} \left[\Phi(\hat{t}_i-t_0)\right]^{\hat{q}_i}.
 \end{equation}
-$\hat{t}_\mathrm{KL}$ is not a valid, but a pseudo-likelihood estimator. However, it can be understood as an approximation to of 
-Kullback-Leibler divergence between an inferred and the true light curves.
+$\hat{t}_\mathrm{KL}$ is not a valid, but a pseudo-likelihood estimator. However, it can be understood as the Kullback-Leibler divergence between an inferred and the true light curves.
 
 $\{(\hat{t}_i, \hat{q}_i)|i=1,\ldots,\hat{N}\}$ gives a light curve estimator $\hat{\Phi}(t)$,
 \begin{equation}
