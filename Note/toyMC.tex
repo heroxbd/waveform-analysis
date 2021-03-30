@@ -4,7 +4,13 @@
 In this section, we discuss why waveform analysis is crucial for timing measurements in PMT-based experiments. 
 
 \subsection{Light Curve}
-In the PMT-based experiments, a particle interact with and deposit energy into the detector along its trajectory. Part of the deposited energy becomes visible as Cherenkov or scintillation photons.  The timing distribution of the emitted photons is called the \textit{light curve}.  A scintillation light curve of is modeled as a mixture of several exponential components with different decay rates~\cite{ludhova_particle_2020}.  Cherenkov light curve is essentially instantaneous, modeled by a Dirac $\delta(t)$ function.
+In the PMT-based experiments, a particle interact with and deposit energy into the detector along its trajectory. Part of the deposited energy becomes visible as Cherenkov or scintillation photons.  The timing distribution of the emitted photons is called the \textit{light curve}.  A scintillation light curve of is modeled as a mixture of several exponential components with different decay rates~\cite{ludhova_particle_2020}.  Cherenkov light curve is essentially instantaneous, modeled by a Dirac delta function.
+
+\begin{figure}[!htb]
+  \centering
+  \resizebox{0.5\textwidth}{!}{\input{figures/profile.pgf}}
+  \caption{\label{fig:time-pro} Light curves.}
+\end{figure}
 
 Photons captured by a PMT are affected by transit time spread (TTS).  In our Monte Carlo setup, the effective light curve $\Phi(t)$ at PMT is modeled as an exponential distribution convoluted with a Gaussian~\cite{li_separation_2016}, known as \textit{ex-Gaussian} or \textit{exponentially modified Gaussian},
 \begin{align}
@@ -12,12 +18,6 @@ Photons captured by a PMT are affected by transit time spread (TTS).  In our Mon
     \label{eq:time-pro}
 \end{align}
 where $\sigma$ encodes the timing uncertainty mainly from TTS.  $\Phi(t)$ of Cherenkov light is a pure Gaussian without the exponential, or equivalently taking the limit $\tau \rightarrow 0$.  Figure~\ref{fig:time-pro} gives several examples of $\Phi(t)$.
-
-\begin{figure}
-  \centering
-  \resizebox{0.5\textwidth}{!}{\input{figures/profile.pgf}}
-  \caption{\label{fig:time-pro} Light curve}
-\end{figure}
 
 \subsection{Single PE Response}
 A photon can produce a PE at the PMT photocathode.  The PE is then accelerated, collected and amplified into $\num[retain-unity-mantissa=false]{\sim 1e7}$ electrons.  The electrons forms a voltage pulse $V_\mathrm{PE}(t)$ in the PMT output and is acquired by the digitizers as a time series called a \textit{waveform} $w(t)$~(Fig.~\ref{fig:spe}).
