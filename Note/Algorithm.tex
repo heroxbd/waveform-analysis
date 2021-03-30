@@ -84,18 +84,18 @@ By directly extracting waveform features, heuristic methods are straightforward 
 
 \subsubsection{Waveform Shifting}
 \label{sec:shifting}
-A threshold $V_\mathrm{th}$ is selected with respect to electronics noise in the waveforms. Waveform entries $w(t_i)$ exceeding $V_\mathrm{th}$ are selected and shifted by $\Delta t$ according to the shape of SPE response $V_\mathrm{PE}(t)$ in \eqref{eq:dayaspe}. $\hat{q}_i$ are made proportional $w(t_i)$ and normalized to total charge by integration of the waveform.  Waveform shifting does minimal analysis and serves as a baseline method.  The demonstration in Fig.~\ref{fig:shifting} gives $D_w = \SI{5.58}{ns}$.
+A threshold $V_\mathrm{th}$ is selected with respect to electronics noise in the waveforms. Waveform entries $w(t_i)$ exceeding $V_\mathrm{th}$ are selected and shifted by $\Delta t$ according to the shape of SPE response $V_\mathrm{PE}(t)$ in \eqref{eq:dayaspe}. $\hat{q}_i$ are made proportional $w(t_i)$ and normalized to total charge by integration of the waveform.  Waveform shifting does minimal analysis and serves as a baseline method.  The demonstration in Fig.~\ref{fig:shifting} gives $D_w = \SI{7.89}{ns}$.
 
 \begin{figure}[H]
   \begin{subfigure}{0.5\textwidth}
     \centering
     \scalebox{0.36}{\input{figures/threshold.pgf}}
-    \caption{\label{fig:shifting}Waveform shifting: $D_w = \SI{5.58}{ns}$}
+    \caption{\label{fig:shifting}Waveform shifting: $\mathrm{RSS}=\SI{2283.5}{mV^2},D_w=\SI{3.52}{ns},\delta=\SI{7.89}{ns}$}
   \end{subfigure}
   \begin{subfigure}{0.5\textwidth}
     \centering
     \scalebox{0.36}{\input{figures/findpeak.pgf}}
-    \caption{\label{fig:peak}Peak finding: $D_w = \SI{1.96}{ns}$}
+    \caption{\label{fig:peak}Peak finding: $\mathrm{RSS}=\SI{2518.5}{mV^2},D_w=\SI{4.59}{ns},\delta=\SI{8.70}{ns}$}
   \end{subfigure}
   \caption{Heuristic methods demonstrations.}
 \end{figure}
@@ -103,7 +103,7 @@ A threshold $V_\mathrm{th}$ is selected with respect to electronics noise in the
 \subsubsection{Peak Finding}
 \label{sec:findpeak}
 
-In the peak finding method, local maxima are extracted in Savitzky-Golay smoothed waveforms.  A minus shift $\Delta t$ is applied to peak positions $t_i$ to minimize $D_w$ considering SPE response $V_\mathrm{PE}(t)$ in \eqref{eq:dayaspe}. The reconstructed charges $\hat{q}_i$ of $t_i$ are proportional to the peak voltages, which are normalized to the total charge by integration of the waveform.  This works well for lower PE counts. When PE's pile-up closely, peaks overlaps and cannot be extracted reliably. A demonstration shown in Fig.~\ref{fig:peak} has $D_w = \SI{1.96}{ns}$. 
+In the peak finding method, local maxima are extracted in Savitzky-Golay smoothed waveforms.  A minus shift $\Delta t$ is applied to peak positions $t_i$ to minimize $D_w$ considering SPE response $V_\mathrm{PE}(t)$ in \eqref{eq:dayaspe}. The reconstructed charges $\hat{q}_i$ of $t_i$ are proportional to the peak voltages, which are normalized to the total charge by integration of the waveform.  This works well for lower PE counts. When PE's pile-up closely, peaks overlaps and cannot be extracted reliably. A demonstration shown in Fig.~\ref{fig:peak} has $D_w = \SI{4.59}{ns}$. 
 
 \subsection{Deconvolution}
 While heuristic methods extract only a timing shift, deconvolution methods exploit the full SPE shape.  Deconvolution can accommodation overshoots and is selected by JUNO prototype to measure charges~\cite{zhang_comparison_2019}.
@@ -117,18 +117,18 @@ Fourier deconvolution is the simplest form of this category.  Assuming the wavef
     \label{eq:fft}
 \end{equation}
 
-The demonstration here shows a result with $D_w = \SI{1.77}{ns}$. 
+The demonstration here shows a result with $D_w = \SI{2.43}{ns}$. 
 
 \begin{figure}[H]
   \begin{subfigure}{0.5\textwidth}
     \centering
     \scalebox{0.36}{\input{figures/fftrans.pgf}}
-    \caption{Fourier deconvolution: $D_w = \SI{1.77}{ns}$}
+    \caption{Fourier deconvolution: $\mathrm{RSS}=\SI{239.5}{mV^2},D_w=\SI{1.72}{ns},\delta=\SI{2.43}{ns}$}
   \end{subfigure}
   \begin{subfigure}{0.5\textwidth}
     \centering
     \scalebox{0.36}{\input{figures/lucyddm.pgf}}
-    \caption{Lucy direct demodulation: $D_w = \SI{0.95}{ns}$}
+    \caption{Lucy direct demodulation: $\mathrm{RSS}=\SI{68.54}{mV^2},D_w=\SI{1.01}{ns},\delta=\SI{2.76}{ns}$}
   \end{subfigure}
   \caption{Deconvolution demonstrations.}
 \end{figure}
@@ -144,7 +144,7 @@ In the $n$-th iteration, the calculation shows in \eqref{eq:lucy-inter} where $v
     \hat{q}^{(n)} &= \hat{q}^{(n-1)} \cdot \left(\frac{w(t)}{\hat{q}^{(n-1)} \otimes V_\mathrm{PE}(t)} \otimes v^{*}_{spe}\right) \label{eq:lucy-inter}
 \end{align}
 
-Iteration will stop when two adjacent loops give very close results. The demonstration here shows a result with $D_w = \SI{0.95}{ns}$. 
+Iteration will stop when two adjacent loops give very close results. The demonstration here shows a result with $D_w = \SI{1.01}{ns}$. 
 
 \subsection{Convolutional Neuron Networks}
 
@@ -215,7 +215,7 @@ The result reconstructing $\hat{q}$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/takarachargestats.pgf}}
-    \caption{\label{fig:cnn-npe} $W_{d}$ vs $N_{pe}$, method is CNN}
+    \caption{\label{fig:cnn-npe} $D_d$ vs $N_{pe}$, method is CNN}
 \end{figure}
 \end{minipage}
 \end{figure}
@@ -232,12 +232,12 @@ Waveform is the convolution of $V_\mathrm{PE}(t)$ and $\hat{q}(t)$ (see formula~
 
 In the fitting process, the parameters are $\hat{q}(t)$ in each discrete hittime $t$. The complete information hidden in the original wave is disturbed by electronics noise and pile-up. The loss (see formula~\ref{eq:loss-rss}) which we optimize in fitting is the residual sum of squares (RSS) between the original wave $w(t)$ and reconstructed wave $\hat{w}(t)$ according to the parameters. The parameters will tend to be preciser when the reconstructed wave approaching the original wave. 
 
-The fitting program is implemented with Limited-memory BFGS with bound constraint \cite{byrd_limited_1995} (L-BFGS-B). L-BFGS-B has an advantage that the $\hat{q}$ are constrained to be larger than 0. The demonstration here shows a result with $D_w = \SI{0.67}{ns}$.
+The fitting program is implemented with Limited-memory BFGS with bound constraint \cite{byrd_limited_1995} (L-BFGS-B). L-BFGS-B has an advantage that the $\hat{q}$ are constrained to be larger than 0. The demonstration here shows a result with $D_w = \SI{0.71}{ns}$.
 
 \begin{figure}[H]
     \centering
     \scalebox{0.4}{\input{figures/xiaopeip.pgf}}
-    \caption{Fitting Demo, $D_w = \SI{0.67}{ns}$}
+    \caption{Fitting Demo, $\mathrm{RSS}=\SI{44.97}{mV^2},D_w=\SI{0.71}{ns},\delta=\SI{3.14}{ns}$}
 \end{figure}
 
 The result reconstructing $\hat{q}$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ shows in figure. (see figure~\ref{fig:fitting-hist}) The overall result of $D_w$ reconstructing $\hat{q}$ shows in the figure (see figure~\ref{fig:fitting-npe}). 
@@ -313,7 +313,7 @@ Figure~\ref{fig:fbmp} shows one of the FBMP results. We can see the origin wavef
 \begin{figure}[H]
     \centering
     \scalebox{0.4}{\input{figures/demoe2c0.pgf}}
-    \caption{\label{fig:fbmp} FBMP Demo, $D_w = \SI{0.27}{ns}$}
+    \caption{\label{fig:fbmp} FBMP Demo, $\mathrm{RSS}=\SI{24.30}{mV^2},D_w=\SI{0.48}{ns},\delta=\SI{2.91}{ns}$}
 \end{figure}
 
 The result of reconstructed $\hat{q}$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ are shown in Fig.~\ref{fig:fbmp-hist}. The overall result of $D_w$ reconstructing $\hat{q}$ shows in Fig.~\ref{fig:fbmp-npe}). 
