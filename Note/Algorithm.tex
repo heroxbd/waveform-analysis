@@ -26,29 +26,29 @@ Facing the ambiguous of $t_i$ and $q_i$, a set of evaluation criteria is develop
 One idea to plug $\hat{t}_i$ into \eqref{eq:2} is to interpret $\hat{q}_i$ as weights,
 \begin{equation}
   \label{eq:pseudo}
-  \hat{t}_\mathrm{KL} = \arg\underset{t_0}{\max} \prod_{i=1}^{\hat{N}} \left[\Phi(\hat{t}_i-t_0)\right]^{\hat{q}_i}.
+  \hat{t}_\mathrm{KL} = \arg\underset{t_0}{\max} \prod_{i=1}^{\hat{N}} \left[\phi(\hat{t}_i-t_0)\right]^{\hat{q}_i}.
 \end{equation}
 $\hat{t}_\mathrm{KL}$ is not a valid, but a pseudo-likelihood estimator. However, it can be understood as the Kullback-Leibler divergence between an inferred and the true light curves.
 
-$\{(\hat{t}_i, \hat{q}_i)|i=1,\ldots,\hat{N}\}$ gives a light curve estimator $\hat{\Phi}(t)$,
+$\{(\hat{t}_i, \hat{q}_i)|i=1,\ldots,\hat{N}\}$ gives a light curve estimator $\hat{\phi}(t)$,
 \begin{equation}
   \label{eq:lc}
-  \hat{\Phi}(t) = \sum_{i=1}^{\hat{N}} \hat{q}_i\delta(t-\hat{t_i})
+  \hat{\phi}(t) = \sum_{i=1}^{\hat{N}} \hat{q}_i\delta(t-\hat{t_i})
 \end{equation}
-up to a normalization factor, where $\delta(t)$ is the Dirac delta function to model discrete values.  Consider the non-normalized KL divergence from $\hat{\Phi}(t)$ to $\Phi(t)$,
+up to a normalization factor, where $\delta(t)$ is the Dirac delta function to model discrete values.  Consider the non-normalized KL divergence from $\hat{\phi}(t)$ to $\phi(t)$,
 \begin{equation}
   \begin{aligned}
-    D_\mathrm{KL}\left[\hat{\Phi}(t) \parallel \Phi(t-t_0)\right] & =\int \left[\hat{\Phi}(t) \log\frac{\hat{\Phi}(t)}{\Phi(t-t_0)} + \Phi(t-t_0) - \hat{\Phi}(t) \right]\mathrm{d}t \\
-    & = - \int \hat{\Phi}(t) \log\Phi(t-t_0)\mathrm{d}t + \int \left[\hat{\Phi}(t) \log\hat{\Phi}(t) + \Phi(t) - \hat{\Phi}(t) \right]\mathrm{d}t \\
-    & = - \sum_{i=1}^{\hat{N}}\int \hat{q}_i\delta(t-\hat{t_i}) \log\Phi(t-t_0)\mathrm{d}t + C \\
-    & = -\log \prod_{i=1}^{\hat{N}} \left[\Phi(\hat{t}_i-t_0)\right]^{\hat{q}_i} + C
+    D_\mathrm{KL}\left[\hat{\phi}(t) \parallel \phi(t-t_0)\right] & =\int \left[\hat{\phi}(t) \log\frac{\hat{\phi}(t)}{\phi(t-t_0)} + \phi(t-t_0) - \hat{\phi}(t) \right]\mathrm{d}t \\
+    & = - \int \hat{\phi}(t) \log\phi(t-t_0)\mathrm{d}t + \int \left[\hat{\phi}(t) \log\hat{\phi}(t) + \phi(t) - \hat{\phi}(t) \right]\mathrm{d}t \\
+    & = - \sum_{i=1}^{\hat{N}}\int \hat{q}_i\delta(t-\hat{t_i}) \log\phi(t-t_0)\mathrm{d}t + C \\
+    & = -\log \prod_{i=1}^{\hat{N}} \left[\phi(\hat{t}_i-t_0)\right]^{\hat{q}_i} + C
   \label{eq:kl}
   \end{aligned}
 \end{equation}
 where $C$ is a constant in regard to $t_0$.  Comparing with \eqref{eq:pseudo}, it is obvious that
 \begin{equation}
   \label{eq:kl2}
-  \hat{t}_\mathrm{KL} = \arg\underset{t_0}{\min}~D_\mathrm{KL}\left[\hat{\Phi}(t) \parallel \Phi(t-t_0)\right].
+  \hat{t}_\mathrm{KL} = \arg\underset{t_0}{\min}~D_\mathrm{KL}\left[\hat{\phi}(t) \parallel \phi(t-t_0)\right].
 \end{equation}
 Similar to $\sigma_\mathrm{ALL}$, we use the standard deviation of $\hat{t}_\mathrm{KL}$ denoted as $\sigma_\mathrm{KL}$ to measure the resolutions of waveform analysis methods.
 
@@ -58,18 +58,18 @@ Similar to $\sigma_\mathrm{ALL}$, we use the standard deviation of $\hat{t}_\mat
 Following~\eqref{eq:1} or~\eqref{eq:lc}, an estimator of waveform can be,
 \begin{equation}
   \label{eq:w-hat}
-  \hat{w}(t) = \sum_{i=1}^{\hat{N}}\hat{q}_iV_\mathrm{PE}(t-\hat{t}_i) = \hat{\Phi}(t) \otimes V_\mathrm{PE}(t).
+  \hat{w}(t) = \sum_{i=1}^{\hat{N}}\hat{q}_iV_\mathrm{PE}(t-\hat{t}_i) = \hat{\phi}(t) \otimes V_\mathrm{PE}(t).
 \end{equation}
 Sum of squares of the residual $\hat{w}(t) - w(t)$ is a natural $\ell_2$-norm inspired by the Gaussian noise term in \eqref{eq:1},
 \begin{equation}
   \label{eq:rss}
-  \mathrm{RSS}:=\int\left[\hat{w}(t) - w(t)\right]^2\mathrm{d}t
+  \mathrm{RSS}\coloneqq\int\left[\hat{w}(t) - w(t)\right]^2\mathrm{d}t
 \end{equation}
-RSS cannot compare a discrete function with a continuous one.  Even with two similar functions, RSS is not sensitive to timing.  In Fig.~\ref{fig:l2}, RSS of  $a-b_{1}$ and $a-b_{2}$ are both 0.25.  Intuitively $b_1$ is closer to $a$ than $b_2$ and RSS fails to capture such difference.
+RSS cannot compare a discrete function with a continuous one.  Even with two similar functions, RSS is not sensitive to timing.  In Fig.~\ref{fig:l2}, RSS of  $a-b_{1}$ and $a-b_{2}$ are both 0.25.  Intuitively $b_1$ is closer to $a$ than $b_2$ and RSS fails to capture such a difference.
 \begin{figure}[H]
     \centering
     \scalebox{0.5}{\input{figures/tab.pgf}}
-    \caption{\label{fig:l2} $b_1$ and $b_2$ have the same RSS=0.25 to $a$, but $b_1$ is closer in timing to $a$.}
+    \caption{\label{fig:l2} $b_1$ and $b_2$ have the same $\mathrm{RSS}=0.25$ to $a$, but $b_1$ is closer in timing to $a$.}
 \end{figure}
 
 \subsubsection{Wasserstein Distance}
@@ -77,9 +77,9 @@ RSS cannot compare a discrete function with a continuous one.  Even with two sim
 
 \input{fom}
 
+\subsection{Heuristic Methods}
 Waveform analysis algorithms are presented below, separately. The hittime in our waveform analysis results is discrete values (time bin edges in a DAQ window). 
 
-\subsection{Heuristic Methods}
 By directly extracting waveform features, heuristic methods are straightforward to implement and thus widely used. 
 
 \subsubsection{Waveform Shifting}
