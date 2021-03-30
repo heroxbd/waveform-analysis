@@ -1,30 +1,17 @@
-In many cases, the reconstruction result and truth can both be regarded as sampling results from some form of probability distribution. Here we introduce Wasserstein distance as the second figure of merit that can contribute to the improvement of timing resolution. 
-
-Suppose $P(X)$ and $Q(X)$ are 2 probability density functions of random variable $X$. There are many ways to measure the difference (distance) between $P(X)$ and $Q(X)$: 
-
-\label{sub:Wasserstein distance}
-\begin{minipage}{.45\textwidth}
+Wasserstein distance $D_w$ is a metric between two distributions, especially suited to mixture models. To qualify the timing characteristics of a waveform analysis result, we take the distance between normalized $\hat{\phi}(t)$ and sampled light curve $\tilde{\phi}(t)\coloneqq \sum_{i=1}^{N_\mathrm{PE}}q_i\delta(t-t_i)$.
 \begin{equation}
-    W_{p}(\mu,\nu):=\left(\inf_{\gamma\in\Phi(\mu,\nu)}\int_{\chi}d(x,y)^{p}\,\mathrm{d}\gamma(x,y)\right)^{1/p} \label{eq:w-dist-def}
+  D_w\left[\hat{\phi}_*(t), \tilde{\phi}_*(t)\right] = \inf_{\gamma \in \Gamma} \left[\int \left\vert t_1 - t_2 \right\vert^p \gamma(t_1, t_2)\mathrm{d}t_1\mathrm{d}t_2\right]^{\frac{1}{p}}
 \end{equation}
-\end{minipage}
-\begin{minipage}{.55\textwidth}
-\begin{figure}[H]
-    \centering
-    \scalebox{0.4}{\input{figures/wdistdemo.pgf}}
-    \caption{\label{fig:Wasserstein transportation} Wasserstein transportation}
-\end{figure}
-\end{minipage}
+where $\hat{\phi}_*(t)$ denotes the normalized $\hat{\phi}(t)$. $\Gamma$ is the collection of joint distributions with marginals $\hat{\phi}_*(t)$ and $\tilde{\phi}_*(t)$,
+\begin{equation*}
+  \label{eq:joint}
+  \Gamma = \left\{\gamma(t_1, t_2) ~\middle\vert~ \int\gamma(t_1,t_2)\mathrm{d}t_1 = \tilde{\phi}_*(t_2) , \int\gamma(t_1,t_2)\mathrm{d}t_2 = \hat{\phi}_*(t_1)  \right\}.
+\end{equation*}
+When $p=1$, it is also known as the \textit{earth mover's distance} in that it encodes the minimum cost to transport mass from one distribution to the other.
+For Fig.~\ref{fig:l2}, $D_w(a, b_1) = 0.5$ while $D_w(a, b_2) = 1.5$, which qualifies that $a$ is closer to $b_1$ and complements RSS.
 
-
-
-Wasserstein distance can overcome these difficulties. Wasserstein distance between distribution $\mu$ and $\nu$ can be regarded as the minimal effort to transport mass from the distribution $\mu$ to $\nu$, which is often described as earth move distance. Further the mass moves, the more the effort we need to give. The transport plan between 2 different one-dimensional random variable distribution is described by $\gamma(x, y)$, which is a two-dimensional random variable distribution. $d(x,y)^{p}$ in the formula~\eqref{eq:w-dist-def} is the Borel measure on Polish spaces \cite{villani_2009}. There is a minimum function in the functional space of $\gamma(x, y)$, whose corresponding $W_{p}(\mu,\nu)$ is the Wasserstein distance between $\mu$ and $\nu$. 
-
-The calculation of Wasserstein distance, however, is not always easy and may suffer from the deficiency of analytical expression, especially when we deriving the loss function in the method of CNN. In practice, we set $p=1$. As the hittime in our waveform analysis results is discrete values (time bin edges in a DAQ window), the loss, Wasserstein distance (abbreviated as W-dist) between $\hat{q}$ and $q$ can be calculated numerically. The corresponding charge $q$ of PE is each hittime can be regarded as weight in the distribution of hittime. Suppose $A$ and $B$ represent two sets of PE's hittime and charge. First, the hittime $t$ are rounded to the nearest integer in the DAQ window. Then we subtract the cumulative distribution function (CDF) of A, $F_{A}$, and the CDF of B, $F_{B}$. Finally, we sum the absolute value of the subtraction, which is formula \eqref{eq:numerical}. The whole process is equivalent to calculating the L1 distance of cumulative distribution function of distribution $A$ and $B$. It is proved that the distance we define here is equivalent to Wasserstein distance with minor loss of accuracy (caused by rounding). 
-
+Although calculating Wasserstein distance is generally costly, when $p=1$ it is straightforward to implement by cumulative distribution functions (CDF).  Denote the CDF of $\hat{\phi}_*(t)$ as $\hat\Phi(t)$.  $D_w$ is equivalent to the $\ell_1$-distance between the CDFs,
 \begin{equation}
-    D_w = \sum_t|F_{A}(t) - F_{B}(t)|
+    D_w\left[\hat{\phi}_*(t), \tilde{\phi}_*(t)\right] = \int\left|\hat{\Phi}(t) - \tilde{\Phi}(t)\right| \mathrm{d}t.
     \label{eq:numerical}
 \end{equation}
-
-Wasserstein distance is more sensitive to the distribution of PEs, together with 
