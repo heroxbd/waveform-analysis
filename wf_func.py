@@ -349,19 +349,11 @@ def loglikelihood(t0, tlist, xmmse, psy_star, like, thres, Tau, Sigma, c):
         logL = special.logsumexp(b_loglikelihoodt0(xmmse, pl, thres=thres), b=psy_star) # Bernoulli
     return logL
 
-def likelihoodt0(hitt, char, gmu, gsigma, Tau, Sigma, npe, ft=None, s0=None, mode='charge', is_delta=False):
+def likelihoodt0(hitt, char, gmu, Tau, Sigma, mode='charge', is_delta=False):
     b = [0., 600.]
     tlist = np.arange(b[0], b[1] + 1e-6, 0.2)
     if mode == 'charge':
-        # l = len(hitt)
-        # char = np.tile(char, (2 * npe + 1, 1)).T
-        # hitt = np.tile(hitt, (2 * npe + 1, 1)).T
-        # npe = np.round(char / gmu) + np.tile(np.arange(-npe, npe + 1), (l, 1))
-        # npe[npe < 0] = np.nan
-        # probcharge = npeprobcharge(char, npe, gmu=gmu, gsigma=gsigma, s0=s0)
-        # logL = lambda t0 : -1 * np.sum(np.log(np.clip(probcharhitt(t0, hitt, probcharge, Tau, Sigma, npe), np.finfo(np.float64).tiny, np.inf)))
         logL = lambda t0 : -1 * np.sum(np.log(np.clip(convolve_exp_norm(hitt - t0, Tau, Sigma), np.finfo(np.float64).tiny, np.inf)) * char / gmu)
-        # logL = lambda t0 : -1 * np.sum(np.log(np.clip(ft(hitt - t0), np.finfo(np.float64).tiny, np.inf)) * char / gmu)
     elif mode == 'all':
         logL = lambda t0 : -1 * np.sum(np.log(np.clip(convolve_exp_norm(hitt - t0, Tau, Sigma), np.finfo(np.float64).tiny, np.inf)))
     logLv_tlist = np.vectorize(logL)(tlist)
@@ -372,7 +364,7 @@ def likelihoodt0(hitt, char, gmu, gsigma, Tau, Sigma, npe, ft=None, s0=None, mod
         t0delta = abs(opti.fmin_l_bfgs_b(logLvdelta, x0=[tlist[np.argmin(np.abs(logLv_tlist - logL(t0) - 0.5))]], approx_grad=True, bounds=[b], maxfun=500000)[0] - t0)
     return t0, t0delta
 
-def initial_params(wave, spe_pre, Mu, Tau, Sigma, gmu, gsigma, Thres, npe, p, nsp, nstd, is_t0=False, is_delta=False, n=1, nshannon=1):
+def initial_params(wave, spe_pre, Mu, Tau, Sigma, gmu, Thres, p, nsp, nstd, is_t0=False, is_delta=False, n=1, nshannon=1):
     hitt, char = lucyddm(savgol_filter(wave[::nshannon], 11, 4), spe_pre['spe'][::nshannon])
     hitt, char = clip(hitt, char, Thres)
     char = char / char.sum() * np.clip(np.abs(wave[::nshannon].sum()), 1e-6, np.inf)
@@ -393,7 +385,7 @@ def initial_params(wave, spe_pre, Mu, Tau, Sigma, gmu, gsigma, Thres, npe, p, ns
     t0_init = None
     t0_init_delta = None
     if is_t0:
-        t0_init, t0_init_delta = likelihoodt0(hitt=hitt, char=char, gmu=gmu, gsigma=gsigma, Tau=Tau, Sigma=Sigma, npe=npe, s0=spe_pre['std'] / np.linalg.norm(spe_pre['spe'][::nshannon]), mode='charge', is_delta=is_delta)
+        t0_init, t0_init_delta = likelihoodt0(hitt=hitt, char=char, gmu=gmu, Tau=Tau, Sigma=Sigma, mode='charge', is_delta=is_delta)
     return A, wave, tlist, t0_init, t0_init_delta, npe_init
 
 def stdrmoutlier(array, r):

@@ -33,7 +33,6 @@ Mu = float(mtslist[0])
 Tau = float(mtslist[1])
 Sigma = float(mtslist[2])
 
-npe = 3
 gmu = 160.
 gsigma = 40.
 p = [8., 0.5, 24.]
@@ -87,7 +86,7 @@ def start_time(a0, a1):
     stime = np.empty(a1 - a0)
     for i in range(a0, a1):
         hitt = pelist[i_pel[i]:i_pel[i+1]]['HitPosInWindow'].astype(np.float64)
-        t0, _ = wff.likelihoodt0(hitt, char=None, gmu=gmu, gsigma=gsigma, Tau=Tau, Sigma=Sigma, npe=npe, mode='all')
+        t0, _ = wff.likelihoodt0(hitt, char=None, gmu=gmu, Tau=Tau, Sigma=Sigma, mode='all')
         stime[i - a0] = t0
     return stime
 
@@ -112,7 +111,6 @@ assert not np.all(np.isnan(waves['Waveform']))
 
 with h5py.File(args.opt, 'w') as opt:
     dset = opt.create_dataset('SimTruth/T', data=t0, compression='gzip', compression_opts=4)
-    dset.attrs['npe'] = npe
     dset.attrs['r'] = r
     dset = opt.create_dataset('SimTriggerInfo/PEList', data=pelist, compression='gzip', compression_opts=4)
     dset.attrs['gmu'] = gmu

@@ -62,7 +62,6 @@ with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
     gmu = ipt['SimTriggerInfo/PEList'].attrs['gmu'].item()
     gsigma = ipt['SimTriggerInfo/PEList'].attrs['gsigma'].item()
     s0 = spe_pre[0]['std'] / np.linalg.norm(spe_pre[0]['spe'])
-    npe = ipt['SimTruth/T'].attrs['npe'].item()
 
 p = spe_pre[0]['parameters']
 if Tau != 0:
@@ -100,8 +99,8 @@ def time_numpyro(a0, a1):
     Awindow = int(window * 0.95)
     rng_key = jax.random.PRNGKey(1)
     rng_key, rng_key_ = jax.random.split(rng_key)
-    stime_t0 = np.empty((a1 - a0, 2))
-    stime_cha = np.empty((a1 - a0, 2))
+    stime_t0 = np.empty(a1 - a0)
+    stime_cha = np.empty(a1 - a0)
     accep = np.full(a1 - a0, np.nan)
     mix0ratio = np.full(a1 - a0, np.nan)
     dt = np.zeros((a1 - a0) * Awindow * 2, dtype=opdt)
@@ -127,7 +126,7 @@ def time_numpyro(a0, a1):
         wave = ent[i]['Waveform'].astype(np.float64) * spe_pre[cid]['epulse']
 
         n = max(math.ceil(Mu / math.sqrt(Tau ** 2 + Sigma ** 2)), 1)
-        AV, wave, tlist, t0_init, t0_init_delta, A_init = wff.initial_params(wave, spe_pre[cid], Mu, Tau, Sigma, gmu, gsigma, Thres['lucyddm'], npe, p, nsp, nstd, is_t0=True, n=n, nshannon=1)
+        AV, wave, tlist, t0_init, t0_init_delta, A_init = wff.initial_params(wave, spe_pre[cid], Mu, Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, n=n, nshannon=1)
         AV = jnp.array(AV)
         wave = jnp.array(wave)
         tlist = jnp.array(tlist)
@@ -154,28 +153,15 @@ def time_numpyro(a0, a1):
             tlist_pan = np.sort(np.unique(np.hstack(np.arange(0, window)[:, None] + np.arange(0, 1, 1 / n))))
             btlist = np.arange(t0_init - 3 * Sigma, t0_init + 3 * Sigma + 1e-6, 0.2)
 
-            As = np.zeros((len(A), len(tlist_pan)))
-            As[:, np.isin(tlist_pan, tlist)] = A
-            # psy_star = np.array([1])
-            # logL = lambda t0 : -1 * wff.loglikelihood(t0, tlist_pan, As[0][None, :], psy_star, 'mix01', Thres['mcmc'], Tau, Sigma, Mu / n)
-            # logLv_btlist = np.vectorize(logL)(btlist)
-            # t0_cha = opti.fmin_l_bfgs_b(logL, x0=[btlist[np.argmin(logLv_btlist)]], approx_grad=True, bounds=[b], maxfun=50000)[0]
-            # # logLvdelta = np.vectorize(lambda t : np.abs(logL(t) - logL(t0_cha) - 0.5))
-            # # t0_chadelta = abs(opti.fmin_l_bfgs_b(logLvdelta, x0=[btlist[np.argmin(np.abs(logLv_btlist - logL(t0_cha) - 0.5))]], approx_grad=True, bounds=[b], maxfun=50000)[0] - t0_cha)
-            logL = lambda t0 : -1 * np.sum(special.logsumexp((np.log(np.clip(wff.convolve_exp_norm(tlist_pan - t0, Tau, Sigma), np.finfo(np.float64).tiny, np.inf))[None, :] * As).sum(axis=1), b=np.ones(len(A)) / len(A)))
+            As = np.zeros(len(tlist_pan))
+            As[np.isin(tlist_pan, tlist)] = np.mean(A, axis=0)
+            logL = lambda t0 : -1 * np.sum(np.log(np.clip(wff.convolve_exp_norm(tlist_pan - t0, Tau, Sigma), np.finfo(np.float64).tiny, np.inf)) * As)
             logLv_btlist = np.vectorize(logL)(btlist)
-            t0_t0_dw = opti.fmin_l_bfgs_b(logL, x0=[btlist[np.argmin(logLv_btlist)]], approx_grad=True, bounds=[b], maxfun=50000)[0]
-            As = np.zeros((1, len(tlist_pan)))
-            As[:, np.isin(tlist_pan, tlist)] = np.mean(A, axis=0)
-            logL = lambda t0 : -1 * np.sum(np.log(np.clip(wff.convolve_exp_norm(tlist_pan - t0, Tau, Sigma), np.finfo(np.float64).tiny, np.inf)) * As[None, :])
-            logLv_btlist = np.vectorize(logL)(btlist)
-            t0_cha_dw = opti.fmin_l_bfgs_b(logL, x0=[btlist[np.argmin(logLv_btlist)]], approx_grad=True, bounds=[b], maxfun=50000)[0]
+            t0_cha = opti.fmin_l_bfgs_b(logL, x0=[btlist[np.argmin(logLv_btlist)]], approx_grad=True, bounds=[b], maxfun=50000)[0]
         except:
             time_mcmc = time_mcmc + time.time() - time_mcmc_start
             t0_t0 = np.array(t0_init)
             t0_cha = t0_init
-            t0_t0_dw = t0_init
-            t0_cha_dw = t0_init
             tlist = np.array(tlist)
             A = np.array([A_init])
             print('Failed waveform is TriggerNo = {:05d}, ChannelID = {:02d}, i = {:05d}'.format(ent[i]['TriggerNo'], cid, i))
@@ -184,11 +170,9 @@ def time_numpyro(a0, a1):
         mix0ratio[i - a0] = (np.abs(cha) < 5 * mix0sigma).sum() / len(cha)
         pet, cha = wff.clip(pet, cha, 0)
         cha = cha * gmu
-        t0_cha, _ = wff.likelihoodt0(pet, char=cha, gmu=gmu, gsigma=gsigma, Tau=Tau, Sigma=Sigma, npe=npe, s0=s0, mode='charge')
-        stime_t0[i - a0][0] = np.mean(t0_t0)
-        stime_cha[i - a0][0] = t0_cha
-        stime_t0[i - a0][1] = t0_t0_dw
-        stime_cha[i - a0][1] = t0_cha_dw
+        t0_cha, _ = wff.likelihoodt0(pet, char=cha, gmu=gmu, Tau=Tau, Sigma=Sigma, mode='charge')
+        stime_t0[i - a0] = np.mean(t0_t0)
+        stime_cha[i - a0] = t0_cha
         end = start + len(cha)
         dt['HitPosInWindow'][start:end] = pet
         dt['Charge'][start:end] = cha
@@ -202,9 +186,9 @@ def time_numpyro(a0, a1):
 def fbmp_inference(a0, a1):
     nsp = 4
     nstd = 3
-    D = 1000
-    stime_t0 = np.empty((a1 - a0, 2))
-    stime_cha = np.empty((a1 - a0, 2))
+    D = 100
+    stime_t0 = np.empty(a1 - a0)
+    stime_cha = np.empty(a1 - a0)
     dt = np.zeros((a1 - a0) * window, dtype=opdt)
     d_tot = np.zeros(a1 - a0).astype(int)
     d_max = np.zeros(a1 - a0).astype(int)
@@ -219,7 +203,7 @@ def fbmp_inference(a0, a1):
         wave = ent[i]['Waveform'].astype(np.float64) * spe_pre[cid]['epulse']
 
         n = max(math.ceil(Mu / math.sqrt(Tau ** 2 + Sigma ** 2)) * 1, 1)
-        A, wave_r, tlist, t0_init, t0_init_delta, char_init = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Mu, Tau, Sigma, gmu, gsigma, Thres['lucyddm'], npe, p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
+        A, wave_r, tlist, t0_init, t0_init_delta, char_init = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Mu, Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
         time_fbmp_start = time.time()
         A = np.matmul(A, np.diag(1. / np.sqrt(np.diag(np.matmul(A.T, A)))))
         xmmse, xmmse_star, psy_star, nu_star, T_star, d_tot_i, d_max_i = wff.fbmpr_fxn_reduced(wave_r, A, min(-1e-3+1, Mu / len(tlist)), spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, D, stop=0)
@@ -232,7 +216,6 @@ def fbmp_inference(a0, a1):
         # d_max_i = 0
         time_fbmp = time_fbmp + time.time() - time_fbmp_start
 
-        # tlist_pan = tlist
         tlist_pan = np.sort(np.unique(np.hstack(np.arange(0, window)[:, None] + np.arange(0, 1, 1 / n))))
         As = np.zeros((len(xmmse_star), len(tlist_pan)))
         As[:, np.isin(tlist_pan, tlist)] = np.clip(xmmse_star, 0, np.inf) / factor
@@ -241,29 +224,17 @@ def fbmp_inference(a0, a1):
             pet = tlist[xmmse_most > 0]
             cha = xmmse_most[xmmse_most > 0] / factor
 
-            logL = lambda t0 : -1 * wff.loglikelihood(t0, tlist_pan, As, psy_star, 'b', Thres['fbmp'], Tau, Sigma, Mu / n)
             btlist = np.arange(t0_init - 3 * Sigma, t0_init + 3 * Sigma + 1e-6, 0.2)
-            logLv_btlist = np.vectorize(logL)(btlist)
-            t0_t0 = opti.fmin_l_bfgs_b(logL, x0=[btlist[np.argmin(logLv_btlist)]], approx_grad=True, bounds=[b], maxfun=50000)[0]
-            # logLvdelta = np.vectorize(lambda t : np.abs(logL(t) - logL(t0_t0) - 0.5))
-            # t0_t0delta = abs(opti.fmin_l_bfgs_b(logLvdelta, x0=[btlist[np.argmin(np.abs(logLv_btlist - logL(t0_t0) - 0.5))]], approx_grad=True, bounds=[b], maxfun=50000)[0] - t0_t0)
             logL = lambda t0 : -1 * np.sum(special.logsumexp((np.log(np.clip(wff.convolve_exp_norm(tlist_pan - t0, Tau, Sigma), np.finfo(np.float64).tiny, np.inf))[None, :] * As).sum(axis=1), b=psy_star))
             logLv_btlist = np.vectorize(logL)(btlist)
-            t0_t0_dw = opti.fmin_l_bfgs_b(logL, x0=[btlist[np.argmin(logLv_btlist)]], approx_grad=True, bounds=[b], maxfun=50000)[0]
+            t0_t0 = opti.fmin_l_bfgs_b(logL, x0=[btlist[np.argmin(logLv_btlist)]], approx_grad=True, bounds=[b], maxfun=50000)[0]
 
-            logL = lambda t0 : -1 * wff.loglikelihood(t0, tlist_pan, As[0][None, :], np.array([1]), 'b', Thres['fbmp'], Tau, Sigma, Mu / n)
-            logLv_btlist = np.vectorize(logL)(btlist)
-            t0_cha = opti.fmin_l_bfgs_b(logL, x0=[btlist[np.argmin(logLv_btlist)]], approx_grad=True, bounds=[b], maxfun=50000)[0]
-            # logLvdelta = np.vectorize(lambda t : np.abs(logL(t) - logL(t0_cha) - 0.5))
-            # t0_chadelta = abs(opti.fmin_l_bfgs_b(logLvdelta, x0=[btlist[np.argmin(np.abs(logLv_btlist - logL(t0_cha) - 0.5))]], approx_grad=True, bounds=[b], maxfun=50000)[0] - t0_cha)
             logL = lambda t0 : -1 * np.sum(np.log(np.clip(wff.convolve_exp_norm(tlist_pan - t0, Tau, Sigma), np.finfo(np.float64).tiny, np.inf)) * As[0][None, :])
             logLv_btlist = np.vectorize(logL)(btlist)
-            t0_cha_dw = opti.fmin_l_bfgs_b(logL, x0=[btlist[np.argmin(logLv_btlist)]], approx_grad=True, bounds=[b], maxfun=50000)[0]
+            t0_cha = opti.fmin_l_bfgs_b(logL, x0=[btlist[np.argmin(logLv_btlist)]], approx_grad=True, bounds=[b], maxfun=50000)[0]
         else:
             t0_t0 = t0_init
             t0_cha = t0_init
-            t0_t0_dw = t0_init
-            t0_cha_dw = t0_init
             d_tot_i = 0
             d_max_i = 0
             pet = tlist
@@ -273,10 +244,8 @@ def fbmp_inference(a0, a1):
         d_max[i - a0] = d_max_i
         pet, cha = wff.clip(pet, cha, Thres[method])
         cha = cha * gmu
-        stime_t0[i - a0][0] = t0_t0
-        stime_cha[i - a0][0] = t0_cha
-        stime_t0[i - a0][1] = t0_t0_dw
-        stime_cha[i - a0][1] = t0_cha_dw
+        stime_t0[i - a0] = t0_t0
+        stime_cha[i - a0] = t0_cha
         end = start + len(cha)
         dt['HitPosInWindow'][start:end] = pet
         dt['Charge'][start:end] = cha
@@ -305,15 +274,15 @@ i_pel = np.append(i_pel, len(ent))
 
 opdt = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('HitPosInWindow', np.float64), ('Charge', np.float64)])
 
-sdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('tscharge', np.float64, 2), ('tswave', np.float64, 2)])
+sdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('tscharge', np.float64), ('tswave', np.float64)])
 if method == 'mcmc':
     ts = np.zeros(N, dtype=sdtp)
     ts['TriggerNo'] = ent['TriggerNo']
     ts['ChannelID'] = ent['ChannelID']
     with Pool(min(args.Ncpu, cpu_count())) as pool:
         result = pool.starmap(partial(time_numpyro), slices)
-    ts['tswave'] = np.vstack([result[i][0] for i in range(len(slices))])
-    ts['tscharge'] = np.vstack([result[i][1] for i in range(len(slices))])
+    ts['tswave'] = np.hstack([result[i][0] for i in range(len(slices))])
+    ts['tscharge'] = np.hstack([result[i][1] for i in range(len(slices))])
     As = np.hstack([result[i][2] for i in range(len(slices))])
     count = np.sum([result[i][3] for i in range(len(slices))])
     time_mcmc = np.hstack([result[i][4] for i in range(len(slices))]).mean()
@@ -345,8 +314,8 @@ elif method == 'fbmp':
     ts['ChannelID'] = ent['ChannelID']
     with Pool(min(args.Ncpu, cpu_count())) as pool:
         result = pool.starmap(partial(fbmp_inference), slices)
-    ts['tswave'] = np.vstack([result[i][0] for i in range(len(slices))])
-    ts['tscharge'] = np.vstack([result[i][1] for i in range(len(slices))])
+    ts['tswave'] = np.hstack([result[i][0] for i in range(len(slices))])
+    ts['tscharge'] = np.hstack([result[i][1] for i in range(len(slices))])
     As = np.hstack([result[i][2] for i in range(len(slices))])
     d_tot = np.hstack([result[i][3] for i in range(len(slices))])
     d_max = np.hstack([result[i][4] for i in range(len(slices))])

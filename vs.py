@@ -78,17 +78,17 @@ for key in mts.keys():
                 record = distf['Record'][:]
                 start = wavef['SimTruth/T'][:]
                 r = wavef['SimTruth/T'].attrs['r'] * 1.5
-            vali = np.abs(time['tscharge'] if time['tscharge'].ndim == 1 else time['tscharge'][:, 1] - start['T0'] - np.mean(time['tscharge'] if time['tscharge'].ndim == 1 else time['tscharge'][:, 1] - start['T0'])) < r * np.std(time['tscharge'] if time['tscharge'].ndim == 1 else time['tscharge'][:, 1] - start['T0'], ddof=-1)
+            vali = np.abs(time['tscharge'] - start['T0'] - np.mean(time['tscharge'] - start['T0'])) < r * np.std(time['tscharge'] - start['T0'], ddof=-1)
             mts[key][i]['N'] = len(start)
             mts[key][i]['std1sttruth'] = np.std(start['ts1sttruth'] - start['T0'], ddof=-1)
             mts[key][i]['stdtruth'] = np.std(start['tstruth'] - start['T0'], ddof=-1)
-            mts[key][i]['stdcharge'], mts[key][i]['stdchargesuccess'] = wff.stdrmoutlier(time['tscharge'] - start['T0'] if time['tscharge'].ndim == 1 else time['tscharge'][:, 1] - start['T0'], r)
+            mts[key][i]['stdcharge'], mts[key][i]['stdchargesuccess'] = wff.stdrmoutlier(time['tscharge'] - start['T0'], r)
             mts[key][i]['bias1sttruth'] = np.mean(start['ts1sttruth'] - start['T0'])
             mts[key][i]['biastruth'] = np.mean(start['tstruth'] - start['T0'])
-            mts[key][i]['biascharge'] = np.mean((time['tscharge'] if time['tscharge'].ndim == 1 else time['tscharge'][:, 1])[vali] - start['T0'][vali])
+            mts[key][i]['biascharge'] = np.mean(time['tscharge'][vali] - start['T0'][vali])
             if not np.any(np.isnan(time['tswave'][vali])):
-                mts[key][i]['stdwave'], mts[key][i]['stdwavesuccess'] = wff.stdrmoutlier(time['tswave'] - start['T0'] if time['tscharge'].ndim == 1 else time['tswave'][:, 1] - start['T0'], r)
-                mts[key][i]['biaswave'] = np.mean((time['tswave'] if time['tscharge'].ndim == 1 else time['tswave'][:, 1])[vali] - start['T0'][vali])
+                mts[key][i]['stdwave'], mts[key][i]['stdwavesuccess'] = wff.stdrmoutlier(time['tswave'] - start['T0'], r)
+                mts[key][i]['biaswave'] = np.mean(time['tswave'][vali] - start['T0'][vali])
             mts[key][i]['wdist'] = np.insert(np.percentile(record['wdist'][vali], [5, 95]), 1, record['wdist'][vali].mean())
             mts[key][i]['RSS'] = np.insert(np.percentile(record['RSS'][vali], [5, 95]), 1, record['RSS'][vali].mean())
         except:
@@ -293,7 +293,7 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
         yerr = stdlist['stdtruth'] / stdlist['std1sttruth'] / np.sqrt(stdlist['N'])
         ax.errorbar(stdlist['mu'], stdlist['stdtruth'] / stdlist['std1sttruth'], yerr=yerr, label=fr'$({tau},{sigma})$', marker=marker[i][j], color=colors[i][j])
 ax.set_xlabel(r'$N_{\mathrm{PE}}\ \mathrm{expectation}\ \mu$')
-ax.set_ylabel(r'$\mathrm{\sigma_\mathrm{ALL}/\sigma_\mathrm{1st}\ ratio}$')
+ax.set_ylabel(r'$\mathrm{\delta_\mathrm{ALL}/\delta_\mathrm{1st}\ ratio}$')
 ax.set_ylim(0.3, 1.1)
 ax.grid()
 ax.legend(title=r'$(\tau, \sigma)/\si{ns}$', bbox_to_anchor=(1., 0.9))

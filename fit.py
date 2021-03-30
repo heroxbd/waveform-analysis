@@ -87,7 +87,6 @@ with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
     Sigma = ipt['Readout/Waveform'].attrs['sigma']
     gmu = ipt['SimTriggerInfo/PEList'].attrs['gmu']
     gsigma = ipt['SimTriggerInfo/PEList'].attrs['gsigma']
-    npe = ipt['SimTruth/T'].attrs['npe']
 if args.Ncpu == 1:
     slices = [[0, l]]
 else:
