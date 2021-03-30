@@ -1,30 +1,6 @@
-Electronics noise is the primary existing bothersome factor for waveform analysis. The first figure of merit is the residual sum of squares (RSS, square of L2 distances) between the waveform without noise recorded in simulation and the waveform derived from reconstructed charge $\hat{q}$ as well as SPE, which is formula \eqref{eq:rss}. It can show the extent to which the reconstructed charge $\hat{q}$ reserved and filtered the original waveform information. But to some extent, RSS is not very sensitive to the time distribution of PEs, which is explained below. 
-
-\begin{equation}
-    D_r = \mathrm{RSS}(w(t), \hat{q} \otimes V_\mathrm{PE}(t)) \label{eq:rss}
-\end{equation}
-
 In many cases, the reconstruction result and truth can both be regarded as sampling results from some form of probability distribution. Here we introduce Wasserstein distance as the second figure of merit that can contribute to the improvement of timing resolution. 
 
 Suppose $P(X)$ and $Q(X)$ are 2 probability density functions of random variable $X$. There are many ways to measure the difference (distance) between $P(X)$ and $Q(X)$: 
-
-\begin{minipage}{.3\textwidth}
-\begin{align*}
-    L_{1} &= \int|p-q| \ud t \\
-    L_{2} &= \int(p-q)^{2} \ud t \\
-    \chi^{2} &= \int\frac{(p-q)^{2}}{q} \ud t \\
-    \cdots
-\end{align*}
-\end{minipage}
-\begin{minipage}{.7\textwidth}
-\begin{figure}[H]
-    \centering
-    \scalebox{0.4}{\input{figures/tab.pgf}}
-    \caption{\label{fig:l2} L2 distance demo}
-\end{figure}
-\end{minipage}
-
-But these distances have certain shortcomings. First, they cannot compare a discrete distribution with a continuous distribution. Second, they are not sensitive to timing: as the graph shows, the L2 distances, square root of RSS, between the distribution of $a,b_{1}$ and $a,b_{2}$ are both 0.25, but the shape of the $b_{1}$ and $b_{2}$ distribution is very different (see figure~\ref{fig:l2}). 
 
 \label{sub:Wasserstein distance}
 \begin{minipage}{.45\textwidth}
@@ -39,6 +15,8 @@ But these distances have certain shortcomings. First, they cannot compare a disc
     \caption{\label{fig:Wasserstein transportation} Wasserstein transportation}
 \end{figure}
 \end{minipage}
+
+
 
 Wasserstein distance can overcome these difficulties. Wasserstein distance between distribution $\mu$ and $\nu$ can be regarded as the minimal effort to transport mass from the distribution $\mu$ to $\nu$, which is often described as earth move distance. Further the mass moves, the more the effort we need to give. The transport plan between 2 different one-dimensional random variable distribution is described by $\gamma(x, y)$, which is a two-dimensional random variable distribution. $d(x,y)^{p}$ in the formula~\eqref{eq:w-dist-def} is the Borel measure on Polish spaces \cite{villani_2009}. There is a minimum function in the functional space of $\gamma(x, y)$, whose corresponding $W_{p}(\mu,\nu)$ is the Wasserstein distance between $\mu$ and $\nu$. 
 
