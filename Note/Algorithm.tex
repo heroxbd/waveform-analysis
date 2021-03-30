@@ -50,7 +50,27 @@ where $C$ is a constant in regard to $t_0$.  Comparing with \eqref{eq:pseudo}, i
   \label{eq:kl2}
   \hat{t}_\mathrm{KL} = \arg\underset{t_0}{\min}~D_\mathrm{KL}\left[\hat{\Phi}(t) \parallel \Phi(t-t_0)\right].
 \end{equation}
+Similar to $\sigma_\mathrm{ALL}$, we use the standard deviation of $\hat{t}_\mathrm{KL}$ denoted as $\sigma_\mathrm{KL}$ to measure the resolutions of waveform analysis methods.
 
+\subsubsection{Residual Sum of Squares}
+\label{sec:rss}
+
+Following~\eqref{eq:1} or~\eqref{eq:lc}, an estimator of waveform can be,
+\begin{equation}
+  \label{eq:w-hat}
+  \hat{w}(t) = \sum_{i=1}^{\hat{N}}\hat{q}_iV_\mathrm{PE}(t-\hat{t}_i) = \hat{\Phi}(t) \otimes V_\mathrm{PE}(t).
+\end{equation}
+Sum of squares of the residual $\hat{w}(t) - w(t)$ is a natural $\ell_2$-norm inspired by the Gaussian noise term in \eqref{eq:1},
+\begin{equation}
+  \label{eq:rss}
+  \mathrm{RSS}:=\int\left[\hat{w}(t) - w(t)\right]^2\mathrm{d}t
+\end{equation}
+RSS cannot compare a discrete function with a continuous one.  Even with two similar functions, RSS is not sensitive to timing.  In Fig.~\ref{fig:l2}, RSS of  $a-b_{1}$ and $a-b_{2}$ are both 0.25.  Intuitively $b_1$ is closer to $a$ than $b_2$ and RSS fails to capture such difference.
+\begin{figure}[H]
+    \centering
+    \scalebox{0.5}{\input{figures/tab.pgf}}
+    \caption{\label{fig:l2} $b_1$ and $b_2$ have the same RSS=0.25 to $a$, but $b_1$ is closer in timing to $a$.}
+\end{figure}
 
 \subsubsection{Wasserstein Distance}
 \label{sec:W-dist}
