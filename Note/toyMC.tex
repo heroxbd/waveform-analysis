@@ -62,10 +62,12 @@ The corresponding $\sigma_\mathrm{ALL}$ is the lower limit of any timing measure
 
 Combinations of $\tau$ and $\sigma$ in the light curve~\eqref{eq:time-pro} are investigated under a scan of $\mu$ \numrange{0}{30}. For scintillation paired with ultra-fast PMTs, $\tau \gg \sigma$.  $\tau \ll \sigma$ is the Cherenkov case.  The $\tau=20, \sigma=5$ case represents a standard scintillation experiment like JUNO~\cite{ludhova_particle_2020}.  For every triple of $(\tau, \sigma, \mu)$, a sample of $10,000$ waveforms is generated for timing resolution estimation.
 
-Figure~\ref{fig:reso-diff} shows that $\sigma_{\mathrm{1st}}=\sigma_{\mathrm{ALL}}$ when $\mu \to 0$ or $\tau \gg \sigma$, which explains the widespread utilization of the $T_1$-$Q$ reduction.  When $\mu \to 0$ there is at most 1 PE in a waveform.  When $\tau \gg \sigma$, the light curve $\Phi(t)$ is an exponential whose $\hat{t}_\mathrm{ALL}$ in \eqref{eq:2} is exactly $\hat{t}_\mathrm{1st}$.  Nevertheless, even when $\mu < 1$, $\sigma_{\mathrm{1st}} - \sigma_{\mathrm{ALL}}$ is noticeable for $\sigma > 0$ cases, covering standard Cherenkov and scintillation experiments with non-negligible PMT TTS.
+Figure~\ref{fig:reso-diff} shows that $\sigma_{\mathrm{1st}}=\sigma_{\mathrm{ALL}}$ when $\mu \to 0$ or $\tau \gg \sigma$, which explains the widespread utilization of the $T_1$-$Q$ reduction.  When $\mu \to 0$ there is at most 1 PE in a waveform.  When $\tau \gg \sigma$, the light curve $\Phi(t)$ is an exponential whose $\hat{t}_\mathrm{ALL}$ in \eqref{eq:2} is exactly $\hat{t}_\mathrm{1st}$.  Nevertheless, even when $\mu = 1$, $\sigma_{\mathrm{1st}} - \sigma_{\mathrm{ALL}}$ is noticeable for $\sigma > 0$ cases, covering standard Cherenkov and scintillation experiments with non-negligible PMT TTS.
 \begin{figure}[H]
-    \centering
-    \scalebox{0.5}{\input{figures/vs-deltadiv.pgf}}
-    \caption{\label{fig:reso-diff} Timing resolution improved by waveform analysis}
+  \centering
+  \scalebox{0.5}{\input{figures/vs-deltadiv.pgf}}
+  \caption{\label{fig:reso-diff} Timing resolution comparison between $\hat{t}_{\mathrm{ALL}}$~(solid lines) when using full PE information and $\hat{t}_\mathrm{1st}$~(dasshed lines) when only the first PE is used.  The difference is manifested especially when $\sigma$ and $\mu$ is large.  3 cases of $(\tau, \sigma)/\si{ns}$ represent scintillation with ultra-fast PMTs~$(20,0)$, Cherenkov~$(0, 5)$ and scintilation~$(20, 5)$ coupled with PMT TTS. Performance of waveform analysis lies between these two extremes.}
 \end{figure}
+
+In waveform analysis, we design estimators of $\hat{N}_\mathrm{PE}$, $\hat{t}_i$ and $\hat{q}_i$ to be deployed into \eqref{eq:2} with the aim of recovering $\hat{t}_\mathrm{ALL}$ to the best possible extent.
 % section Towards Timing Resolution (end)
