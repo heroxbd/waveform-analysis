@@ -229,8 +229,9 @@ The result of $\hat{\phi}(t)$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ 
 \end{figure}
 
 \subsection{Regression Analysis}
-\subsubsection{Gradient Descent}
+With waveform generative model in~\eqref{eq:1}, regression analysis is the best for waveform analysis.  Computational complexity hindered regression to be used in huge volumes of raw data.  With the advancement of big data infrastructure and research on sparsity, the statistical advantage of regression becomes more pronounced.
 
+\subsubsection{Gradient Descent}
 Waveform is the convolution of $V_\mathrm{PE}(t)$ and $\hat{q}(t)$ (see formula~\eqref{eq:wave-con}). 
 
 \begin{align}
