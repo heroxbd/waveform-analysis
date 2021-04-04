@@ -56,22 +56,24 @@ Similar to $\sigma_\mathrm{ALL}$, we use the standard deviation of $\hat{t}_\mat
 \subsubsection{Residual Sum of Squares}
 \label{sec:rss}
 
-Following~\eqref{eq:1} or~\eqref{eq:lc}, an estimator of waveform can be,
+Following~\eqref{eq:1} and~\eqref{eq:lc}, construct an estimator of waveform,
 \begin{equation}
   \label{eq:w-hat}
   \hat{w}(t) = \sum_{i=1}^{\hat{N}}\hat{q}_iV_\mathrm{PE}(t-\hat{t}_i) = \hat{\phi}(t) \otimes V_\mathrm{PE}(t).
 \end{equation}
-Sum of squares of the residual $\hat{w}(t) - w(t)$ is a natural $\ell_2$-norm inspired by the Gaussian noise term in \eqref{eq:1},
+Sum of squares of the residual $\hat{w}(t) - w(t)$ is a natural $\ell_2$-metric inspired by the Gaussian noise term in \eqref{eq:1},
 \begin{equation}
   \label{eq:rss}
-  \mathrm{RSS}\coloneqq\int\left[\hat{w}(t) - w(t)\right]^2\mathrm{d}t
+  \mathrm{RSS}_w\coloneqq\int\left[\hat{w}(t) - w(t)\right]^2\mathrm{d}t
 \end{equation}
 RSS cannot compare a discrete function with a continuous one.  Even with two similar functions, RSS is not sensitive to timing.  In Fig.~\ref{fig:l2}, RSS of  $a-b_{1}$ and $a-b_{2}$ are both 0.25.  Intuitively $b_1$ is closer to $a$ than $b_2$ and RSS fails to capture such a difference.
 \begin{figure}[H]
-    \centering
-    \scalebox{0.4}{\input{figures/tab.pgf}}
-    \caption{\label{fig:l2} $b_1$ and $b_2$ have the same $\mathrm{RSS}=0.25$ to $a$, but $b_1$ is closer in timing to $a$.}
+  \centering
+  \scalebox{0.4}{\input{figures/tab.pgf}}
+  \caption{\label{fig:l2} $b_1$ and $b_2$ have the same $\mathrm{RSS}=0.25$ to $a$, but $b_1$ is closer in timing to $a$.}
 \end{figure}
+
+The PE space is sparse. RSS metric of $\tilde{\phi}(t)$ and $\hat{\phi}(t)$ suffers from the ambiguity in Fig.~\ref{fig:l2}: functions having different timing properties are indistinguishable by $\tilde{\phi}(t)$-$\hat{\phi}(t)$ RSS.  Unless specified otherwise, $\mathrm{RSS}$ refers to $\mathrm{RSS}_w$ in~\eqref{eq:rss}.
 
 \subsubsection{Wasserstein Distance}
 \label{sec:W-dist}
@@ -184,78 +186,46 @@ where on the right hand side, normalization constants cancel each other. Constru
 \end{equation}
 Like Fourier deconvolution in \eqref{eq:fdconv2}, this method thresholds and scales the converged $\hat{\phi}^{n}(t')$.  The final scaling eliminates the need for keeping $\hat{\phi}^{n}(t')$ normalized in \eqref{eq:iter}.  LucyDDM defines $\hat{\phi}(t')$ to be positive, making it more resilient to noise.  Figure~\ref{fig:lucy} shows a LucyDDM example with $D_w = \SI{1.01}{ns}$.
 
-\subsection{Convolutional Neuron Networks}
+\subsection{Convolutional Neural Networks}
 
 % Network structure
-Advances in neural networks have brought breakthroughs in various domains like Computer Vision and Natural Language Processing. As an efficient composition with weighted additions and pointwise nonlinearities, the method has prevailed against most of the traditional algorithms in pattern recognition tasks. In our experiment, we introduced a multi-layer convolutional neural network (CNN) to process time-sensitive signals from detector outputs. Based on the Physics nature that a detector signal (PMT outputs) do only have a local correlation with recent PE, we chose convolutional setups with a moderate total width coverage. From a view of information, a broader coverage by an output neuron's receptive field on its related area will contribute to higher accuracy, while redundant connections could only lead to excessive computation and lower processing speed. As a result, a wise setup should try to cover all relevant signal areas exclusively while cutting off every connection unnecessary, balancing the speed and accuracy from the two mentioned effects.
+Advances in neural networks have brought breakthroughs in various domains like computer vision and natural language processing. As an efficient composition of weighted additions and pointwise non-linear functions, neural networks have prevailed against many traditional algorithms. We introduce a multi-layered convolutional neural network~(CNN) to process time-sensitive PEs $\tilde{\phi}(t)$ from waveforms $w(t)$ in \eqref{eq:1}.  Because $V_\mathrm{PE}(t)$ is localized, the convolutional widths are selected accordingly.
 
-A similar trade-off also exists in the depth of the neural network. A deeper network could provide more complex combinations to all detected features, and the computation complexity of result calculation changes linearly with the depth. With the existence of advanced structures like residual connection and strategies like batch-norm, depth in training is never a problem. However, to cut the computation in massive experimental data, a network should be relatively shallow. Detector signals are relatively similar and peak-shaped. Such a simple pattern does not require many layers to recognize. A good design for the task is a network with 4 to 6 layers. Deeper structures may bring a slight improvement in precision but will introduce a considerable increase in processing cost.
+Although advanced structures like residual connection and strategies like batch-norm alleviated training convergence problems for deep networks, the pulse-shape and universality of $V_\mathrm{PE}(t)$ for all the PE signals permit patterns to be recognized in only a few layers.  We chose a shadow network structure of 5 layers~(Fig.~\ref{fig:struct}) to cut the computation in massive experimental data.  Deeper structures give diminishing returns.
 
-A CNN is developed to analyze the waveform. Here is the structure of CNN which has 5 convolutional layers (see figure~\ref{fig:struct}). The length of data remains the same. 
-
-% Processing workflow
-
-The complete workflow of data processing consists of two stages, data training and predicting. Data training is a task of supervised learning.  Based on paired data examples, the goal is to find an efficient mapping from detector waveforms to PE with backpropagation methods. In the training process, a loss function judges the difference between training outputs and their referenced truth, and the training process is to minimize the loss. The product of network training is a function that creates desired outputs from inputs. By directly putting waveforms as inputs, one can get demanded outputs from a trained network in prediction.
-%<Add a workflow description here>
-
-% Loss function
-
-A critical issue matters the network training is the loss function. PE only incidents in a small proportion of time channels within a recorded sequence, which means the outputs and related truth are always sparse. While operating with ineffective loss functions, training processes always end up in local optimal of constant output due to the sparsity. Also, in practice, the form of loss function influences heavily on the final prediction performance. 
-
-A well-designed loss function should meet two requirements as follows: it should handle the sparsity, and it should give a fair judgment to the output in training. A qualified loss function could work on either sequence values or normalized distributions. In pursuit of time precision, a good algorithm should encourage correct predictions in the close neighborhoods of their corresponding truth, while punishing outputs that are incorrect or inaccurate in time. While working on the sequence outputs, such a mechanism is easy to implement but hard to arrange appropriately. It is hard to find a fair arrangement of punishment weight matching all circumstances. On the other hand, statistical distances and divergences could assess the difference in distribution but are hard to implement in a trainable form for backpropagation. 
-
-To tackle the mentioned difficulties, efforts of our work have established feasible, robust solutions with guaranteed performance and convergence for each case of processing. We will describe the details of the method in the following section.
-
-\emph{Value-based Reconstruction Loss}
-% Introductory Photos should be added to this part.
-To cope with sparsity in value-based processing, we have introduced a reconstruction procedure to build up a waveform based on its corresponding PE. By introducing a reverse process after neural network computing, one could define the loss function on a denser wave domain instead of the original incidence domain. The expression of the reconstruction is arbitrary but should fit the paired relationship expressed by data samples. Typically, one should add a training process to fit the parameters in construction expressions before training the predicting neural networks.
-%<Add an algorithm description here>
-
-\emph{CDF Wasserstein Loss}
-A direct implementation of judgment metrics into loss function is often difficult. To deal with sparsity and encourage time accuracy, we established the loss function on the cumulative distribution functions (CDF) of outputs. The form of cumulative sums could build a connection between sequence prediction and its previous values, making optimization through history possible. Moreover, the first Wasserstein distance between two 1D distributions is equivalent to the norm-1 difference of two corresponding CDFs. The optimal transport amount described by this metric is a reliable measurement standard for all distribution differences, including cases in our application. 
-
-As Wasserstein distance is the distance between two probability distributions, the CDF Wasserstein Loss is based on \emph{normalized} output of the network. The normalization process ensures that the integral of the original waveform is equal to the sum of normalized output, namely, charge. 
+The workflow of data processing consists of training and predicting. Training is to find an efficient mapping from detector waveforms $w(t)$ to PE $\tilde{\phi}(t)$ with backpropagation methods by supervised learning.  The learning is achieved by minimizing the Wasserstein distance loss $W_d$ between the truth $\tilde{\phi}$ and predicted $\hat{\phi}(t)$.  As discussed in Section~\ref{sec:W-dist}, $W_d$ is chosen to handle the PE sparsity and output proximity judgement in training iterations.  KL divergences discussed in Section~\ref{sec:pseudo} is a candidate but it is still to be explored to implement in a trainable form for backpropagation.  RSS is less timing sensitive.  The evolution of Wasserstein distance during training is shown in figure~\ref{fig:loss}. 
 
 \begin{figure}[H]
-\begin{minipage}[b]{.4\textwidth}
-\begin{figure}[H]
-    \begin{center}
-    \begin{adjustbox}{width=0.6\textwidth}
-        \input{model}
+  \begin{subfigure}{0.35\textwidth}
+    \centering
+    \begin{adjustbox}{width=0.65\textwidth}
+      \input{model}
     \end{adjustbox}
-    \end{center}
-    \caption{\label{fig:struct} CNN Structure}
-\end{figure}
-\end{minipage}
-\begin{minipage}[b]{.6\textwidth}
-\begin{figure}[H]
+    \caption{\label{fig:struct} CNN structure}
+  \end{subfigure}
+  \begin{subfigure}{0.6\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/epoch.pgf}}
     \caption{\label{fig:loss} Loss variation during training}
-\end{figure}
-\end{minipage}
+  \end{subfigure}
+  \caption{\label{fig:loss} Training of a CNN}
 \end{figure}
 
-% Result
-In the training process, we trained CNN for each PMT channel. The loss which is Wasserstein distance during training shows in figure~\ref{fig:loss}. 
+The product of network training is a function that creates outputs $\hat{\phi}(t)$ from inputs $w(t)$.  Since $W_d$ disregards normalization, $\hat{\phi}(t)$ is scaled to $\hat(Q)\hat(\phi)_*(t)$ following~\eqref{eq:fdconv2}.
 
-The result reconstructing $\hat{q}$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ shows in figure (see figure~\ref{fig:cnn-hist}). The overall result of $D_w$ reconstructing $\hat{q}$ shows in figure (see figure~\ref{fig:cnn-npe}). 
+The result of $\hat{\phi}(t)$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ is shown in Fig.~\ref{fig:cnn-hist}). The overall result of $D_w$ reconstructing $\hat{q}$ shows in Fig.~\ref{fig:cnn-npe}. 
 
 \begin{figure}[H]
-\begin{minipage}[t]{.5\textwidth}
-\begin{figure}[H]
+\begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/takarachargehist.pgf}}
     \caption{\label{fig:cnn-hist} $W_{d}$ Histogram \& Boxplot, $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$, method is CNN}
-\end{figure}
-\end{minipage}
-\begin{minipage}[t]{.5\textwidth}
-\begin{figure}[H]
+\end{subfigure}
+\begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/takarachargestats.pgf}}
     \caption{\label{fig:cnn-npe} $D_d$ vs $N_{pe}$, method is CNN}
-\end{figure}
-\end{minipage}
+\end{subfigure}
 \end{figure}
 
 \subsection{Regression Analysis}
