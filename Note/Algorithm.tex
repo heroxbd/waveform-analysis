@@ -93,12 +93,12 @@ A threshold $V_\mathrm{th}$ is selected with respect to electronics noise in the
   \begin{subfigure}{0.5\textwidth}
     \centering
     \scalebox{0.36}{\input{figures/threshold.pgf}}
-    \caption{\label{fig:shifting}Waveform shifting: $\mathrm{RSS}=\SI{2283.5}{mV^2},D_w=\SI{3.52}{ns},\delta=\SI{7.89}{ns}$}
+    \caption{\label{fig:shifting}Waveform shifting: $\mathrm{RSS}=\SI{2283.5}{mV^2},D_w=\SI{3.52}{ns},\Delta t_0=\SI{7.89}{ns}$}
   \end{subfigure}
   \begin{subfigure}{0.5\textwidth}
     \centering
     \scalebox{0.36}{\input{figures/findpeak.pgf}}
-    \caption{\label{fig:peak}Peak finding: $\mathrm{RSS}=\SI{2518.5}{mV^2},D_w=\SI{4.59}{ns},\delta=\SI{8.70}{ns}$}
+    \caption{\label{fig:peak}Peak finding: $\mathrm{RSS}=\SI{2518.5}{mV^2},D_w=\SI{4.59}{ns},\Delta t_0=\SI{8.70}{ns}$}
   \end{subfigure}
   \caption{Heuristic methods demonstrations.}
 \end{figure}
@@ -153,12 +153,12 @@ and $\hat{\phi}_*'(t)$ is the normalized $\hat{\phi}'(t)$. Figure~\ref{fig:fd} i
   \begin{subfigure}{0.5\textwidth}
     \centering
     \scalebox{0.36}{\input{figures/fftrans.pgf}}
-    \caption{\label{fig:fd}Fourier deconvolution: $\mathrm{RSS}=\SI{239.5}{mV^2},D_w=\SI{1.72}{ns},\delta=\SI{2.43}{ns}$}
+    \caption{\label{fig:fd}Fourier deconvolution: $\mathrm{RSS}=\SI{239.5}{mV^2},D_w=\SI{1.72}{ns},\Delta t_0=\SI{2.43}{ns}$}
   \end{subfigure}
   \begin{subfigure}{0.5\textwidth}
     \centering
     \scalebox{0.36}{\input{figures/lucyddm.pgf}}
-    \caption{\label{fig:lucy}Lucy direct demodulation: $\mathrm{RSS}=\SI{68.54}{mV^2},D_w=\SI{1.01}{ns},\delta=\SI{2.76}{ns}$}
+    \caption{\label{fig:lucy}Lucy direct demodulation: $\mathrm{RSS}=\SI{68.54}{mV^2},D_w=\SI{1.01}{ns},\Delta t_0=\SI{2.76}{ns}$}
   \end{subfigure}
   \caption{Deconvolution demonstrations.}
 \end{figure}
@@ -166,25 +166,25 @@ and $\hat{\phi}_*'(t)$ is the normalized $\hat{\phi}'(t)$. Figure~\ref{fig:fd} i
 
 \subsubsection{Lucy Direct Demodulation}
 
-Lucy-Richardson direct demodulation (LucyDDM) uses non-linear iteration to calculate deconvolutio, and is used in astronomy \cite{li_richardson-lucy_2019}, image processing, and many other fields.  Viewing $V_{\mathrm{PE}*}(t-t')$ as a conditional probability distribution $P(t|t')$ of amplified electron time $t$ given PE occuring at $t'$, by the Bayesian rule,
+Lucy-Richardson direct demodulation (LucyDDM) uses non-linear iteration to calculate deconvolutio, and is used in astronomy \cite{li_richardson-lucy_2019}, image processing, and many other fields.  Viewing $V_{\mathrm{PE}*}(t-s)$ as a conditional probability distribution $P(t|s)$ of amplified electron time $t$ given PE occuring at $s$, by the Bayesian rule,
 \begin{equation}
   \label{eq:lucy}
-  \tilde{\phi}_*(t') V_{\mathrm{PE}*}(t-t') = P(t,t') = \tilde{w}_*(t)P(t'|t)
+  \tilde{\phi}_*(s) V_{\mathrm{PE}*}(t-s) = P(t,s) = \tilde{w}_*(t)P(s|t)
 \end{equation}
-where $P(t,t')$ is the joint distribution of amplified electron and PE timings.  Therefore,
+where $P(t,s)$ is the joint distribution of amplified electron and PE timings.  Therefore,
 \begin{equation}
   \label{eq:ptt}
-  P(t'|t) = \frac{\tilde{\phi}_*(t') V_{\mathrm{PE}*}(t-t')}{\tilde{w}_*(t)} = \frac{\tilde{\phi}(t') V_{\mathrm{PE}}(t-t')}{\int\tilde{\phi}(s) V_{\mathrm{PE}}(t-s)\mathrm{d}s}.
+  P(s|t) = \frac{\tilde{\phi}_*(s) V_{\mathrm{PE}*}(t-s)}{\tilde{w}_*(t)} = \frac{\tilde{\phi}(s) V_{\mathrm{PE}}(t-s)}{\int\tilde{\phi}(s') V_{\mathrm{PE}}(t-s')\mathrm{d}s'}.
 \end{equation}
-where on the right hand side, normalization constants cancel each other. Construct $\phi_*(t')$ recurrence relation by replacing $\tilde{w}_*(t)$ with the observed waveform $w_*(t)$,
+where on the right hand side, normalization constants cancel each other. Construct $\phi_*$ recurrence relation by replacing $\tilde{w}_*$ with the observed normalized waveform $w_*$,
 \begin{equation}
   \label{eq:iter}
   \begin{aligned}
-    \tilde{\phi}_*(t') & = \int P(t'|t) w_*(t)\mathrm{d}t =  \int \frac{\tilde{\phi}(t') V_{\mathrm{PE}}(t-t')}{\int\tilde{\phi}(s) V_{\mathrm{PE}}(t-s)\mathrm{d}s} w_*(t) \mathrm{d}t \\
-    \implies \hat{\phi}^{n+1}(t') & = \int \frac{\hat{\phi}^n(t') V_{\mathrm{PE}}(t-t')}{\int\hat{\phi}^n(s) V_{\mathrm{PE}}(t-s)\mathrm{d}s} w(t) \mathrm{d}t.
+    \tilde{\phi}_*(s) & = \int P(s|t) w_*(t)\mathrm{d}t =  \int \frac{\tilde{\phi}(s) V_{\mathrm{PE}}(t-s)}{\int\tilde{\phi}(s') V_{\mathrm{PE}}(t-s')\mathrm{d}s'} w_*(t) \mathrm{d}t \\
+    \implies \hat{\phi}^{n+1}(s) & = \int \frac{\hat{\phi}^n(s) V_{\mathrm{PE}}(t-s)}{\int\hat{\phi}^n(s') V_{\mathrm{PE}}(t-s')\mathrm{d}s'} w(t) \mathrm{d}t.
   \end{aligned}
 \end{equation}
-Like Fourier deconvolution in \eqref{eq:fdconv2}, this method thresholds and scales the converged $\hat{\phi}^{n}(t')$.  The final scaling eliminates the need for keeping $\hat{\phi}^{n}(t')$ normalized in \eqref{eq:iter}.  LucyDDM defines $\hat{\phi}(t')$ to be positive, making it more resilient to noise.  Figure~\ref{fig:lucy} shows a LucyDDM example with $D_w = \SI{1.01}{ns}$.
+Like Fourier deconvolution in \eqref{eq:fdconv2}, this method thresholds and scales the converged $\hat{\phi}^{n}$.  The final scaling eliminates the need for keeping $\hat{\phi}^{n}$ normalized in \eqref{eq:iter}.  LucyDDM constructs $\hat{\phi}$ to be positive, making it more resilient to noise.  Figure~\ref{fig:lucy} shows a LucyDDM example with $D_w = \SI{1.01}{ns}$.
 
 \subsection{Convolutional Neural Networks}
 
@@ -211,21 +211,22 @@ The workflow of data processing consists of training and predicting. Training is
   \caption{\label{fig:CNN} Training of a CNN}
 \end{figure}
 
-The product of network training is a function that creates outputs $\hat{\phi}(t)$ from inputs $w(t)$.  Since $W_d$ disregards normalization, $\hat{\phi}(t)$ is scaled to $\hat(Q)\hat(\phi)_*(t)$ following~\eqref{eq:fdconv2}.
+The product of network training is a function that creates PE outputs $\hat{\phi}(t)$ from waveform inputs $w(t)$.  Since $W_d$ disregards normalization, $\hat{\phi}$ is scaled to $\hat{Q}\hat{\phi}_*$ following~\eqref{eq:fdconv2}.
 
-The result of $\hat{\phi}(t)$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ is shown in Fig.~\ref{fig:cnn-hist}). The overall result of $D_w$ reconstructing $\hat{q}$ shows in Fig.~\ref{fig:cnn-npe}. 
+The result of $\hat{\phi}(t)$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ is shown in Fig.~\ref{fig:cnn-hist}. The overall result of $D_w$ reconstructing $\hat{q}$ shows in Fig.~\ref{fig:cnn-npe}.
 
 \begin{figure}[H]
-\begin{subfigure}{.5\textwidth}
+  \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/takarachargehist.pgf}}
-    \caption{\label{fig:cnn-hist} $W_{d}$ Histogram \& Boxplot, $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$, method is CNN}
-\end{subfigure}
-\begin{subfigure}{.5\textwidth}
+    \caption{\label{fig:cnn-hist} $W_{d}$ Histogram \& Boxplot, $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$}
+  \end{subfigure}
+  \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/takarachargestats.pgf}}
-    \caption{\label{fig:cnn-npe} $D_d$ vs $N_{pe}$, method is CNN}
-\end{subfigure}
+    \caption{\label{fig:cnn-npe} $D_d$ vs $N_{pe}$}
+  \end{subfigure}
+  \caption{CNN performance}
 \end{figure}
 
 \subsection{Regression Analysis}
@@ -246,7 +247,7 @@ The fitting program is implemented with Limited-memory BFGS with bound constrain
 \begin{figure}[H]
     \centering
     \scalebox{0.4}{\input{figures/xiaopeip.pgf}}
-    \caption{Fitting Demo, $\mathrm{RSS}=\SI{44.97}{mV^2},D_w=\SI{0.71}{ns},\delta=\SI{3.14}{ns}$}
+    \caption{Fitting example, $\mathrm{RSS}=\SI{44.97}{mV^2},D_w=\SI{0.71}{ns},\delta=\SI{3.14}{ns}$}
 \end{figure}
 
 The result reconstructing $\hat{q}$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ shows in figure. (see figure~\ref{fig:fitting-hist}) The overall result of $D_w$ reconstructing $\hat{q}$ shows in the figure (see figure~\ref{fig:fitting-npe}). 
