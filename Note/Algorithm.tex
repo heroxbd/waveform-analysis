@@ -233,41 +233,45 @@ The result of $\hat{\phi}(t)$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ 
 With waveform generative model in~\eqref{eq:1}, regression analysis is the best for waveform analysis.  Computational complexity hindered regression to be used in huge volumes of raw data.  With the advancement of big data infrastructure and research on sparsity, the statistical advantage of regression becomes more pronounced.
 
 \subsubsection{Gradient Descent}
-Waveform is the convolution of $V_\mathrm{PE}(t)$ and $\hat{q}(t)$ (see formula~\eqref{eq:wave-con}). 
+In (\ref{eq:w-hat}), replace $\hat{N}$ with a fixed sample size $N_s$ and $\hat{t}_i$ with a set of equidistant timings $t'_1, \ldots, t'_{N_s}$,
+\begin{equation}
+  \label{eq:gd}
+  w'(t) = \sum_{i=1}^{N_s}q'_iV_\mathrm{PE}(t-t'_i)
+\end{equation}
+Construct estimators $\hat{q}_i$ by minimizing RSS of $w'(t)$ and $w(t)$,
+\begin{equation}
+  \label{eq:gd-q}
+  \hat{q}_1, \ldots, \hat{q}_{N_s} = \arg \underset{q'_1, \ldots, q'_{N_s}}{\min} \mathrm{RSS}\left[w'(t),w(t)\right].
+\end{equation}
+When $\{t'_i\}$ is dense enough, $\{\hat{q}_i\}$ determines the inferred PE distribution $\hat{\phi}(t)$,
+\begin{equation}
+  \label{eq:gd-phi}
+  \hat{\phi}(t) = \sum_{i=1}^{N_s}\hat{q}_i\delta(t-t'_i).
+\end{equation}
 
-\begin{align}
-    w(t) &= \hat{q} \otimes V_\mathrm{PE}(t) \label{eq:wave-con} \\
-    L &= L(\hat{w}(t), w(t)) = L(\hat{q}, V_\mathrm{PE}(t), w(t)) = \mathrm{RSS}(w(t), \hat{q} \otimes V_\mathrm{PE}(t)) \label{eq:loss-rss}
-\end{align}
+It is tempting to replace the dense $\{t'_i\}$ grid in \eqref{eq:gd} with a length-varying set of sparse PEs. However, because the truth $N_\mathrm{PE}$ is unknown, that formulates an explicit trans-dimensional model.  Although worth trying, model selection will complicate the optimization and is beyond the scope of this study.
 
-In the fitting process, the parameters are $\hat{q}(t)$ in each discrete hittime $t$. The complete information hidden in the original wave is disturbed by electronics noise and pile-up. The loss (see formula~\ref{eq:loss-rss}) which we optimize in fitting is the residual sum of squares (RSS) between the original wave $w(t)$ and reconstructed wave $\hat{w}(t)$ according to the parameters. The parameters will tend to be preciser when the reconstructed wave approaching the original wave. 
-
-The fitting program is implemented with Limited-memory BFGS with bound constraint \cite{byrd_limited_1995} (L-BFGS-B). L-BFGS-B has an advantage that the $\hat{q}$ are constrained to be larger than 0. The demonstration here shows a result with $D_w = \SI{0.71}{ns}$.
+The optimizer is realized with limited-memory Broyden-Fletcher-Goldfarb-Shanno algorithm with bound constraint~\cite{byrd_limited_1995}.  It can impose constraints of $q'_i > 0$. The demonstration here shows a result with $D_w = \SI{0.71}{ns}$.
 
 \begin{figure}[H]
+  \begin{subfigure}{.33\textwidth}
     \centering
-    \scalebox{0.4}{\input{figures/xiaopeip.pgf}}
+    \scalebox{0.2}{\input{figures/xiaopeip.pgf}}
     \caption{Fitting example, $\mathrm{RSS}=\SI{44.97}{mV^2},D_w=\SI{0.71}{ns},\delta=\SI{3.14}{ns}$}
-\end{figure}
-
-The result reconstructing $\hat{q}$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ shows in figure. (see figure~\ref{fig:fitting-hist}) The overall result of $D_w$ reconstructing $\hat{q}$ shows in the figure (see figure~\ref{fig:fitting-npe}). 
-
-\begin{figure}[H]
-\begin{minipage}[t]{.5\textwidth}
-\begin{figure}[H]
+  \end{subfigure}
+  \begin{subfigure}{.33\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/xiaopeipchargehist.pgf}}
     \caption{\label{fig:fitting-hist} $W_{d}$ Histogram \& Boxplot, $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$, method is Fitting}
-\end{figure}
-\end{minipage}
-\begin{minipage}[t]{.5\textwidth}
-\begin{figure}[H]
+  \end{subfigure}
+  \begin{subfigure}{.33\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/xiaopeipchargestats.pgf}}
     \caption{\label{fig:fitting-npe} $W_{d}$ vs $N_{pe}$, method is Fitting}
+  \end{subfigure}
 \end{figure}
-\end{minipage}
-\end{figure}
+
+The result reconstructing $\hat{q}$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ is shown in Fig.~\ref{fig:fitting-hist}.  The overall result of $D_w$ is shown in Fig~\ref{fig:fitting-npe}.
 
 \subsubsection{Markov Chain Monte Carlo}
 
