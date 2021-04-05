@@ -186,14 +186,14 @@ where on the right hand side, normalization constants cancel each other. Constru
 \end{equation}
 Like Fourier deconvolution in \eqref{eq:fdconv2}, this method thresholds and scales the converged $\hat{\phi}^{n}$.  The final scaling eliminates the need for keeping $\hat{\phi}^{n}$ normalized in \eqref{eq:iter}.  LucyDDM constructs $\hat{\phi}$ to be positive, making it more resilient to noise.  Figure~\ref{fig:lucy} shows a LucyDDM example with $D_w = \SI{1.01}{ns}$.
 
-\subsection{Convolutional Neural Networks}
+\subsection{Convolutional Neural Network}
 
 % Network structure
 Advances in neural networks have brought breakthroughs in various domains like computer vision and natural language processing. As an efficient composition of weighted additions and pointwise non-linear functions, neural networks have prevailed against many traditional algorithms. We introduce a multi-layered convolutional neural network~(CNN) to process time-sensitive PEs $\tilde{\phi}(t)$ from waveforms $w(t)$ in \eqref{eq:1}.  Because $V_\mathrm{PE}(t)$ is localized, the convolutional widths are selected accordingly.
 
 Although advanced structures like residual connection and strategies like batch-norm alleviated training convergence problems for deep networks, the pulse-shape and universality of $V_\mathrm{PE}(t)$ for all the PE signals permit patterns to be recognized in only a few layers.  We chose a shadow network structure of 5 layers~(Fig.~\ref{fig:struct}) to cut the computation in massive experimental data.  Deeper structures give diminishing returns.
 
-The workflow of data processing consists of training and predicting. Training is to find an efficient mapping from detector waveforms $w(t)$ to PE $\tilde{\phi}(t)$ with backpropagation methods by supervised learning.  The learning is achieved by minimizing the Wasserstein distance loss $D_w$ between the truth $\tilde{\phi}$ and predicted $\hat{\phi}(t)$.  As discussed in Section~\ref{sec:W-dist}, $D_w$ is chosen to handle the PE sparsity and output proximity judgement in training iterations.  KL divergences discussed in Section~\ref{sec:pseudo} is a candidate but it is still to be explored to implement in a trainable form for backpropagation.  RSS is less timing sensitive.  The evolution of Wasserstein distance during training is shown in figure~\ref{fig:loss}. 
+The workflow of data processing consists of training and predicting. Training is to find an efficient mapping from detector waveforms $w(t)$ to PE $\tilde{\phi}(t)$ with backpropagation methods by supervised learning.  The learning is achieved by minimizing the Wasserstein distance loss $W_d$ between the truth $\tilde{\phi}$ and predicted $\hat{\phi}(t)$.  As discussed in Section~\ref{sec:W-dist}, $W_d$ is chosen to handle the PE sparsity and output proximity judgement in training iterations.  KL divergences discussed in Section~\ref{sec:pseudo} is a candidate but it is still to be explored to implement in a trainable form for backpropagation.  RSS is less timing sensitive.  The evolution of Wasserstein distance during training is shown in figure~\ref{fig:loss}.
 
 \begin{figure}[H]
   \begin{subfigure}{0.35\textwidth}
