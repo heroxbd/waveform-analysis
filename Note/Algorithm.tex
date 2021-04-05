@@ -189,7 +189,7 @@ Like Fourier deconvolution in \eqref{eq:fdconv2}, this method thresholds and sca
 \subsection{Convolutional Neural Network}
 
 % Network structure
-Advances in neural networks have brought breakthroughs in various domains like computer vision and natural language processing. As an efficient composition of weighted additions and pointwise non-linear functions, neural networks have prevailed against many traditional algorithms. We introduce a multi-layered convolutional neural network~(CNN) to process time-sensitive PEs $\tilde{\phi}(t)$ from waveforms $w(t)$ in \eqref{eq:1}.  Because $V_\mathrm{PE}(t)$ is localized, the convolutional widths are selected accordingly.
+Advances in neural networks have brought breakthroughs in various domains like computer vision~\cite{he_deep_2015} and natural language processing~\cite{vaswani_attention_2017}. As an efficient composition of weighted additions and pointwise non-linear functions, neural networks have prevailed against many traditional algorithms. We introduce a multi-layered convolutional neural network~(CNN) to process time-sensitive PEs $\tilde{\phi}(t)$ from waveforms $w(t)$ in \eqref{eq:1}.  Because $V_\mathrm{PE}(t)$ is localized, the convolutional widths are selected accordingly.
 
 Although advanced structures like residual connection and strategies like batch-norm alleviated training convergence problems for deep networks, the pulse-shape and universality of $V_\mathrm{PE}(t)$ for all the PE signals permit patterns to be recognized in only a few layers.  We chose a shadow network structure of 5 layers~(Fig.~\ref{fig:struct}) to cut the computation in massive experimental data.  Deeper structures give diminishing returns.
 
