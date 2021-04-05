@@ -206,7 +206,7 @@ The workflow of data processing consists of training and predicting. Training is
   \begin{subfigure}{0.6\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/epoch.pgf}}
-    \caption{\label{fig:loss} Loss variation during training}
+    \caption{\label{fig:loss} Evolution of loss}
   \end{subfigure}
   \caption{\label{fig:CNN} Training of a CNN}
 \end{figure}
@@ -219,13 +219,14 @@ The result of $\hat{\phi}(t)$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ 
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/takara.pgf}}
-    \caption{\label{fig:cnn}CNN: $\mathrm{RSS}=\SI{62.77}{mV^2},D_w=\SI{0.64}{ns},\delta=\SI{2.86}{ns}$}
+    \caption{\label{fig:cnn}$\mathrm{RSS}=\SI{62.77}{mV^2},D_w=\SI{0.64}{ns},\delta=\SI{2.86}{ns}$}
   \end{subfigure}
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/takarachargestats.pgf}}
-    \caption{\label{fig:cnn-npe} $D_d$ vs $N_{pe}$ Histogram \& Boxplot, $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$, method is CNN}
+    \caption{\label{fig:cnn-npe} $D_d$ vs $N_{pe}$ Histogram \& Boxplot}
   \end{subfigure}
+  \caption{CNN when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$}
 \end{figure}
 
 \subsection{Regression Analysis}
@@ -256,37 +257,46 @@ The optimizer is realized with limited-memory Broyden-Fletcher-Goldfarb-Shanno a
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/xiaopeip.pgf}}
-    \caption{\label{fig:fitting}Gradient descent: $\mathrm{RSS}=\SI{44.97}{mV^2},D_w=\SI{0.71}{ns},\delta=\SI{3.14}{ns}$}
+    \caption{\label{fig:fitting}$\mathrm{RSS}=\SI{44.97}{mV^2},D_w=\SI{0.71}{ns},\delta=\SI{3.14}{ns}$}
   \end{subfigure}
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/xiaopeipchargestats.pgf}}
-    \caption{\label{fig:fitting-npe} $D_d$ vs $N_{pe}$ Boxplot \& Histogram, $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$, method is Gradient descent}
+    \caption{\label{fig:fitting-npe} $D_d$ vs $N_{pe}$ Boxplot \& Histogram}
   \end{subfigure}
+  \caption{Gradient descent when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$}
 \end{figure}
 
 The result of $\hat{q}$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ is shown in Fig.~\ref{fig:fitting-npe}. The left panel is the boxplot which shows the $D_d$ percentile vs $N_{pe}$, and the right panel is the overall histogram of $D_d$. 
 
 \subsubsection{Markov Chain Monte Carlo}
+The optimization problem in \eqref{eq:gd-q} is in general not convex and may be stuck in local minima.  Markov chain Monte Carlo~(MCMC) has the potential to overcome this difficulty.
 
-The typical variable optimization methods such as L-BFGS-B depend on gradient evaluation and their iteration stops when the gradient is smaller than a certain tiny value, following the convention in the field of numerical calculation. In some circumstances, the Gradient descent result may be stuck in local minimum rather than global minimum. Hamiltonian Monte Carlo (HMC), which is a version of the Markov Chain Monte Carlo (MCMC) method, has the potential to overcome this difficulty. 
+Hamiltonian Monte Carlo~(HMC) is an efficient MCMC for for high dimensional distributions~\cite{neal_mcmc_2012} such as the posterior of $\{q'_i\}$.  The posterior is combined with a $\{q'_i\}$ prior conditioned on $t_0$ to form a hierarchical model,
+\begin{equation}
+  \begin{aligned}
+    t_{0} &\sim \mathrm{Uniform}(0, \overline{t_0}) \\
+    p_i &= \mu \int_{t'_i-\frac{\Delta t'}{2}}^{t'_i+\frac{\Delta t'}{2}} \phi(t' - t_0)\mathrm{d}t' \approx \mu\phi(t' - t_0)\Delta{t'}  \\
+    z_i &\sim \mathrm{Binomial}(p_i) \\
+    q'_{i,0}&=0\\
+    q'_{i,1}& \sim \mathrm{Normal}(1, \sigma_q)\\
+    q'_i &= q'_{i,z_i}\\
+    w'(t) & = \sum_{i=1}^{N_s}q'_iV_\mathrm{PE}(t-t'_i)\\
+    w(t) &\sim \mathrm{Normal}(w'(t), \sigma_\epsilon)
+  \end{aligned}
+  \label{eq:mixnormal}
+\end{equation}
+where $t_{0}$ is sampled from a uniform prior with upper bound $\overline{t_{0}}$, and $p_i$ the expection of a PE hitting $(t_{i} - \frac{\Delta t'}{2}, t_{i} + \frac{\Delta t'}{2})$ when $\Delta t'$ is small enough. $q'_i$ is a mixture of 0 (no PE) and normally distributed $q'_{i,1}$ (1 PE).  The inferred waveform $w'(t)$ differs from observation $w(t)$ by a white noise $\epsilon(t) \sim \mathrm{Normal}(0, \sigma_\epsilon)$.  When $\Delta{t'} \to 0$, formulation~\eqref{eq:mixnormal} is equivalent to~\eqref{eq:1} up to a shift by $t_0$.  Instead of using $N_\mathrm{PE}$ to govern the number of pairs $(t_i, q_i)$, the trans-dimensionality is encoded implicitly by $z_i$ to turn on or off $q'_i$ .
 
-HMC is an efficient MCMC method for achieving samples from a distribution for which direct sampling is difficult, especially efficient dealing with high dimensional variables \cite{neal_mcmc_2012}, for example, $q$ in waveform analysis. A program based on HMC is developed intending to sample from the posterior distribution of $q$, as well as $t_{0}$. The samples derived by HMC can usually be approximately ergodic in the posterior distribution, so the global minimum will be obtained with a large sampling set. 
+Posterior samples of $t_0$ and $\{q'_i\}$ are generated by HMC.   Ergodicity of HMC prevents local maxima from trapping the sampler.  We use NumPyro~\cite{phan2019composable}, a graceful probabilistic programming library, to drive the HMC.  Instead of fixing to 0, $q'_{i,0}$ is modeled as a narrow $\mathrm{Normal}(0, \sigma_0)$ to adapt to NumPyro.
 
-The model and prior distribution are defined below: 
+$\hat{t}_0$ and $\hat{q}_i$ are constructed as the mean estimators of posterior samples.  Unlike the pseudo-likelihood $\hat{t}_\mathrm{KL}$ discussed in Section \ref{sec:pseudo}, $\hat{t}_0$ is a genuine Bayesian estimator.  Construct $\hat{\phi}(t)$ as,
+\begin{equation}
+  \label{eq:mcmc-phi}
+  \hat{\phi}(t) = \sum_{i=1}^{N_s}\hat{q}_i\delta(t-t'_i).
+\end{equation}
 
-\begin{align}
-    t_{0} &\sim \mathrm{Uniform}(0, L_{w}) \\
-    P_{q}(t_{i}) &= \mu \cdot P_{t}(t_{i}) \\
-    q(t_{i}) &\sim \mathrm{Mix}\mathcal{N}(P_{q}(t_{i}), \mu_{g}, \sigma_{g}^{2}) \\
-    w(t_{i}) &\sim \mathcal{N}(F_{w}(q), \sigma_{w}^{2}) \\
-    \mathrm{Mix}\mathcal{N}(q(t_{i}) | P_{q}(t_{i}), \mu_{g}, \sigma_{g}^{2}) &= (1 - P_{q}(t_{i}))\delta(q(t_{i})) + P_{q}(t_{i})\mathcal{N}(q(t_{i}) | \mu_{g}, \sigma_{g}^{2}) \label{eq:mixnormal}
-\end{align}
-
-where $t_{0}$ is the starting time of time profile and $L_{w}$ is nothing but an upper limit of $t_{0}$. $P_{q}(t_{i})$ is the equivalent charge expectation in time interval $[t_{i}, t_{i}+\mathrm{d}t]$, where $\mathrm{d}t$ is a man-made small time interval depends on the precision required. $q$ follow the probability Normal mixture distribution, whose probability density function (PDF) is $\mathrm{Mix}\mathcal{N}$ in \eqref{eq:mixnormal}. Given $q$, using function $F_{w}(q)$ is the rebuilt waveform expectation. 
-
-We use NumPyro \cite{phan2019composable}, a graceful probabilistic programming library, to build the model and sample. One of the sampling results shows in Fig.~\ref{fig:mcmc-t0hist}. A demonstration shown in Fig.~\ref{fig:mcmc} has $D_w = \SI{}{ns}$. 
-
+The distribution of $\Delta{t_0} = \hat{t}_0 - t_0$ is shown in Fig.~\ref{fig:mcmc-t0hist} and $W_d$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ is shown in Fig.~\ref{fig:mcmc}.
 \begin{figure}[H]
     \centering
     \resizebox{0.5\textwidth}{!}{\input{figures/mcmct0hist.pgf}}
@@ -302,11 +312,10 @@ We use NumPyro \cite{phan2019composable}, a graceful probabilistic programming l
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/mcmcchargestats.pgf}}
-    \caption{\label{fig:mcmc-npe} $D_d$ vs $N_{pe}$ Boxplot \& Histogram, $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$, method is MCMC}
+    \caption{\label{fig:mcmc-npe} $D_d$ vs $N_{pe}$ Boxplot \& Histogram}
   \end{subfigure}
+  \caption{MCMC results when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$}
 \end{figure}
-
-We can see during MCMC sampling, the charge w.r.t. time, $\hat{q}$, is also collected. The result reconstructing $\hat{q}$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ shows in figure (see figure~\ref{fig:mcmc-npe}). 
 
 \subsubsection{Fast Bayesian Matching Pursuit}
 
