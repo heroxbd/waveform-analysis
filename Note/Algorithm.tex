@@ -317,14 +317,11 @@ The distribution of $\Delta{t_0} = \hat{t}_0 - t_0$ is shown in Fig.~\ref{fig:mc
 \end{figure}
 
 \subsubsection{Fast Bayesian Matching Pursuit}
-
-Fast Bayesian Matching Pursuit (FBMP) is a parameters estimation method for sparse linear models~\cite{schniter_fast_nodate}. The linear sparse model in waveform analysis is given by \eqref{eq:fbmpmodel}: 
-
+In~\eqref{eq:mixnormal}, $\bm{q'}$ is sparse especially when $\bm{t'}$ is dense, $w(t)$ is a Gaussian process and only a few $\bm{z}$ dominate the posterior.  Those facts lead to Fast Bayesian Matching Pursuit (FBMP), a parameter estimation method for sparse linear models~\cite{schniter_fast_nodate}.
 \begin{align}
-    w(t) &= F_{w}(q) = \vec{A}\cdot \vec{q} \label{eq:fbmpmodel} \\
-    \hat{\vec{s}}_{*} &\triangleq \mathrm{argmax}\,p(\vec{s}|\vec{y}) \label{eq:map}
+    \bm{z} &= \arg \underset{\bm{z}}{\max} \label{eq:map}
 \end{align}
-in which $A$ is a matrix derived from SPE response~\eqref{eq:dayaspe}. $\vec{q}$ is the charge vector of PE with length $N$, in which most elements are zeros. FBMP algorithm select model before estimation of $q$. For a certain model, $\vec{s}$ is a model selection vector that contains only 0 and 1. Only if $s_{n}=1$, $q_{n}\neq0$, where $\{q_{n}\}_{n=0}^{N-1}$. Implementing the maximum a posteriori (MAP) model-vector estimate (given by~\eqref{eq:map}), a repeated greedy search (RGS) is performed to get a set of dominant models, $\mathcal{S}_{*}$, in the parameter space of $\vec{s}$. RGS will stop after a controlled number of steps, as we believe the search for dominant models set is sufficient enough. Additionally, a linear algebra trick reduces the complexity of the algorithm \cite{schniter_fast_nodate}. Finally, a set of dominant models $\mathcal{S}_{*}$ and its corresponding set of posterior probability, as well as estimations of $\vec{q}$ for each model in $\mathcal{S}_{*}$, are collected to be the approximation of sparse posterior estimation of $\vec{q}$. We use the charge estimation of the maximum posterior probability model as the waveform analysis result. 
+Before estimating of $q'$, FBMP selects models of $\bm{z}$ with dominating posterior probabilities $p\left[\bm{z}|w(t)\right]$.  A repeated greedy search (RGS) is performed to get a the target set $\mathcal{Z}$.  RGS will stop after enough steps to cover most probable cases of $\bm{z}$.  Additionally, a linear algebraic iteration reduces the complexity of $p\left[\bm{z}|w(t)\right]$ calculation~\cite{schniter_fast_nodate}.  Finally, dominating $\bm{z}_j$ and and its corresponding posterior probability $p_j$, as well as estimations of $\bm{q}_j$ are collected to be the approximation of posterior distribution.  We use the charge estimation of the maximum posterior probability model as the waveform analysis result. 
 
 Figure~\ref{fig:fbmp} shows one of the FBMP results. We can see the origin waveform $w(t)$ and reconstructed waveform $\hat{w}(t)$ are very similar. The reconstructed and truth $\hat{q}$ are also similar. 
 
@@ -334,12 +331,12 @@ Figure~\ref{fig:fbmp} shows one of the FBMP results. We can see the origin wavef
     \caption{\label{fig:fbmp} FBMP Demo, $\mathrm{RSS}=\SI{24.30}{mV^2},D_w=\SI{0.48}{ns},\Delta{t_0}=\SI{2.91}{ns}$}
 \end{figure}
 
-The result of $\hat{q}$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ is shown in Fig.~\ref{fig:fbmp-npe}. The left panel is the boxplot which shows the $D_d$ percentile vs $N_{pe}$, and the right panel is the overall histogram of $D_d$. 
+The result of $\hat{q}$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ is shown in Fig.~\ref{fig:fbmp-npe}. The left panel is the boxplot which shows the $D_w$ percentile vs $N_{pe}$, and the right panel is the overall histogram of $D_w$. 
 
 \begin{figure}[H]
     \centering
     \resizebox{0.5\textwidth}{!}{\input{figures/fbmpchargestats.pgf}}
-    \caption{\label{fig:fbmp-npe} $D_d$ vs $N_{pe}$ Boxplot \& Histogram, $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$, method is FBMP}
+    \caption{\label{fig:fbmp-npe} $D_w$ vs $N_{pe}$ Boxplot \& Histogram, $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$, method is FBMP}
 \end{figure}
 
 It is noted that one of the deconvolution methods can be used for FBMP initialization, where we reduce $N$ regarding deconvolution results. In the test of FBMP, we use LucyDDM as the initializer. 
