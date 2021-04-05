@@ -147,7 +147,7 @@ $\hat{Q}$ is the total relative charge,
   \label{eq:Q}
   \hat{Q} = \frac{\int w(t) \mathrm{d}t}{\int V_\mathrm{PE}(t) \mathrm{d}t},
 \end{equation}
-and $\hat{\phi}_*'(t)$ is the normalized $\hat{\phi}'(t)$. Figure~\ref{fig:fd} illustrates the algorithm with an example having $D_w = \SI{2.43}{ns}$. 
+and $\hat{\phi}_*'(t)$ is the normalized $\hat{\phi}'(t)$. Figure~\ref{fig:fd} illustrates the algorithm with an example having $D_w = \SI{1.72}{ns}$. 
 
 \begin{figure}[H]
   \begin{subfigure}{0.5\textwidth}
@@ -211,22 +211,21 @@ The workflow of data processing consists of training and predicting. Training is
   \caption{\label{fig:CNN} Training of a CNN}
 \end{figure}
 
-The product of network training is a function that creates PE outputs $\hat{\phi}(t)$ from waveform inputs $w(t)$.  Since $W_d$ disregards normalization, $\hat{\phi}$ is scaled to $\hat{Q}\hat{\phi}_*$ following~\eqref{eq:fdconv2}.
+The product of network training is a function that creates PE outputs $\hat{\phi}(t)$ from waveform inputs $w(t)$.  Since $W_d$ disregards normalization, $\hat{\phi}$ is scaled to $\hat{Q}\hat{\phi}_*$ following~\eqref{eq:fdconv2}. A demonstration shown in Fig.~\ref{fig:cnn} has $D_w = \SI{0.64}{ns}$. 
 
-The result of $\hat{\phi}(t)$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ is shown in Fig.~\ref{fig:cnn-hist}. The overall result of $D_w$ reconstructing $\hat{q}$ shows in Fig.~\ref{fig:cnn-npe}.
+The result of $\hat{\phi}(t)$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ is shown in Fig.~\ref{fig:cnn-npe}. The left panel is the boxplot which shows the $D_d$ percentile vs $N_{pe}$, and the right panel is the overall histogram of $D_d$. 
 
 \begin{figure}[H]
   \begin{subfigure}{.5\textwidth}
     \centering
-    \resizebox{\textwidth}{!}{\input{figures/takarachargehist.pgf}}
-    \caption{\label{fig:cnn-hist} $W_{d}$ Histogram \& Boxplot, $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$}
+    \resizebox{\textwidth}{!}{\input{figures/takara.pgf}}
+    \caption{\label{fig:cnn}CNN: $\mathrm{RSS}=\SI{62.77}{mV^2},D_w=\SI{0.64}{ns},\delta=\SI{2.86}{ns}$}
   \end{subfigure}
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/takarachargestats.pgf}}
-    \caption{\label{fig:cnn-npe} $D_d$ vs $N_{pe}$}
+    \caption{\label{fig:cnn-npe} $D_d$ vs $N_{pe}$ Histogram \& Boxplot, $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$, method is CNN}
   \end{subfigure}
-  \caption{CNN performance}
 \end{figure}
 
 \subsection{Regression Analysis}
@@ -251,31 +250,26 @@ When $\{t'_i\}$ is dense enough, $\{\hat{q}_i\}$ determines the inferred PE dist
 
 It is tempting to replace the dense $\{t'_i\}$ grid in \eqref{eq:gd} with a length-varying set of sparse PEs. However, because the truth $N_\mathrm{PE}$ is unknown, that formulates an explicit trans-dimensional model.  Although worth trying, model selection will complicate the optimization and is beyond the scope of this study.
 
-The optimizer is realized with limited-memory Broyden-Fletcher-Goldfarb-Shanno algorithm with bound constraint~\cite{byrd_limited_1995}.  It can impose constraints of $q'_i > 0$. The demonstration here shows a result with $D_w = \SI{0.71}{ns}$.
+The optimizer is realized with limited-memory Broyden-Fletcher-Goldfarb-Shanno algorithm with bound constraint~\cite{byrd_limited_1995}.  It can impose constraints of $q'_i > 0$. The demonstration~\ref{fig:fitting} here shows a result with $D_w = \SI{0.71}{ns}$.
 
 \begin{figure}[H]
-  \begin{subfigure}{.33\textwidth}
+  \begin{subfigure}{.5\textwidth}
     \centering
-    \scalebox{0.2}{\input{figures/xiaopeip.pgf}}
-    \caption{Fitting example, $\mathrm{RSS}=\SI{44.97}{mV^2},D_w=\SI{0.71}{ns},\delta=\SI{3.14}{ns}$}
+    \resizebox{\textwidth}{!}{\input{figures/xiaopeip.pgf}}
+    \caption{\label{fig:fitting}Gradient descent: $\mathrm{RSS}=\SI{44.97}{mV^2},D_w=\SI{0.71}{ns},\delta=\SI{3.14}{ns}$}
   \end{subfigure}
-  \begin{subfigure}{.33\textwidth}
-    \centering
-    \resizebox{\textwidth}{!}{\input{figures/xiaopeipchargehist.pgf}}
-    \caption{\label{fig:fitting-hist} $W_{d}$ Histogram \& Boxplot, $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$, method is Fitting}
-  \end{subfigure}
-  \begin{subfigure}{.33\textwidth}
+  \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/xiaopeipchargestats.pgf}}
-    \caption{\label{fig:fitting-npe} $W_{d}$ vs $N_{pe}$, method is Fitting}
+    \caption{\label{fig:fitting-npe} $D_d$ vs $N_{pe}$ Boxplot \& Histogram, $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$, method is Gradient descent}
   \end{subfigure}
 \end{figure}
 
-The result reconstructing $\hat{q}$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ is shown in Fig.~\ref{fig:fitting-hist}.  The overall result of $D_w$ is shown in Fig~\ref{fig:fitting-npe}.
+The result of $\hat{q}$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ is shown in Fig.~\ref{fig:fitting-npe}. The left panel is the boxplot which shows the $D_d$ percentile vs $N_{pe}$, and the right panel is the overall histogram of $D_d$. 
 
 \subsubsection{Markov Chain Monte Carlo}
 
-The typical variable optimization methods such as L-BFGS-B depend on gradient evaluation and their iteration stops when the gradient is smaller than a certain tiny value, following the convention in the field of numerical calculation. In some circumstances, the fitting result may be stuck in local minimum rather than global minimum. Hamiltonian Monte Carlo (HMC), which is a version of the Markov Chain Monte Carlo (MCMC) method, has the potential to overcome this difficulty. 
+The typical variable optimization methods such as L-BFGS-B depend on gradient evaluation and their iteration stops when the gradient is smaller than a certain tiny value, following the convention in the field of numerical calculation. In some circumstances, the Gradient descent result may be stuck in local minimum rather than global minimum. Hamiltonian Monte Carlo (HMC), which is a version of the Markov Chain Monte Carlo (MCMC) method, has the potential to overcome this difficulty. 
 
 HMC is an efficient MCMC method for achieving samples from a distribution for which direct sampling is difficult, especially efficient dealing with high dimensional variables \cite{neal_mcmc_2012}, for example, $q$ in waveform analysis. A program based on HMC is developed intending to sample from the posterior distribution of $q$, as well as $t_{0}$. The samples derived by HMC can usually be approximately ergodic in the posterior distribution, so the global minimum will be obtained with a large sampling set. 
 
@@ -291,26 +285,28 @@ The model and prior distribution are defined below:
 
 where $t_{0}$ is the starting time of time profile and $L_{w}$ is nothing but an upper limit of $t_{0}$. $P_{q}(t_{i})$ is the equivalent charge expectation in time interval $[t_{i}, t_{i}+\mathrm{d}t]$, where $\mathrm{d}t$ is a man-made small time interval depends on the precision required. $q$ follow the probability Normal mixture distribution, whose probability density function (PDF) is $\mathrm{Mix}\mathcal{N}$ in \eqref{eq:mixnormal}. Given $q$, using function $F_{w}(q)$ is the rebuilt waveform expectation. 
 
-We use NumPyro \cite{phan2019composable}, a graceful probabilistic programming library, to build the model and sample. One of the sampling results shows in Fig.~\ref{fig:mcmcrec-t0hist}. 
+We use NumPyro \cite{phan2019composable}, a graceful probabilistic programming library, to build the model and sample. One of the sampling results shows in Fig.~\ref{fig:mcmc-t0hist}. A demonstration shown in Fig.~\ref{fig:mcmc} has $D_w = \SI{}{ns}$. 
 
 \begin{figure}[H]
-\begin{minipage}[t]{.5\textwidth}
-\begin{figure}[H]
     \centering
-    \resizebox{\textwidth}{!}{\input{figures/mcmcrect0hist.pgf}}
-    \caption{\label{fig:mcmcrec-t0hist} $\Delta t_{0}$ Histogram, $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$, method is MCMC}
-\end{figure}
-\end{minipage}
-\begin{minipage}[t]{.5\textwidth}
-\begin{figure}[H]
-    \centering
-    \resizebox{\textwidth}{!}{\input{figures/mcmcchargehist.pgf}}
-    \caption{\label{fig:mcmcrec-chargehist} $W_{d}$ Histogram, $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$, method is MCMC}
-\end{figure}
-\end{minipage}
+    \resizebox{0.5\textwidth}{!}{\input{figures/mcmct0hist.pgf}}
+    \caption{\label{fig:mcmc-t0hist} $\Delta t_{0}$ Histogram, $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$, method is MCMC}
 \end{figure}
 
-We can see during MCMC sampling, the charge w.r.t. time, $\hat{q}$, is also collected. The result reconstructing $\hat{q}$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ shows in figure (see figure~\ref{fig:mcmcrec-chargehist}). 
+\begin{figure}[H]
+  \begin{subfigure}{.5\textwidth}
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/mcmc.pgf}}
+    \caption{\label{fig:mcmc}MCMC: $\mathrm{RSS}=\SI{}{mV^2},D_w=\SI{}{ns},\delta=\SI{}{ns}$}
+  \end{subfigure}
+  \begin{subfigure}{.5\textwidth}
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/mcmcchargestats.pgf}}
+    \caption{\label{fig:mcmc-npe} $D_d$ vs $N_{pe}$ Boxplot \& Histogram, $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$, method is MCMC}
+  \end{subfigure}
+\end{figure}
+
+We can see during MCMC sampling, the charge w.r.t. time, $\hat{q}$, is also collected. The result reconstructing $\hat{q}$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ shows in figure (see figure~\ref{fig:mcmc-npe}). 
 
 \subsubsection{Fast Bayesian Matching Pursuit}
 
@@ -330,23 +326,12 @@ Figure~\ref{fig:fbmp} shows one of the FBMP results. We can see the origin wavef
     \caption{\label{fig:fbmp} FBMP Demo, $\mathrm{RSS}=\SI{24.30}{mV^2},D_w=\SI{0.48}{ns},\delta=\SI{2.91}{ns}$}
 \end{figure}
 
-The result of reconstructed $\hat{q}$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ are shown in Fig.~\ref{fig:fbmp-hist}. The overall result of $D_w$ reconstructing $\hat{q}$ shows in Fig.~\ref{fig:fbmp-npe}). 
+The result of $\hat{q}$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ is shown in Fig.~\ref{fig:fbmp-npe}. The left panel is the boxplot which shows the $D_d$ percentile vs $N_{pe}$, and the right panel is the overall histogram of $D_d$. 
 
 \begin{figure}[H]
-\begin{minipage}[t]{.5\textwidth}
-\begin{figure}[H]
     \centering
-    \resizebox{\textwidth}{!}{\input{figures/fbmpchargehist.pgf}}
-    \caption{\label{fig:fbmp-hist} $W_{d}$ Histogram \& Boxplot, $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$, method is FBMP}
-\end{figure}
-\end{minipage}
-\begin{minipage}[t]{.5\textwidth}
-\begin{figure}[H]
-    \centering
-    \resizebox{\textwidth}{!}{\input{figures/fbmpchargestats.pgf}}
-    \caption{\label{fig:fbmp-npe} $W_{d}$ vs $N_{pe}$, method is FBMP}
-\end{figure}
-\end{minipage}
+    \resizebox{0.5\textwidth}{!}{\input{figures/fbmpchargestats.pgf}}
+    \caption{\label{fig:fbmp-npe} $D_d$ vs $N_{pe}$ Boxplot \& Histogram, $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$, method is FBMP}
 \end{figure}
 
 It is noted that one of the deconvolution methods can be used for FBMP initialization, where we reduce $N$ regarding deconvolution results. In the test of FBMP, we use LucyDDM as the initializer. 
