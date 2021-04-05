@@ -193,7 +193,7 @@ Advances in neural networks have brought breakthroughs in various domains like c
 
 Although advanced structures like residual connection and strategies like batch-norm alleviated training convergence problems for deep networks, the pulse-shape and universality of $V_\mathrm{PE}(t)$ for all the PE signals permit patterns to be recognized in only a few layers.  We chose a shadow network structure of 5 layers~(Fig.~\ref{fig:struct}) to cut the computation in massive experimental data.  Deeper structures give diminishing returns.
 
-The workflow of data processing consists of training and predicting. Training is to find an efficient mapping from detector waveforms $w(t)$ to PE $\tilde{\phi}(t)$ with backpropagation methods by supervised learning.  The learning is achieved by minimizing the Wasserstein distance loss $W_d$ between the truth $\tilde{\phi}$ and predicted $\hat{\phi}(t)$.  As discussed in Section~\ref{sec:W-dist}, $W_d$ is chosen to handle the PE sparsity and output proximity judgement in training iterations.  KL divergences discussed in Section~\ref{sec:pseudo} is a candidate but it is still to be explored to implement in a trainable form for backpropagation.  RSS is less timing sensitive.  The evolution of Wasserstein distance during training is shown in figure~\ref{fig:loss}. 
+The workflow of data processing consists of training and predicting. Training is to find an efficient mapping from detector waveforms $w(t)$ to PE $\tilde{\phi}(t)$ with backpropagation methods by supervised learning.  The learning is achieved by minimizing the Wasserstein distance loss $D_w$ between the truth $\tilde{\phi}$ and predicted $\hat{\phi}(t)$.  As discussed in Section~\ref{sec:W-dist}, $D_w$ is chosen to handle the PE sparsity and output proximity judgement in training iterations.  KL divergences discussed in Section~\ref{sec:pseudo} is a candidate but it is still to be explored to implement in a trainable form for backpropagation.  RSS is less timing sensitive.  The evolution of Wasserstein distance during training is shown in figure~\ref{fig:loss}. 
 
 \begin{figure}[H]
   \begin{subfigure}{0.35\textwidth}
@@ -211,7 +211,7 @@ The workflow of data processing consists of training and predicting. Training is
   \caption{\label{fig:CNN} Training of a CNN}
 \end{figure}
 
-The product of network training is a function that creates PE outputs $\hat{\phi}(t)$ from waveform inputs $w(t)$.  Since $W_d$ disregards normalization, $\hat{\phi}$ is scaled to $\hat{Q}\hat{\phi}_*$ following~\eqref{eq:fdconv2}. A demonstration shown in Fig.~\ref{fig:cnn} has $D_w = \SI{0.64}{ns}$. 
+The product of network training is a function that creates PE outputs $\hat{\phi}(t)$ from waveform inputs $w(t)$.  Since $D_w$ disregards normalization, $\hat{\phi}$ is scaled to $\hat{Q}\hat{\phi}_*$ following~\eqref{eq:fdconv2}. A demonstration shown in Fig.~\ref{fig:cnn} has $D_w = \SI{0.64}{ns}$. 
 
 The result of $\hat{\phi}(t)$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ is shown in Fig.~\ref{fig:cnn-npe}. The left panel is the boxplot which shows the $D_d$ percentile vs $N_{pe}$, and the right panel is the overall histogram of $D_d$. 
 
@@ -296,18 +296,17 @@ $\hat{t}_0$ and $\hat{q}_i$ are constructed as the mean estimators of posterior 
   \hat{\phi}(t) = \sum_{i=1}^{N_s}\hat{q}_i\delta(t-t'_i).
 \end{equation}
 
-The distribution of $\Delta{t_0} = \hat{t}_0 - t_0$ is shown in Fig.~\ref{fig:mcmc-t0hist} and $W_d$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ is shown in Fig.~\ref{fig:mcmc}.
+The distribution of $\Delta{t_0} = \hat{t}_0 - t_0$ is shown in Fig.~\ref{fig:mcmc-t0hist} and $D_w$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ is shown in Fig.~\ref{fig:mcmc}.
 \begin{figure}[H]
+  \begin{subfigure}{\textwidth}
     \centering
-    \resizebox{0.5\textwidth}{!}{\input{figures/mcmct0hist.pgf}}
-    \caption{\label{fig:mcmc-t0hist} $\Delta t_{0}$ Histogram, $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$, method is MCMC}
-\end{figure}
-
-\begin{figure}[H]
+    \resizebox{0.5\textwidth}{!}{\input{figures/mcmc.pgf}}
+    \caption{\label{fig:mcmc}MCMC: $\mathrm{RSS}=\SI{}{mV^2},D_w=\SI{}{ns},\delta=\SI{}{ns}$}
+  \end{subfigure}
   \begin{subfigure}{.5\textwidth}
     \centering
-    \resizebox{\textwidth}{!}{\input{figures/mcmc.pgf}}
-    \caption{\label{fig:mcmc}MCMC: $\mathrm{RSS}=\SI{}{mV^2},D_w=\SI{}{ns},\delta=\SI{}{ns}$}
+    \resizebox{\textwidth}{!}{\input{figures/mcmct0hist.pgf}}
+    \caption{\label{fig:mcmc-t0hist} $\Delta t_{0}$ Histogram}
   \end{subfigure}
   \begin{subfigure}{.5\textwidth}
     \centering
