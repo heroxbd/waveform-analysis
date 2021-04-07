@@ -108,8 +108,7 @@ def lucyddm(waveform, spe_pre):
     .. [1] https://en.wikipedia.org/wiki/Richardson%E2%80%93Lucy_deconvolution
     .. [2] https://github.com/scikit-image/scikit-image/blob/master/skimage/restoration/deconvolution.py#L329
     '''
-    n = 0
-    spe = np.append(np.zeros(len(spe_pre) - 2 * n - 1), np.abs(spe_pre))
+    spe = np.append(np.zeros(len(spe_pre) - 1), np.abs(spe_pre))
     waveform = np.clip(waveform, 1e-6, np.inf)
     spe = np.clip(spe, 1e-6, np.inf)
     waveform = waveform / np.sum(spe)
@@ -118,11 +117,11 @@ def lucyddm(waveform, spe_pre):
     while True:
         relative_blur = waveform / np.convolve(wave_deconv, spe, mode='same')
         new_wave_deconv = wave_deconv * np.convolve(relative_blur, spe_mirror, mode='same')
-        if np.max(np.abs(wave_deconv[n:] - new_wave_deconv[n:])) < 1e-4:
+        if np.max(np.abs(wave_deconv - new_wave_deconv)) < 1e-4:
             break
         else:
             wave_deconv = new_wave_deconv
-    return np.arange(0, len(waveform) - n), wave_deconv[n:]
+    return np.arange(len(waveform)), wave_deconv
 
 def omp(wave, A, tlist, factor):
     coef = orthogonal_mp(A, wave[:, None])

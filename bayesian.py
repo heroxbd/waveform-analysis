@@ -68,8 +68,8 @@ if Tau != 0:
     Alpha = 1 / Tau
     Co = (Alpha / 2. * np.exp(Alpha ** 2 * Sigma ** 2 / 2.)).item()
 std = 1.
-Thres = {'mcmc':0.1, 'lucyddm':0.1, 'fbmp':1e-6}
-mix0sigma = 1e-4
+Thres = {'mcmc':std / gsigma, 'lucyddm':0.1, 'fbmp':1e-6}
+mix0sigma = 1e-3
 
 class mNormal(numpyro.distributions.distribution.Distribution):
     arg_constraints = {'pl': numpyro.distributions.constraints.real}
@@ -125,39 +125,28 @@ def time_numpyro(a0, a1):
         cid = ent[i]['ChannelID']
         wave = ent[i]['Waveform'].astype(np.float64) * spe_pre[cid]['epulse']
 
-        n = max(math.ceil(Mu / math.sqrt(Tau ** 2 + Sigma ** 2)), 1)
-        AV, wave, tlist, t0_init, t0_init_delta, A_init = wff.initial_params(wave, spe_pre[cid], Mu, Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, n=n, nshannon=1)
+        # n = max(math.ceil(Mu / math.sqrt(Tau ** 2 + Sigma ** 2)), 1)
+        n = 2
+        AV, wave, tlist, t0_init, t0_init_delta, A_init = wff.initial_params(wave[::wff.nshannon], spe_pre[cid], Mu, Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, n=n, nshannon=1)
         AV = jnp.array(AV)
         wave = jnp.array(wave)
         tlist = jnp.array(tlist)
         t0_init = jnp.array(t0_init)
-        A_init = jnp.array(A_init) + jnp.finfo(jnp.float64).epsneg
+        A_init = jnp.array(A_init)
 
         time_mcmc_start = time.time()
         nuts_kernel = numpyro.infer.NUTS(model, adapt_step_size=True, init_strategy=numpyro.infer.initialization.init_to_value(values={'t0': t0_init, 'A': A_init}))
         mcmc = numpyro.infer.MCMC(nuts_kernel, num_samples=1000, num_warmup=1000, num_chains=1, progress_bar=False, chain_method='sequential', jit_model_args=True)
         try:
             ticrun = time.time()
-            mcmc.run(rng_key, n=n, y=wave, mu=Mu, tlist=tlist, AV=AV, t0left=t0_init - 3 * Sigma, t0right=t0_init + 3 * Sigma, extra_fields=('num_steps', 'accept_prob', 'potential_energy'))
+            mcmc.run(rng_key, n=n, y=wave, mu=Mu, tlist=tlist, AV=AV, t0left=t0_init - 3 * Sigma, t0right=t0_init + 3 * Sigma, extra_fields=('accept_prob', 'potential_energy'))
             tocrun = time.time()
             time_mcmc = time_mcmc + time.time() - time_mcmc_start
-            num_leapfrogs = mcmc.get_extra_fields()['num_steps'].sum()
-            # print('avg. time for each step :', (tocrun - ticrun) / num_leapfrogs)
             potential_energy = np.array(mcmc.get_extra_fields()['potential_energy'])
             accep[i - a0] = np.array(mcmc.get_extra_fields()['accept_prob']).mean()
             t0_t0 = np.array(mcmc.get_samples()['t0']).flatten()
             A = np.array(mcmc.get_samples()['A'])
             count = count + 1
-
-            # # tlist_pan = np.array(tlist)
-            tlist_pan = np.sort(np.unique(np.hstack(np.arange(0, window)[:, None] + np.arange(0, 1, 1 / n))))
-            btlist = np.arange(t0_init - 3 * Sigma, t0_init + 3 * Sigma + 1e-6, 0.2)
-
-            As = np.zeros(len(tlist_pan))
-            As[np.isin(tlist_pan, tlist)] = np.mean(A, axis=0)
-            logL = lambda t0 : -1 * np.sum(np.log(np.clip(wff.convolve_exp_norm(tlist_pan - t0, Tau, Sigma), np.finfo(np.float64).tiny, np.inf)) * As)
-            logLv_btlist = np.vectorize(logL)(btlist)
-            t0_cha = opti.fmin_l_bfgs_b(logL, x0=[btlist[np.argmin(logLv_btlist)]], approx_grad=True, bounds=[b], maxfun=50000)[0]
         except:
             time_mcmc = time_mcmc + time.time() - time_mcmc_start
             t0_t0 = np.array(t0_init)
@@ -238,7 +227,7 @@ def fbmp_inference(a0, a1):
             d_tot_i = 0
             d_max_i = 0
             pet = tlist
-            cha = char_init / gmu
+            cha = char_init
 
         d_tot[i - a0] = d_tot_i
         d_max[i - a0] = d_max_i
