@@ -5,17 +5,9 @@
 
 Formula \eqref{eq:pseudo} is the likelihood to estimate $t_{0}$ in formula \eqref{eq:time-pro}. But $q_{i}$ is the charge in each time bin $t_{i}$ rather the number of PE. 
 
-\begin{align}
-    \mathcal{L}(t_{0}) &= e^{-\mu}\Pi_{i=0}^{N_\mathrm{PE}}\left(\sum_{j=a}^{b}[P_{i}(q_{i},j)(P_{t}(t_{i}))^{j}]\right)
-    \label{eq:originlikelihood} \\
-    P_{i}(q_{i},j) &= \frac{P_{q}(q_{i}|j)}{\sum_{j=a}^{b}P_{q}(q_{i}|j)}
-\end{align}
-
-For reconstructed hittime and charge produced by waveform analysis algorithms, each charge $q$ is registered to a single hittime $t$, but the number of PE at a single hittime is uncertain. $P_{i}(q_{i},j)$ is the posterior probability if the number of PE is $j$ with charge $q_{i}$. $a$ and $b$ are the upper and lower bound estimation of the number of PE $j$. 
-
 % Methods
 
-The $W_{d}$ summary of all methods is plotted in Fig.~\ref{fig:chargesummary}, with all dataset parameters $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$. The errorbar shows 5 to 95 percentile of Wasserstein distance distribution. 
+The $D_w$ summary of all methods is plotted in Fig.~\ref{fig:chargesummary}, with all dataset parameters $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$. The errorbar shows 5 to 95 percentile of Wasserstein distance distribution. 
 
 \begin{figure}[H]
     \centering
@@ -27,14 +19,14 @@ It is apparent that FindPeak, Shift, and FFT are second-rate among all 8 methods
 
 % Figure of Merits
 
-The $W_{d}$ summary of 5 methods (LucyDDM, Fitting, MCMC, CNN, FBMP) is plotted in \ref{fig:wdistsummary}, with all dataset parameters combination. The errorbar shows 5 to 95 percentile of Wasserstein distance distribution. Wasserstein distances of all 5 methods are approaching each other when $\mu$ increases. 
+The $D_w$ summary of 5 methods (LucyDDM, Fitting, MCMC, CNN, FBMP) is plotted in \ref{fig:wdistsummary}, with all dataset parameters combination. The errorbar shows 5 to 95 percentile of Wasserstein distance distribution. Wasserstein distances of all 5 methods are approaching each other when $\mu$ increases. 
 
 We can see that as method CNN uses Wasserstein distance as loss directly during training, its Wasserstein distance is the smallest. While Fitting treats RSS as its loss, FBMP obtains the least RSS among 5 methods (see formula~\ref{fig:rsssummary}) and CNN follows. 
 
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/vs-wdist.pgf}}
-    \caption{\label{fig:wdistsummary} $W_{d}$ of methods, error bar 5--95 percentile ($\hat{q}$)}
+    \caption{\label{fig:wdistsummary} $D_w$ of methods, error bar 5--95 percentile ($\hat{q}$)}
 \end{figure}
 
 \begin{figure}[H]
@@ -61,7 +53,28 @@ In the figure, $\mathrm{MCMCcha}$ corresponds to reconstruction with recorded $\
 
 All 5 methods (LucyDDM, Fitting, MCMC, CNN, FBMP) provide better timing resolution $\delta$ than only using the first PE during construction. 
 
-% Fitting & Posterior charge distribution
+
+\subsection{Program Efficiency}
+
+The efficiency of 5 performant methods on our simulation dataset show in Table~\ref{fig:efficiency}. The CNN on GPU is faster than LucyDDM and FBMP, and much faster than gradient descent.  Number of iteration for LucyDDM and gradient descent and $t'_i$ sampling frequency of FBMP and MCMC can be decreased to trade for speed.  The time consumed by FBMP contains the initialization time of LucyDDM pre-conditioner.
+
+\begin{table}[H]
+    \centering
+    \caption{\label{fig:efficiency} Reconstruction Efficiency.}
+    \begin{tabular}{cc}
+        \hline
+        & Performance/$10^{5}$Waveform \\
+        \hline
+        CNN & 7.5s (GPU\tablefootnote{one graphics card of NVIDIA\textsuperscript{\textregistered} Tesla\textsuperscript{\textregistered} K80.}) \\
+        FBMP & 432.7s (CPU\tablefootnote{100 CPU cores of AMD EYPC\texttrademark\ 7702}) \\
+        Gradient Descent & 1072.5s (CPU) \\
+        LucyDDM & 362.7s (CPU) \\
+        MCMC & 15539.1s (CPU) \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\subsection{Posterior Charge Distribution}
 
 The charge of reconstruction, $\hat{q}$, result distribution when $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$ shows in figure (see figure~\ref{fig:recchargehist}). 
 
