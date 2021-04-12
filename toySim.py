@@ -101,7 +101,7 @@ ts['ts1sttruth'] = np.array([np.min(pelist[i_pel[i]:i_pel[i+1]]['HitPosInWindow'
 t0 = recfunctions.join_by(('TriggerNo', 'ChannelID'), ts, t0, usemask=False)
 
 r = 7
-vali = np.logical_not((np.sum(waves['Waveform'], axis=1) <= 0) | np.any(np.isnan(waves['Waveform']), axis=1) | np.isin(waves['TriggerNo'], pelist['TriggerNo'][pelist['HitPosInWindow'] > window - 1]) | (np.abs(t0['tstruth'] - t0['T0'] - np.mean(t0['tstruth'] - t0['T0'])) > r * np.std(t0['tstruth'] - t0['T0'], ddof=-1)))
+vali = np.logical_not((np.sum(waves['Waveform'], axis=1) <= 0) | np.any(np.isnan(waves['Waveform']), axis=1) | np.isin(waves['TriggerNo'], pelist['TriggerNo'][pelist['HitPosInWindow'] > window - 1]) | (np.abs(t0['tstruth'] - t0['T0'] - np.mean(t0['tstruth'] - t0['T0'])) > r * np.std(t0['tstruth'] - t0['T0'], ddof=-1)) | (np.sum(waves['Waveform'] > 5 * std, axis=1) <= 0))
 if np.sum(vali) != args.N:
     t0 = t0[vali]
     waves = waves[vali]

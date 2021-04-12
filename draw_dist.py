@@ -134,6 +134,11 @@ pdf.savefig(fig)
 plt.close(fig)
 
 with h5py.File(args.ref[0], 'r', libver='latest', swmr=True) as wavef, h5py.File(args.ref[1], 'r', libver='latest', swmr=True) as soluf, h5py.File(args.ref[2], 'r', libver='latest', swmr=True) as charf:
+    waves = wavef['Readout/Waveform'][:]
+    Mu = wavef['Readout/Waveform'].attrs['mu']
+    Tau = wavef['Readout/Waveform'].attrs['tau']
+    Sigma = wavef['Readout/Waveform'].attrs['sigma']
+    pelist = wavef['SimTriggerInfo/PEList'][:]
     start = wavef['SimTruth/T'][:]
     time = soluf['starttime'][:]
     charge = charf['photoelectron'][:]
@@ -187,6 +192,68 @@ if not np.all(np.isnan(time['tswave'])):
 
 pdf.savefig(fig)
 plt.close(fig)
+
+if 'muwave' in time.dtype.names:
+    # Mu = dt['NPE']
+    fig = plt.figure()
+    gs = gridspec.GridSpec(2, 2, figure=fig, left=0.1, right=0.95, top=0.9, bottom=0.1, wspace=0.2, hspace=0.3)
+
+    Chnum = len(np.unique(pelist['PMTId']))
+    e_ans, i_ans = np.unique(pelist['TriggerNo'] * Chnum + pelist['PMTId'], return_index=True)
+    i_ans = np.append(i_ans, len(pelist))
+    pe_sum = np.array([pelist[i_ans[i]:i_ans[i+1]]['Charge'].sum() for i in range(len(e_ans))]) / gmu
+    wave_sum = waves['Waveform'].sum(axis=1) / gmu
+
+    ax0 = fig.add_subplot(gs[0, 0])
+    ax0.hist(wave_sum - Mu, bins=100, label=r'$\mu_{int} - \mu$')
+    ax0.set_xlabel(r'$\mu_{int} - \mu$')
+    ax0.set_ylabel(r'$Count$')
+    ax0.set_yscale('log')
+    ax0.legend()
+    s = np.std(wave_sum - Mu, ddof=-1)
+    m = np.mean(wave_sum - Mu)
+    # ax0.set_xlim(-Mu, dt['NPE'].max()-Mu)
+    ax0.set_title(fr'$\delta_{{int}}={s:.02f},\mathrm{{bias}}={m:.02f}$')
+
+    ax1 = fig.add_subplot(gs[0, 1])
+    ax1.hist(pe_sum - Mu, bins=100, label=r'$\mu_{pe} - \mu$')
+    ax1.set_xlabel(r'$\mu_{pe} - \mu$')
+    ax1.set_ylabel(r'$Count$')
+    ax1.set_yscale('log')
+    ax1.legend()
+    s = np.std(pe_sum - Mu, ddof=-1)
+    m = np.mean(pe_sum - Mu)
+    # ax1.set_xlim(-Mu, dt['NPE'].max()-Mu)
+    ax1.set_title(fr'$\delta_{{pe}}={s:.02f},\mathrm{{bias}}={m:.02f}$')
+
+    ax2 = fig.add_subplot(gs[1, 0])
+    ax2.hist(time['mucharge'] - Mu, bins=100, label=r'$\mu_{cha} - \mu$')
+    ax2.set_xlabel(r'$\mu_{cha} - \mu$')
+    ax2.set_ylabel(r'$Count$')
+    ax2.set_yscale('log')
+    ax2.legend()
+    s = np.std(time['mucharge'] - Mu, ddof=-1)
+    m = np.mean(time['mucharge'] - Mu)
+    # ax2.set_xlim(-Mu, dt['NPE'].max()-Mu)
+    ax2.set_title(fr'$\delta_{{cha}}={s:.02f},\mathrm{{bias}}={m:.02f}$')
+
+    ax3 = fig.add_subplot(gs[1, 1])
+    ax3.hist(time['muwave'] - Mu, bins=100, label=r'$\mu_{wave} - \mu$')
+    ax3.set_xlabel(r'$\mu_{wave} - \mu$')
+    ax3.set_ylabel(r'$Count$')
+    ax3.set_yscale('log')
+    ax3.legend()
+    s = np.std(time['muwave'] - Mu, ddof=-1)
+    m = np.mean(time['muwave'] - Mu)
+    # ax3.set_xlim(-Mu, dt['NPE'].max()-Mu)
+    ax3.set_title(fr'$\delta_{{wave}}={s:.02f},\mathrm{{bias}}={m:.02f}$')
+
+    s = np.std(dt['NPE'] - Mu, ddof=-1)
+    m = np.mean(dt['NPE'] - Mu)
+    fig.suptitle(fr'$\delta_{{N_{{pe}}}}={s:.02f},\mathrm{{bias}}={m:.02f}$')
+
+    pdf.savefig(fig)
+    plt.close(fig)
 
 fig = plt.figure()
 ax = fig.add_subplot(111)

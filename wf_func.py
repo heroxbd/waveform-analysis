@@ -174,21 +174,22 @@ def findpeak(wave, spe_pre):
 def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0):
     M, N = A.shape
 
-    nu_true_mean = -M / 2 - M / 2 * np.log(sig2w) - p1 * N / 2 * np.log(sig2s / sig2w + 1) - M / 2 * np.log(2 * np.pi) + N * np.log(1 - p1) + p1 * N * np.log(p1 / (1 - p1))
-    nu_true_stdv = np.sqrt(M / 2 + N * p1 * (1 - p1) * (np.log(p1 / (1 - p1)) - np.log(sig2s / sig2w + 1) / 2) ** 2)
+    p = p1.mean()
+    nu_true_mean = -M / 2 - M / 2 * np.log(sig2w) - p * N / 2 * np.log(sig2s / sig2w + 1) - M / 2 * np.log(2 * np.pi) + N * np.log(1 - p) + p * N * np.log(p / (1 - p))
+    nu_true_stdv = np.sqrt(M / 2 + N * p * (1 - p) * (np.log(p / (1 - p)) - np.log(sig2s / sig2w + 1) / 2) ** 2)
     nu_stop = nu_true_mean - stop * nu_true_stdv
 
     psy_thresh = 1e-4
-    P = min(M, 1 + math.ceil(N * p1 + 1.82138636 * math.sqrt(2 * N * p1 * (1 - p1))))
+    P = min(M, 1 + math.ceil(N * p + 1.82138636 * math.sqrt(2 * N * p * (1 - p))))
 
     T = np.full((P, D), 0)
     nu = np.full((P, D), -np.inf)
     xmmse = np.zeros((P, D, N))
     d_tot = D - 1
 
-    nu_root = -np.linalg.norm(y) ** 2 / 2 / sig2w - M * np.log(2 * np.pi) / 2 - M * np.log(sig2w) / 2 + N * np.log(1 - p1)
+    nu_root = -np.linalg.norm(y) ** 2 / 2 / sig2w - M * np.log(2 * np.pi) / 2 - M * np.log(sig2w) / 2 + np.log(1 - p1).sum()
     Bxt_root = A / sig2w
-    betaxt_root = np.abs(sig2s / (1 + sig2s * np.sum(np.conjugate(A) * Bxt_root, axis=0)))
+    betaxt_root = np.abs(sig2s / (1 + sig2s * np.sum(A * Bxt_root, axis=0)))
     nuxt_root = nu_root + np.log(betaxt_root / sig2s) / 2 + 0.5 * betaxt_root * np.abs(np.dot(y, Bxt_root) + mus / sig2s) ** 2 - 0.5 * mus ** 2 / sig2s + np.log(p1 / (1 - p1))
     
     for d in range(D):
@@ -385,7 +386,7 @@ def initial_params(wave, spe_pre, Mu, Tau, Sigma, gmu, Thres, p, nsp, nstd, is_t
     t0_init_delta = None
     if is_t0:
         t0_init, t0_init_delta = likelihoodt0(hitt=hitt, char=char, gmu=gmu, Tau=Tau, Sigma=Sigma, mode='charge', is_delta=is_delta)
-    return A, wave, tlist, t0_init, t0_init_delta, npe_init
+    return A, wave, tlist, t0_init, t0_init_delta, npe_init, left_wave, right_wave
 
 def stdrmoutlier(array, r):
     arrayrmoutlier = array[np.abs(array - np.mean(array)) < r * np.std(array, ddof=-1)]
