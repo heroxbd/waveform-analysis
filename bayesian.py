@@ -14,7 +14,6 @@ import numpy as np
 import scipy
 import scipy.stats
 from scipy.stats import poisson, uniform, norm
-import scipy.special as special
 from scipy import optimize as opti
 import scipy.special as special
 import pandas as pd
@@ -72,6 +71,11 @@ if Tau != 0:
 std = 1.
 Thres = {'mcmc':std / gsigma, 'lucyddm':0.1, 'fbmp':1e-6}
 mix0sigma = 1e-3
+mu0 = np.arange(2, int(Mu + 5 * np.sqrt(Mu)))
+n_t = np.arange(1, 100)
+p_t = special.comb(mu0, 2)[:, None] * np.power(wff.convolve_exp_norm(np.arange(1029) - 200, Tau, Sigma) / n_t[:, None], 2).sum(axis=1)
+n0 = np.array([n_t[p_t[i] < max(1e-2, np.sort(p_t[i])[1])].min() for i in range(len(mu0))])
+ndict = dict(zip(mu0, n0))
 
 class mNormal(numpyro.distributions.distribution.Distribution):
     arg_constraints = {'pl': numpyro.distributions.constraints.real}
@@ -196,7 +200,7 @@ def fbmp_inference(a0, a1):
 
         # initialization
         mu_t = abs(wave.sum() / gmu)
-        n = max(math.ceil(mu_t / math.sqrt(Tau ** 2 + Sigma ** 2)) * 1, 1) * 10
+        n = ndict[min(math.ceil(mu_t + 3 * np.sqrt(mu_t)), max(mu0))]
         A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Mu, Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
         try:
             def optit0mu(t0, mu, n, xmmse_star, psy_star, la, factor):
@@ -231,21 +235,6 @@ def fbmp_inference(a0, a1):
             la = np.clip(mu_t * wff.convolve_exp_norm(tlist - t0_t, Tau, Sigma) / n, 1e-3, 1 - 1e-3)
             xmmse, xmmse_star, psy_star, nu_star, T_star, d_tot_i, d_max_i = wff.fbmpr_fxn_reduced(wave_r, A, la, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, D, stop=0)
             time_fbmp = time_fbmp + time.time() - time_fbmp_start
-
-            # t0_t, mu_t, ys = optit0mu(t0_t, mu_t, n, xmmse_star, psy_star, la, factor)
-
-            # # 2nd initialization
-            # tlist = np.unique(np.clip(np.hstack(np.around(tlist[xmmse > 0][:, None] * n) + np.arange(-nsp, nsp+1)), 0, len(wave[::wff.nshannon]) * n - 1) / n)
-            # n = n * 5
-            # tlist = np.unique(np.sort(np.hstack(np.around(tlist[:, None] * n) + np.arange(0, n))) / n)
-            # t_auto = (np.arange(left_wave, right_wave) / wff.nshannon)[:, None] - tlist
-            # A = p[2] * np.exp(-1 / 2 * (np.log((t_auto + np.abs(t_auto)) * (1 / p[0] / 2)) * (1 / p[1])) ** 2)
-
-            # # 2nd FBMP
-            # factor = np.sqrt(np.diag(np.matmul(A.T, A)).mean())
-            # A = np.matmul(A, np.diag(1. / np.sqrt(np.diag(np.matmul(A.T, A)))))
-            # la = np.clip(mu_t * wff.convolve_exp_norm(tlist - t0_t, Tau, Sigma) / n, 1e-3, 1 - 1e-3)
-            # xmmse, xmmse_star, psy_star, nu_star, T_star, d_tot_i, d_max_i = wff.fbmpr_fxn_reduced(wave_r, A, la, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, D, stop=0)
 
             t0, mu, ys = optit0mu(t0_t, mu_t, n, xmmse_star, psy_star, la, factor)
 
