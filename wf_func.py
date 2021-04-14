@@ -170,7 +170,6 @@ def findpeak(wave, spe_pre):
         cha = np.array([1])
     return pet, cha
 
-# @njit
 def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0):
     M, N = A.shape
 

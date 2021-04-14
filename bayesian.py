@@ -71,7 +71,7 @@ if Tau != 0:
 std = 1.
 Thres = {'mcmc':std / gsigma, 'lucyddm':0.1, 'fbmp':1e-6}
 mix0sigma = 1e-3
-mu0 = np.arange(2, int(Mu + 5 * np.sqrt(Mu)))
+mu0 = np.arange(1, int(Mu + 5 * np.sqrt(Mu)))
 n_t = np.arange(1, 100)
 p_t = special.comb(mu0, 2)[:, None] * np.power(wff.convolve_exp_norm(np.arange(1029) - 200, Tau, Sigma) / n_t[:, None], 2).sum(axis=1)
 n0 = np.array([n_t[p_t[i] < max(1e-2, np.sort(p_t[i])[1])].min() for i in range(len(mu0))])
@@ -133,7 +133,7 @@ def time_numpyro(a0, a1):
 
         # n = max(math.ceil(Mu / math.sqrt(Tau ** 2 + Sigma ** 2)), 1)
         n = 2
-        AV, wave, tlist, t0_init, t0_init_delta, A_init = wff.initial_params(wave[::wff.nshannon], spe_pre[cid], Mu, Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, n=n, nshannon=1)
+        AV, wave, tlist, t0_init, t0_init_delta, A_init, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[cid], Mu, Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, n=n, nshannon=1)
         AV = jnp.array(AV)
         wave = jnp.array(wave)
         tlist = jnp.array(tlist)
@@ -181,7 +181,7 @@ def time_numpyro(a0, a1):
 def fbmp_inference(a0, a1):
     nsp = 4
     nstd = 3
-    D = 500
+    D = 1000
     t0_wav = np.empty(a1 - a0)
     t0_cha = np.empty(a1 - a0)
     mu_wav = np.empty(a1 - a0)
