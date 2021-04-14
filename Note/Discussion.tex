@@ -1,59 +1,6 @@
 \section{Summary and Discussion} % (fold)
 \label{sec:discussion}
 
-% Likelihood
-
-Formula \eqref{eq:pseudo} is the likelihood to estimate $t_{0}$ in formula \eqref{eq:time-pro}. But $q_{i}$ is the charge in each time bin $t_{i}$ rather the number of PE. 
-
-% Methods
-
-The $D_w$ summary of all methods is plotted in Fig.~\ref{fig:chargesummary}, with all dataset parameters $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$. The errorbar shows 5 to 95 percentile of Wasserstein distance distribution. 
-
-\begin{figure}[H]
-    \centering
-    \scalebox{0.6}{\input{figures/summarycharge.pgf}}
-    \caption{\label{fig:chargesummary} $W_{d}$ of methods with light curve $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$}
-\end{figure}
-
-It is apparent that FindPeak, Shift, and FFT are second-rate among all 8 methods, so we will only discuss the other 5 methods below. 
-
-% Figure of Merits
-
-The $D_w$ summary of 5 methods (LucyDDM, Fitting, MCMC, CNN, FBMP) is plotted in \ref{fig:wdistsummary}, with all dataset parameters combination. The errorbar shows 5 to 95 percentile of Wasserstein distance distribution. Wasserstein distances of all 5 methods are approaching each other when $\mu$ increases. 
-
-We can see that as method CNN uses Wasserstein distance as loss directly during training, its Wasserstein distance is the smallest. While Fitting treats RSS as its loss, FBMP obtains the least RSS among 5 methods (see formula~\ref{fig:rsssummary}) and CNN follows. 
-
-\begin{figure}[H]
-    \centering
-    \resizebox{\textwidth}{!}{\input{figures/vs-wdist.pgf}}
-    \caption{\label{fig:wdistsummary} $D_w$ of methods, error bar 5--95 percentile ($\hat{q}$)}
-\end{figure}
-
-\begin{figure}[H]
-    \centering
-    \resizebox{\textwidth}{!}{\input{figures/vs-rss.pgf}}
-    \caption{\label{fig:rsssummary} RSS of methods, error bar 5--95 percentile ($\hat{q}$)}
-\end{figure}
-
-The timing resolution $\delta$ using waveform analysis results (charge $\hat{q}$) of these methods are computed and collected. The $t_{0}$ reconstruction process is also MLE, which introduced by the formula \eqref{eq:pseudo}. Additionally, MCMC can provide an estimation of $t_{0}$ directly, which is also collected, and FBMP provides dozens of samples of $q$, which allows us to derive MLE estimation of $t_{0}$. The comparison between timing resolution using the first PE, all PE, and the 5 methods is shown in figure~\ref{fig:deltamethods}. 
-
-\begin{figure}[H]
-    \centering
-    \resizebox{\textwidth}{!}{\input{figures/vs-deltamethodsdiv.pgf}}
-    \caption{\label{fig:deltamethods} Timing resolution ratio $\delta_{\mathrm{all}}/\delta_{\mathrm{1st}}$ of methods}
-\end{figure}
-
-\begin{figure}[H]
-    \centering
-    \resizebox{\textwidth}{!}{\input{figures/recchargehist.pgf}}
-    \caption{\label{fig:recchargehist}  $\hat{q}$ distribution, $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$}
-\end{figure}
-
-In the figure, $\mathrm{MCMCcha}$ corresponds to reconstruction with recorded $\hat{q}$ during sampling and $\mathrm{MCMCt0}$ corresponds to reconstruction with $t_{0}$, which is directly collected in the MCMC method. $\mathrm{FBMPcha}$ corresponds to reconstruction with maximum posterior probability model's $\hat{q}$ and $\mathrm{FBMPt0}$ corresponds to the estimation of $t_{0}$ with all samples provided by FBMP. 
-
-All 5 methods (LucyDDM, Fitting, MCMC, CNN, FBMP) provide better timing resolution $\delta$ than only using the first PE during construction. 
-
-
 \subsection{Program Efficiency}
 
 The efficiency of 5 performant methods on our simulation dataset show in Table~\ref{fig:efficiency}. The CNN on GPU is faster than LucyDDM and FBMP, and much faster than gradient descent.  Number of iteration for LucyDDM and gradient descent and $t'_i$ sampling frequency of FBMP and MCMC can be decreased to trade for speed.  The time consumed by FBMP contains the initialization time of LucyDDM pre-conditioner.
@@ -76,6 +23,12 @@ The efficiency of 5 performant methods on our simulation dataset show in Table~\
 
 \subsection{Posterior Charge Distribution}
 
+\begin{figure}[H]
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/recchargehist.pgf}}
+    \caption{\label{fig:recchargehist}  $\hat{q}$ distribution, $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$}
+\end{figure}
+
 The charge of reconstruction, $\hat{q}$, result distribution when $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$ shows in figure (see figure~\ref{fig:recchargehist}). 
 
 The steep edge near 0 in these distributions results from the cut of the original $\hat{q}$, which is intended to remove fragment values of $\hat{q}$. But as we can see in figure~\ref{fig:recchargehist}, the charge distribution of LucyDDM, Fitting, CNN, and MCMC are severely distorted, while the charge distribution of FBMP partly retains the shape of the original (or prior) distribution of charge and only some skewing persists. 
@@ -93,5 +46,25 @@ But as we see, the reconstruction results of hittime, $\hat{t}$, are discrete va
 % Pedestal & Hardware
 
 The evaluation of the pedestal of waveforms is not included in this work, which is a potential future work to do. Additionally, widely equipped PMTs bring the storage pressure of readout data. This problem can be solved by a voltage data pre-process hardware where waveform analysis is implemented, which is equivalent, or even more effective than data compression. 
+
+\subsection{Timing Resolution}
+
+% Likelihood
+
+Formula \eqref{eq:pseudo} is the likelihood to estimate $t_{0}$ in formula \eqref{eq:time-pro}. But $q_{i}$ is the charge in each time bin $t_{i}$ rather the number of PE. 
+
+The timing resolution $\delta$ using waveform analysis results (charge $\hat{q}$) of these methods are computed and collected. The $t_{0}$ reconstruction process is also MLE, which introduced by the formula \eqref{eq:pseudo}. Additionally, MCMC can provide an estimation of $t_{0}$ directly, which is also collected, and FBMP provides dozens of samples of $q$, which allows us to derive MLE estimation of $t_{0}$. The comparison between timing resolution using the first PE, all PE, and the 5 methods is shown in figure~\ref{fig:deltamethods}. 
+
+\begin{figure}[H]
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/vs-deltamethodsdiv.pgf}}
+    \caption{\label{fig:deltamethods} Timing resolution ratio $\delta_{\mathrm{all}}/\delta_{\mathrm{1st}}$ of methods}
+\end{figure}
+
+In the figure, $\mathrm{MCMCcha}$ corresponds to reconstruction with recorded $\hat{q}$ during sampling and $\mathrm{MCMCt0}$ corresponds to reconstruction with $t_{0}$, which is directly collected in the MCMC method. $\mathrm{FBMPcha}$ corresponds to reconstruction with maximum posterior probability model's $\hat{q}$ and $\mathrm{FBMPt0}$ corresponds to the estimation of $t_{0}$ with all samples provided by FBMP. 
+
+All 5 methods (LucyDDM, Fitting, MCMC, CNN, FBMP) provide better timing resolution $\delta$ than only using the first PE during construction. 
+
+\subsection{Charge Reconstruction}
 
 % section Discussion (end)
