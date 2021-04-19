@@ -1,0 +1,500 @@
+% !TEX program = xelatex
+% !TEX options = --shell-escape -synctex=1 -interaction=nonstopmode -file-line-error "%DOC%"
+% !BIB program = bibtex
+\documentclass{beamer}
+
+\usetheme{Madrid}
+\usecolortheme{default}
+
+\definecolor{THUpurple}{RGB}{102,8,116}
+
+\usepackage{amsmath}
+\usepackage{mathtools}
+\usepackage{caption}
+\usepackage{listings}
+\usepackage{lmodern}
+\usepackage{xcolor}
+\lstset{language=Python,keywordstyle={\bfseries \color{blue}}}
+\usepackage{pdfpages}
+\usepackage{makecell}
+\usepackage[EULERGREEK]{sansmath}
+\usepackage{tikz}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows}
+\usepackage[subrefformat=parens]{subcaption}
+\usepackage[none]{hyphenat}
+\usepackage[binary-units=true,per-mode=symbol]{siunitx}
+\usepackage{ctex}
+\usepackage{textcomp}
+\usepackage{adjustbox}
+\usepackage{pgfplots}
+\usepackage{bm}
+\usepackage{tablefootnote}
+\DeclareMathOperator{\erf}{erf}
+\usefonttheme[onlymath]{serif}
+
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\mev}{\mathrm{MeV}}
+\newcommand{\gev}{\mathrm{GeV}}
+
+\setbeamercolor{structure}{fg=THUpurple}
+\setbeamersize{text margin left=10mm,text margin right=10mm}
+% \setlength{\belowcaptionskip}{-2mm}
+\title[Waveform Analysis]{Optimized PMT Waveform Analysis}
+\author[Dacheng Xu]{Dacheng Xu~(徐大成) \and Erjin Bao~(宝尔金) \and Yiyang Wu~(武益阳) \and Benda Xu~(续本达) \and Yu Xu~(徐宇) \and Geliang Zhang~(张戈亮) et.al \\ [4mm] \includegraphics[height=2cm]{img/Tsinghua_University_Logo.png}}
+\date[JUNO]{April 16, 2021}
+
+\AtBeginSection[]
+{
+    \begin{frame}[noframenumbering]
+        \frametitle{Outline}
+        \thispagestyle{empty}
+        \tableofcontents[currentsection]
+    \end{frame}
+}
+
+\begin{document}
+\captionsetup[figure]{labelfont={bf},name={Fig}}
+\frame{\titlepage}
+
+\begin{frame}[noframenumbering]
+\frametitle{Outline}
+\thispagestyle{empty}
+\tableofcontents
+\end{frame}
+
+\section{Motivation}
+
+\begin{frame}
+\frametitle{Motivation}
+\begin{columns}
+\column{0.425\textwidth}
+\begin{figure}
+    \centering
+    \includegraphics[width=1.0\linewidth]{img/event.png}
+    \caption{An Event in Detector}
+\end{figure}
+\column{0.575\textwidth}
+\begin{figure}
+    \centering
+    \resizebox{\textwidth}{!}{\input{img/junowave.pgf}}
+    \caption{A PMT Waveform}
+\end{figure}
+\end{columns}
+\begin{block}{}
+Waveform analysis, which means extracting time and charge information from PMT waveforms, is the bedrock of subsequent analysis such as event reconstruction. 
+\end{block}
+\end{frame}
+
+\section{Dataset}
+
+\begin{frame}
+\frametitle{Simulation Setup - Time Profile}
+\begin{figure}
+    \centering
+    \resizebox{0.4\textwidth}{!}{\input{img/profile.pgf}}
+    \caption{Time Profile of Events}
+\end{figure}
+\begin{align*}
+    \phi(t) &= \mathcal{N}(t|\sigma^2)\otimes \mathrm{Exp}(t|\tau) \\
+    &= \frac{1}{2\tau} \exp\left(\frac{\sigma^2}{2\tau^2}-\frac{t}{\tau}\right) \left[1 - \erf\left( \frac{\sigma}{\sqrt{2}\tau} - \frac{t}{\sqrt{2}\sigma} \right)\right]
+\end{align*}
+\end{frame}
+
+\begin{frame}
+\frametitle{Simulation Setup - Single PE response}
+\begin{figure}
+    \centering
+    \resizebox{0.6\textwidth}{!}{\input{img/spe.pgf}}
+    \caption{Single PE response\cite{jetter_pmt_2012}}
+\end{figure}
+\begin{align*}
+  V_\mathrm{PE}(t) &= V_{0}\exp\left[-\frac{1}{2}\left(\frac{\log(t/\tau_\mathrm{PE})}{\sigma_\mathrm{PE}}\right)^{2}\right]
+\end{align*}
+\end{frame}
+
+\begin{frame}
+\frametitle{Data Input \& Output}
+\begin{columns}
+\column{0.5\textwidth}
+\begin{figure}
+    \centering
+    \resizebox{1.0\textwidth}{!}{\input{img/wave.pgf}}
+    \caption{Input Waveform (Pedestal free)}
+\end{figure}
+\column{0.5\textwidth}
+\begin{figure}
+    \centering
+    \resizebox{1.0\textwidth}{!}{\input{img/charge.pgf}}
+    \caption{Output Time and Charge $\hat\phi(t)$}
+\end{figure}
+\end{columns}
+\begin{align*}
+  \tilde{\phi}(t) &= \sum_{i=1}^{N_{\mathrm{PE}}} q_i \delta(t-t_i), \ N_{\mathrm{PE}}\sim \mathrm{Poisson}(\mu) \\
+  w(t) &= \tilde{\phi}(t) \otimes V_\mathrm{PE}(t) + \epsilon(t) = \sum_{i=1}^{N_\mathrm{PE}} q_i V_\mathrm{PE}(t-t_i) + \epsilon(t)
+\end{align*}
+\end{frame}
+
+\section{Evaluation Criteria}
+
+\begin{frame}
+\frametitle{Evaluation Criteria}
+$\tilde{\phi}(t)$ (simulation result) is an approximation of $\phi(t)$ (time profile). 
+
+$\hat{\phi}(t)$ (reconstruction result) should be consistent with $\tilde{\phi}(t)$. 
+
+Several evaluation criteria are needed. 
+\begin{block}{}
+\begin{equation*}
+    \hat{\phi}(t) \leftrightarrow \tilde{\phi}(t)
+\end{equation*}
+\end{block}
+\end{frame}
+
+\begin{frame}
+\frametitle{Residual Sum Square}
+\begin{align*}
+  \mathrm{RSS} &\coloneqq \int\left[\hat{w}(t) - w(t)\right]^2\mathrm{d}t
+\end{align*}
+\begin{figure}
+    \centering
+    \resizebox{1.0\textwidth}{!}{\input{img/tab.pgf}}
+    \caption{$b_1$ and $b_2$ have the same $\mathrm{RSS}=0.25$ to $a$, but $b_1$ is closer in timing to $a$}
+\end{figure}
+\end{frame}
+
+\begin{frame}
+\frametitle{Wasserstein Distance}
+\begin{figure}
+    \centering
+    \includegraphics[width=1.0\linewidth]{img/WD.png}
+    \caption{Wasserstein Distance when $p=1$: Earth Mover Distance}  
+\end{figure}
+\begin{align*}
+  D_w\left[\hat{\phi}_*, \tilde{\phi}_*\right] &= \inf_{\gamma \in \Gamma} \left[\int \left\vert t_1 - t_2 \right\vert^p \gamma(t_1, t_2)\mathrm{d}t_1\mathrm{d}t_2\right]^{\frac{1}{p}}
+\end{align*}
+\begin{align*}
+  \Gamma &= \left\{\gamma(t_1, t_2) ~\middle\vert~ \int\gamma(t_1,t_2)\mathrm{d}t_1 = \tilde{\phi}_*(t_2) , \int\gamma(t_1,t_2)\mathrm{d}t_2 = \hat{\phi}_*(t_1) \right\}
+\end{align*}
+when $p=1$, CDF of $\phi(t)$ is $\Phi(t)$, $D_w$ is a $\ell_1$-distance:
+\begin{align*}
+  D_w\left[\hat{\phi}_*, \tilde{\phi}_*\right] &= \int\left|\hat{\Phi}(t) - \tilde{\Phi}(t)\right| \mathrm{d}t
+\end{align*}
+\end{frame}
+
+\begin{frame}
+\frametitle{Kullback-Leibler Divergence}
+\begin{align*}
+  \hat{t}_\mathrm{KL} &= \arg\underset{t_0}{\max} \prod_{i=1}^{\hat{N}} \left[\phi(\hat{t}_i-t_0)\right]^{\hat{q}_i} ,\ \Delta t = \hat{t}_\mathrm{KL} - t_0
+\end{align*}
+\begin{figure}
+    \centering
+    \resizebox{0.6\textwidth}{!}{\input{img/twoprofile.pgf}}
+    \caption{Time translation between time profiles}
+\end{figure}
+\end{frame}
+
+\section{Waveform Analysis Methods}
+
+\begin{frame}
+\frametitle{Fourier Deconvolution}
+\begin{align*}
+  \mathcal{F}[w] &= \mathcal{F}[\tilde{\phi}]\mathcal{F}[V_\mathrm{PE}] + \mathcal{F}[\epsilon],
+\end{align*}
+\begin{figure}
+    \centering
+    \resizebox{0.6\textwidth}{!}{\input{img/fftrans.pgf}}
+    \caption{$\mathrm{RSS}=\SI{159.3}{mV^2},D_w=\SI{1.98}{ns},\Delta t_0=\SI{-1.26}{ns}$}
+\end{figure}
+\end{frame}
+
+\begin{frame}
+\frametitle{Lucy Direct Demodulation}
+\begin{align*}
+  \hat{\phi}_*^{n+1}(s) &= \int \frac{\hat{\phi}_*^n(s) V_{\mathrm{PE}*}(t-s)}{\int\hat{\phi}_*^n(s') V_{\mathrm{PE}*}(t-s')\mathrm{d}s'} w_*(t) \mathrm{d}t
+\end{align*}
+\begin{figure}
+    \centering
+    \resizebox{0.6\textwidth}{!}{\input{img/lucyddm.pgf}}
+    \caption{$\mathrm{RSS}=\SI{61.5}{mV^2},D_w=\SI{0.94}{ns},\Delta t_0=\SI{-1.66}{ns}$}
+\end{figure}
+\end{frame}
+
+\begin{frame}
+\frametitle{Convolutional Neural Network}
+\begin{columns}
+\column{0.35\textwidth}
+\begin{figure}
+    \centering
+    \begin{adjustbox}{width=0.65\textwidth}
+        \input{model}
+    \end{adjustbox}
+    \caption{CNN structure}
+\end{figure}
+\begin{center}
+    Loss is $D_w[\hat{\phi}_*, \tilde{\phi}_*]$
+\end{center}
+\column{0.65\textwidth}
+\begin{figure}
+    \centering
+    \resizebox{\textwidth}{!}{\input{img/takara.pgf}}
+    \caption{$\mathrm{RSS}=\SI{10.82}{mV^2},D_w=\SI{0.70}{ns},\Delta t_0=\SI{-2.89}{ns}$}
+\end{figure}
+\end{columns}
+\end{frame}
+
+\section{Fast Bayesian Matching Pursuit}
+
+\begin{frame}
+\frametitle{Model definition}
+\begin{itemize}
+    \item Time in DAQ window is divided into time bins: $\vec{t}$, whose length is $N$
+    \item Model vector: $\vec{z}$. $z_i=0\implies q_i=0$ and $\ z_i=1\implies q_i\neq0$
+    \item Linear Model: $\vec{w} = \bm{V}_\mathrm{PE}\vec{z} + \vec{\epsilon}$
+    \item 
+        \begin{align*}
+            \left.
+            \begin{bmatrix}
+                \vec{w} \\
+                \vec{q}
+            \end{bmatrix}
+            \right\vert\vec{z}
+            &\sim \mathrm{Normal}\left(
+            \begin{bmatrix}
+                \bm{V}_\mathrm{PE}\vec{z} \\
+                \vec{z}
+            \end{bmatrix}, 
+            \begin{bmatrix}
+                \bm{\Sigma}_z & \bm{V}_\mathrm{PE}\bm{Z} \\
+                \bm{Z}\bm{V}_\mathrm{PE}^\intercal & \bm{Z}
+            \end{bmatrix}
+            \right) \\
+            \bm{\Sigma}_z &= \bm{V}_\mathrm{PE}\bm{Z}\bm{V}_\mathrm{PE}^\intercal+\sigma_\epsilon^2\bm{I}
+        \end{align*}
+    where $\bm{Z}$ is the diagonal matrix of vector $\vec{z}$ controlling $q_i$ 
+    \item $\mathcal{Z}=\{\vec{z}_j\}$ contains \textcolor{red}{$2^{N}$} model vectors
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Fast Bayesian Matching Pursuit}
+    \begin{itemize}
+        \item Calculation of \textcolor{red}{$2^{N}$} model vectors is impossible!
+        \item Most of $p(\vec{w}|\vec{z}) \rightarrow 0$!
+    \end{itemize}
+    \noindent\begin{minipage}[c]{0.33\textwidth}
+        \begin{figure}[H]
+            \centering
+                \includegraphics[width=0.95\textwidth]{img/perfect_PE.pdf}
+            \caption{perfect PE matching waveform, $p(\vec{z}|\vec{w})$ hit maximum}
+            \label{fig:perfect PE}
+        \end{figure}
+    \end{minipage}\begin{minipage}[c]{0.33\textwidth}
+        \begin{figure}[H]
+            \centering
+                \includegraphics[width=0.95\textwidth]{img/not_so_perfect_PE.pdf}
+            \caption{not so perfect, $p(\vec{z}|\vec{w})$ is smaller but still $>0$}
+            \label{fig:not so perfect PE}
+        \end{figure}
+    \end{minipage}\begin{minipage}[c]{0.33\textwidth}
+        \begin{figure}[H]
+            \centering
+                \includegraphics[width=0.95\textwidth]{img/nonsense_PE.pdf}
+            \caption{Completely mismatch the waveform, $p(\vec{z}|\vec{w}) \rightarrow 0$}
+            \label{fig:nonsense PE}
+        \end{figure}
+    \end{minipage}
+    \begin{align*}
+        p(\vec{z}|\vec{w}) &= \frac{p(\vec{w}|\vec{z})p(\vec{z})}{\sum_{\vec{z}'\in\mathcal{Z}}p(\vec{w}|\vec{z'})p(\vec{z'})} \approx \frac{p(\vec{w}|\vec{z})p(\vec{z})}{\sum_{\vec{z}'\in\mathcal{Z}'}p(\vec{w}|\vec{z'})p(\vec{z'})}
+    \end{align*}
+\end{frame}
+
+\begin{frame}
+\frametitle{Fast Bayesian Matching Pursuit}
+\begin{itemize}
+    \item \begin{align*}
+        \log[\textcolor{red}{p(\vec{w},\vec{z})}] =& \log[p(\vec{w}|\vec{z})p(\vec{z})] \\
+        =& -\frac{1}{2}(\vec{w}-\bm{V}_\mathrm{PE}\vec{z})^\intercal\bm{\Sigma}_z^{-1}(\vec{w}-\bm{V}_\mathrm{PE}\vec{z})-\frac{1}{2}\log\det\bm{\Sigma}_z \\ 
+        &-\frac{N}{2}\log2\pi -\mu + \sum_{i|z_i=1}\log \frac{\mu \phi(t'_i - t_0) \Delta t'}{1-\mu \phi(t'_i - t_0) \Delta t'}
+        \end{align*}
+    \item A \textcolor{red}{repeated greedy search}(RGS) is performed to construct the target set $\mathcal{Z}'$, which contains only the $\vec{z}$ giving large $p(\vec{w}|\vec{z})$. 
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{FBMP's result: Bayesian interface}
+\begin{itemize}
+    \item PE Time: $\vec{t}$
+    \item Models: $\mathcal{Z}'=\{\vec{z}_j\}$
+    \item Charge: \begin{align*}
+        \hat{\vec{q}}_z = E(\vec{q}|\vec{w},\vec{z}) &= \vec{z} + \bm{Z}\bm{V}_\mathrm{PE}^\intercal\bm{\Sigma}_z^{-1}(\vec{w}-\bm{V}_\mathrm{PE}\vec{z})
+        \end{align*}
+    \item Model's posterior probability: $p(\vec{z}|\vec{w})$
+\end{itemize}
+\begin{center}
+    Provides opportunity for subsequent Bayesian analysis! 
+\end{center}
+\end{frame}
+
+\begin{frame}
+\frametitle{FBMP Demonstration}
+\begin{figure}
+    \centering
+    \resizebox{0.6\textwidth}{!}{\input{img/demoe2c0.pgf}}
+    \caption{$\mathrm{RSS}=\SI{12.26}{mV^2},D_w=\SI{0.63}{ns},\Delta t_0=\SI{-3.97}{ns}$}
+\end{figure}
+\end{frame}
+
+\begin{frame}
+\frametitle{FBMP's Performance of Evaluation Criteria}
+For dataset: $(\mu, \tau, \sigma)/\si{ns}=(4, 20, 5)$: 
+\begin{figure}
+    \centering
+    \resizebox{\textwidth}{!}{\input{img/vs.pgf}}
+    \caption{$D_w$ and $\mathrm{RSS}$ of methods}
+\end{figure}
+\end{frame}
+
+\begin{frame}
+\frametitle{Charge Posterior}
+\begin{figure}
+    \centering
+    \resizebox{0.7\textwidth}{!}{\input{img/chargehist.pgf}}
+    \caption{$\hat{q}$ histogram of methods}
+\end{figure}
+\begin{block}{}
+FBMP retains charge distribution of PE. 
+\end{block}
+\end{frame}
+
+\section{Summary}
+
+\begin{frame}
+\frametitle{Summary}
+\begin{itemize}
+    \item Waveform analysis is necessary for elaborate analysis. 
+    \item FBMP restore information of PE most completely. 
+    \item FBMP provides a Bayesian interface for subsequent analysis. 
+\end{itemize}
+\end{frame}
+
+\section{Backup}
+\label{sec:FBMP's Next Step: Bayesian Probe of Point like Events (BAPPE)}
+
+\begin{frame}
+    \frametitle{FBMP's Next Step: Bayesian Probe of Point like Events (BAPPE)}
+    \textbf{Probe: detector's response to point source}
+    
+    A vertex called $\mathcal{V}$ deposits energy $E$ at $(\vec{r},t=0)$, causing \textcolor{red}{$j$-th} PMT to receive $n$ PEs in $[t_i, t_i+\dd t)$. $n$ follows a Poisson distribution with expectation $P(t_i|\mathcal{V})\dd t$, which is an inhomogeneous Poisson process with intensity $P(t_i|\mathcal{V})$.
+    
+    Probe is made by parametrizing simulation data or calibration data. \cite{lin_fast_2016}
+
+    \begin{figure}[H]
+        \centering
+            \includegraphics[width=0.4\textwidth]{img/PoissonIntensitySketch.pdf}
+        \caption{A sketch of $P(t_i|\mathcal{V})$}
+        \label{fig:1}
+    \end{figure}
+\end{frame}
+
+\begin{frame}
+    \frametitle{FBMP's Next Step: Bayesian Probe of Point like Events (BAPPE)}
+    \textbf{The Bayesian interface between Probe and FBMP}
+
+    Forward process: given vertex, the distribution of response is determined: $z_i|_{t\in[t_i,t_i+\dd t)} \sim \mathrm{Poisson}(P(t_i|\mathcal{V}) \dd t)$ $z_i$ is the number of PE detected. When $\dd t \rightarrow 0$, the possibility of $\geqslant 2$ PEs can be neglected, yielding:
+
+    \begin{equation}
+        z_i|_{t\in[t_i,t_i+\dd t)} \sim \left\{ 
+            \begin{aligned}
+                & 0, & 1-P(t_i|\mathcal{V}) \dd t \\
+                & 1, & P(t_i|\mathcal{V}) \dd t
+            \end{aligned}
+        \right.
+        \label{eq:1}
+    \end{equation}
+
+    Therefore, $\vec{z}$ is a boolean array, e.g. $\vec{z} = (0,0,0,1,0,0,1,1,0)$ means there is a detected PE in the 4th, 7th and 8th time bin. For N bins, there are $2^N$ configurations of PE.
+\end{frame}
+
+\begin{frame}
+    \frametitle{The Bayesian interface between Probe and FBMP}
+
+    Using the Bayes' theorem, for a single PMT, 
+
+    \begin{equation}
+        \mathrm{Posterior}(\mathcal{V}|\vec{w}) = \frac{P(\vec{w}|\mathcal{V}) \cdot \mathrm{Prior}(\mathcal{V})}  {P(\vec{w})} \propto P(\vec{w}|\mathcal{V}) \cdot \mathrm{Prior}(\mathcal{V})
+        \label{eq:2}
+    \end{equation}
+    
+   $P(\vec{w})$ is independent of $\mathcal{V}$ and only acts as a normalization factor of the posterior.
+
+   \textbf{The interface between Probe and FBMP, is {\color{red} the total probability rule} :}
+
+    \begin{equation}
+        \small
+        P(\vec{w}|\mathcal{V}) = \sum_{\vec{z} \in \mathcal{Z}} P(\vec{w}|\vec{z},\mathcal{V}) \cdot P(\vec{z}|\mathcal{V}) = \sum_{\vec{z} \in \mathcal{Z}} P(\vec{w}|\vec{z}) \cdot P(\vec{z}|\mathcal{V})
+        \label{eq:3}
+    \end{equation}
+\end{frame}
+
+\begin{frame}
+    \frametitle{The Bayesian interface between Probe and FBMP}
+    
+    \begin{equation}
+        \small
+        \begin{aligned}
+            P(\vec{w}|\mathcal{V}) & = \sum_{\vec{z} \in \mathcal{Z}} P(\vec{w}|\vec{z},\mathcal{V}) \cdot P(\vec{z}|\mathcal{V}) \\
+            & = \sum_{\vec{z} \in \mathcal{Z}} P(\vec{w}|\vec{z}) \cdot P(\vec{z}|\mathcal{V}) \\
+            & \overset{\text{FBMP}}{\approx} \sum_{\vec{z} \in \textcolor{red}{\mathcal{Z}'}} P(\vec{w}|\vec{z}) \cdot P(\vec{z}|\mathcal{V})
+        \end{aligned}
+    \end{equation}
+    
+    The $\mathcal{Z}$ has over $2^N$ possibilities, but only PE configuration $\vec{z}$ matching the waveform can have relatively large probabilities (dominate terms of the summation), which is given by FBMP. 
+
+    i.e.: 
+
+    $\mathcal{Z}' \in \mathcal{Z}$, $|\mathcal{Z}'| \ll |\mathcal{Z}|$ and $\forall \vec{z}_1 \in \mathcal{Z} \backslash \mathcal{Z}',\ \forall \vec{z}_2 \in \mathcal{Z}' ,\ \ P(\vec{w}|\vec{z}_1) \ll P(\vec{w}|\vec{z}_2)$
+\end{frame}
+
+\begin{frame}
+    \frametitle{Bayesian Probe of Point like Events (BAPPE)}
+    
+    Recall 
+    \begin{equation*}
+        P({z}_i|\mathcal{V}) = \left\{ 
+            \begin{aligned}
+                & 1-P(t_i|\mathcal{V}) \dd t, & 0\ \mathrm{PE} \\
+                & P(t_i|\mathcal{V}) \dd t , & 1\ \mathrm{PE}
+            \end{aligned}
+        \right.
+    \end{equation*}
+
+    Finally, we multiply the posterior of \textcolor{red}{all PMTs}, and choose even distribution as the vertex prior (in this case the posterior is proportional to the likelihood):
+
+    \begin{equation}
+        \mathrm{Posterior}(\{\vec{w}_j\}|\mathcal{V}) \propto \prod_{j \in {\mathrm{PMTId}}} \sum_{\vec{z}_{jk} \in \mathcal{Z}'_j} P_j(\vec{w}_j|\vec{z}_{jk}) \cdot P_j(\vec{z}_{jk}|\mathcal{V})
+        \label{eq:4}
+    \end{equation}
+
+    $\hat{\mathcal{V}}=\underset{\mathcal{V}}{\mathrm{argmax}}\ \mathrm{Posterior}(\vec{w}|\mathcal{V})$ is the BAPPE event reconstruction. 
+\end{frame}
+
+\begin{frame}
+    \frametitle{The Road to the Nature of Neutrino Mass}
+    
+    \begin{figure}[H]
+        \centering
+            \includegraphics[width=1.0\textwidth]{img/tech.pdf}
+        \caption{The Road to the Nature of Neutrino Mass}
+    \end{figure}
+\end{frame}
+
+
+\begin{frame}
+\bibliographystyle{unsrt}
+\bibliography{ref.bib}
+\end{frame}
+
+\end{document}
