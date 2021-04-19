@@ -219,7 +219,7 @@ The result of $\hat{\phi}(t)$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ 
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/takara.pgf}}
-    \caption{\label{fig:cnn}$\mathrm{RSS}=\SI{62.77}{mV^2},D_w=\SI{0.64}{ns},\Delta{t_0}=\SI{2.86}{ns}$}
+    \caption{\label{fig:cnn}$\mathrm{RSS}=\SI{62.77}{mV^2},D_w=\SI{0.64}{ns},\Delta t_0=\SI{2.86}{ns}$}
   \end{subfigure}
   \begin{subfigure}{.5\textwidth}
     \centering
@@ -276,7 +276,7 @@ Hamiltonian Monte Carlo~(HMC) is an efficient MCMC for for high dimensional dist
 \begin{equation}
   \begin{aligned}
     t_{0} &\sim \mathrm{Uniform}(0, \overline{t_0}) \\
-    p_i &= \mu \int_{t'_i-\frac{\Delta t'}{2}}^{t'_i+\frac{\Delta t'}{2}} \phi(t' - t_0)\mathrm{d}t' \approx \mu\phi(t' - t_0)\Delta{t'}  \\
+    p_i &= \mu \int_{t'_i-\frac{\Delta t'}{2}}^{t'_i+\frac{\Delta t'}{2}} \phi(t' - t_0)\mathrm{d}t' \approx \mu\phi(t'_i - t_0)\Delta{t'}  \\
     z_i &\sim \mathrm{Binomial}(p_i) \\
     q'_{i,0}&=0\\
     q'_{i,1}& \sim \mathrm{Normal}(1, \sigma_q)\\
@@ -332,7 +332,7 @@ We define a \textit{model vector}, $\bm{z}$, whose elements, $z_i$, are $0$ or $
         \bm{q}'
     \end{bmatrix}
     \right\vert\bm{z}
-    &\sim Normal\left(
+    &\sim \mathrm{Normal}\left(
     \begin{bmatrix}
         \bm{A}\bm{z} \\
         \bm{z}
@@ -354,15 +354,15 @@ We define a \textit{model vector}, $\bm{z}$, whose elements, $z_i$, are $0$ or $
 
 Before estimating of $q'$, FBMP selects models of $\bm{z}$ in model vector space $\mathcal{Z}$. The large number of dimensions, $N_s$, prohibits the traversing in $\mathcal{Z}$. So only models with non-negligible posterior probabilities $p(\bm{z}|\bm{w})$ in dominant model space $\mathcal{Z}'$ will be evaluated. With Bayes rule, the model posterior becomes
 \begin{align}
-    p(\bm{z}|\bm{w}) &= \frac{p(\bm{w}|\bm{z})p(\bm{z})}{\sum_{\bm{z'}\in\mathcal{Z}'}p(\bm{w}|\bm{z'})p(\bm{z'})}
+    p(\bm{z}|\bm{w}) &= \frac{p(\bm{w}|\bm{z})p(\bm{z})}{\sum_{\bm{z}'\in\mathcal{Z}'}p(\bm{w}|\bm{z'})p(\bm{z'})}
 \end{align}
 
 A \textit{model selection metric}, $\nu(\bm{z},\bm{w})$ is defined as the metric of $\bm{z}$, 
 \begin{equation}
     \begin{aligned}
-        \nu(\bm{z},\bm{w}) &= \ln[p(\bm{w}|\bm{z})p(\bm{z})] \\
-        &= \ln p(\bm{w}|\bm{z}) + \ln p(\bm{z}) \\
-        &= -(\bm{w}-\bm{A}\bm{z})^\top\bm{\Phi}(\bm{z})^{-1}(\bm{w}-\bm{A}\bm{z})-\ln\det\bm{\Phi}(\bm{z})+\sum_{i=1}^{N_s}p_i+C
+        \nu(\bm{z},\bm{w}) &= \log[p(\bm{w}|\bm{z})p(\bm{z})] \\
+        &= \log p(\bm{w}|\bm{z}) + \log p(\bm{z}) \\
+        &= -\frac{1}{2}(\bm{w}-\bm{A}\bm{z})^\top\bm{\Phi}(\bm{z})^{-1}(\bm{w}-\bm{A}\bm{z})-\frac{1}{2}\ln\det\bm{\Phi}(\bm{z})+\sum_{i=1}^{N_s}p_i+C
     \end{aligned}
 \end{equation}
 where $C$ is a constant in regard to $\bm{z}$. 
@@ -392,6 +392,47 @@ The result of $\hat{q}$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ is sho
     \caption{\label{fig:fbmp-npe} $D_w$ vs $N_{pe}$ Boxplot \& Histogram, $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$, method is FBMP}
 \end{figure}
 
+The sparsity of FBMP results provides the opportunity to estimate $\mu$ and $t_0$ in a different way against \eqref{eq:pseudo}. All non-zero charges in each sample $\bm{q}'$ is regarded as one PE, 
+
+\begin{equation}
+\begin{aligned}
+    \left(\hat{t}_0, \hat{\mu}\right) &= \arg\underset{t_0,\mu}{\max} p(t_0, \mu|\bm{w}) \\
+    p(t_0, \mu|\bm{w}) &\propto \prod_{\bm{z}'\in\mathcal{Z}'}p(\bm{w}|\bm{z}',t_0,\mu)p(\bm{z}'|t_0,\mu) = \prod_{\bm{z}'\in\mathcal{Z}'}p(\bm{w}|\bm{z}')p(\bm{z}'|t_0,\mu) \\
+    p(\bm{z}|t_0,\mu) &= \prod_{i}p_i^{z_i} \approx \prod_{i}\left[\mu\phi(t'_i - t_0)\Delta{t'}\right]^{z_i}
+\end{aligned}
+\end{equation}
+
 It is noted that one of the deconvolution methods can be used for FBMP initialization, where we reduce $N_s$ regarding deconvolution results. In the test of FBMP, we use LucyDDM as the initializer. 
+
+\subsection{Performance}
+
+% Methods
+
+The $D_w$ summary of all methods is plotted in Fig.~\ref{fig:chargesummary}, with all dataset parameters $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$. The errorbar shows 5 to 95 percentile of Wasserstein distance distribution. 
+
+\begin{figure}[H]
+    \centering
+    \scalebox{0.6}{\input{figures/summarycharge.pgf}}
+    \caption{\label{fig:chargesummary} $W_{d}$ of methods with light curve $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$}
+\end{figure}
+
+It is apparent that FindPeak, Shift, and FFT are second-rate among all 8 methods, so we will only discuss the other 5 methods below. 
+
+% Figure of Merits
+
+The $D_w$ summary of 5 methods (LucyDDM, Fitting, MCMC, CNN, FBMP) is plotted in \ref{fig:wdistsummary}, with all dataset parameters combination. The errorbar shows 5 to 95 percentile of Wasserstein distance distribution. Wasserstein distances of all 5 methods are approaching each other when $\mu$ increases. 
+
+We can see that as method CNN uses Wasserstein distance as loss directly during training, its Wasserstein distance is the smallest. While Fitting treats RSS as its loss, FBMP obtains the least RSS among 5 methods (see formula~\ref{fig:rsssummary}) and CNN follows. 
+\begin{figure}[H]
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/vs-wdist.pgf}}
+    \caption{\label{fig:wdistsummary} $D_w$ of methods, error bar 5--95 percentile ($\hat{q}$)}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/vs-rss.pgf}}
+    \caption{\label{fig:rsssummary} RSS of methods, error bar 5--95 percentile ($\hat{q}$)}
+\end{figure}
 
 % section Algorithm (end)
