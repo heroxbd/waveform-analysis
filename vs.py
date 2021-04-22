@@ -218,7 +218,7 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
             ax.errorbar(rsslist['mu'] + jitter[key], rsslist['RSS'][:, 1], yerr=yerr, label='$'+label[key]+'$', c=color[key], marker=marker[key])
             ax.fill_between(rsslist['mu'] + jitter[key], rsslist['RSS'][:, 0], rsslist['RSS'][:, 2], fc=color[key], alpha=0.1, color=None)
         ax.set_xlabel(r'$N_{\mathrm{PE}}\ \mathrm{expectation}\ \mu$')
-        ax.set_ylabel(r'$RSS/\si{mV}^{2}$')
+        ax.set_ylabel(r'$\mathrm{RSS}/\si{mV}^{2}$')
         ax.set_title(fr'$\tau={tau}\si{{ns}},\,\sigma={sigma}\si{{ns}}$')
         ax.set_ylim(0, lim['rss'][i, j])
         # ax.set_yscale('log')

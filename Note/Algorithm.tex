@@ -60,7 +60,7 @@ batch of waveforms, denoted as $\sigma_\mathrm{KL}$, to measure the resolutions 
 Following~\eqref{eq:1} and~\eqref{eq:lc}, construct an estimator of waveform,
 \begin{equation}
   \label{eq:w-hat}
-  \hat{w}(t) = \sum_{i=1}^{\hat{N}}\hat{q}_iV_\mathrm{PE}(t-\hat{t}_i) = \hat{\phi}(t) \otimes V_\mathrm{PE}(t).
+  \hat{w}(t) = \sum_{i=1}^{\hat{N}}\hat{q}_i V_\mathrm{PE}(t-\hat{t}_i) = \hat{\phi}(t) \otimes V_\mathrm{PE}(t).
 \end{equation}
 Sum of squares of the residual $\hat{w}(t) - w(t)$ is a natural $\ell_2$-metric inspired by the Gaussian noise term in \eqref{eq:1},
 \begin{equation}
@@ -270,9 +270,9 @@ The optimizer is realized with limited-memory Broyden-Fletcher-Goldfarb-Shanno a
 The result of $\hat{q}$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ is shown in Fig.~\ref{fig:fitting-npe}. The left panel is the boxplot which shows the $D_d$ percentile vs $N_{pe}$, and the right panel is the overall histogram of $D_d$. 
 
 \subsubsection{Markov Chain Monte Carlo}
-The optimization problem in \eqref{eq:gd-q} is in general not convex and may be stuck in local minima.  Markov chain Monte Carlo~(MCMC) has the potential to overcome this difficulty.
+The optimization problem in \eqref{eq:gd-q} is in general not convex and may be stuck in local minima.  Markov Chain Monte Carlo~(MCMC) has the potential to overcome this difficulty.
 
-Hamiltonian Monte Carlo~(HMC) is an efficient MCMC for for high dimensional distributions~\cite{neal_mcmc_2012} such as the posterior of $\bm{q'}$.  The posterior is combined with a $\bm{q'}$ prior conditioned on $t_0$ to form a hierarchical model,
+Hamiltonian Monte Carlo~(HMC) is an efficient MCMC for high dimensional distributions~\cite{neal_mcmc_2012} such as the posterior of $\bm{q'}$.  The posterior is combined with a $\bm{q'}$ prior conditioned on $t_0$ to form a hierarchical model,
 \begin{equation}
   \begin{aligned}
     t_{0} &\sim \mathrm{Uniform}(0, \overline{t_0}) \\
@@ -317,14 +317,13 @@ The distribution of $\Delta{t_0} = \hat{t}_0 - t_0$ is shown in Fig.~\ref{fig:mc
 \end{figure}
 
 \subsubsection{Fast Bayesian Matching Pursuit}
-In~\eqref{eq:mixnormal}, $\bm{q'}$ is sparse especially when $\bm{t'}$ is dense, $w(t)$ is a Gaussian process and only a few $\bm{z}$ dominate the posterior.  Those facts lead to Fast Bayesian Matching Pursuit (FBMP), a parameter estimation method for sparse linear models~\cite{schniter_fast_nodate}. Re-represent waveform formulation in~\eqref{eq:gd} as a linear model, where multiplier $\bm{A}$ is equivalent 
-to $V_\mathrm{PE}$, 
-\begin{align}
-    \bm{w} &= \bm{A}\bm{q'} + \bm{\epsilon} \label{eq:fbmp-li}
-\end{align}
-
-We define a \textit{model vector}, $\bm{z}$, whose elements, $z_i$, are $0$ or $1$. The prior distribution of $q'_i$ is a conditional probability function of $z_i$, consistent with~\eqref{eq:gd}. $\bm{w}$ and $\bm{q}'$ subject to the conditional probability distribution of $\bm{z}$ where $\bm{I}$ is a unit matrix,
+$w(t)$ is a Gaussian process subject to $\bm{z}$,
 \begin{equation}
+    w(t)|\bm{z} \sim \mathcal{GP}\left[\sum_{i|z_i=1}V_\mathrm{PE}(t-t'_i), \sigma_q^2 \sum_{i|z_i=1}V_\mathrm{PE}(t'_i-t)V_\mathrm{PE}(s-t'_i) + \sigma_\epsilon^2 \right],
+\end{equation}
+where $\bm{z}$ controls which $t'_i$ are used.  In the numerical calculation, the Gaussian process is discretized as a multivariate normal distribution together with $\bm{q}'$
+\begin{equation}
+\label{eq:mgauss}
 \begin{aligned}
     \left.
     \begin{bmatrix}
@@ -334,49 +333,62 @@ We define a \textit{model vector}, $\bm{z}$, whose elements, $z_i$, are $0$ or $
     \right\vert\bm{z}
     &\sim \mathrm{Normal}\left(
     \begin{bmatrix}
-        \bm{A}\bm{z} \\
+        \bm{V}_\mathrm{PE}\bm{z} \\
         \bm{z}
     \end{bmatrix}, 
     \begin{bmatrix}
-        \bm{\Phi}(\bm{z}) & \bm{A}\bm{R}(\bm{z}) \\
-        \bm{R}(\bm{z})\bm{A}^\top & \bm{R}(\bm{z})
+        \bm{\Sigma}_z & \bm{V}_\mathrm{PE}\bm{Z} \\
+        \bm{Z}\bm{V}_\mathrm{PE}^\intercal & \bm{Z}
     \end{bmatrix}
     \right) \\
-    \bm{R}(\bm{z})_{ij} &= \left\{
-    \begin{array}{ll}
-      \sigma_q & , i=j\ and\ z_i = 1, \\
-      0 & \mbox{, otherwise}
-    \end{array}
-    \right. \\
-    \bm{\Phi}(\bm{z}) &= \bm{A}\bm{R}(\bm{z})\bm{A}^\top+\sigma_\epsilon^2\bm{I}
+    \bm{\Sigma}_z &= \bm{V}_\mathrm{PE}\bm{Z}\bm{V}_\mathrm{PE}^\intercal+\sigma_\epsilon^2\bm{I}
 \end{aligned}
 \end{equation}
+where $\bm{Z}$ is the diagonal matrix of vector $\bm{z}$ controlling $q'_i$. $\bm{I}$ is a unit matrix.
 
-Before estimating of $q'$, FBMP selects models of $\bm{z}$ in model vector space $\mathcal{Z}$. The large number of dimensions, $N_s$, prohibits the traversing in $\mathcal{Z}$. So only models with non-negligible posterior probabilities $p(\bm{z}|\bm{w})$ in dominant model space $\mathcal{Z}'$ will be evaluated. With Bayes rule, the model posterior becomes
-\begin{align}
-    p(\bm{z}|\bm{w}) &= \frac{p(\bm{w}|\bm{z})p(\bm{z})}{\sum_{\bm{z}'\in\mathcal{Z}'}p(\bm{w}|\bm{z'})p(\bm{z'})}
-\end{align}
-
-A \textit{model selection metric}, $\nu(\bm{z},\bm{w})$ is defined as the metric of $\bm{z}$, 
+Denote a set $\mathcal{Z}$ to contain the $2^{N_s}$ combinations of $\bm{z}$. Only few $\bm{z}$'s gives finite probabilities of $\bm{w}$, leading to Fast Bayesian Matching Pursuit~(FBMP), a parameter estimation method for sparse linear models~\cite{schniter_fast_nodate}.  FBMP defines a subset $\mathcal{Z}'$ of $\mathcal{Z}$ with only the $\bm{z}$ giving non-negligible $p(\bm{w}|\bm{z})$.  The posterior of $\bm{z}$ is approximated as
 \begin{equation}
+    \label{eq:z}
     \begin{aligned}
-        \nu(\bm{z},\bm{w}) &= \log[p(\bm{w}|\bm{z})p(\bm{z})] \\
-        &= \log p(\bm{w}|\bm{z}) + \log p(\bm{z}) \\
-        &= -\frac{1}{2}(\bm{w}-\bm{A}\bm{z})^\top\bm{\Phi}(\bm{z})^{-1}(\bm{w}-\bm{A}\bm{z})-\frac{1}{2}\ln\det\bm{\Phi}(\bm{z})+\sum_{i=1}^{N_s}p_i+C
+    p(\bm{z}|\bm{w}) &= \frac{p(\bm{w}|\bm{z})p(\bm{z})}{\sum_{\bm{z}'\in\mathcal{Z}}p(\bm{w}|\bm{z'})p(\bm{z'})} \\
+    &\approx \frac{p(\bm{w}|\bm{z})p(\bm{z})}{\sum_{\bm{z}'\in\mathcal{Z}'}p(\bm{w}|\bm{z'})p(\bm{z'})},
     \end{aligned}
 \end{equation}
-where $C$ is a constant in regard to $\bm{z}$. 
+where the prior $p(\bm{z})$ is given by the Bernoulli distributions of binned light curve,
+\begin{equation}
+\begin{aligned}
+    p(\bm{z}|t_0, \mu) &= \prod_{i|z_i=0}(1-\mu \phi(t'_i - t_0) \Delta t') \prod_{i|z_i=1} \mu \phi(t'_i - t_0) \Delta t' \\
+    &= \prod_{i}(1-\mu \phi(t'_i - t_0) \Delta t') \prod_{i|z_i=1} \frac{\mu \phi(t'_i - t_0) \Delta t'}{1-\mu \phi(t'_i - t_0) \Delta t'} \\
+    &\approx e^{-\mu} \prod_{i|z_i=1} \frac{\mu \phi(t'_i - t_0) \Delta t'}{1-\mu \phi(t'_i - t_0) \Delta t'}
+\end{aligned}.
+\end{equation}
 
-A repeated greedy search (RGS) is performed to construct the target set $\mathcal{Z}'$. Additionally, a linear algebraic iteration reduces the complexity of $p(\bm{z}|\bm{w})$ calculation~\cite{schniter_fast_nodate}. 
+The nominator logarithm of \eqref{eq:z},
+\begin{equation}
+    \label{eq:metric}
+    \begin{aligned}
+        \log[p(\bm{w},\bm{z})] =& \log[p(\bm{w}|\bm{z})p(\bm{z})] \\
+        =& -\frac{1}{2}(\bm{w}-\bm{V}_\mathrm{PE}\bm{z})^\intercal\bm{\Sigma}_z^{-1}(\bm{w}-\bm{V}_\mathrm{PE}\bm{z})-\frac{1}{2}\log\det\bm{\Sigma}_z-\frac{N_s}{2}\log2\pi \\
+        & -\mu + \sum_{i|z_i=1}\log \frac{\mu \phi(t'_i - t_0) \Delta t'}{1-\mu \phi(t'_i - t_0) \Delta t'}
+    \end{aligned}
+\end{equation}
+is treated as a \textit{model selection metric}.  A repeated greedy search is performed to construct the target set $\mathcal{Z}'$ guided by \eqref{eq:metric}. Additionally, a linear algebraic iteration reduces the complexity of $p(\bm{z}|\bm{w})$ calculation~\cite{schniter_fast_nodate}. 
 
-For each $\bm{z}$, the expectation estimation $E(\bm{q}')$ of $\bm{q}'$ is determined with minimum mean squared error (MMSE) method, 
+For each $\bm{z} \in \mathcal{Z}'$, by \eqref{eq:mgauss} the expectation estimation of $\bm{q}'$ is, 
 \begin{align}
-    E(\bm{q}'|\bm{w},\bm{z}) &= \bm{z} + \bm{R}(\bm{z})\bm{A}^\top\bm{\Phi}(\bm{z})^{-1}(\bm{w}-\bm{A}\bm{z})
+    \hat{\bm{q}}_z = E(\bm{q}'|\bm{w},\bm{z}) &= \bm{z} + \bm{Z}\bm{V}_\mathrm{PE}^\intercal\bm{\Sigma}_z^{-1}(\bm{w}-\bm{V}_\mathrm{PE}\bm{z})
 \end{align}
 
-Finally, dominant $\{\bm{z}_j\}$ and their corresponding posterior probability $\{p_j\}$, as well as estimations of $\{\bm{q}'_j\}$ are collected to be the approximation of posterior distribution. We use the charge estimation of the maximum posterior probability model as the charge analysis result $\hat{q}$. 
+Finally, all the $\bm{z} \in \mathcal{Z}'$ and their corresponding posterior probabilities $p(\bm{z}|\bm{w})$, and estimations of $\hat{\bm{q}}_z$ are collected to be the total posterior distribution.  $\hat{\bm{q}}$ is estimated by the maximum posterior probability,
+\begin{equation}
+    \begin{aligned}
+        \hat{\bm{z}} &= \arg \underset{\bm{z}}{\max} p(\bm{z}|\bm{w}) \\
+        \hat{\bm{q}} &= \hat{\bm{q}}_{\hat{z}} \\
+        \hat{w}(t) &= \sum_{i|\hat{z}_i=1} \hat{q}_i V_\mathrm{PE}(t-t'_i)
+    \end{aligned}
+\end{equation}
 
-Figure~\ref{fig:fbmp} shows one of the FBMP results. We can see the origin waveform $w(t)$ and reconstructed waveform $\hat{w}(t)$ are very similar. The reconstructed and truth $\hat{q}$ are also similar. 
+Figure~\ref{fig:fbmp} shows one of the FBMP results. We can see the origin waveform $w(t)$ and reconstructed waveform $\hat{w}(t)$ are very similar. The reconstructed and truth $\bm{q}$ are also similar.
 
 \begin{figure}[H]
     \centering
@@ -384,7 +396,7 @@ Figure~\ref{fig:fbmp} shows one of the FBMP results. We can see the origin wavef
     \caption{\label{fig:fbmp} FBMP Demo, $\mathrm{RSS}=\SI{24.30}{mV^2},D_w=\SI{0.48}{ns},\Delta{t_0}=\SI{2.91}{ns}$}
 \end{figure}
 
-The result of $\hat{q}$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ is shown in Fig.~\ref{fig:fbmp-npe}. The left panel is the boxplot which shows the $D_w$ percentile vs $N_{pe}$, and the right panel is the overall histogram of $D_w$. 
+The result of $\hat{q}$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ is shown in Fig.~\ref{fig:fbmp-npe}. The left panel is the boxplot which shows the $D_w$ percentiles vs $N_{pe}$, and the right panel is the overall histogram of $D_w$. 
 
 \begin{figure}[H]
     \centering
@@ -392,15 +404,15 @@ The result of $\hat{q}$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ is sho
     \caption{\label{fig:fbmp-npe} $D_w$ vs $N_{pe}$ Boxplot \& Histogram, $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$, method is FBMP}
 \end{figure}
 
-The sparsity of FBMP results provides the opportunity to estimate $\mu$ and $t_0$ in a different way against \eqref{eq:pseudo}. All non-zero charges in each sample $\bm{q}'$ is regarded as one PE, 
-
+The denominator of \eqref{eq:z} is actually $p(\bm{w}|t_0, \mu)$, which provides a superior estimator of $\mu$ and $t_0$ to \eqref{eq:pseudo},
 \begin{equation}
 \begin{aligned}
-    \left(\hat{t}_0, \hat{\mu}\right) &= \arg\underset{t_0,\mu}{\max} p(t_0, \mu|\bm{w}) \\
-    p(t_0, \mu|\bm{w}) &\propto \prod_{\bm{z}'\in\mathcal{Z}'}p(\bm{w}|\bm{z}',t_0,\mu)p(\bm{z}'|t_0,\mu) = \prod_{\bm{z}'\in\mathcal{Z}'}p(\bm{w}|\bm{z}')p(\bm{z}'|t_0,\mu) \\
-    p(\bm{z}|t_0,\mu) &= \prod_{i}p_i^{z_i} \approx \prod_{i}\left[\mu\phi(t'_i - t_0)\Delta{t'}\right]^{z_i}
+    \left(\hat{t}_0, \hat{\mu}\right) &= \arg\underset{t_0,\mu}{\max} p(t_0, \mu|\bm{w}) =  \arg\underset{t_0,\mu}{\max} p(\bm{w} | t_0, \mu) \\
+    p(\bm{w}|t_0, \mu) &= \sum_{\bm{z}'\in\mathcal{Z}'}p(\bm{w}|\bm{z}',t_0,\mu)p(\bm{z}'|t_0,\mu) \\
+    &= \sum_{\bm{z}'\in\mathcal{Z}'}p(\bm{w}|\bm{z}')p(\bm{z}'|t_0,\mu).
 \end{aligned}
 \end{equation}
+where a flat prior for $p(t_0, \mu)$ is used.
 
 It is noted that one of the deconvolution methods can be used for FBMP initialization, where we reduce $N_s$ regarding deconvolution results. In the test of FBMP, we use LucyDDM as the initializer. 
 
