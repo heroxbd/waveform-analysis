@@ -165,25 +165,20 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
 
         ax = figdd.add_subplot(gsdd[i, j])
         stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == tau) & (mts['lucyddm']['sigma'] == sigma)]
-        yerrall = stdlist['stdtruth'] / stdlist['std1sttruth'] / np.sqrt(stdlist['N'])
-        ax.errorbar(stdlist['mu'] + jitter['tru'], stdlist['stdtruth'] / stdlist['std1sttruth'], yerr=yerrall, label='$\sigma_'+deltalabel['tru']+'/\sigma_'+deltalabel['1st']+'$', c=color['tru'], marker=marker['tru'])
-        # ax.plot(stdlist['mu'] + jitter['tru'], stdlist['stdtruth'] / stdlist['std1sttruth'], label='$\sigma_'+deltalabel['tru']+'/\sigma_'+deltalabel['1st']+'$', c=color['tru'], marker=marker['tru'])
         for key in keylist:
             if key in badkey:
                 continue
             stdlistkey = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
-            yerr = stdlistkey['stdcharge'] / stdlist['std1sttruth'] / np.sqrt(stdlistkey['N'])
-            ax.errorbar(stdlist['mu'] + jitter[key], stdlistkey['stdcharge'] / stdlist['std1sttruth'], yerr=yerr, label='$\sigma_'+deltalabel[key]+'/\sigma_'+deltalabel['1st']+'$', c=color[key], marker=marker[key])
-            # ax.plot(stdlist['mu'] + jitter[key], stdlistkey['stdcharge'] / stdlist['std1sttruth'], label='$\sigma_'+deltalabel[key]+'/\sigma_'+deltalabel['1st']+'$', c=color[key], marker=marker[key])
+            yerr = stdlistkey['stdcharge'] / stdlist['stdtruth'] / np.sqrt(stdlistkey['N'])
+            ax.errorbar(stdlist['mu'] + jitter[key], stdlistkey['stdcharge'] / stdlist['stdtruth'], yerr=yerr, label='$\sigma_'+deltalabel[key]+'/\sigma_'+deltalabel['tru']+'$', c=color[key], marker=marker[key])
         for m in ['fbmp']:
             stdlistwav = mts[m][(mts[m]['tau'] == tau) & (mts[m]['sigma'] == sigma)]
-            yerrwav = stdlistwav['stdcharge'] / stdlist['std1sttruth'] / np.sqrt(stdlistwav['N'])
-            ax.errorbar(stdlistwav['mu'] + jitter[m + 'wave'], stdlistwav['stdwave'] / stdlist['std1sttruth'], yerr=yerrwav, label='$\sigma_'+deltalabel[m + 'wave']+'/\sigma_'+deltalabel['1st']+'$', c=color[m + 'wave'], marker=marker[m + 'wave'])
-            # ax.plot(stdlistwav['mu'] + jitter[m + 'wave'], stdlistwav['stdwave'] / stdlist['std1sttruth'], label='$\sigma_'+deltalabel[m + 'wave']+'/\sigma_'+deltalabel['1st']+'$', c=color[m + 'wave'], marker=marker[m + 'wave'])
+            yerrwav = stdlistwav['stdcharge'] / stdlist['stdtruth'] / np.sqrt(stdlistwav['N'])
+            ax.errorbar(stdlistwav['mu'] + jitter[m + 'wave'], stdlistwav['stdwave'] / stdlist['stdtruth'], yerr=yerrwav, label='$\sigma_'+deltalabel[m + 'wave']+'/\sigma_'+deltalabel['tru']+'$', c=color[m + 'wave'], marker=marker[m + 'wave'])
         ax.set_xlabel(r'$N_{\mathrm{PE}}\ \mathrm{expectation}\ \mu$')
         ax.set_ylabel(r'$\mathrm{ratio}$')
         ax.set_title(fr'$\tau={tau}\si{{ns}},\,\sigma={sigma}\si{{ns}}$')
-        ax.set_ylim(lim['deltadiv'][i, j], 1.01)
+        # ax.set_ylim(lim['deltadiv'][i, j], 1.01)
         ax.grid()
         if i == len(Sigma) - 1 and j == len(Tau) - 1:
             ax.legend(loc='upper left', bbox_to_anchor=(1., 0.9))
@@ -290,11 +285,11 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
         stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == tau) & (mts['lucyddm']['sigma'] == sigma)]
         sigma = int(sigma)
         tau = int(tau)
-        yerr = stdlist['stdtruth'] / stdlist['std1sttruth'] / np.sqrt(stdlist['N'])
-        ax.errorbar(stdlist['mu'], stdlist['stdtruth'] / stdlist['std1sttruth'], yerr=yerr, label=fr'$({tau},{sigma})$', marker=marker[i][j], color=colors[i][j])
+        yerr = stdlist['std1sttruth'] / stdlist['stdtruth'] / np.sqrt(stdlist['N'])
+        ax.errorbar(stdlist['mu'], stdlist['std1sttruth'] / stdlist['stdtruth'], yerr=yerr, label=fr'$({tau},{sigma})$', marker=marker[i][j], color=colors[i][j])
 ax.set_xlabel(r'$N_{\mathrm{PE}}\ \mathrm{expectation}\ \mu$')
-ax.set_ylabel(r'$\mathrm{\sigma_\mathrm{ALL}/\sigma_\mathrm{1st}\ ratio}$')
-ax.set_ylim(0.3, 1.1)
+ax.set_ylabel(r'$\mathrm{\sigma_\mathrm{1st}/\sigma_\mathrm{ALL}\ ratio}$')
+ax.set_ylim(0.9, 3.0)
 ax.grid()
 ax.legend(title=r'$(\tau, \sigma)/\si{ns}$', bbox_to_anchor=(1., 0.9))
 fig.savefig('Note/figures/vs-deltadiv.pgf')
