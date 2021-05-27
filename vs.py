@@ -112,7 +112,7 @@ gsw = gridspec.GridSpec(len(Sigma), len(Tau), figure=figw, left=0.1, right=0.8, 
 figr = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 4.5))
 gsr = gridspec.GridSpec(len(Sigma), len(Tau), figure=figr, left=0.1, right=0.8, top=0.93, bottom=0.1, wspace=0.3, hspace=0.35)
 alpha = 0.05
-lim = {'deltadiv':np.tile([0.3, 0.5, 0.], (2, 1)), 'wdist':np.tile([2, 3.5, 7], (2, 1)), 'rss':np.array([[0.7e3, 2.5e3, 2e3], [1.5e3, 2.5e3, 2e3]])}
+lim = {'deltadiv':np.tile([0.3, 0.5], (2, 1)), 'wdist':np.tile([2, 3.5], (2, 1)), 'rss':np.array([[0.7e3, 2.5e3], [1.5e3, 2.5e3]])}
 keylist = list(mts.keys())
 for sigma, i in zip(Sigma, list(range(len(Sigma)))):
     for tau, j in zip(Tau, list(range(len(Tau)))):
@@ -181,7 +181,7 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
             ax.errorbar(stdlistwav['mu'] + jitter[m + 'wave'], stdlistwav['stdwave'] / stdlist['std1sttruth'], yerr=yerrwav, label='$\sigma_'+deltalabel[m + 'wave']+'/\sigma_'+deltalabel['1st']+'$', c=color[m + 'wave'], marker=marker[m + 'wave'])
             # ax.plot(stdlistwav['mu'] + jitter[m + 'wave'], stdlistwav['stdwave'] / stdlist['std1sttruth'], label='$\sigma_'+deltalabel[m + 'wave']+'/\sigma_'+deltalabel['1st']+'$', c=color[m + 'wave'], marker=marker[m + 'wave'])
         ax.set_xlabel(r'$N_{\mathrm{PE}}\ \mathrm{expectation}\ \mu$')
-        ax.set_ylabel(r'$ratio$')
+        ax.set_ylabel(r'$\mathrm{ratio}$')
         ax.set_title(fr'$\tau={tau}\si{{ns}},\,\sigma={sigma}\si{{ns}}$')
         ax.set_ylim(lim['deltadiv'][i, j], 1.01)
         ax.grid()
@@ -199,9 +199,10 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
             ax.errorbar(wdistlist['mu'] + jitter[key], wdistlist['wdist'][:, 1], yerr=yerr, label='$'+label[key]+'$', c=color[key], marker=marker[key])
             ax.fill_between(wdistlist['mu'] + jitter[key], wdistlist['wdist'][:, 0], wdistlist['wdist'][:, 2], fc=color[key], alpha=0.1, color=None)
         ax.set_xlabel(r'$N_{\mathrm{PE}}\ \mathrm{expectation}\ \mu$')
-        ax.set_ylabel(r'$W-dist/\si{ns}$')
+        ax.set_ylabel(r'$\mathrm{W-dist}/\si{ns}$')
         ax.set_title(fr'$\tau={tau}\si{{ns}},\,\sigma={sigma}\si{{ns}}$')
         ax.set_ylim(0, lim['wdist'][i, j])
+        # ax.set_xscale('log')
         # ax.set_yscale('log')
         ax.grid()
         if i == len(Sigma) - 1 and j == len(Tau) - 1:
@@ -221,6 +222,7 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
         ax.set_ylabel(r'$\mathrm{RSS}/\si{mV}^{2}$')
         ax.set_title(fr'$\tau={tau}\si{{ns}},\,\sigma={sigma}\si{{ns}}$')
         ax.set_ylim(0, lim['rss'][i, j])
+        # ax.set_xscale('log')
         # ax.set_yscale('log')
         ax.yaxis.get_major_formatter().set_powerlimits((0, 1))
         ax.grid()

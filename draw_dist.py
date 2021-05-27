@@ -167,7 +167,7 @@ ax1.set_yscale('log')
 ax1.legend()
 s = np.std(start['tstruth'] - start['T0'], ddof=-1)
 m = np.mean(start['tstruth'] - start['T0'])
-ax1.set_title(fr'$\delta_{{1sttru}}={s:.02f},\mathrm{{bias}}={m:.02f}$')
+ax1.set_title(fr'$\delta_{{alltru}}={s:.02f},\mathrm{{bias}}={m:.02f}$')
 
 ax2 = fig.add_subplot(gs[1, 0])
 ax2.hist(time['tscharge'] - start['T0'], bins=100, label=r'$t_{charge} - t_{0}$')
