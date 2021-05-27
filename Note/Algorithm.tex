@@ -110,6 +110,7 @@ A threshold $V_\mathrm{th}$ is selected with respect to electronics noise in the
 In the peak finding method, local maxima are extracted in Savitzky-Golay filter~\cite{savitzky_smoothing_1964} smoothed waveforms.  A minus shift $\Delta t$ is applied to peak positions $\hat{t}_i$ to minimize $D_w$ considering SPE response $V_\mathrm{PE}(t)$ in \eqref{eq:dayaspe}. The reconstructed charges $\hat{q}_i$ of $\hat{t}_i$ are proportional to the peak voltages, which are normalized to the total charge by integration of the waveform.  This works well for lower PE counts. When PE's pile-up closely, peaks overlap and cannot be extracted reliably. A demonstration shown in Fig.~\ref{fig:peak} has $D_w = \SI{4.59}{ns}$. 
 
 \subsection{Deconvolution}
+\label{sec:deconv}
 While heuristic methods extract only a timing shift, deconvolution methods exploit the full SPE shape.  Deconvolution can accommodate overshoots and is selected by JUNO prototype to measure charges~\cite{zhang_comparison_2019}.  Smoothing is necessary because deconvolution does not model the white noise. 
 
 \subsubsection{Fourier Deconvolution}
@@ -117,12 +118,10 @@ While heuristic methods extract only a timing shift, deconvolution methods explo
 Take Fourier transform $\mathcal{F}$ of \eqref{eq:1},
 \begin{equation}
   \label{eq:fourier}
-  \mathcal{F}[w] = \mathcal{F}[\tilde{\phi}]\mathcal{F}[V_\mathrm{PE}] + \mathcal{F}[\epsilon],
-\end{equation}
-therefore
-\begin{equation}
-  \label{eq:fdconv}
-  \mathcal{F}[\tilde{\phi}] = \frac{\mathcal{F}[w]}{\mathcal{F}[V_\mathrm{PE}]} - \frac{\mathcal{F}[\epsilon]}{\mathcal{F}[V_\mathrm{PE}]}.
+  \begin{aligned}
+  \mathcal{F}[w] & = \mathcal{F}[\tilde{\phi}]\mathcal{F}[V_\mathrm{PE}] + \mathcal{F}[\epsilon]\\
+  \implies \mathcal{F}[\tilde{\phi}] & = \frac{\mathcal{F}[w]}{\mathcal{F}[V_\mathrm{PE}]} - \frac{\mathcal{F}[\epsilon]}{\mathcal{F}[V_\mathrm{PE}]}.
+  \end{aligned}
 \end{equation}
 The noise term $\epsilon$ is unknown, but can be suppressed by a threshold $V_\mathrm{th}$ and a low pass filter if $V_\mathrm{PE}(t)$ is smooth.  The filter can be realized by a multiplier $R$ in the frequency domain. The estimator $\hat{\phi}(t)$ takes the over-threshold part of inverse Fourier transformationed function of $t$ and is defined in 3 steps,
 \begin{equation}
@@ -133,8 +132,9 @@ The noise term $\epsilon$ is unknown, but can be suppressed by a threshold $V_\m
     \hat{\phi}(t) & = \hat{Q}\hat{\phi}_*'(t) \\
   \end{aligned}
 \end{equation}
-where $I(x)$ is the indicator function,
-\begin{equation}
+where $\hat{\phi}_*'(t)$ is the normalized $\hat{\phi}'(t)$, $I(x)$ is the indicator function and $\hat{Q}$ is the total relative charge,
+\begin{equation*}
+  \begin{aligned}
   \label{eq:id}
   I(x) = \left\{
     \begin{array}{ll}
@@ -142,13 +142,12 @@ where $I(x)$ is the indicator function,
       0 & \mbox{, otherwise}
     \end{array}
     \right.
-\end{equation}
-$\hat{Q}$ is the total relative charge,
-\begin{equation}
-  \label{eq:Q}
-  \hat{Q} = \frac{\int w(t) \mathrm{d}t}{\int V_\mathrm{PE}(t) \mathrm{d}t},
-\end{equation}
-and $\hat{\phi}_*'(t)$ is the normalized $\hat{\phi}'(t)$. Figure~\ref{fig:fd} illustrates the algorithm with an example having $D_w = \SI{1.72}{ns}$. 
+    & \hspace{1cm} &
+    \hat{Q} = \frac{\int w(t) \mathrm{d}t}{\int V_\mathrm{PE}(t) \mathrm{d}t}\\
+  \end{aligned}
+\end{equation*}
+
+Figure~\ref{fig:fd} illustrates the algorithm with an example having $D_w = \SI{1.72}{ns}$. 
 
 \begin{figure}[H]
   \begin{subfigure}{0.5\textwidth}
@@ -232,17 +231,12 @@ The result of $\hat{\phi}(t)$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ 
 \subsection{Regression Analysis}
 With waveform generative model in~\eqref{eq:1}, regression analysis is the best for waveform analysis.  Although computational complexity hindered regression from being used in vast volumes of raw data, the advancement of big data infrastructure and sparsity research makes the advantage of regression more pronounced.
 
-\subsubsection{Gradient Descent}
 In (\ref{eq:w-hat}), replace $\hat{N}$ with a fixed sample size $N_s$ and $\hat{t}_i$ with a fixed vector of timings $t'_i$,
 \begin{equation}
   \label{eq:gd}
   w'(t) = \sum_{i=1}^{N_s}q'_iV_\mathrm{PE}(t-t'_i)
 \end{equation}
-Construct estimators $\hat{q}_i$ by minimizing RSS of $w'(t)$ and $w(t)$,
-\begin{equation}
-  \label{eq:gd-q}
-  \bm{\hat{q}} = \arg \underset{\bm{q'}}{\min} \mathrm{RSS}\left[w'(t),w(t)\right].
-\end{equation}
+
 When $\{t'_i\}$ is dense enough, $\{\hat{q}_i\}$ determines the inferred PE distribution $\hat{\phi}(t)$,
 \begin{equation}
   \label{eq:gd-phi}
@@ -250,6 +244,16 @@ When $\{t'_i\}$ is dense enough, $\{\hat{q}_i\}$ determines the inferred PE dist
 \end{equation}
 
 It is tempting to replace the dense $\bm{t'}$ grid in \eqref{eq:gd} with a length-varying vector of sparse PEs. However, because the truth $N_\mathrm{PE}$ is unknown, that formulates an explicit trans-dimensional model.  Although worth trying, model selection will complicate the optimization and is beyond the scope of this study.
+
+ Because the output $\hat{phi}(t)$ from a deconvolution method~(Section \ref{sec:deconv}) covers locations of non-zero $\bm{q}'$, its discretization can seed the $\bm{t}'$ grid to reduce $N_s$ and consequently the time consumption.
+
+\subsubsection{Gradient Descent}
+
+Construct estimators $\hat{q}_i$ by minimizing RSS of $w'(t)$ and $w(t)$,
+\begin{equation}
+  \label{eq:gd-q}
+  \bm{\hat{q}} = \arg \underset{\bm{q'}}{\min} \mathrm{RSS}\left[w'(t),w(t)\right].
+\end{equation}
 
 The optimizer is realized with limited-memory Broyden-Fletcher-Goldfarb-Shanno algorithm with bound constraint~\cite{byrd_limited_1995}.  It can impose constraints of $q'_i > 0$. The demonstration~\ref{fig:fitting} here shows a result with $D_w = \SI{0.71}{ns}$.
 
@@ -351,17 +355,18 @@ Denote a set $\mathcal{Z}$ to contain the $2^{N_s}$ combinations of $\bm{z}$. On
     \label{eq:z}
     \begin{aligned}
     p(\bm{z}|\bm{w}) &= \frac{p(\bm{w}|\bm{z})p(\bm{z})}{\sum_{\bm{z}'\in\mathcal{Z}}p(\bm{w}|\bm{z'})p(\bm{z'})} \\
-    &\approx \frac{p(\bm{w}|\bm{z})p(\bm{z})}{\sum_{\bm{z}'\in\mathcal{Z}'}p(\bm{w}|\bm{z'})p(\bm{z'})},
+    &\approx \frac{p(\bm{w}|\bm{z})p(\bm{z})}{\sum_{\bm{z}'\in\mathcal{Z}'}p(\bm{w}|\bm{z'})p(\bm{z'})}.
     \end{aligned}
 \end{equation}
-where the prior $p(\bm{z})$ is given by the Bernoulli distributions of binned light curve,
+The prior $p(\bm{z})$ is given by the Bernoulli distributions of binned light curve,
 \begin{equation}
 \begin{aligned}
     p(\bm{z}|t_0, \mu) &= \prod_{i|z_i=0}(1-\mu \phi(t'_i - t_0) \Delta t') \prod_{i|z_i=1} \mu \phi(t'_i - t_0) \Delta t' \\
     &= \prod_{i}(1-\mu \phi(t'_i - t_0) \Delta t') \prod_{i|z_i=1} \frac{\mu \phi(t'_i - t_0) \Delta t'}{1-\mu \phi(t'_i - t_0) \Delta t'} \\
     &\approx e^{-\mu} \prod_{i|z_i=1} \frac{\mu \phi(t'_i - t_0) \Delta t'}{1-\mu \phi(t'_i - t_0) \Delta t'}
-\end{aligned}.
+\end{aligned},
 \end{equation}
+where $\mu$ is the expected number of PEs and $\sum_i \phi(t'_i - t_0)\Delta t' = 1$ by the normalization condition.
 
 The nominator logarithm of \eqref{eq:z},
 \begin{equation}
@@ -388,7 +393,7 @@ Finally, all the $\bm{z} \in \mathcal{Z}'$ and their corresponding posterior pro
     \end{aligned}
 \end{equation}
 
-Figure~\ref{fig:fbmp} shows one of the FBMP results. We can see the origin waveform $w(t)$ and reconstructed waveform $\hat{w}(t)$ are very similar. The reconstructed and truth $\bm{q}$ are also similar.
+Figure~\ref{fig:fbmp} shows one of the FBMP results. We can see the original waveform $w(t)$ and reconstructed waveform $\hat{w}(t)$ are very similar. The reconstructed and truth $\bm{q}$ are also similar.
 
 \begin{figure}[H]
     \centering
@@ -404,17 +409,15 @@ The result of $\hat{q}$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ is sho
     \caption{\label{fig:fbmp-npe} $D_w$ vs $N_{pe}$ Boxplot \& Histogram, $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$, method is FBMP}
 \end{figure}
 
-The denominator of \eqref{eq:z} is actually $p(\bm{w}|t_0, \mu)$, which provides a superior estimator of $\mu$ and $t_0$ to \eqref{eq:pseudo},
+The denominator of \eqref{eq:z} is actually the evidence $p(\bm{w}|t_0, \mu)$, which provides a superior estimator of $\mu$ and $t_0$ to \eqref{eq:pseudo},
 \begin{equation}
 \begin{aligned}
-    \left(\hat{t}_0, \hat{\mu}\right) &= \arg\underset{t_0,\mu}{\max} p(t_0, \mu|\bm{w}) =  \arg\underset{t_0,\mu}{\max} p(\bm{w} | t_0, \mu) \\
+    \left(\hat{t}_0, \hat{\mu}\right) &= \arg\underset{t_0,\mu}{\max} p(\bm{w} | t_0, \mu) \\
     p(\bm{w}|t_0, \mu) &= \sum_{\bm{z}'\in\mathcal{Z}'}p(\bm{w}|\bm{z}',t_0,\mu)p(\bm{z}'|t_0,\mu) \\
     &= \sum_{\bm{z}'\in\mathcal{Z}'}p(\bm{w}|\bm{z}')p(\bm{z}'|t_0,\mu).
 \end{aligned}
 \end{equation}
-where a flat prior for $p(t_0, \mu)$ is used.
-
-It is noted that one of the deconvolution methods can be used for FBMP initialization, where we reduce $N_s$ regarding deconvolution results. In the test of FBMP, we use LucyDDM as the initializer. 
+where $p(\bm{w}|z', t_0, \mu) = p(\bm{w}|')$ because $\bm{w}$ does not depend on $t_0$ or $\mu$ if $z'$ is given.  If $t_0$ and $\mu$ are predicted by a event model $p(t_0, \mu | \mathcal{E})$, FBMP is extended to event reconstruction bypassing the need to save PE $\bm{t}'$ and $\bm{q}'$.  It is however out of the scope of this article and will be covered elsewhere.
 
 \subsection{Performance}
 
