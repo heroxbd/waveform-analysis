@@ -58,13 +58,13 @@ mtsi['wdist'] = np.nan
 mtsi['RSS'] = np.nan
 mtsi = np.sort(mtsi, kind='stable', order=['mu', 'tau', 'sigma'])
 
-mts = {'findpeak':mtsi.copy(), 'threshold':mtsi.copy(), 'fftrans':mtsi.copy(), 'lucyddm':mtsi.copy(), 'xiaopeip':mtsi.copy(), 'mcmc':mtsi.copy(), 'takara':mtsi.copy(), 'fbmp':mtsi.copy()}
+mts = {'findpeak':mtsi.copy(), 'threshold':mtsi.copy(), 'fftrans':mtsi.copy(), 'mcmc':mtsi.copy(), 'lucyddm':mtsi.copy(), 'xiaopeip':mtsi.copy(), 'takara':mtsi.copy(), 'fbmp':mtsi.copy()}
 deltalabel = {'1st':'\mathrm{1st}', 'tru':'\mathrm{ALL}', 'findpeak':'\mathrm{FindPeak}', 'threshold':'\mathrm{Shift}', 'fftrans':'\mathrm{FFT}', 'lucyddm':'\mathrm{LucyDDM}', 'xiaopeip':'\mathrm{Fitting}', 'takara':'\mathrm{CNN}', 'fbmp':'\mathrm{FBMPcha}', 'fbmpwave':'\mathrm{FBMPt0}', 'mcmc':'\mathrm{MCMCcha}', 'mcmcwave':'\mathrm{MCMCt0}'}
 label = {'1st':'\mathrm{1st}', 'tru':'\mathrm{ALL}', 'findpeak':'\mathrm{FindPeak}', 'threshold':'\mathrm{Shift}', 'fftrans':'\mathrm{FFT}', 'lucyddm':'\mathrm{LucyDDM}', 'xiaopeip':'\mathrm{Fitting}', 'takara':'\mathrm{CNN}', 'fbmp':'\mathrm{FBMP}', 'fbmpwave':'\mathrm{FBMP}', 'mcmc':'\mathrm{MCMC}', 'mcmcwave':'\mathrm{MCMC}'}
 marker = {'1st':'s', 'tru':'h', 'findpeak':',', 'threshold':'1', 'fftrans':'+', 'lucyddm':'p', 'xiaopeip':'*', 'takara':'X', 'fbmp':'o', 'fbmpwave':'^', 'mcmc':'x', 'mcmcwave':'>'}
 color = {'1st':'b', 'tru':'k', 'findpeak':'C1', 'threshold':'C2', 'fftrans':'m', 'lucyddm':'y', 'xiaopeip':'c', 'takara':'C0', 'fbmp':'r', 'fbmpwave':'b', 'mcmc':'C4', 'mcmcwave':'C5'}
 jit = 0.05
-jitter = {'mcmc':-6 * jit, 'tru':-5 * jit, 'fbmp':-4 * jit, 'fbmpwave':-3 * jit, 'lucyddm':-2 * jit, 'mcmcwave':-1 * jit, 'xiaopeip':1 * jit, 'takara':0 * jit, 'fftrans':2 * jit, '1st':3 * jit, 'findpeak':4 * jit, 'threshold':5 * jit}
+jitter = {'mcmcwave':-5 * jit, 'mcmc':-4 * jit, 'tru':-3 * jit, 'fbmp':-2 * jit, 'fbmpwave':-1 * jit, 'lucyddm':0 * jit, 'xiaopeip':1 * jit, 'takara':2 * jit, '1st':3 * jit, 'fftrans':4 * jit, 'findpeak':5 * jit, 'threshold':6 * jit}
 
 for key in mts.keys():
     for i in range(len(mts[key])):
@@ -112,8 +112,9 @@ gsw = gridspec.GridSpec(len(Sigma), len(Tau), figure=figw, left=0.1, right=0.8, 
 figr = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 4.5))
 gsr = gridspec.GridSpec(len(Sigma), len(Tau), figure=figr, left=0.1, right=0.8, top=0.93, bottom=0.1, wspace=0.3, hspace=0.35)
 alpha = 0.05
-lim = {'deltadiv':np.tile([0.3, 0.5], (2, 1)), 'wdist':np.tile([2, 3.5], (2, 1)), 'rss':np.array([[0.7e3, 2.5e3], [1.5e3, 2.5e3]])}
+lim = {'deltadiv':np.array([[0.3, 0.5]]), 'wdist':np.array([[1.5, 3.0]]), 'rss':np.array([[0.55e3, 2.2e3]])}
 keylist = list(mts.keys())
+badkey = ['findpeak', 'threshold', 'fftrans', 'mcmc']
 for sigma, i in zip(Sigma, list(range(len(Sigma)))):
     for tau, j in zip(Tau, list(range(len(Tau)))):
         ax = figd.add_subplot(gsd[i, j])
@@ -122,12 +123,11 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
         yerrall = np.vstack([stdlist['stdtruth']-np.sqrt(np.power(stdlist['stdtruth'],2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(stdlist['stdtruth'],2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-stdlist['stdtruth']])
         ax.errorbar(stdlist['mu'] + jitter['1st'], stdlist['std1sttruth'], yerr=yerr1st, c=color['1st'], label='$\sigma_'+deltalabel['1st']+'$', marker=marker['1st'])
         ax.errorbar(stdlist['mu'] + jitter['tru'], stdlist['stdtruth'], yerr=yerrall, c=color['tru'], label='$\sigma_'+deltalabel['tru']+'$', marker=marker['tru'])
-        for m in ['mcmc', 'fbmp']:
+        for m in ['fbmp']:
             stdlistwav = mts[m][(mts[m]['tau'] == tau) & (mts[m]['sigma'] == sigma)]
             yerrwav = np.vstack([stdlistwav['stdwave']-np.sqrt(np.power(stdlistwav['stdwave'],2)*stdlistwav['N']/chi2.ppf(1-alpha/2, stdlistwav['N'])), np.sqrt(np.power(stdlistwav['stdwave'],2)*stdlistwav['N']/chi2.ppf(alpha/2, stdlistwav['N']))-stdlistwav['stdwave']])
             ax.errorbar(stdlistwav['mu'] + jitter[m + 'wave'], stdlistwav['stdwave'], yerr=yerrwav, c=color[m + 'wave'], label='$\sigma_'+deltalabel[m + 'wave']+'$', marker=marker[m + 'wave'])
-        for k in range(len(keylist)):
-            key = keylist[k]
+        for key in keylist:
             stdlist = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
             yerrcha = np.vstack([stdlist['stdcharge']-np.sqrt(np.power(stdlist['stdcharge'],2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(stdlist['stdcharge'],2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-stdlist['stdcharge']])
             ax.errorbar(stdlist['mu'] + jitter[key], stdlist['stdcharge'], yerr=yerrcha, c=color[key], label='$\sigma_'+deltalabel[key]+'$', marker=marker[key])
@@ -145,12 +145,13 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
         yerrall = np.vstack([stdlist['biastruth']-t.ppf(1-alpha/2, stdlist['N'])*stdlist['stdtruth']/np.sqrt(stdlist['N']), t.ppf(1-alpha/2, stdlist['N'])*stdlist['stdtruth']/np.sqrt(stdlist['N'])-stdlist['biastruth']])
         ax.errorbar(stdlist['mu'] + jitter['1st'], stdlist['bias1sttruth'], yerr=yerr1st, c=color['1st'], label='$\mathrm{bias}_'+deltalabel['1st']+'$', marker=marker['1st'])
         ax.errorbar(stdlist['mu'] + jitter['tru'], stdlist['biastruth'], yerr=yerrall, c=color['tru'], label='$\mathrm{bias}_'+deltalabel['tru']+'$', marker=marker['tru'])
-        for m in ['mcmc', 'fbmp']:
+        for m in ['fbmp']:
             stdlistwav = mts[m][(mts[m]['tau'] == tau) & (mts[m]['sigma'] == sigma)]
             yerrwav = np.vstack([stdlistwav['biaswave']-t.ppf(1-alpha/2, stdlist['N'])*stdlist['stdwave']/np.sqrt(stdlist['N']), t.ppf(1-alpha/2, stdlist['N'])*stdlist['stdwave']/np.sqrt(stdlist['N'])-stdlistwav['biaswave']])
             ax.errorbar(stdlistwav['mu'] + jitter[m + 'wave'], stdlistwav['biaswave'], yerr=yerrwav, c=color[m + 'wave'], label='$\mathrm{bias}_'+deltalabel[m + 'wave']+'$', marker=marker[m + 'wave'])
-        for k in range(len(keylist)):
-            key = keylist[k]
+        for key in keylist:
+            if key in badkey:
+                continue
             stdlist = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
             yerrcha = np.vstack([stdlist['biascharge']-t.ppf(1-alpha/2, stdlist['N'])*stdlist['stdcharge']/np.sqrt(stdlist['N']), t.ppf(1-alpha/2, stdlist['N'])*stdlist['stdcharge']/np.sqrt(stdlist['N'])-stdlist['biascharge']])
             ax.errorbar(stdlist['mu'] + jitter[key], stdlist['biascharge'], yerr=yerrcha, c=color[key], label='$\mathrm{bias}_'+deltalabel[key]+'$', marker=marker[key])
@@ -167,15 +168,14 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
         yerrall = stdlist['stdtruth'] / stdlist['std1sttruth'] / np.sqrt(stdlist['N'])
         ax.errorbar(stdlist['mu'] + jitter['tru'], stdlist['stdtruth'] / stdlist['std1sttruth'], yerr=yerrall, label='$\sigma_'+deltalabel['tru']+'/\sigma_'+deltalabel['1st']+'$', c=color['tru'], marker=marker['tru'])
         # ax.plot(stdlist['mu'] + jitter['tru'], stdlist['stdtruth'] / stdlist['std1sttruth'], label='$\sigma_'+deltalabel['tru']+'/\sigma_'+deltalabel['1st']+'$', c=color['tru'], marker=marker['tru'])
-        for k in range(len(keylist)):
-            key = keylist[k]
-            if key == 'findpeak' or key == 'fftrans':
+        for key in keylist:
+            if key in badkey:
                 continue
             stdlistkey = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
             yerr = stdlistkey['stdcharge'] / stdlist['std1sttruth'] / np.sqrt(stdlistkey['N'])
             ax.errorbar(stdlist['mu'] + jitter[key], stdlistkey['stdcharge'] / stdlist['std1sttruth'], yerr=yerr, label='$\sigma_'+deltalabel[key]+'/\sigma_'+deltalabel['1st']+'$', c=color[key], marker=marker[key])
             # ax.plot(stdlist['mu'] + jitter[key], stdlistkey['stdcharge'] / stdlist['std1sttruth'], label='$\sigma_'+deltalabel[key]+'/\sigma_'+deltalabel['1st']+'$', c=color[key], marker=marker[key])
-        for m in ['mcmc', 'fbmp']:
+        for m in ['fbmp']:
             stdlistwav = mts[m][(mts[m]['tau'] == tau) & (mts[m]['sigma'] == sigma)]
             yerrwav = stdlistwav['stdcharge'] / stdlist['std1sttruth'] / np.sqrt(stdlistwav['N'])
             ax.errorbar(stdlistwav['mu'] + jitter[m + 'wave'], stdlistwav['stdwave'] / stdlist['std1sttruth'], yerr=yerrwav, label='$\sigma_'+deltalabel[m + 'wave']+'/\sigma_'+deltalabel['1st']+'$', c=color[m + 'wave'], marker=marker[m + 'wave'])
@@ -189,9 +189,8 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
             ax.legend(loc='upper left', bbox_to_anchor=(1., 0.9))
 
         ax = figw.add_subplot(gsw[i, j])
-        for k in range(len(keylist)):
-            key = keylist[k]
-            if key == 'findpeak' or key == 'threshold' or key == 'fftrans':
+        for key in keylist:
+            if key in badkey:
                 continue
             wdistlist = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
             # ax.plot(wdistlist['mu'] + jitter[key], wdistlist['wdist'], c=color[key], label='$'+label[key]+'$', marker=marker[key])
@@ -209,9 +208,8 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
             ax.legend(loc='upper left', bbox_to_anchor=(1., 0.9))
 
         ax = figr.add_subplot(gsr[i, j])
-        for k in range(len(keylist)):
-            key = keylist[k]
-            if key == 'findpeak' or key == 'threshold' or key == 'fftrans':
+        for key in keylist:
+            if key in badkey:
                 continue
             rsslist = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
             # ax.plot(rsslist['mu'] + jitter[key], rsslist['RSS'], c=color[key], label='$'+label[key]+'$', marker=marker[key])
