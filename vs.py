@@ -40,7 +40,7 @@ with open(args.conf) as f:
 filelist = os.listdir('result/lucyddm/solu')
 filelist = [f for f in filelist if f[0] != '.' and os.path.splitext(f)[-1] == '.h5']
 numbers = [[float(i) for i in f[:-3].split('-')] for f in filelist]
-stype = np.dtype([('mu', np.float64), ('tau', np.float64), ('sigma', np.float64), ('n', np.uint), ('std1sttruth', np.float64), ('stdtruth', np.float64), ('stdcharge', np.float64), ('stdwave', np.float64), ('bias1sttruth', np.float64), ('biastruth', np.float64), ('biascharge', np.float64), ('biaswave', np.float64), ('wdist', np.float64, 3), ('RSS', np.float64, 3), ('N', np.uint), ('stdchargesuccess', np.uint), ('stdwavesuccess', np.uint)])
+stype = np.dtype([('mu', np.float64), ('tau', np.float64), ('sigma', np.float64), ('n', np.uint), ('std1sttruth', np.float64), ('stdtruth', np.float64), ('std', np.float64), ('stdone', np.float64), ('bias1sttruth', np.float64), ('biastruth', np.float64), ('bias', np.float64), ('biasone', np.float64), ('wdist', np.float64, 3), ('RSS', np.float64, 3), ('N', np.uint), ('stdsuccess', np.uint), ('stdonesuccess', np.uint)])
 mtsi = np.zeros(len(numbers), dtype=stype)
 mtsi['mu'] = np.array([i[0] for i in numbers])
 mtsi['tau'] = np.array([i[1] for i in numbers])
@@ -48,23 +48,23 @@ mtsi['sigma'] = np.array([i[2] for i in numbers])
 mtsi['n'] = np.arange(len(numbers))
 mtsi['std1sttruth'] = np.nan
 mtsi['stdtruth'] = np.nan
-mtsi['stdcharge'] = np.nan
-mtsi['stdwave'] = np.nan
+mtsi['std'] = np.nan
+mtsi['stdone'] = np.nan
 mtsi['bias1sttruth'] = np.nan
 mtsi['biastruth'] = np.nan
-mtsi['biascharge'] = np.nan
-mtsi['biaswave'] = np.nan
+mtsi['bias'] = np.nan
+mtsi['biasone'] = np.nan
 mtsi['wdist'] = np.nan
 mtsi['RSS'] = np.nan
 mtsi = np.sort(mtsi, kind='stable', order=['mu', 'tau', 'sigma'])
 
 mts = {'findpeak':mtsi.copy(), 'threshold':mtsi.copy(), 'fftrans':mtsi.copy(), 'mcmc':mtsi.copy(), 'lucyddm':mtsi.copy(), 'xiaopeip':mtsi.copy(), 'takara':mtsi.copy(), 'fbmp':mtsi.copy()}
-deltalabel = {'1st':'\mathrm{1st}', 'tru':'\mathrm{ALL}', 'findpeak':'\mathrm{FindPeak}', 'threshold':'\mathrm{Shift}', 'fftrans':'\mathrm{FFT}', 'lucyddm':'\mathrm{LucyDDM}', 'xiaopeip':'\mathrm{Fitting}', 'takara':'\mathrm{CNN}', 'fbmp':'\mathrm{FBMPcha}', 'fbmpwave':'\mathrm{FBMPt0}', 'mcmc':'\mathrm{MCMCcha}', 'mcmcwave':'\mathrm{MCMCt0}'}
-label = {'1st':'\mathrm{1st}', 'tru':'\mathrm{ALL}', 'findpeak':'\mathrm{FindPeak}', 'threshold':'\mathrm{Shift}', 'fftrans':'\mathrm{FFT}', 'lucyddm':'\mathrm{LucyDDM}', 'xiaopeip':'\mathrm{Fitting}', 'takara':'\mathrm{CNN}', 'fbmp':'\mathrm{FBMP}', 'fbmpwave':'\mathrm{FBMP}', 'mcmc':'\mathrm{MCMC}', 'mcmcwave':'\mathrm{MCMC}'}
-marker = {'1st':'s', 'tru':'h', 'findpeak':',', 'threshold':'1', 'fftrans':'+', 'lucyddm':'p', 'xiaopeip':'*', 'takara':'X', 'fbmp':'o', 'fbmpwave':'^', 'mcmc':'x', 'mcmcwave':'>'}
-color = {'1st':'b', 'tru':'k', 'findpeak':'C1', 'threshold':'C2', 'fftrans':'m', 'lucyddm':'y', 'xiaopeip':'c', 'takara':'C0', 'fbmp':'r', 'fbmpwave':'b', 'mcmc':'C4', 'mcmcwave':'C5'}
+deltalabel = {'1st':'\mathrm{1st}', 'tru':'\mathrm{ALL}', 'findpeak':'\mathrm{FindPeak}', 'threshold':'\mathrm{Shift}', 'fftrans':'\mathrm{FFT}', 'lucyddm':'\mathrm{LucyDDM}', 'xiaopeip':'\mathrm{Fitting}', 'takara':'\mathrm{CNN}', 'fbmp':'\mathrm{FBMP}', 'fbmpone':'\mathrm{FBMPmax}', 'mcmc':'\mathrm{MCMCt0}', 'mcmcone':'\mathrm{MCMCcha}'}
+label = {'1st':'\mathrm{1st}', 'tru':'\mathrm{ALL}', 'findpeak':'\mathrm{FindPeak}', 'threshold':'\mathrm{Shift}', 'fftrans':'\mathrm{FFT}', 'lucyddm':'\mathrm{LucyDDM}', 'xiaopeip':'\mathrm{Fitting}', 'takara':'\mathrm{CNN}', 'fbmp':'\mathrm{FBMP}', 'mcmc':'\mathrm{MCMC}'}
+marker = {'1st':'o', 'tru':'h', 'findpeak':',', 'threshold':'1', 'fftrans':'+', 'lucyddm':'p', 'xiaopeip':'*', 'takara':'x', 'fbmp':'s', 'fbmpone':'^', 'mcmc':'X', 'mcmcone':'>'}
+color = {'1st':'g', 'tru':'k', 'findpeak':'C1', 'threshold':'C2', 'fftrans':'m', 'lucyddm':'y', 'xiaopeip':'c', 'takara':'C0', 'fbmp':'r', 'fbmpone':'b', 'mcmc':'C4', 'mcmcone':'C5'}
 jit = 0.05
-jitter = {'mcmcwave':-5 * jit, 'mcmc':-4 * jit, 'tru':-3 * jit, 'fbmp':-2 * jit, 'fbmpwave':-1 * jit, 'lucyddm':0 * jit, 'xiaopeip':1 * jit, 'takara':2 * jit, '1st':3 * jit, 'fftrans':4 * jit, 'findpeak':5 * jit, 'threshold':6 * jit}
+jitter = {'mcmcone':-5 * jit, 'mcmc':-4 * jit, 'tru':-3 * jit, 'fbmp':-2 * jit, 'fbmpone':-1 * jit, 'lucyddm':0 * jit, 'xiaopeip':1 * jit, 'takara':2 * jit, '1st':3 * jit, 'fftrans':4 * jit, 'findpeak':5 * jit, 'threshold':6 * jit}
 
 for key in mts.keys():
     for i in range(len(mts[key])):
@@ -77,24 +77,27 @@ for key in mts.keys():
                 time = soluf['starttime'][:]
                 record = distf['Record'][:]
                 start = wavef['SimTruth/T'][:]
-                r = wavef['SimTruth/T'].attrs['r'] * 1.5
-            vali = np.abs(time['tscharge'] - start['T0'] - np.mean(time['tscharge'] - start['T0'])) < r * np.std(time['tscharge'] - start['T0'], ddof=-1)
+                r = wavef['SimTruth/T'].attrs['r']
             mts[key][i]['N'] = len(start)
+            vali = np.abs(time['tscharge'] - start['T0'] - np.mean(time['tscharge'] - start['T0'])) < r * np.std(time['tscharge'] - start['T0'], ddof=-1)
             mts[key][i]['std1sttruth'] = np.std(start['ts1sttruth'] - start['T0'], ddof=-1)
             mts[key][i]['stdtruth'] = np.std(start['tstruth'] - start['T0'], ddof=-1)
-            mts[key][i]['stdcharge'], mts[key][i]['stdchargesuccess'] = wff.stdrmoutlier(time['tscharge'] - start['T0'], r)
+            mts[key][i]['std'], mts[key][i]['stdsuccess'] = wff.stdrmoutlier(time['tscharge'] - start['T0'], r)
             mts[key][i]['bias1sttruth'] = np.mean(start['ts1sttruth'] - start['T0'])
             mts[key][i]['biastruth'] = np.mean(start['tstruth'] - start['T0'])
-            mts[key][i]['biascharge'] = np.mean(time['tscharge'][vali] - start['T0'][vali])
-            if not np.any(np.isnan(time['tswave'][vali])):
-                mts[key][i]['stdwave'], mts[key][i]['stdwavesuccess'] = wff.stdrmoutlier(time['tswave'] - start['T0'], r)
-                mts[key][i]['biaswave'] = np.mean(time['tswave'][vali] - start['T0'][vali])
+            mts[key][i]['bias'] = np.mean(time['tscharge'][vali] - start['T0'][vali])
             mts[key][i]['wdist'] = np.insert(np.percentile(record['wdist'][vali], [5, 95]), 1, record['wdist'][vali].mean())
             mts[key][i]['RSS'] = np.insert(np.percentile(record['RSS'][vali], [5, 95]), 1, record['RSS'][vali].mean())
+            if not np.any(np.isnan(time['tswave'][vali])):
+                mts[key][i]['stdone'], mts[key][i]['stdonesuccess'] = wff.stdrmoutlier(time['tscharge'] - start['T0'], r)
+                mts[key][i]['biasone'] = np.mean(time['tscharge'][vali] - start['T0'][vali])
+                vali = np.abs(time['tswave'] - start['T0'] - np.mean(time['tswave'] - start['T0'])) < r * np.std(time['tswave'] - start['T0'], ddof=-1)
+                mts[key][i]['std'], mts[key][i]['stdsuccess'] = wff.stdrmoutlier(time['tswave'] - start['T0'], r)
+                mts[key][i]['bias'] = np.mean(time['tswave'][vali] - start['T0'][vali])
         except:
             pass
 
-dhigh = np.array([[np.max(mts[key]['std1sttruth']), np.max(mts[key]['stdtruth']), np.max(mts[key]['stdcharge']), np.max(mts[key]['stdwave'])] for key in mts.keys()])
+dhigh = np.array([[np.max(mts[key]['std1sttruth']), np.max(mts[key]['stdtruth']), np.max(mts[key]['std']), np.max(mts[key]['stdone'])] for key in mts.keys()])
 dhigh = np.max(dhigh[~np.isnan(dhigh)]) * 1.05
 whigh = np.array([[np.max(mts[key]['wdist'])] for key in mts.keys()])
 whigh = np.max(whigh[~np.isnan(whigh)]) * 1.05
@@ -123,14 +126,14 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
         yerrall = np.vstack([stdlist['stdtruth']-np.sqrt(np.power(stdlist['stdtruth'],2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(stdlist['stdtruth'],2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-stdlist['stdtruth']])
         ax.errorbar(stdlist['mu'] + jitter['1st'], stdlist['std1sttruth'], yerr=yerr1st, c=color['1st'], label='$\sigma_'+deltalabel['1st']+'$', marker=marker['1st'])
         ax.errorbar(stdlist['mu'] + jitter['tru'], stdlist['stdtruth'], yerr=yerrall, c=color['tru'], label='$\sigma_'+deltalabel['tru']+'$', marker=marker['tru'])
-        for m in ['fbmp']:
+        for m in ['mcmc', 'fbmp']:
             stdlistwav = mts[m][(mts[m]['tau'] == tau) & (mts[m]['sigma'] == sigma)]
-            yerrwav = np.vstack([stdlistwav['stdwave']-np.sqrt(np.power(stdlistwav['stdwave'],2)*stdlistwav['N']/chi2.ppf(1-alpha/2, stdlistwav['N'])), np.sqrt(np.power(stdlistwav['stdwave'],2)*stdlistwav['N']/chi2.ppf(alpha/2, stdlistwav['N']))-stdlistwav['stdwave']])
-            ax.errorbar(stdlistwav['mu'] + jitter[m + 'wave'], stdlistwav['stdwave'], yerr=yerrwav, c=color[m + 'wave'], label='$\sigma_'+deltalabel[m + 'wave']+'$', marker=marker[m + 'wave'])
+            yerrwav = np.vstack([stdlistwav['stdone']-np.sqrt(np.power(stdlistwav['stdone'],2)*stdlistwav['N']/chi2.ppf(1-alpha/2, stdlistwav['N'])), np.sqrt(np.power(stdlistwav['stdone'],2)*stdlistwav['N']/chi2.ppf(alpha/2, stdlistwav['N']))-stdlistwav['stdone']])
+            ax.errorbar(stdlistwav['mu'] + jitter[m + 'one'], stdlistwav['stdone'], yerr=yerrwav, c=color[m + 'one'], label='$\sigma_'+deltalabel[m + 'one']+'$', marker=marker[m + 'one'])
         for key in keylist:
             stdlist = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
-            yerrcha = np.vstack([stdlist['stdcharge']-np.sqrt(np.power(stdlist['stdcharge'],2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(stdlist['stdcharge'],2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-stdlist['stdcharge']])
-            ax.errorbar(stdlist['mu'] + jitter[key], stdlist['stdcharge'], yerr=yerrcha, c=color[key], label='$\sigma_'+deltalabel[key]+'$', marker=marker[key])
+            yerrcha = np.vstack([stdlist['std']-np.sqrt(np.power(stdlist['std'],2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(stdlist['std'],2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-stdlist['std']])
+            ax.errorbar(stdlist['mu'] + jitter[key], stdlist['std'], yerr=yerrcha, c=color[key], label='$\sigma_'+deltalabel[key]+'$', marker=marker[key])
         ax.set_xlabel(r'$N_{\mathrm{PE}}\ \mathrm{expectation}\ \mu$')
         ax.set_ylabel(r'$\sigma/\si{ns}$')
         ax.set_title(fr'$\tau={tau}\si{{ns}},\,\sigma={sigma}\si{{ns}}$')
@@ -145,16 +148,12 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
         yerrall = np.vstack([stdlist['biastruth']-t.ppf(1-alpha/2, stdlist['N'])*stdlist['stdtruth']/np.sqrt(stdlist['N']), t.ppf(1-alpha/2, stdlist['N'])*stdlist['stdtruth']/np.sqrt(stdlist['N'])-stdlist['biastruth']])
         ax.errorbar(stdlist['mu'] + jitter['1st'], stdlist['bias1sttruth'], yerr=yerr1st, c=color['1st'], label='$\mathrm{bias}_'+deltalabel['1st']+'$', marker=marker['1st'])
         ax.errorbar(stdlist['mu'] + jitter['tru'], stdlist['biastruth'], yerr=yerrall, c=color['tru'], label='$\mathrm{bias}_'+deltalabel['tru']+'$', marker=marker['tru'])
-        for m in ['fbmp']:
-            stdlistwav = mts[m][(mts[m]['tau'] == tau) & (mts[m]['sigma'] == sigma)]
-            yerrwav = np.vstack([stdlistwav['biaswave']-t.ppf(1-alpha/2, stdlist['N'])*stdlist['stdwave']/np.sqrt(stdlist['N']), t.ppf(1-alpha/2, stdlist['N'])*stdlist['stdwave']/np.sqrt(stdlist['N'])-stdlistwav['biaswave']])
-            ax.errorbar(stdlistwav['mu'] + jitter[m + 'wave'], stdlistwav['biaswave'], yerr=yerrwav, c=color[m + 'wave'], label='$\mathrm{bias}_'+deltalabel[m + 'wave']+'$', marker=marker[m + 'wave'])
         for key in keylist:
             if key in badkey:
                 continue
             stdlist = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
-            yerrcha = np.vstack([stdlist['biascharge']-t.ppf(1-alpha/2, stdlist['N'])*stdlist['stdcharge']/np.sqrt(stdlist['N']), t.ppf(1-alpha/2, stdlist['N'])*stdlist['stdcharge']/np.sqrt(stdlist['N'])-stdlist['biascharge']])
-            ax.errorbar(stdlist['mu'] + jitter[key], stdlist['biascharge'], yerr=yerrcha, c=color[key], label='$\mathrm{bias}_'+deltalabel[key]+'$', marker=marker[key])
+            yerrcha = np.vstack([stdlist['bias']-t.ppf(1-alpha/2, stdlist['N'])*stdlist['std']/np.sqrt(stdlist['N']), t.ppf(1-alpha/2, stdlist['N'])*stdlist['std']/np.sqrt(stdlist['N'])-stdlist['bias']])
+            ax.errorbar(stdlist['mu'] + jitter[key], stdlist['bias'], yerr=yerrcha, c=color[key], label='$\mathrm{bias}_'+deltalabel[key]+'$', marker=marker[key])
         ax.set_xlabel(r'$N_{\mathrm{PE}}\ \mathrm{expectation}\ \mu$')
         ax.set_ylabel(r'$\mathrm{bias}/\si{ns}$')
         ax.set_title(fr'$\tau={tau}\si{{ns}},\,\sigma={sigma}\si{{ns}}$')
@@ -169,12 +168,8 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
             if key in badkey:
                 continue
             stdlistkey = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
-            yerr = stdlistkey['stdcharge'] / stdlist['stdtruth'] / np.sqrt(stdlistkey['N'])
-            ax.errorbar(stdlist['mu'] + jitter[key], stdlistkey['stdcharge'] / stdlist['stdtruth'], yerr=yerr, label='$\sigma_'+deltalabel[key]+'/\sigma_'+deltalabel['tru']+'$', c=color[key], marker=marker[key])
-        for m in ['fbmp']:
-            stdlistwav = mts[m][(mts[m]['tau'] == tau) & (mts[m]['sigma'] == sigma)]
-            yerrwav = stdlistwav['stdcharge'] / stdlist['stdtruth'] / np.sqrt(stdlistwav['N'])
-            ax.errorbar(stdlistwav['mu'] + jitter[m + 'wave'], stdlistwav['stdwave'] / stdlist['stdtruth'], yerr=yerrwav, label='$\sigma_'+deltalabel[m + 'wave']+'/\sigma_'+deltalabel['tru']+'$', c=color[m + 'wave'], marker=marker[m + 'wave'])
+            yerr = stdlistkey['std'] / stdlist['stdtruth'] / np.sqrt(stdlistkey['N'])
+            ax.errorbar(stdlist['mu'] + jitter[key], stdlistkey['std'] / stdlist['stdtruth'], yerr=yerr, label='$\sigma_'+deltalabel[key]+'/\sigma_'+deltalabel['tru']+'$', c=color[key], marker=marker[key])
         ax.set_xlabel(r'$N_{\mathrm{PE}}\ \mathrm{expectation}\ \mu$')
         ax.set_ylabel(r'$\mathrm{ratio}$')
         ax.set_title(fr'$\tau={tau}\si{{ns}},\,\sigma={sigma}\si{{ns}}$')
@@ -319,8 +314,8 @@ fig.clf()
 plt.close(fig)
 
 for key in mts.keys():
-    print(key.rjust(10) + ' stdchargesuccess mean = {:.04%}'.format((mts[key]['stdchargesuccess'] / mts[key]['N']).mean()))
-    print(key.rjust(10) + '  stdchargesuccess min = {:.04%}'.format((mts[key]['stdchargesuccess'] / mts[key]['N']).min()))
+    print(key.rjust(10) + ' stdchargesuccess mean = {:.04%}'.format((mts[key]['stdsuccess'] / mts[key]['N']).mean()))
+    print(key.rjust(10) + '  stdchargesuccess min = {:.04%}'.format((mts[key]['stdsuccess'] / mts[key]['N']).min()))
 for m in ['mcmc', 'fbmp']:
-    print((m + 'wave').rjust(10) + '   stdwavesuccess mean = {:.04%}'.format((mts[m]['stdwavesuccess'] / mts[m]['N']).mean()))
-    print((m + 'wave').rjust(10) + '    stdwavesuccess min = {:.04%}'.format((mts[m]['stdwavesuccess'] / mts[m]['N']).min()))
+    print((m + 'one').rjust(10) + '   stdwavesuccess mean = {:.04%}'.format((mts[m]['stdonesuccess'] / mts[m]['N']).mean()))
+    print((m + 'one').rjust(10) + '    stdwavesuccess min = {:.04%}'.format((mts[m]['stdonesuccess'] / mts[m]['N']).min()))

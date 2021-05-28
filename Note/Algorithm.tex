@@ -300,17 +300,12 @@ $\hat{t}_0$ and $\hat{q}_i$ are constructed as the mean estimators of posterior 
   \hat{\phi}(t) = \sum_{i=1}^{N_s}\hat{q}_i\delta(t-t'_i).
 \end{equation}
 
-The distribution of $\Delta{t_0} = \hat{t}_0 - t_0$ is shown in Fig.~\ref{fig:mcmc-t0hist} and $D_w$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ is shown in Fig.~\ref{fig:mcmc}.
+$D_w$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ is shown in Fig.~\ref{fig:mcmc}.
 \begin{figure}[H]
-  \begin{subfigure}{\textwidth}
-    \centering
-    \resizebox{0.5\textwidth}{!}{\input{figures/mcmc.pgf}}
-    \caption{\label{fig:mcmc}$\mathrm{RSS}=\SI{}{mV^2},D_w=\SI{}{ns},\Delta{t_0}=\SI{}{ns}$}
-  \end{subfigure}
   \begin{subfigure}{.5\textwidth}
     \centering
-    \resizebox{\textwidth}{!}{\input{figures/mcmct0hist.pgf}}
-    \caption{\label{fig:mcmc-t0hist} $\Delta t_{0}$ Histogram}
+    \resizebox{\textwidth}{!}{\input{figures/mcmc.pgf}}
+    \caption{\label{fig:mcmc}$\mathrm{RSS}=\SI{}{mV^2},D_w=\SI{}{ns},\Delta{t_0}=\SI{}{ns}$}
   \end{subfigure}
   \begin{subfigure}{.5\textwidth}
     \centering
