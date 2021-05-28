@@ -199,9 +199,15 @@ if 'muwave' in time.dtype.names:
     gs = gridspec.GridSpec(2, 2, figure=fig, left=0.1, right=0.95, top=0.9, bottom=0.1, wspace=0.2, hspace=0.3)
 
     Chnum = len(np.unique(pelist['PMTId']))
+
     e_ans, i_ans = np.unique(pelist['TriggerNo'] * Chnum + pelist['PMTId'], return_index=True)
     i_ans = np.append(i_ans, len(pelist))
     pe_sum = np.array([pelist[i_ans[i]:i_ans[i+1]]['Charge'].sum() for i in range(len(e_ans))]) / gmu
+
+    # e_sub, i_sub = np.unique(charge['TriggerNo'] * Chnum + charge['ChannelID'], return_index=True)
+    # i_sub = np.append(i_sub, len(charge))
+    # pe_sum = np.array([charge[i_sub[i]:i_sub[i+1]]['Charge'].sum() for i in range(len(e_sub))]) / gmu
+
     wave_sum = waves['Waveform'].sum(axis=1) / gmu
 
     n = np.arange(1, 1000)
