@@ -71,11 +71,6 @@ if Tau != 0:
 std = 1.
 Thres = {'mcmc':std / gsigma, 'lucyddm':0.1, 'fbmp':1e-6}
 mix0sigma = 1e-3
-mu0 = np.arange(1, int(Mu + 5 * np.sqrt(Mu)))
-n_t = np.arange(1, 100)
-p_t = special.comb(mu0, 2)[:, None] * np.power(wff.convolve_exp_norm(np.arange(1029) - 200, Tau, Sigma) / n_t[:, None], 2).sum(axis=1)
-n0 = np.array([n_t[p_t[i] < max(1e-2, np.sort(p_t[i])[1])].min() for i in range(len(mu0))])
-ndict = dict(zip(mu0, n0))
 
 class mNormal(numpyro.distributions.distribution.Distribution):
     arg_constraints = {'pl': numpyro.distributions.constraints.real}
@@ -200,29 +195,29 @@ def fbmp_inference(a0, a1):
 
         # initialization
         mu_t = abs(wave.sum() / gmu)
-        n = ndict[min(math.ceil(mu_t + 3 * np.sqrt(mu_t)), max(mu0))]
+        n = 1
         A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Mu, Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
         try:
-            def optit0mu(t0, mu, n, xmmse_star, psy_star, la, factor):
-                ys = np.log(psy_star) - np.where(xmmse_star != 0, np.log(la), np.log(1 - la)).sum(axis=1)
+            def optit0mu(t0, mu, n, xmmse_star, psy_star, c_star, la, factor):
+                ys = np.log(psy_star) - np.log(poisson.pmf(c_star, la)).sum(axis=1)
                 ys = np.exp(ys - ys.max()) / np.sum(np.exp(ys - ys.max()))
                 btlist = np.arange(t0 - 3 * Sigma, t0 + 3 * Sigma + 1e-6, 0.2)
                 mulist = np.arange(max(0.2, mu - 3 * np.sqrt(mu)), mu + 3 * np.sqrt(mu), 0.2)
                 b_mu = [max(0.2, mu - 5 * np.sqrt(mu)), mu + 5 * np.sqrt(mu)]
                 tlist_pan = np.sort(np.unique(np.hstack(np.arange(0, window)[:, None] + np.arange(0, 1, 1 / n))))
                 As = np.zeros((len(xmmse_star), len(tlist_pan)))
-                As[:, np.isin(tlist_pan, tlist)] = np.clip(xmmse_star, 0, np.inf) / factor
+                As[:, np.isin(tlist_pan, tlist)] = c_star
                 assert sum(np.sum(As, axis=0) > 0) > 0
                 
                 # optimize t0
-                logL = lambda t0 : -1 * np.sum(special.logsumexp((np.log(np.clip(wff.convolve_exp_norm(tlist_pan - t0, Tau, Sigma), np.finfo(np.float64).tiny, np.inf))[None, :] * np.where(As > 0, 1, 0)).sum(axis=1), b=ys))
+                logL = lambda t0 : -1 * np.sum(special.logsumexp((np.log(wff.convolve_exp_norm(tlist_pan - t0, Tau, Sigma) + 1e-8)[None, :] * As).sum(axis=1), b=ys))
                 logLv_btlist = np.vectorize(logL)(btlist)
                 t0 = opti.fmin_l_bfgs_b(logL, x0=[btlist[np.argmin(logLv_btlist)]], approx_grad=True, bounds=[b_t0], maxfun=50000)[0]
 
                 # optimize mu
                 def likelihood(mu):
-                    a = np.clip(mu * wff.convolve_exp_norm(tlist_pan - t0, Tau, Sigma) / n, np.finfo(np.float64).eps, 1) # use tlist_pan not tlist
-                    li = -special.logsumexp(np.where(As > 0, np.log(a), np.log(1 - a)).sum(axis=1), b=ys)
+                    a = mu * wff.convolve_exp_norm(tlist_pan - t0, Tau, Sigma) / n + 1e-8 # use tlist_pan not tlist
+                    li = -special.logsumexp(np.log(poisson.pmf(As, a)).sum(axis=1), b=ys)
                     return li
                 like = np.array([likelihood(mulist[j]) for j in range(len(mulist))])
                 mu = opti.fmin_l_bfgs_b(likelihood, x0=mulist[like.argmin()], approx_grad=True, bounds=[b_mu], maxfun=50000)[0]
@@ -232,21 +227,29 @@ def fbmp_inference(a0, a1):
             time_fbmp_start = time.time()
             factor = np.sqrt(np.diag(np.matmul(A.T, A)).mean())
             A = np.matmul(A, np.diag(1. / np.sqrt(np.diag(np.matmul(A.T, A)))))
-            la = np.clip(mu_t * wff.convolve_exp_norm(tlist - t0_t, Tau, Sigma) / n, 1e-3, 1 - 1e-3)
-            xmmse, xmmse_star, psy_star, nu_star, T_star, d_tot_i, d_max_i = wff.fbmpr_fxn_reduced(wave_r, A, la, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, D, stop=0)
+            la = mu_t * wff.convolve_exp_norm(tlist - t0_t, Tau, Sigma) + 1e-8
+            xmmse_star, psy_star, nu_star, T_star, d_tot_i, d_max_i = wff.fbmpr_fxn_reduced(wave_r, A, la, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, D, stop=0)
             time_fbmp = time_fbmp + time.time() - time_fbmp_start
+            c_star = np.zeros_like(xmmse_star).astype(int)
+            for k in range(len(T_star)):
+                t, c = np.unique(T_star[k][xmmse_star[k][T_star[k]] > 0], return_counts=True)
+                c_star[k, t] = c
 
-            t0, mu, ys = optit0mu(t0_t, mu_t, n, xmmse_star, psy_star, la, factor)
+            t0, mu, ys = optit0mu(t0_t, mu_t, n, xmmse_star, psy_star, c_star, la, factor)
 
             while abs(t0_t - t0) > 1e-3:
                 t0_t = t0
                 mu_t = mu
-                t0, mu, ys = optit0mu(t0_t, mu_t, n, xmmse_star, psy_star, la, factor)
+                t0, mu, ys = optit0mu(t0_t, mu_t, n, xmmse_star, psy_star, c_star, la, factor)
+            
+            # mu = np.average(c_star.sum(axis=1), weights=psy_star)
             
             xmmse_most = xmmse_star[0]
-            pet = tlist[xmmse_most > 0]
-            cha = xmmse_most[xmmse_most > 0] / factor
-            t0_i, mu_i, ys = optit0mu(t0, mu, n, xmmse_star[0][None, :], np.array([1]), la, factor)
+            pet = np.repeat(tlist[xmmse_most > 0], c_star[0][xmmse_most > 0])
+            cha = np.repeat(xmmse_most[xmmse_most > 0] / factor / c_star[0][xmmse_most > 0], c_star[0][xmmse_most > 0])
+            t0_i, mu_i, ys = optit0mu(t0, mu, n, xmmse_star[0][None, :], np.array([1]), c_star[0][None, :], la, factor)
+
+            # mu_i = len(cha)
 
             # xmmse = np.zeros_like(tlist)
             # hitm = np.repeat(np.around(truth['HitPosInWindow'][:, None] * n) / n, len(tlist), axis=1)

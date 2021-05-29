@@ -171,9 +171,10 @@ def findpeak(wave, spe_pre):
     return pet, cha
 
 def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0):
+    # Only for multi-gaussian with arithmetic sequence of mu and sigma
     M, N = A.shape
 
-    p = p1.mean()
+    p = 1 - poisson.pmf(0, p1).mean()
     nu_true_mean = -M / 2 - M / 2 * np.log(sig2w) - p * N / 2 * np.log(sig2s / sig2w + 1) - M / 2 * np.log(2 * np.pi) + N * np.log(1 - p) + p * N * np.log(p / (1 - p))
     nu_true_stdv = np.sqrt(M / 2 + N * p * (1 - p) * (np.log(p / (1 - p)) - np.log(sig2s / sig2w + 1) / 2) ** 2)
     nu_stop = nu_true_mean - stop * nu_true_stdv
@@ -187,34 +188,31 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0):
     d_tot = D - 1
 
     nu_root = -0.5 * np.linalg.norm(y) ** 2 / sig2w - 0.5 * M * np.log(2 * np.pi) - 0.5 * M * np.log(sig2w) + np.log(poisson.pmf(0, p1)).sum()
-    Bxt_root = A / sig2w
-    betaxt_root = np.abs(sig2s / (1 + sig2s * np.sum(A * Bxt_root, axis=0)))
-    nuxt_root = nu_root + 0.5 * np.log(betaxt_root / sig2s) + 0.5 * betaxt_root * np.abs(np.dot(y, Bxt_root) + mus / sig2s) ** 2 - 0.5 * mus ** 2 / sig2s + np.log(poisson.pmf(1, p1) / poisson.pmf(0, p1))
+    cx_root = A / sig2w
+    betaxt_root = np.abs(sig2s / (1 + sig2s * np.sum(A * cx_root, axis=0)))
+    nuxt_root = nu_root + 0.5 * np.log(betaxt_root / sig2s) + 0.5 * betaxt_root * np.abs(np.dot(y, cx_root) + mus / sig2s) ** 2 - 0.5 * mus ** 2 / sig2s + np.log(poisson.pmf(1, p1) / poisson.pmf(0, p1))
     
     for d in range(D):
         nuxt = nuxt_root.copy()
         z = y.copy()
-        Bxt = Bxt_root.copy()
+        cx = cx_root.copy()
         betaxt = betaxt_root.copy()
         for p in range(P):
-            nustar = max(nuxt)
-            nstar = np.argmax(nuxt)
-            while np.any(np.abs(nustar - nu[p, :d]) < 1e-4):
-                nuxt[nstar] = -np.inf
-                nustar = max(nuxt)
-                nstar = np.argmax(nuxt)
+            nuxtshadow = np.where(np.sum(np.abs(nuxt - nu[p, :d][:, None]) < 1e-4, axis=0), -np.inf, nuxt)
+            nustar = max(nuxtshadow)
+            istar = np.argmax(nuxtshadow)
             nu[p, d] = nustar
-            T[p, d] = nstar
-            Bxt = Bxt - np.dot(betaxt[nstar] * Bxt[:, nstar].copy().reshape(M, 1), np.dot(Bxt[:, nstar], A).copy().reshape(1, N))
+            T[p, d] = istar
+            cx = cx - np.dot(betaxt[istar] * cx[:, istar].copy().reshape(M, 1), np.dot(cx[:, istar], A).copy().reshape(1, N))
 
-            z = z - A[:, nstar] * mus
+            z = z - A[:, istar] * mus
             assist = np.zeros(N)
-            assist[T[:p+1, d]] = mus + sig2s * np.dot(z, Bxt[:, T[:p+1, d]])
+            t, c = np.unique(T[:p+1, d], return_counts=True)
+            assist[t] = mus * c + sig2s * c * np.dot(z, cx[:, t])
             xmmse[p, d] = assist
 
-            betaxt = np.abs(sig2s / (1 + sig2s * np.sum(A * Bxt, axis=0)))
-            nuxt = nustar + 0.5 * np.log(betaxt / sig2s) + 0.5 * betaxt * np.abs(np.dot(z, Bxt) + mus / sig2s) ** 2 - 0.5 * mus ** 2 / sig2s + np.log(p1 / (1 - p1))
-            nuxt[T[:p+1, d]] = np.full(p+1, -np.inf)
+            betaxt = np.abs(sig2s / (1 + sig2s * np.sum(A * cx, axis=0)))
+            nuxt = nustar + 0.5 * np.log(betaxt / sig2s) + 0.5 * betaxt * np.abs(np.dot(z, cx) + mus / sig2s) ** 2 - 0.5 * mus ** 2 / sig2s + np.log(poisson.pmf(np.sum(T[:p, d] == istar) + 1, p1[istar]) / poisson.pmf(np.sum(T[:p, d] == istar), p1[istar]))
 
         if max(nu[:, d]) > nu_stop:
             d_tot = d + 1
@@ -230,14 +228,10 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0):
     psy_star = np.exp(nu_star - nu_max) / np.sum(np.exp(nu_star - nu_max))
     T_star = [T[:(indx[k] % P) + 1, indx[k] // P] for k in range(num)]
     xmmse_star = np.empty((num, N))
-    p1_up = 0
     for k in range(num):
         xmmse_star[k] = xmmse[indx[k] % P, indx[k] // P]
-        p1_up = p1_up + psy_star[k] / N * len(T_star[k])
 
-    xmmse = np.dot(psy_star, xmmse_star)
-
-    return xmmse, xmmse_star, psy_star, nu_star, T_star, d_tot, d_max
+    return xmmse_star, psy_star, nu_star, T_star, d_tot, d_max
 
 def shannon_interpolation(w, n):
     t = np.arange(0, len(w), 1 / n)
