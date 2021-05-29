@@ -179,17 +179,17 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0):
     nu_stop = nu_true_mean - stop * nu_true_stdv
 
     psy_thresh = 1e-4
-    P = min(M, 1 + math.ceil(N * p + 1.82138636 * math.sqrt(2 * N * p * (1 - p))))
+    P = min(M, 1 + math.ceil(N * p + special.erfcinv(1e-2) * math.sqrt(2 * N * p * (1 - p))))
 
     T = np.full((P, D), 0)
     nu = np.full((P, D), -np.inf)
     xmmse = np.zeros((P, D, N))
     d_tot = D - 1
 
-    nu_root = -np.linalg.norm(y) ** 2 / 2 / sig2w - M * np.log(2 * np.pi) / 2 - M * np.log(sig2w) / 2 + np.log(1 - p1).sum()
+    nu_root = -0.5 * np.linalg.norm(y) ** 2 / sig2w - 0.5 * M * np.log(2 * np.pi) - 0.5 * M * np.log(sig2w) + np.log(poisson.pmf(0, p1)).sum()
     Bxt_root = A / sig2w
     betaxt_root = np.abs(sig2s / (1 + sig2s * np.sum(A * Bxt_root, axis=0)))
-    nuxt_root = nu_root + np.log(betaxt_root / sig2s) / 2 + 0.5 * betaxt_root * np.abs(np.dot(y, Bxt_root) + mus / sig2s) ** 2 - 0.5 * mus ** 2 / sig2s + np.log(p1 / (1 - p1))
+    nuxt_root = nu_root + 0.5 * np.log(betaxt_root / sig2s) + 0.5 * betaxt_root * np.abs(np.dot(y, Bxt_root) + mus / sig2s) ** 2 - 0.5 * mus ** 2 / sig2s + np.log(poisson.pmf(1, p1) / poisson.pmf(0, p1))
     
     for d in range(D):
         nuxt = nuxt_root.copy()
@@ -199,19 +199,21 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0):
         for p in range(P):
             nustar = max(nuxt)
             nstar = np.argmax(nuxt)
-            while np.sum(np.abs(nustar - nu[p, :d]) < 1e-8):
+            while np.any(np.abs(nustar - nu[p, :d]) < 1e-4):
                 nuxt[nstar] = -np.inf
                 nustar = max(nuxt)
                 nstar = np.argmax(nuxt)
             nu[p, d] = nustar
             T[p, d] = nstar
-            z = z - A[:, nstar] * mus
             Bxt = Bxt - np.dot(betaxt[nstar] * Bxt[:, nstar].copy().reshape(M, 1), np.dot(Bxt[:, nstar], A).copy().reshape(1, N))
+
+            z = z - A[:, nstar] * mus
             assist = np.zeros(N)
             assist[T[:p+1, d]] = mus + sig2s * np.dot(z, Bxt[:, T[:p+1, d]])
             xmmse[p, d] = assist
+
             betaxt = np.abs(sig2s / (1 + sig2s * np.sum(A * Bxt, axis=0)))
-            nuxt = nustar + np.log(betaxt / sig2s) / 2 + 0.5 * betaxt * np.abs(np.dot(z, Bxt) + mus / sig2s) ** 2 - 0.5 * mus ** 2 / sig2s + np.log(p1 / (1 - p1))
+            nuxt = nustar + 0.5 * np.log(betaxt / sig2s) + 0.5 * betaxt * np.abs(np.dot(z, Bxt) + mus / sig2s) ** 2 - 0.5 * mus ** 2 / sig2s + np.log(p1 / (1 - p1))
             nuxt[T[:p+1, d]] = np.full(p+1, -np.inf)
 
         if max(nu[:, d]) > nu_stop:

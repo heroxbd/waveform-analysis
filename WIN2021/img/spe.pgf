@@ -902,15 +902,15 @@
 \pgfsetstrokecolor{currentstroke}%
 \pgfsetstrokeopacity{0.800000}%
 \pgfsetdash{}{0pt}%
-\pgfpathmoveto{\pgfqpoint{6.965343in}{5.082821in}}%
+\pgfpathmoveto{\pgfqpoint{5.721131in}{5.082821in}}%
 \pgfpathlineto{\pgfqpoint{10.005556in}{5.082821in}}%
 \pgfpathquadraticcurveto{\pgfqpoint{10.061111in}{5.082821in}}{\pgfqpoint{10.061111in}{5.138377in}}%
 \pgfpathlineto{\pgfqpoint{10.061111in}{5.505556in}}%
 \pgfpathquadraticcurveto{\pgfqpoint{10.061111in}{5.561111in}}{\pgfqpoint{10.005556in}{5.561111in}}%
-\pgfpathlineto{\pgfqpoint{6.965343in}{5.561111in}}%
-\pgfpathquadraticcurveto{\pgfqpoint{6.909787in}{5.561111in}}{\pgfqpoint{6.909787in}{5.505556in}}%
-\pgfpathlineto{\pgfqpoint{6.909787in}{5.138377in}}%
-\pgfpathquadraticcurveto{\pgfqpoint{6.909787in}{5.082821in}}{\pgfqpoint{6.965343in}{5.082821in}}%
+\pgfpathlineto{\pgfqpoint{5.721131in}{5.561111in}}%
+\pgfpathquadraticcurveto{\pgfqpoint{5.665575in}{5.561111in}}{\pgfqpoint{5.665575in}{5.505556in}}%
+\pgfpathlineto{\pgfqpoint{5.665575in}{5.138377in}}%
+\pgfpathquadraticcurveto{\pgfqpoint{5.665575in}{5.082821in}}{\pgfqpoint{5.721131in}{5.082821in}}%
 \pgfpathclose%
 \pgfusepath{stroke,fill}%
 \end{pgfscope}%
@@ -921,15 +921,15 @@
 \definecolor{currentstroke}{rgb}{0.000000,0.000000,1.000000}%
 \pgfsetstrokecolor{currentstroke}%
 \pgfsetdash{}{0pt}%
-\pgfpathmoveto{\pgfqpoint{7.020898in}{5.347184in}}%
-\pgfpathlineto{\pgfqpoint{7.576454in}{5.347184in}}%
+\pgfpathmoveto{\pgfqpoint{5.776686in}{5.347184in}}%
+\pgfpathlineto{\pgfqpoint{6.332242in}{5.347184in}}%
 \pgfusepath{stroke}%
 \end{pgfscope}%
 \begin{pgfscope}%
 \definecolor{textcolor}{rgb}{0.000000,0.000000,0.000000}%
 \pgfsetstrokecolor{textcolor}%
 \pgfsetfillcolor{textcolor}%
-\pgftext[x=7.798676in,y=5.249962in,left,base]{\color{textcolor}\sffamily\fontsize{20.000000}{24.000000}\selectfont Single PE response}%
+\pgftext[x=6.554464in,y=5.249962in,left,base]{\color{textcolor}\sffamily\fontsize{20.000000}{24.000000}\selectfont Single Photoelectron response}%
 \end{pgfscope}%
 \end{pgfpicture}%
 \makeatother%

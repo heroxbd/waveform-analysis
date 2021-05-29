@@ -132,7 +132,7 @@
     \begin{figure}
       \centering
       \includegraphics[width=0.5\linewidth]{img/WD.png}
-      \caption{Wasserstein Distance when $p=1$: Earth Mover Distance}  
+      \caption{Wasserstein Distance $D_w$ when $p=1$: Earth Mover Distance}
     \end{figure}
     \begin{align*}
       D_w\left[\hat{\phi}_*, \tilde{\phi}_*\right] &= \inf_{\gamma \in \Gamma} \left[\int \left\vert t_1 - t_2 \right\vert^p \gamma(t_1, t_2)\mathrm{d}t_1\mathrm{d}t_2\right]^{\frac{1}{p}}
@@ -140,7 +140,7 @@
     \begin{align*}
       \Gamma &= \left\{\gamma(t_1, t_2) ~\middle\vert~ \int\gamma(t_1,t_2)\mathrm{d}t_1 = \tilde{\phi}_*(t_2) , \int\gamma(t_1,t_2)\mathrm{d}t_2 = \hat{\phi}_*(t_1) \right\}
     \end{align*}
-    when $p=1$, CDF of $\phi(t)$ is $\Phi(t)$, $D_w$ is a $\ell_1$-distance:
+    when $p=1$, Cumulative distribution function (CDF) of $\phi(t)$ is $\Phi(t)$, $D_w$ is a $\ell_1$-distance:
     \begin{align*}
       D_w\left[\hat{\phi}_*, \tilde{\phi}_*\right] &= \int\left|\hat{\Phi}(t) - \tilde{\Phi}(t)\right| \mathrm{d}t
     \end{align*}
@@ -156,7 +156,7 @@
   \begin{block}{Fast Bayesian Matching Pursuit\cite{schniter_fast_nodate} in waveform analysis}
 
     \begin{itemize}
-      \item FBMP is a sparse regression algorithm, which origins from the field of signal processing. 
+      \item Fast Bayesian Matching Pursuit (FBMP) is a sparse regression algorithm, which origins from the field of signal processing. 
       \item Time in DAQ window is divided into time bins: $\vec{t}$, whose length is $N$. Each time bin can have 1 PE. As long as the bin width is small, the timing resolution will be retained. 
       \item Model vector: $\vec{z}$. $z_i=0\implies q_i=0$ and $\ z_i=1\implies q_i\neq0$. When $z_i$ is 0, the corresponding charge of PE in time bin $t_i$ will be 0, otherwise it may not be zero. 
       \item Linear Model: $\vec{w} = \bm{V}_\mathrm{PE}\vec{z} + \vec{\epsilon}$. This process is equivalent to $\tilde{\phi}$ convoluting with Single PE, and merely time is digitized. 
@@ -230,7 +230,7 @@
 
   \end{block}
 
-  \begin{block}{FBMP's Bayesian interface}
+  \begin{alertblock}{FBMP's Bayesian interface}
 
     \begin{itemize}
       \item PE Time: $\vec{t}$
@@ -239,13 +239,13 @@
           \hat{\vec{q}}_z = E(\vec{q}|\vec{w},\vec{z}) &= \vec{z} + \bm{Z}\bm{V}_\mathrm{PE}^\intercal\bm{\Sigma}_z^{-1}(\vec{w}-\bm{V}_\mathrm{PE}\vec{z})
           \end{align*}
       \item Model's posterior probability: $p(\vec{z}|\vec{w})$
-      \item The final result of FBMP is the time vector, several models, and their corresponding charge vectors. Additionally, the posterior probability of each model. In commonly used fitting methods such as Maximum likelihood estimation(MLE), the posterior distribution is approximated into delta function or normal distribution. 
+      \item The final result of FBMP is the time vector, several models, and their corresponding charge vectors. Additionally, the posterior probability of each model. In commonly used fitting methods such as Maximum likelihood estimation (MLE), the posterior distribution is approximated into delta function or normal distribution. 
     \end{itemize}
     \begin{center}
         Provides opportunity for subsequent \textcolor{red}{Bayesian} analysis! 
     \end{center}
 
-  \end{block}
+  \end{alertblock}
 
 \end{column}
 
