@@ -1,0 +1,300 @@
+\documentclass[final]{beamer}
+
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[size=A0]{beamerposter}
+\usetheme{gemini}
+\usecolortheme{mit}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage{bm}
+\usepackage[binary-units=true,per-mode=symbol]{siunitx}
+\DeclareMathOperator{\erf}{erf}
+\usefonttheme[onlymath]{serif}
+
+% If you have N columns, choose \sepwidth and \colwidth such that
+% (N+1)*\sepwidth + N*\colwidth = \paperwidth
+\newlength{\sepwidth}
+\newlength{\colwidth}
+\setlength{\sepwidth}{0.025\paperwidth}
+\setlength{\colwidth}{0.3\paperwidth}
+
+\newcommand{\separatorcolumn}{\begin{column}{\sepwidth}\end{column}}
+
+\title{Accurate and Robust PMT Waveform Analysis}
+
+\author{E.~Bao\inst{1} \and Y.~Wu\inst{2} \and B.~D.~Xu\inst{2} \and D.~C.~Xu\inst{2} \and Y.~Xu\inst{3} \and G.~Zhang\inst{4}}
+
+\institute[shortinst]{\inst{a} National Institute of Informatics \samelineand \inst{b} Tsinghua University \samelineand \inst{c} Forschungszentrum Jülich \samelineand \inst{d} Southwestern University of Finance and Economics}
+
+% use this to include logos on the left and/or right side of the header:
+% \logoright{\includegraphics[height=7cm]{logo1.pdf}}
+% \logoleft{\includegraphics[height=7cm]{logo2.pdf}}
+
+\begin{document}
+
+\begin{frame}[t]
+\begin{columns}[t]
+\separatorcolumn
+
+\begin{column}{\colwidth}
+
+  \begin{block}{Motivation}
+
+    \begin{columns}
+    \column{0.5\textwidth}
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.4\linewidth]{img/event.png}
+        \caption{An Event in Detector}
+    \end{figure}
+    \column{0.5\textwidth}
+    \begin{figure}
+        \centering
+        \resizebox{0.9\textwidth}{!}{\input{img/winwave.pgf}}
+        \caption{A PMT Waveform}
+    \end{figure}
+    \end{columns}
+
+    Waveform analysis, which means extracting time and charge information from PMT waveforms, is the bedrock of subsequent analysis such as event reconstruction. 
+
+  \end{block}
+
+  \begin{block}{Simulation Setup}
+
+    \begin{columns}
+      \column{0.5\textwidth}
+      \begin{figure}
+        \centering
+        \resizebox{0.9\textwidth}{!}{\input{img/profile.pgf}}
+        \caption{Time Profile $\phi(t)$ of Events}
+      \end{figure}
+      \column{0.5\textwidth}
+      \begin{figure}
+        \centering
+        \resizebox{0.9\textwidth}{!}{\input{img/spe.pgf}}
+        \caption{Single PE response $V_\mathrm{PE}(t)$\cite{jetter_pmt_2012}}
+      \end{figure}
+      \end{columns}
+    \begin{columns}
+    \column{0.5\textwidth}
+    \begin{align*}
+        \phi(t) &= \mathcal{N}(t|\sigma^2)\otimes \mathrm{Exp}(t|\tau) \\
+        &= \frac{1}{2\tau} \exp\left(\frac{\sigma^2}{2\tau^2}-\frac{t}{\tau}\right) \left[1 - \erf\left( \frac{\sigma}{\sqrt{2}\tau} - \frac{t}{\sqrt{2}\sigma} \right)\right]
+    \end{align*}
+    \column{0.5\textwidth}
+    \begin{align*}
+      V_\mathrm{PE}(t) &= V_{0}\exp\left[-\frac{1}{2}\left(\frac{\log(t/\tau_\mathrm{PE})}{\sigma_\mathrm{PE}}\right)^{2}\right]
+    \end{align*}
+    \end{columns}
+
+  \end{block}
+
+  % \begin{alertblock}{}
+  % \end{alertblock}
+
+  \begin{block}{Data Input \& Output}
+
+    \begin{columns}
+    \column{0.5\textwidth}
+    \begin{figure}
+        \centering
+        \resizebox{0.9\textwidth}{!}{\input{img/wave.pgf}}
+        \caption{Input Waveform (Pedestal free)}
+    \end{figure}
+    \column{0.5\textwidth}
+    \begin{figure}
+        \centering
+        \resizebox{0.9\textwidth}{!}{\input{img/charge.pgf}}
+        \caption{Output Time and Charge $\hat\phi(t)$}
+    \end{figure}
+    \end{columns}
+    \begin{columns}
+    \column{0.5\textwidth}
+    \begin{align*}
+      w(t) &= \tilde{\phi}(t) \otimes V_\mathrm{PE}(t) + \epsilon(t) = \sum_{i=1}^{N_\mathrm{PE}} q_i V_\mathrm{PE}(t-t_i) + \epsilon(t)
+    \end{align*}
+    \column{0.5\textwidth}
+    \begin{align*}
+      \tilde{\phi}(t) &= \sum_{i=1}^{N_{\mathrm{PE}}} q_i \delta(t-t_i), \ N_{\mathrm{PE}}\sim \mathrm{Poisson}(\mu)
+    \end{align*}
+    \end{columns}
+
+  \end{block}
+
+  \begin{block}{Wasserstein Distance\cite{villani_2009} as Evaluation Criteria}
+
+    $\tilde{\phi}(t)$ (simulation truth) is an approximation of $\phi(t)$ (time profile). 
+
+    $\hat{\phi}(t)$ (reconstruction result) should be consistent with $\tilde{\phi}(t)$. 
+    \begin{figure}
+      \centering
+      \includegraphics[width=0.5\linewidth]{img/WD.png}
+      \caption{Wasserstein Distance when $p=1$: Earth Mover Distance}  
+    \end{figure}
+    \begin{align*}
+      D_w\left[\hat{\phi}_*, \tilde{\phi}_*\right] &= \inf_{\gamma \in \Gamma} \left[\int \left\vert t_1 - t_2 \right\vert^p \gamma(t_1, t_2)\mathrm{d}t_1\mathrm{d}t_2\right]^{\frac{1}{p}}
+    \end{align*}
+    \begin{align*}
+      \Gamma &= \left\{\gamma(t_1, t_2) ~\middle\vert~ \int\gamma(t_1,t_2)\mathrm{d}t_1 = \tilde{\phi}_*(t_2) , \int\gamma(t_1,t_2)\mathrm{d}t_2 = \hat{\phi}_*(t_1) \right\}
+    \end{align*}
+    when $p=1$, CDF of $\phi(t)$ is $\Phi(t)$, $D_w$ is a $\ell_1$-distance:
+    \begin{align*}
+      D_w\left[\hat{\phi}_*, \tilde{\phi}_*\right] &= \int\left|\hat{\Phi}(t) - \tilde{\Phi}(t)\right| \mathrm{d}t
+    \end{align*}
+
+  \end{block}
+
+\end{column}
+
+\separatorcolumn
+
+\begin{column}{\colwidth}
+
+  \begin{block}{Fast Bayesian Matching Pursuit\cite{schniter_fast_nodate} in waveform analysis}
+
+    \begin{itemize}
+      \item FBMP is a sparse regression algorithm, which origins from the field of signal processing. 
+      \item Time in DAQ window is divided into time bins: $\vec{t}$, whose length is $N$. Each time bin can have 1 PE. As long as the bin width is small, the timing resolution will be retained. 
+      \item Model vector: $\vec{z}$. $z_i=0\implies q_i=0$ and $\ z_i=1\implies q_i\neq0$. When $z_i$ is 0, the corresponding charge of PE in time bin $t_i$ will be 0, otherwise it may not be zero. 
+      \item Linear Model: $\vec{w} = \bm{V}_\mathrm{PE}\vec{z} + \vec{\epsilon}$. This process is equivalent to $\tilde{\phi}$ convoluting with Single PE, and merely time is digitized. 
+      \item 
+          \begin{align*}
+              \left.
+              \begin{bmatrix}
+                  \vec{w} \\
+                  \vec{q}
+              \end{bmatrix}
+              \right\vert\vec{z}
+              &\sim \mathrm{Normal}\left(
+              \begin{bmatrix}
+                  \bm{V}_\mathrm{PE}\vec{z} \\
+                  \vec{z}
+              \end{bmatrix}, 
+              \begin{bmatrix}
+                  \bm{\Sigma}_z & \bm{V}_\mathrm{PE}\bm{Z} \\
+                  \bm{Z}\bm{V}_\mathrm{PE}^\intercal & \bm{Z}
+              \end{bmatrix}
+              \right) \\
+              \bm{\Sigma}_z &= \bm{V}_\mathrm{PE}\bm{Z}\bm{V}_\mathrm{PE}^\intercal+\sigma_\epsilon^2\bm{I}
+          \end{align*}
+        where $\bm{Z}$ is the diagonal matrix of vector $\vec{z}$ controlling $q_i$ 
+        \item $\mathcal{Z}=\{\vec{z}_j\}$ contains \textcolor{red}{$2^{N}$} model vectors
+    \end{itemize}
+
+  \end{block}
+
+  \begin{block}{FBMP Evaluation}
+
+    \begin{itemize}
+        \item Calculation of \textcolor{red}{$2^{N}$} model vectors is impossible!
+        \item Most of $p(\vec{w}|\vec{z}) \rightarrow 0$!
+    \end{itemize}
+    \noindent\begin{minipage}[c]{0.33\textwidth}
+        \begin{figure}[H]
+            \centering
+                \includegraphics[width=0.95\textwidth]{img/perfect_PE.pdf}
+            \caption{perfect PE matching waveform, $p(\vec{z}|\vec{w})$ hit maximum}
+            \label{fig:perfect PE}
+        \end{figure}
+    \end{minipage}\begin{minipage}[c]{0.33\textwidth}
+        \begin{figure}[H]
+            \centering
+                \includegraphics[width=0.95\textwidth]{img/not_so_perfect_PE.pdf}
+            \caption{not so perfect, $p(\vec{z}|\vec{w})$ is smaller but still $>0$}
+            \label{fig:not so perfect PE}
+        \end{figure}
+    \end{minipage}\begin{minipage}[c]{0.33\textwidth}
+        \begin{figure}[H]
+            \centering
+                \includegraphics[width=0.95\textwidth]{img/nonsense_PE.pdf}
+            \caption{Completely mismatch the waveform, $p(\vec{z}|\vec{w}) \rightarrow 0$}
+            \label{fig:nonsense PE}
+        \end{figure}
+    \end{minipage}
+
+    \begin{itemize}
+      \item Most z can be ignored because most z does not correspond to the waveform. If we only consider the model vector z with a relatively large posterior probability, the calculation effort will be reduced. 
+      \item \begin{align*}
+          \log[\textcolor{red}{p(\vec{w},\vec{z})}] =& \log[p(\vec{w}|\vec{z})p(\vec{z})] \\
+          =& -\frac{1}{2}(\vec{w}-\bm{V}_\mathrm{PE}\vec{z})^\intercal\bm{\Sigma}_z^{-1}(\vec{w}-\bm{V}_\mathrm{PE}\vec{z})-\frac{1}{2}\log\det\bm{\Sigma}_z \\ 
+          &-\frac{N}{2}\log2\pi -\mu + \sum_{i|z_i=1}\log \frac{\mu \phi(t'_i - t_0) \Delta t'}{1-\mu \phi(t'_i - t_0) \Delta t'}
+          \end{align*}
+      \item A \textcolor{red}{repeated greedy search}(RGS) is performed to construct the target set $\mathcal{Z}'$, which contains only the $\vec{z}$ giving large $p(\vec{w}|\vec{z})$. 
+      \begin{align*}
+        p(\vec{z}|\vec{w}) &= \frac{p(\vec{w}|\vec{z})p(\vec{z})}{\sum_{\vec{z}'\in\mathcal{Z}}p(\vec{w}|\vec{z'})p(\vec{z'})} \approx \frac{p(\vec{w}|\vec{z})p(\vec{z})}{\sum_{\vec{z}'\in\mathcal{Z}'}p(\vec{w}|\vec{z'})p(\vec{z'})}
+      \end{align*}
+    \end{itemize}
+
+  \end{block}
+
+  \begin{block}{FBMP's Bayesian interface}
+
+    \begin{itemize}
+      \item PE Time: $\vec{t}$
+      \item Models: $\mathcal{Z}'=\{\vec{z}_j\}$
+      \item Charge: \begin{align*}
+          \hat{\vec{q}}_z = E(\vec{q}|\vec{w},\vec{z}) &= \vec{z} + \bm{Z}\bm{V}_\mathrm{PE}^\intercal\bm{\Sigma}_z^{-1}(\vec{w}-\bm{V}_\mathrm{PE}\vec{z})
+          \end{align*}
+      \item Model's posterior probability: $p(\vec{z}|\vec{w})$
+      \item The final result of FBMP is the time vector, several models, and their corresponding charge vectors. Additionally, the posterior probability of each model. In commonly used fitting methods such as Maximum likelihood estimation(MLE), the posterior distribution is approximated into delta function or normal distribution. 
+    \end{itemize}
+    \begin{center}
+        Provides opportunity for subsequent \textcolor{red}{Bayesian} analysis! 
+    \end{center}
+
+  \end{block}
+
+\end{column}
+
+\separatorcolumn
+
+\begin{column}{\colwidth}
+
+  \begin{block}{FBMP Demonstration}
+
+    \begin{figure}
+      \centering
+      \resizebox{0.8\textwidth}{!}{\input{img/demoe2c0.pgf}}
+      \caption{Max posterior probability model in FBMP's result, with $D_w=\SI{0.63}{ns}$}
+    \end{figure}
+
+  \end{block}
+
+  \begin{block}{FBMP's Performance of Evaluation Criteria and Charge Posterior}
+
+    For dataset $(\mu, \tau, \sigma)/\si{ns}=(4, 20, 5)$, $10^4$ waveforms: 
+    \begin{columns}
+      \column{0.5\textwidth}
+      \begin{figure}
+        \centering
+        \resizebox{\textwidth}{!}{\input{img/vs.pgf}}
+        \caption{$D_w$ of methods}
+      \end{figure}
+      \column{0.5\textwidth}
+      \begin{figure}
+        \centering
+        \resizebox{\textwidth}{!}{\input{img/chargehist.pgf}}
+        \caption{$\hat{q}$ histogram of methods}
+      \end{figure}
+    \end{columns}
+    FBMP performs good on $D_w$ and retains charge distribution of PE. When the truth distribution of charge is normal distribution, only FBMP can retain the distribution, which means every charge in FBMP method can be regarded as \textcolor{red}{one PE}, while other methods can not work due to these fragments of charge. 
+
+  \end{block}
+
+  \begin{block}{References}
+
+    % \nocite{*}
+    \footnotesize{\bibliographystyle{unsrt}\bibliography{poster}}
+
+  \end{block}
+
+\end{column}
+
+\separatorcolumn
+\end{columns}
+\end{frame}
+
+\end{document}
