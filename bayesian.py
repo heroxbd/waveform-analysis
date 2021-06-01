@@ -71,6 +71,11 @@ if Tau != 0:
 std = 1.
 Thres = {'mcmc':std / gsigma, 'lucyddm':0.1, 'fbmp':1e-6}
 mix0sigma = 1e-3
+mu0 = np.arange(1, int(Mu + 5 * np.sqrt(Mu)))
+n_t = np.arange(1, 100)
+p_t = special.comb(mu0, 2)[:, None] * np.power(wff.convolve_exp_norm(np.arange(1029) - 200, Tau, Sigma) / n_t[:, None], 2).sum(axis=1)
+n0 = np.array([n_t[p_t[i] < max(1, np.sort(p_t[i])[1])].min() for i in range(len(mu0))])
+ndict = dict(zip(mu0, n0))
 
 class mNormal(numpyro.distributions.distribution.Distribution):
     arg_constraints = {'pl': numpyro.distributions.constraints.real}
@@ -173,10 +178,10 @@ def time_numpyro(a0, a1):
     dt = np.sort(dt, kind='stable', order=['TriggerNo', 'ChannelID'])
     return stime_t0, stime_cha, dt, count, time_mcmc, accep, mix0ratio
 
+D = 200
 def fbmp_inference(a0, a1):
     nsp = 4
     nstd = 3
-    D = 1000
     t0_wav = np.empty(a1 - a0)
     t0_cha = np.empty(a1 - a0)
     mu_wav = np.empty(a1 - a0)
@@ -195,7 +200,8 @@ def fbmp_inference(a0, a1):
 
         # initialization
         mu_t = abs(wave.sum() / gmu)
-        n = 1
+        # n = ndict[min(math.ceil(mu_t), max(mu0))]
+        n = math.ceil(max((mu_t + 3 * np.sqrt(mu_t)) * wff.convolve_exp_norm(np.arange(-3 * Sigma, 3 * Sigma + 2 * Tau, 0.1), Tau, Sigma)) * 4)
         A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Mu, Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
         try:
             def optit0mu(t0, mu, n, xmmse_star, psy_star, c_star, la, factor):
@@ -227,13 +233,18 @@ def fbmp_inference(a0, a1):
             time_fbmp_start = time.time()
             factor = np.sqrt(np.diag(np.matmul(A.T, A)).mean())
             A = np.matmul(A, np.diag(1. / np.sqrt(np.diag(np.matmul(A.T, A)))))
-            la = mu_t * wff.convolve_exp_norm(tlist - t0_t, Tau, Sigma) + 1e-8
+            la = mu_t * wff.convolve_exp_norm(tlist - t0_t, Tau, Sigma) / n + 1e-8
             xmmse_star, psy_star, nu_star, T_star, d_tot_i, d_max_i = wff.fbmpr_fxn_reduced(wave_r, A, la, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, D, stop=0)
             time_fbmp = time_fbmp + time.time() - time_fbmp_start
             c_star = np.zeros_like(xmmse_star).astype(int)
             for k in range(len(T_star)):
                 t, c = np.unique(T_star[k][xmmse_star[k][T_star[k]] > 0], return_counts=True)
                 c_star[k, t] = c
+            xmmse_most = xmmse_star[0]
+            # print('{},{}'.format(np.max(c_star[0]), i))
+
+            # mu = np.average(c_star.sum(axis=1), weights=psy_star)
+            # t0 = t0_t
 
             t0, mu, ys = optit0mu(t0_t, mu_t, n, xmmse_star, psy_star, c_star, la, factor)
 
@@ -242,14 +253,13 @@ def fbmp_inference(a0, a1):
                 mu_t = mu
                 t0, mu, ys = optit0mu(t0_t, mu_t, n, xmmse_star, psy_star, c_star, la, factor)
             
-            # mu = np.average(c_star.sum(axis=1), weights=psy_star)
-            
-            xmmse_most = xmmse_star[0]
             pet = np.repeat(tlist[xmmse_most > 0], c_star[0][xmmse_most > 0])
             cha = np.repeat(xmmse_most[xmmse_most > 0] / factor / c_star[0][xmmse_most > 0], c_star[0][xmmse_most > 0])
-            t0_i, mu_i, ys = optit0mu(t0, mu, n, xmmse_star[0][None, :], np.array([1]), c_star[0][None, :], la, factor)
 
             # mu_i = len(cha)
+            # t0_i = t0_t
+
+            t0_i, mu_i, ys = optit0mu(t0, mu, n, xmmse_star[0][None, :], np.array([1]), c_star[0][None, :], la, factor)
 
             # xmmse = np.zeros_like(tlist)
             # hitm = np.repeat(np.around(truth['HitPosInWindow'][:, None] * n) / n, len(tlist), axis=1)
@@ -363,6 +373,7 @@ elif method == 'fbmp':
     ax.hist(d_tot, bins=np.linspace(0, d_tot.max(), 20), label='d_tot')
     ax.set_xlabel('d_tot')
     ax.set_ylabel('Count')
+    ax.set_xlim(right=1.01 * D)
     ax.set_ylim(0.5, N)
     ax.set_yscale('log')
     ax.legend(loc='upper center')
@@ -372,6 +383,7 @@ elif method == 'fbmp':
     ax.hist(d_tot, bins=np.linspace(0, d_tot.max(), 20), label='d_max')
     ax.set_xlabel('d_max')
     ax.set_ylabel('Count')
+    ax.set_xlim(right=1.01 * D)
     ax.set_ylim(0.5, N)
     ax.set_yscale('log')
     ax.legend(loc='upper right')

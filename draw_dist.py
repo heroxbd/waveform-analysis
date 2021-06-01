@@ -213,7 +213,7 @@ if 'muwave' in time.dtype.names:
     n = np.arange(1, 1000)
     mean = np.average(n, weights=poisson.pmf(n, mu=Mu))
     s = np.sqrt(np.average((n - mean)**2, weights=poisson.pmf(n, mu=Mu)))
-    fig.suptitle(fr'$\delta_{{N_{{pe}}}}={s:.02f}$')
+    fig.suptitle(fr'$\mu={mean:.02f},\delta_{{N_{{pe}}}}={s:.02f}$')
 
     ax0 = fig.add_subplot(gs[0, 0])
     ax0.hist(wave_sum - mean, bins=100, label=r'$\mu_{int} - \mu$')
