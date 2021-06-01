@@ -20,7 +20,6 @@ from mpl_axes_aligner import align
 import h5py
 from scipy.interpolate import interp1d
 from sklearn.linear_model import orthogonal_mp
-from numba import njit
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -177,7 +176,7 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0):
     p = 1 - poisson.pmf(0, p1).mean()
     nu_true_mean = -M / 2 - M / 2 * np.log(sig2w) - p * N / 2 * np.log(sig2s / sig2w + 1) - M / 2 * np.log(2 * np.pi) + N * np.log(1 - p) + p * N * np.log(p / (1 - p))
     nu_true_stdv = np.sqrt(M / 2 + N * p * (1 - p) * (np.log(p / (1 - p)) - np.log(sig2s / sig2w + 1) / 2) ** 2)
-    nu_stop = nu_true_mean - stop * nu_true_stdv
+    nu_stop = nu_true_mean + stop * nu_true_stdv
 
     psy_thresh = 1e-4
     P = min(M, 1 + math.ceil(N * p + special.erfcinv(1e-2) * math.sqrt(2 * N * p * (1 - p))))
@@ -232,6 +231,15 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0):
         xmmse_star[k] = xmmse[indx[k] % P, indx[k] // P]
 
     return xmmse_star, psy_star, nu_star, T_star, d_tot, d_max
+
+def nu_direct(y, A, nx, mus, sig2s, sig2w, la):
+    M, N = A.shape
+    Phi = np.matmul(np.matmul(A, np.diagflat(sig2s * nx)), A.T) + np.eye(M) * sig2w
+    z = y - np.dot(A, (mus * nx))
+    invPhi = np.linalg.inv(Phi)
+    detPhi = np.linalg.det(Phi)
+    nu = -0.5 * np.matmul(np.matmul(z, invPhi), z) - 0.5 * np.log(detPhi) - 0.5 * M * np.log(2 * np.pi) + np.log(poisson.pmf(nx, mu=la)).sum()
+    return nu
 
 def shannon_interpolation(w, n):
     t = np.arange(0, len(w), 1 / n)

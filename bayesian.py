@@ -178,7 +178,7 @@ def time_numpyro(a0, a1):
     dt = np.sort(dt, kind='stable', order=['TriggerNo', 'ChannelID'])
     return stime_t0, stime_cha, dt, count, time_mcmc, accep, mix0ratio
 
-D = 200
+D = 50
 def fbmp_inference(a0, a1):
     nsp = 4
     nstd = 3
@@ -194,7 +194,6 @@ def fbmp_inference(a0, a1):
     b_t0 = [0., 600.]
     time_fbmp = 0
     for i in range(a0, a1):
-        truth = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
         cid = ent[i]['ChannelID']
         wave = ent[i]['Waveform'].astype(np.float64) * spe_pre[cid]['epulse']
 
@@ -234,7 +233,7 @@ def fbmp_inference(a0, a1):
             factor = np.sqrt(np.diag(np.matmul(A.T, A)).mean())
             A = np.matmul(A, np.diag(1. / np.sqrt(np.diag(np.matmul(A.T, A)))))
             la = mu_t * wff.convolve_exp_norm(tlist - t0_t, Tau, Sigma) / n + 1e-8
-            xmmse_star, psy_star, nu_star, T_star, d_tot_i, d_max_i = wff.fbmpr_fxn_reduced(wave_r, A, la, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, D, stop=0)
+            xmmse_star, psy_star, nu_star, T_star, d_tot_i, d_max_i = wff.fbmpr_fxn_reduced(wave_r, A, la, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, D, stop=2)
             time_fbmp = time_fbmp + time.time() - time_fbmp_start
             c_star = np.zeros_like(xmmse_star).astype(int)
             for k in range(len(T_star)):
@@ -242,6 +241,11 @@ def fbmp_inference(a0, a1):
                 c_star[k, t] = c
             xmmse_most = xmmse_star[0]
             # print('{},{}'.format(np.max(c_star[0]), i))
+
+            # truth = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
+            # nx = np.sum([(tlist < truth['HitPosInWindow'][i] + 0.5 / n) * (tlist > truth['HitPosInWindow'][i] - 0.5 / n) for i in range(len(truth))], axis=0)
+            # nu_truth = wff.nu_direct(wave_r, A, nx, factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la)
+            # nu = np.array([wff.nu_direct(wave_r, A, c_star[i], factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la) for i in range(len(c_star))])
 
             # mu = np.average(c_star.sum(axis=1), weights=psy_star)
             # t0 = t0_t
