@@ -230,7 +230,9 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0):
     for k in range(num):
         xmmse_star[k] = xmmse[indx[k] % P, indx[k] // P]
 
-    return xmmse_star, psy_star, nu_star, T_star, d_tot, d_max
+    xmmse = np.average(xmmse_star, weights=psy_star, axis=0)
+
+    return xmmse, xmmse_star, psy_star, nu_star, T_star, d_tot, d_max
 
 def nu_direct(y, A, nx, mus, sig2s, sig2w, la):
     M, N = A.shape
