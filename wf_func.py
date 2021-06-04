@@ -34,10 +34,7 @@ plt.rcParams['lines.linewidth'] = 2.0
 plt.rcParams['text.usetex'] = True
 plt.rcParams['pgf.texsystem'] = 'pdflatex'
 plt.rcParams['axes.unicode_minus'] = False
-pgf_with_latex = {'pgf.preamble': [
-        r'\usepackage[detect-all,locale=DE]{siunitx}'
-        ]}
-plt.rcParams.update(pgf_with_latex)
+plt.rcParams['pgf.preamble'] = r'\usepackage[detect-all,locale=DE]{siunitx}'
 
 nshannon = 1
 
@@ -178,13 +175,16 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0):
     nu_true_stdv = np.sqrt(M / 2 + N * p * (1 - p) * (np.log(p / (1 - p)) - np.log(sig2s / sig2w + 1) / 2) ** 2)
     nu_stop = nu_true_mean + stop * nu_true_stdv
 
-    psy_thresh = 1e-4
+    psy_thresh = 1e-3
     P = min(M, 1 + math.ceil(N * p + special.erfcinv(1e-2) * math.sqrt(2 * N * p * (1 - p))))
+    # P = math.ceil(min(M, p1.sum() + 3 * np.sqrt(p1.sum())))
+    D = min(min(len(p1), P), D)
 
     T = np.full((P, D), 0)
     nu = np.full((P, D), -np.inf)
     xmmse = np.zeros((P, D, N))
-    d_tot = D - 1
+    cc = np.zeros((P, D, N))
+    d_tot = D
 
     nu_root = -0.5 * np.linalg.norm(y) ** 2 / sig2w - 0.5 * M * np.log(2 * np.pi) - 0.5 * M * np.log(sig2w) + np.log(poisson.pmf(0, p1)).sum()
     cx_root = A / sig2w
@@ -208,6 +208,7 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0):
             assist = np.zeros(N)
             t, c = np.unique(T[:p+1, d], return_counts=True)
             assist[t] = mus * c + sig2s * c * np.dot(z, cx[:, t])
+            cc[p, d][t] = c
             xmmse[p, d] = assist
 
             betaxt = np.abs(sig2s / (1 + sig2s * np.sum(A * cx, axis=0)))
@@ -216,15 +217,19 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0):
         if max(nu[:, d]) > nu_stop:
             d_tot = d + 1
             break
-    nu = nu[:, :d+1].T.flatten()
+    # revise = np.log(poisson.pmf(np.arange(1, P+1), p1.sum())) - special.logsumexp(np.log(poisson.pmf(cc[:, :d_tot], p1)).sum(axis=-1), axis=1)
+    # revise = np.log(poisson.pmf(np.arange(1, P+1), p1.sum()))
+    # nu[:, :d_tot] = nu[:, :d_tot] + revise[:, None]
+    # pp = poisson.pmf(np.arange(1, P+1), p1.sum())
+    # nu[:, :d_tot][np.random.uniform(size=nu[:, :d_tot].shape) > pp[:, None] / pp.max()] = -np.inf
+    nu = nu[:, :d_tot].T.flatten()
 
     dum = np.sort(nu)[::-1]
     indx = np.argsort(nu)[::-1]
     d_max = math.floor(indx[0] // P) + 1
-    nu_max = nu[indx[0]]
-    num = int(np.sum(nu > nu_max + np.log(psy_thresh)))
+    num = min(int(np.sum(nu > nu.max() + np.log(psy_thresh))), D)
     nu_star = nu[indx[:num]]
-    psy_star = np.exp(nu_star - nu_max) / np.sum(np.exp(nu_star - nu_max))
+    psy_star = np.exp(nu_star - nu.max()) / np.sum(np.exp(nu_star - nu.max()))
     T_star = [T[:(indx[k] % P) + 1, indx[k] // P] for k in range(num)]
     xmmse_star = np.empty((num, N))
     for k in range(num):

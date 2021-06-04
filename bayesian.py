@@ -74,7 +74,7 @@ mix0sigma = 1e-3
 mu0 = np.arange(1, int(Mu + 5 * np.sqrt(Mu)))
 n_t = np.arange(1, 100)
 p_t = special.comb(mu0, 2)[:, None] * np.power(wff.convolve_exp_norm(np.arange(1029) - 200, Tau, Sigma) / n_t[:, None], 2).sum(axis=1)
-n0 = np.array([n_t[p_t[i] < max(1, np.sort(p_t[i])[1])].min() for i in range(len(mu0))])
+n0 = np.array([n_t[p_t[i] < max(1e-2, np.sort(p_t[i])[1])].min() for i in range(len(mu0))])
 ndict = dict(zip(mu0, n0))
 
 class mNormal(numpyro.distributions.distribution.Distribution):
@@ -201,7 +201,7 @@ def fbmp_inference(a0, a1):
         mu_t = abs(wave.sum() / gmu)
         # n = ndict[min(math.ceil(mu_t), max(mu0))]
         # n = math.ceil(max((mu_t + 3 * np.sqrt(mu_t)) * wff.convolve_exp_norm(np.arange(-3 * Sigma, 3 * Sigma + 2 * Tau, 0.1), Tau, Sigma)) * 4)
-        n = 5
+        n = 10
         A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Mu, Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
         try:
             def optit0mu(t0, mu, n, xmmse_star, psy_star, c_star, la):
@@ -245,14 +245,14 @@ def fbmp_inference(a0, a1):
                 c_star[k, t] = c
             maxindex = 0
 
-            nx = np.sum([(tlist < truth['HitPosInWindow'][j] + 0.5 / n) * (tlist > truth['HitPosInWindow'][j] - 0.5 / n) for j in range(len(truth))], axis=0)
-            cc = np.sum([np.where(tlist < truth['HitPosInWindow'][j] + 0.5 / n, np.sqrt(truth['Charge'][j]), 0) * np.where(tlist > truth['HitPosInWindow'][j] - 0.5 / n, np.sqrt(truth['Charge'][j]), 0) for j in range(len(truth))], axis=0)
-            pp = np.arange(left_wave, right_wave)
-            wav_ans = np.sum([np.where(pp > truth['HitPosInWindow'][j], wff.spe(pp - truth['HitPosInWindow'][j], tau=p[0], sigma=p[1], A=p[2]) * truth['Charge'][j] / gmu, 0) for j in range(len(truth))], axis=0)
-            nu_truth = wff.nu_direct(wave_r, A, nx, factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la)
-            rss_truth = np.power(wav_ans - np.matmul(A, cc / gmu * factor), 2).sum()
-            nu = np.array([wff.nu_direct(wave_r, A, c_star[j], factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la) for j in range(len(psy_star))])
-            rss = np.array([np.power(wav_ans - np.matmul(A, xmmse_star[j]), 2).sum() for j in range(len(psy_star))])
+            # nx = np.sum([(tlist < truth['HitPosInWindow'][j] + 0.5 / n) * (tlist > truth['HitPosInWindow'][j] - 0.5 / n) for j in range(len(truth))], axis=0)
+            # cc = np.sum([np.where(tlist < truth['HitPosInWindow'][j] + 0.5 / n, np.sqrt(truth['Charge'][j]), 0) * np.where(tlist > truth['HitPosInWindow'][j] - 0.5 / n, np.sqrt(truth['Charge'][j]), 0) for j in range(len(truth))], axis=0)
+            # pp = np.arange(left_wave, right_wave)
+            # wav_ans = np.sum([np.where(pp > truth['HitPosInWindow'][j], wff.spe(pp - truth['HitPosInWindow'][j], tau=p[0], sigma=p[1], A=p[2]) * truth['Charge'][j] / gmu, 0) for j in range(len(truth))], axis=0)
+            # nu_truth = wff.nu_direct(wave_r, A, nx, factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la)
+            # rss_truth = np.power(wav_ans - np.matmul(A, cc / gmu * factor), 2).sum()
+            # nu = np.array([wff.nu_direct(wave_r, A, c_star[j], factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la) for j in range(len(psy_star))])
+            # rss = np.array([np.power(wav_ans - np.matmul(A, xmmse_star[j]), 2).sum() for j in range(len(psy_star))])
 
             # print('{},{}'.format(np.max(c_star[maxindex]), i))
             xmmse_most = xmmse_star[maxindex]
@@ -380,7 +380,7 @@ elif method == 'fbmp':
     ax.hist(d_tot, bins=np.linspace(0, d_tot.max(), 20), label='d_tot')
     ax.set_xlabel('d_tot')
     ax.set_ylabel('Count')
-    ax.set_xlim(right=1.01 * D)
+    ax.set_xlim(right=1.01 * d_tot.max())
     ax.set_ylim(0.5, N)
     ax.set_yscale('log')
     ax.legend(loc='upper center')
@@ -390,7 +390,7 @@ elif method == 'fbmp':
     ax.hist(d_tot, bins=np.linspace(0, d_tot.max(), 20), label='d_max')
     ax.set_xlabel('d_max')
     ax.set_ylabel('Count')
-    ax.set_xlim(right=1.01 * D)
+    ax.set_xlim(right=1.01 * d_tot.max())
     ax.set_ylim(0.5, N)
     ax.set_yscale('log')
     ax.legend(loc='upper right')

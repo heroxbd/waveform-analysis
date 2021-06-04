@@ -1,7 +1,6 @@
 SHELL:=bash
 channelN:=$(shell seq -f '%02g' 0 0)
 mu:=$(shell seq -f '%0.1f' 0.5 0.5 3.5 && seq -f '%0.1f' 4 2 10 && seq -f '%0.1f' 15 5 30)
-# mu:=$(shell seq -f '%0.1f' 10 5 10)
 
 tau:=$(shell awk -F',' 'NR == 1 { print $1 }' rc.csv)
 sigma:=$(shell awk -F',' 'NR == 2 { print $1 }' rc.csv)
