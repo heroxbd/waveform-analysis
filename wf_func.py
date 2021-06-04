@@ -176,7 +176,7 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0):
     nu_stop = nu_true_mean + stop * nu_true_stdv
 
     psy_thresh = 1e-3
-    P = min(M, 1 + math.ceil(N * p + special.erfcinv(1e-2) * math.sqrt(2 * N * p * (1 - p))))
+    P = math.ceil(N * p + special.erfcinv(1e-2) * math.sqrt(2 * N * p * (1 - p)))
     # P = math.ceil(min(M, p1.sum() + 3 * np.sqrt(p1.sum())))
     D = min(min(len(p1), P), D)
 
@@ -230,7 +230,7 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0):
     num = min(int(np.sum(nu > nu.max() + np.log(psy_thresh))), D)
     nu_star = nu[indx[:num]]
     psy_star = np.exp(nu_star - nu.max()) / np.sum(np.exp(nu_star - nu.max()))
-    T_star = [T[:(indx[k] % P) + 1, indx[k] // P] for k in range(num)]
+    T_star = [np.sort(T[:(indx[k] % P) + 1, indx[k] // P]) for k in range(num)]
     xmmse_star = np.empty((num, N))
     for k in range(num):
         xmmse_star[k] = xmmse[indx[k] % P, indx[k] // P]
