@@ -188,20 +188,23 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0):
 
     nu_root = -0.5 * np.linalg.norm(y) ** 2 / sig2w - 0.5 * M * np.log(2 * np.pi) - 0.5 * M * np.log(sig2w) + np.log(poisson.pmf(0, p1)).sum()
     cx_root = A / sig2w
-    betaxt_root = np.abs(sig2s / (1 + sig2s * np.sum(A * cx_root, axis=0)))
+    betaxt_root = sig2s / (1 + sig2s * np.sum(A * cx_root, axis=0))
     nuxt_root = nu_root + 0.5 * np.log(betaxt_root / sig2s) + 0.5 * betaxt_root * np.abs(np.dot(y, cx_root) + mus / sig2s) ** 2 - 0.5 * mus ** 2 / sig2s + np.log(poisson.pmf(1, p1) / poisson.pmf(0, p1))
+    pan_root = np.zeros(N)
     
     for d in range(D):
         nuxt = nuxt_root.copy()
         z = y.copy()
         cx = cx_root.copy()
         betaxt = betaxt_root.copy()
+        pan = pan_root.copy()
         for p in range(P):
             nuxtshadow = np.where(np.sum(np.abs(nuxt - nu[p, :d][:, None]) < 1e-4, axis=0), -np.inf, nuxt)
             nustar = max(nuxtshadow)
             istar = np.argmax(nuxtshadow)
             nu[p, d] = nustar
             T[p, d] = istar
+            pan[istar] += 1
             cx = cx - np.dot(betaxt[istar] * cx[:, istar].copy().reshape(M, 1), np.dot(cx[:, istar], A).copy().reshape(1, N))
 
             z = z - A[:, istar] * mus
@@ -211,8 +214,9 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0):
             cc[p, d][t] = c
             xmmse[p, d] = assist
 
-            betaxt = np.abs(sig2s / (1 + sig2s * np.sum(A * cx, axis=0)))
-            nuxt = nustar + 0.5 * np.log(betaxt / sig2s) + 0.5 * betaxt * np.abs(np.dot(z, cx) + mus / sig2s) ** 2 - 0.5 * mus ** 2 / sig2s + np.log(poisson.pmf(np.sum(T[:p, d] == istar) + 1, p1[istar]) / poisson.pmf(np.sum(T[:p, d] == istar), p1[istar]))
+            betaxt = sig2s / (1 + sig2s * np.sum(A * cx, axis=0))
+            nuxt = nustar + 0.5 * np.log(betaxt / sig2s) + 0.5 * betaxt * np.abs(np.dot(z, cx) + mus / sig2s) ** 2 - 0.5 * mus ** 2 / sig2s + np.log(poisson.pmf(pan + 1, mu=p1) / poisson.pmf(pan, mu=p1))
+            # nuxt[t] = -np.inf
 
         if max(nu[:, d]) > nu_stop:
             d_tot = d + 1
