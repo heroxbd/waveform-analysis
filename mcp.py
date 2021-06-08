@@ -2,10 +2,27 @@ import numpy as np
 import numpyro
 templateProbability = np.array([68.74,16.58,8.595,6.022])
 normalTplProbability = templateProbability/np.sum(templateProbability)
+# calculate the probability matrxi
+def hnu2PEProbability(probability,hnumax=200,petimes=4):
+    # probability is the mcp charge response fit result, the first row and first column is for zero hnu and PE
+    E = np.zeros((hnumax+1, hnumax*petimes+1))
+    E[0,0] = 1
+    E[1,1:(petimes+1)] = probability
+    # hnumax+1 is the hnumax hnu
+    for i in range(2,hnumax+1):
+        for j in range(i,5):
+            tmpE = np.zeros(4)
+            tmpE[:j] = E[(i-1),(j-1)::-1]
+            E[i,j] = np.sum(tmpE*probability)
+        for j in range(5, 4*i+1):
+            tmpE = E[(i-1),(j-1):(j-5):-1]
+            E[i,j] = np.sum(tmpE*probability)
+    return E
+hnu2PEmatrix = hnu2PEProbability(normalTplProbability)
 # define the process from number of photon to pe
 def photon2pe(nphoton, pmf=normalTplProbability):
     return np.random.choice(np.arange(1,templateProbability.shape[0]+1),size=nphoton, p=pmf)
-class mcpModel(numpyro.distributions.distribution.Distribution):
+#class mcpModel(numpyro.distributions.distribution.Distribution):
     
 def mcpModel(pes, pmf=normalTplProbability,logits=range(1,len(normalTplProbability)+1)):
     # pe expect value
