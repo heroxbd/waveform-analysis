@@ -209,8 +209,8 @@ def fbmp_inference(a0, a1):
                 ys = np.log(psy_star) - np.log(poisson.pmf(c_star, la)).sum(axis=1)
                 ys = np.exp(ys - ys.max()) / np.sum(np.exp(ys - ys.max()))
                 btlist = np.arange(t0 - 3 * Sigma, t0 + 3 * Sigma + 1e-6, 0.2)
-                mulist = np.arange(max(1e-8, mu - 3 * np.sqrt(mu)), mu + 3 * np.sqrt(mu), 0.1)
-                b_mu = [max(1e-8, mu - 5 * np.sqrt(mu)), mu + 5 * np.sqrt(mu)]
+                mulist = np.arange(max(0.2, mu - 3 * np.sqrt(mu)), mu + 3 * np.sqrt(mu), 0.2)
+                b_mu = [max(0.2, mu - 5 * np.sqrt(mu)), mu + 5 * np.sqrt(mu)]
                 tlist_pan = np.sort(np.unique(np.hstack(np.arange(0, window)[:, None] + np.arange(0, 1, 1 / n))))
                 As = np.zeros((len(xmmse_star), len(tlist_pan)))
                 As[:, np.isin(tlist_pan, tlist)] = c_star
@@ -236,9 +236,11 @@ def fbmp_inference(a0, a1):
             # 1st FBMP
             time_fbmp_start = time.time()
             factor = np.sqrt(np.diag(np.matmul(A.T, A)).mean())
+            # normalize matrix A to unit norm
             A = np.matmul(A, np.diag(1. / np.sqrt(np.diag(np.matmul(A.T, A)))))
+            # initalize the expect pe
             la = mu_t * wff.convolve_exp_norm(tlist - t0_t, Tau, Sigma) / n + 1e-8
-            xmmse, xmmse_star, psy_star, nu_star, T_star, d_tot_i, d_max_i = wff.fbmpr_fxn_reduced(wave_r, A, la, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, D, stop=5, truth=truth, i=i)
+            xmmse, xmmse_star, psy_star, nu_star, T_star, d_tot_i, d_max_i = wff.fbmpr_fxn_reduced(wave_r, A, la, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, D, stop=2)
             time_fbmp = time_fbmp + time.time() - time_fbmp_start
             c_star = np.zeros_like(xmmse_star).astype(int)
             for k in range(len(T_star)):
@@ -259,6 +261,7 @@ def fbmp_inference(a0, a1):
             xmmse_most = xmmse_star[maxindex]
 
             # mu = np.average(c_star.sum(axis=1), weights=psy_star)
+            # mu = np.average(xmmse_star.sum(axis=1), weights=psy_star) / factor
             # t0 = t0_t
 
             t0, mu, ys = optit0mu(t0_t, mu_t, n, xmmse_star, psy_star, c_star, la)
@@ -271,6 +274,7 @@ def fbmp_inference(a0, a1):
             cha = np.repeat(xmmse_most[xmmse_most > 0] / factor / c_star[maxindex][xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
 
             # mu_i = len(cha)
+            # mu_i = cha.sum()
             # t0_i = t0_t
 
             t0_i, mu_i, ys = optit0mu(t0, mu, n, xmmse_most[None, :], np.array([1]), c_star[maxindex][None, :], la)
@@ -301,11 +305,12 @@ def fbmp_inference(a0, a1):
     dt = np.sort(dt, kind='stable', order=['TriggerNo', 'ChannelID'])
     return t0_wav, t0_cha, dt, d_tot, d_max, time_fbmp, mu_wav, mu_cha
 
-if args.Ncpu == 1:
-    slices = [[0, N]]
-else:
-    chunk = N // args.Ncpu + 1
-    slices = np.vstack((np.arange(0, N, chunk), np.append(np.arange(chunk, N, chunk), N))).T.astype(int).tolist()
+# if args.Ncpu == 1:
+#     slices = [[0, N]]
+# else:
+#     chunk = N // args.Ncpu + 1
+#     slices = np.vstack((np.arange(0, N, chunk), np.append(np.arange(chunk, N, chunk), N))).T.astype(int).tolist()
+slices = [0,N]
 
 print('Initialization finished, real time {0:.02f}s, cpu time {1:.02f}s'.format(time.time() - global_start, time.process_time() - cpu_global_start))
 tic = time.time()
@@ -358,8 +363,7 @@ elif method == 'fbmp':
     ts = np.zeros(N, dtype=sdtp)
     ts['TriggerNo'] = ent['TriggerNo']
     ts['ChannelID'] = ent['ChannelID']
-    with Pool(min(args.Ncpu, cpu_count())) as pool:
-        result = pool.starmap(partial(fbmp_inference), slices)
+    result = fbmp_inference(slices[0],slices[1])
     ts['tswave'] = np.hstack([result[i][0] for i in range(len(slices))])
     ts['tscharge'] = np.hstack([result[i][1] for i in range(len(slices))])
     As = np.hstack([result[i][2] for i in range(len(slices))])
@@ -386,7 +390,7 @@ elif method == 'fbmp':
     ax = ff.add_subplot(122)
     # di, ci = np.unique(d_max, return_counts=True)
     # ax.bar(di, ci, label='d_max')
-    ax.hist(d_max, bins=np.linspace(0, d_tot.max(), 20), label='d_max')
+    ax.hist(d_tot, bins=np.linspace(0, d_tot.max(), 20), label='d_max')
     ax.set_xlabel('d_max')
     ax.set_ylabel('Count')
     ax.set_xlim(right=1.01 * d_tot.max())

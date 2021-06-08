@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
 import wf_func as wff
+import mcp
 
 psr = argparse.ArgumentParser()
 psr.add_argument('-o', dest='opt', type=str, help='output file')
@@ -42,8 +43,20 @@ std = 1.
 def sampling(a0, a1, mu, tau, sigma):
     np.random.seed(a0 + round(Tau + Sigma))
     npe = poisson.ppf(1 - uniform.rvs(scale=1-poisson.cdf(0, mu), size=a1 - a0), mu).astype(int)
+    # generate the mcp response pe charge
+    npeCdf = np.cumsum(npe)
+    npeCdf = np.concatenate([[0], npeCdf])
+
+    nMcpPe = mcp.photon2pe(np.sum(npe))
+    nMcpPeCdf = np.cumsum(nMcpPe)
+    nMcpPeCdf = np.concatenate([[0],nMcpPeCdf])
+    charges = wff.charge(np.sum(nMcpPe),gmu=gmu, gsigma=gsigma, thres=0)
+    peCharge = [np.sum(charges[nMcpPeCdf[i]:nMcpPeCdf[i+1]]) for i in range(npeCdf[-1])]
+
     t0 = np.random.uniform(100., 500., size=a1 - a0)
-    sams = [np.vstack((wff.time(npe[i], tau, sigma) + t0[i], wff.charge(npe[i], gmu=gmu, gsigma=gsigma, thres=0))).T for i in range(a1 - a0)]
+    #sams = [np.vstack((wff.time(npe[i], tau, sigma) + t0[i], wff.charge(npe[i], gmu=gmu, gsigma=gsigma, thres=0))).T for i in range(a1 - a0)]
+    # use peCharge calculated above
+    sams = [np.vstack((wff.time(npe[i], tau, sigma) + t0[i], peCharge[npeCdf[i]:npeCdf[i+1]])).T for i in range(a1-a0)]
     wdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('Waveform', np.int16, window * wff.nshannon)])
     waves = np.empty(a1 - a0).astype(wdtp)
     pan = np.arange(0, window, 1 / wff.nshannon)
@@ -69,7 +82,7 @@ def sampling(a0, a1, mu, tau, sigma):
 
 chunk = args.N // args.Ncpu + 1
 slices = np.vstack((np.arange(0, args.N, chunk), np.append(np.arange(chunk, args.N, chunk), args.N))).T.astype(int).tolist()
-
+# slices use to store triggerno, and seperate into different parts.
 with Pool(min(args.Ncpu, cpu_count())) as pool:
     result = pool.starmap(partial(sampling, mu=Mu, tau=Tau, sigma=Sigma), slices)
 

@@ -169,14 +169,17 @@ def findpeak(wave, spe_pre):
 def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None):
     # Only for multi-gaussian with arithmetic sequence of mu and sigma
     M, N = A.shape
-
+    # non-zero prob
     p = 1 - poisson.pmf(0, p1).mean()
+    # 1st and 2nd moments
     nu_true_mean = -M / 2 - M / 2 * np.log(sig2w) - p * N / 2 * np.log(sig2s / sig2w + 1) - M / 2 * np.log(2 * np.pi) + N * np.log(1 - p) + p * N * np.log(p / (1 - p))
     nu_true_stdv = np.sqrt(M / 2 + N * p * (1 - p) * (np.log(p / (1 - p)) - np.log(sig2s / sig2w + 1) / 2) ** 2)
     nu_stop = nu_true_mean + stop * nu_true_stdv
 
-    psy_thresh = 1e-2
-    P = math.ceil(min(M, p1.sum() + 3 * np.sqrt(p1.sum())))
+    psy_thresh = 1e-3
+    # wave length
+    P = min(M, 1 + math.ceil(N * p + special.erfcinv(1e-2) * math.sqrt(2 * N * p * (1 - p))))
+    # P = math.ceil(min(M, p1.sum() + 3 * np.sqrt(p1.sum())))
     D = min(min(len(p1), P), D)
 
     T = np.full((P, D), 0)
@@ -184,10 +187,11 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None
     xmmse = np.zeros((P, D, N))
     cc = np.zeros((P, D, N))
     d_tot = D
-
+    # nu(0,y)
     nu_root = -0.5 * np.linalg.norm(y) ** 2 / sig2w - 0.5 * M * np.log(2 * np.pi) - 0.5 * M * np.log(sig2w) + np.log(poisson.pmf(0, p1)).sum()
     cx_root = A / sig2w
-    betaxt_root = sig2s / (1 + sig2s * np.sum(A * cx_root, axis=0))
+    betaxt_root = np.abs(sig2s / (1 + sig2s * np.sum(A * cx_root, axis=0)))
+    # add delta nu
     nuxt_root = nu_root + 0.5 * np.log(betaxt_root / sig2s) + 0.5 * betaxt_root * np.abs(np.dot(y, cx_root) + mus / sig2s) ** 2 - 0.5 * mus ** 2 / sig2s + np.log(poisson.pmf(1, p1) / poisson.pmf(0, p1))
     pan_root = np.zeros(N)
     
@@ -196,11 +200,13 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None
         z = y.copy()
         cx = cx_root.copy()
         betaxt = betaxt_root.copy()
-        pan = pan_root.copy()
+        # search in pe number 
         for p in range(P):
+            # select the best
             nuxtshadow = np.where(np.sum(np.abs(nuxt - nu[p, :d][:, None]) < 1e-4, axis=0), -np.inf, nuxt)
             nustar = max(nuxtshadow)
             istar = np.argmax(nuxtshadow)
+            # select pe
             nu[p, d] = nustar
             T[p, d] = istar
             pan[istar] += 1
@@ -212,11 +218,10 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None
             assist[t] = mus * c + sig2s * c * np.dot(z, cx[:, t])
             cc[p, d][t] = c
             xmmse[p, d] = assist
-
-            betaxt = sig2s / (1 + sig2s * np.sum(A * cx, axis=0))
-            nuxt = nustar + 0.5 * np.log(betaxt / sig2s) + 0.5 * betaxt * np.abs(np.dot(z, cx) + mus / sig2s) ** 2 - 0.5 * mus ** 2 / sig2s + np.log(poisson.pmf(pan + 1, mu=p1) / poisson.pmf(pan, mu=p1))
-            # nuxt[t] = -np.inf
-
+            # poisson
+            betaxt = np.abs(sig2s / (1 + sig2s * np.sum(A * cx, axis=0)))
+            nuxt = nustar + 0.5 * np.log(betaxt / sig2s) + 0.5 * betaxt * np.abs(np.dot(z, cx) + mus / sig2s) ** 2 - 0.5 * mus ** 2 / sig2s + np.log(poisson.pmf(np.sum(T[:p, d] == istar) + 1, p1[istar]) / poisson.pmf(np.sum(T[:p, d] == istar), p1[istar]))
+            breakpoint()
         if max(nu[:, d]) > nu_stop:
             d_tot = d + 1
             break
@@ -352,6 +357,7 @@ def spe(t, tau, sigma, A):
 #     return np.where(t == 0, 1, 0)
 
 def charge(n, gmu, gsigma, thres=0):
+    # ppf percent point function, inverse of cdf; only sample the charge>0 in gauss distribution.
     chargesam = norm.ppf(1 - uniform.rvs(scale=1-norm.cdf(thres, loc=gmu, scale=gsigma), size=n), loc=gmu, scale=gsigma)
     return chargesam
 
@@ -381,16 +387,19 @@ def likelihoodt0(hitt, char, gmu, Tau, Sigma, mode='charge', is_delta=False):
     return t0, t0delta
 
 def initial_params(wave, spe_pre, Mu, Tau, Sigma, gmu, Thres, p, nsp, nstd, is_t0=False, is_delta=False, n=1, nshannon=1):
+    # hittime and charge
     hitt, char = lucyddm(savgol_filter(wave[::nshannon], 11, 4), spe_pre['spe'][::nshannon])
     hitt, char = clip(hitt, char, Thres)
+    # normalize
     char = char / char.sum() * np.clip(np.abs(wave[::nshannon].sum()), 1e-6, np.inf)
     tlist = np.unique(np.clip(np.hstack(hitt[:, None] + np.arange(-nsp, nsp+1)), 0, len(wave[::nshannon]) - 1))
-
+    # select wave
+    breakpoint()
     index_prom = np.hstack([np.argwhere(savgol_filter(wave, 11 * (nshannon if nshannon % 2 == 1 else nshannon + 1), 4) > nstd * spe_pre['std']).flatten(), hitt * nshannon])
     left_wave = round(np.clip(index_prom.min() - 3 * spe_pre['mar_l'], 0, len(wave) - 1))
     right_wave = round(np.clip(index_prom.max() + 3 * spe_pre['mar_r'], 0, len(wave) - 1))
     wave = wave[left_wave:right_wave]
-
+    # calc the matrix A
     npe_init = np.zeros(len(tlist))
     npe_init[np.isin(tlist, hitt)] = char / gmu
     npe_init = np.repeat(npe_init, n) / n
