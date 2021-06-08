@@ -166,7 +166,7 @@ def findpeak(wave, spe_pre):
         cha = np.array([1])
     return pet, cha
 
-def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0):
+def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None):
     # Only for multi-gaussian with arithmetic sequence of mu and sigma
     M, N = A.shape
 
@@ -175,9 +175,8 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0):
     nu_true_stdv = np.sqrt(M / 2 + N * p * (1 - p) * (np.log(p / (1 - p)) - np.log(sig2s / sig2w + 1) / 2) ** 2)
     nu_stop = nu_true_mean + stop * nu_true_stdv
 
-    psy_thresh = 1e-3
-    P = math.ceil(N * p + special.erfcinv(1e-2) * math.sqrt(2 * N * p * (1 - p)))
-    # P = math.ceil(min(M, p1.sum() + 3 * np.sqrt(p1.sum())))
+    psy_thresh = 1e-2
+    P = math.ceil(min(M, p1.sum() + 3 * np.sqrt(p1.sum())))
     D = min(min(len(p1), P), D)
 
     T = np.full((P, D), 0)
@@ -226,14 +225,33 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0):
     # nu[:, :d_tot] = nu[:, :d_tot] + revise[:, None]
     # pp = poisson.pmf(np.arange(1, P+1), p1.sum())
     # nu[:, :d_tot][np.random.uniform(size=nu[:, :d_tot].shape) > pp[:, None] / pp.max()] = -np.inf
+    nu_bk = nu[:, :d_tot]
     nu = nu[:, :d_tot].T.flatten()
 
-    dum = np.sort(nu)[::-1]
     indx = np.argsort(nu)[::-1]
     d_max = math.floor(indx[0] // P) + 1
-    num = min(int(np.sum(nu > nu.max() + np.log(psy_thresh))), D)
+    num = min(min(int(np.sum(nu > nu.max() + np.log(psy_thresh))), D), 10)
     nu_star = nu[indx[:num]]
     psy_star = np.exp(nu_star - nu.max()) / np.sum(np.exp(nu_star - nu.max()))
+
+    # fig = plt.figure(figsize=(6, 6))
+    # # fig.tight_layout()
+    # gs = gridspec.GridSpec(1, 1, figure=fig, left=0.15, right=0.95, top=0.9, bottom=0.15, wspace=0.4, hspace=0.5)
+    # ax = fig.add_subplot(gs[0, 0])
+    # cp = ax.imshow(nu_bk)
+    # fig.colorbar(cp, ax=ax)
+    # ax.set_xticks(np.arange(d_tot))
+    # ax.set_xticklabels(np.arange(1, d_tot + 1).astype(str))
+    # ax.set_yticks(np.arange(P))
+    # ax.set_yticklabels(np.arange(1, P + 1).astype(str))
+    # ax.set_xlabel('D')
+    # ax.set_ylabel('P')
+    # ax.hlines(len(truth) - 1, 0, d_tot - 1, color='g')
+    # ax.scatter([ind // P for ind in indx[:num]], [ind % P for ind in indx[:num]], c=psy_star)
+    # ax.scatter(indx[0] // P, indx[0] % P, color='r')
+    # fig.savefig('t/' + str(i) + '.png')
+    # plt.close()
+
     T_star = [np.sort(T[:(indx[k] % P) + 1, indx[k] // P]) for k in range(num)]
     xmmse_star = np.empty((num, N))
     for k in range(num):
