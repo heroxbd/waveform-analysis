@@ -1,5 +1,7 @@
 result/
+result
 waveform/
+waveform
 *.dat
 *.fits
 *.csv
