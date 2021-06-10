@@ -1,7 +1,13 @@
 import numpy as np
 import numpyro
+import wf_func as wff
+
+from scipy import optimize, special
+from scipy.stats import poisson
 templateProbability = np.array([68.74,16.58,8.595,6.022])
 normalTplProbability = templateProbability/np.sum(templateProbability)
+defaultHnumax = 200
+defaultpetimes = 4
 # calculate the probability matrxi
 def hnu2PEProbability(probability,hnumax=200,petimes=4):
     # probability is the mcp charge response fit result, the first row and first column is for zero hnu and PE
@@ -19,11 +25,59 @@ def hnu2PEProbability(probability,hnumax=200,petimes=4):
             E[i,j] = np.sum(tmpE*probability)
     return E
 hnu2PEmatrix = hnu2PEProbability(normalTplProbability)
+def lightCurve(t0, mu, binsT, tau, sigma, binwidth=0.1):
+    # use the ligth curve distribution from wff
+    expectM = mu * wff.convolve_exp_norm(binsT-t0, tau, sigma)*binwidth
+    return expectM
+def hypo0(expectM):
+    return np.exp(-expectM)
+def hypo1(expecthnu, hnu2PEp):
+    return np.dot(expecthnu, hnu2PEp)
+def hypo(expectM, cstar, indexstar):
+    binsp = np.tile(hypo0(expectM), (cstar.shape[0],1))
+    for i in range(cstar.shape[0]):
+        for j in range(len(indexstar[i])):
+            # indexstar[i][j]  is the index of nonzeros
+            expecthnu = poisson.pmf(np.arange(defaultHnumax+1), expectM[indexstar[i][j]])
+            assert(cstar[i,indexstar[i][j]]>=1)
+            binsp[i, indexstar[i][j]] = hypo1(expecthnu, hnu2PEmatrix[:,cstar[i,indexstar[i][j]]])
+    return binsp
+def likelihood(x,*args):
+    binsT, tau, sigma,c_star, p_star, index_star, mu = args
+    lightC = lightCurve(x[0],mu,binsT,tau,sigma)
+    prob = hypo(lightC, c_star, index_star)
+    L = -special.logsumexp(np.sum(np.log(prob),axis=1),b=p_star)
+    #L = -np.dot(np.sum(np.log(prob),axis=1),p_star)
+    return L
+def findNonzero(cstar):
+    indexstar = [[]]*cstar.shape[0]
+    for i in range(cstar.shape[0]):
+        indexstar[i] = np.where(cstar[i]>0)[0]
+    return indexstar
+def optimizet0mu(binsT, tau, sigma,c_star, p_star, t0guess,method='SLSQP'):
+    index_star = findNonzero(c_star)
+    expectnum = np.sum(c_star)/len(c_star)
+    fitresults = []
+    for delta in np.arange(0,100,0.2):
+        for n in range(1,int(expectnum)+2):
+            x0 = [t0guess-delta]
+            fitresults.append((optimize.minimize(likelihood, x0, method=method,bounds=((t0guess-200, t0guess+50),(0,500)),args=(binsT, tau, sigma,c_star, p_star, index_star,n)),n))#,options={'eps':0.01}))
+    return min(fitresults,key=lambda x:x[0].fun)
+def optimizeBotht0mu(binsT, tau, sigma,c_star, p_star, t0guess,method='SLSQP'):
+    # minimize t0 and mu both
+    index_star = findNonzero(c_star)
+    expectnum = np.sum(c_star)/len(c_star)
+    fitresults = []
+    for delta in np.arange(0,100,0.2):
+        for n in range(1,int(expectnum)+2):
+            x0 = [t0guess-delta, n]
+            fitresults.append(optimize.minimize(likelihood, x0, method=method,bounds=((t0guess-200, t0guess+50),(0,500)),args=(binsT, tau, sigma,c_star, p_star, index_star,n)))#,options={'eps':0.01}))
+    return min(fitresults,key=lambda x:x.fun)
 # define the process from number of photon to pe
 def photon2pe(nphoton, pmf=normalTplProbability):
     return np.random.choice(np.arange(1,templateProbability.shape[0]+1),size=nphoton, p=pmf)
 #class mcpModel(numpyro.distributions.distribution.Distribution):
-    
+
 def mcpModel(pes, pmf=normalTplProbability,logits=range(1,len(normalTplProbability)+1)):
     # pe expect value
     p0 = numpyro.sample('p0', numpyro.distributions.Uniform(0,10))
