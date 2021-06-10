@@ -222,7 +222,8 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None
             break
     # revise = np.log(poisson.pmf(np.arange(1, P+1), p1.sum())) - special.logsumexp(np.log(poisson.pmf(cc[:, :d_tot], p1)).sum(axis=-1), axis=1)
     # revise = np.log(poisson.pmf(np.arange(1, P+1), p1.sum()))
-    # nu[:, :d_tot] = nu[:, :d_tot] + revise[:, None]
+    revise = norm.logpdf(p1.sum() * mus, loc=np.arange(1, P+1) * mus, scale=np.sqrt(np.arange(1, P+1) * sig2s))
+    nu[:, :d_tot] = nu[:, :d_tot] + revise[:, None]
     # pp = poisson.pmf(np.arange(1, P+1), p1.sum())
     # nu[:, :d_tot][np.random.uniform(size=nu[:, :d_tot].shape) > pp[:, None] / pp.max()] = -np.inf
     nu_bk = nu[:, :d_tot]

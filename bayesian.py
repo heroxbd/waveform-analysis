@@ -203,6 +203,7 @@ def fbmp_inference(a0, a1):
         # n = math.ceil(max((mu_t + 3 * np.sqrt(mu_t)) * wff.convolve_exp_norm(np.arange(-3 * Sigma, 3 * Sigma + 2 * Tau, 0.1), Tau, Sigma)) * 4)
         n = 10
         A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Mu, Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
+        mu_t = wave_r.sum() / gmu
         try:
             def optit0mu(t0, mu, n, xmmse_star, psy_star, c_star, la):
                 ys = np.log(psy_star) - np.log(poisson.pmf(c_star, la)).sum(axis=1)
@@ -274,8 +275,8 @@ def fbmp_inference(a0, a1):
 
             t0_i, mu_i, ys = optit0mu(t0, mu, n, xmmse_most[None, :], np.array([1]), c_star[maxindex][None, :], la)
         except:
-            t0_i = t0
-            mu_i = mu
+            t0_i = t0_t
+            mu_i = mu_t
             d_tot_i = 0
             d_max_i = 0
             pet = tlist
