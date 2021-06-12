@@ -1,3 +1,4 @@
+from operator import le
 import os
 import math
 import warnings
@@ -16,6 +17,8 @@ from scipy.signal import savgol_filter
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+from matplotlib import cm
+from matplotlib import colors
 from mpl_axes_aligner import align
 import h5py
 from scipy.interpolate import interp1d
@@ -166,7 +169,7 @@ def findpeak(wave, spe_pre):
         cha = np.array([1])
     return pet, cha
 
-def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None):
+def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None, left=None, right=None, tlist=None, gmu=None, para=None):
     # Only for multi-gaussian with arithmetic sequence of mu and sigma
     M, N = A.shape
 
@@ -175,9 +178,9 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None
     nu_true_stdv = np.sqrt(M / 2 + N * p * (1 - p) * (np.log(p / (1 - p)) - np.log(sig2s / sig2w + 1) / 2) ** 2)
     nu_stop = nu_true_mean + stop * nu_true_stdv
 
-    psy_thresh = 1e-2
+    psy_thresh = 1e-4
     P = math.ceil(min(M, p1.sum() + 3 * np.sqrt(p1.sum())))
-    D = min(min(len(p1), P), D)
+    D = min(len(p1), D)
 
     T = np.full((P, D), 0)
     nu = np.full((P, D), -np.inf)
@@ -222,7 +225,7 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None
             break
     # revise = np.log(poisson.pmf(np.arange(1, P+1), p1.sum())) - special.logsumexp(np.log(poisson.pmf(cc[:, :d_tot], p1)).sum(axis=-1), axis=1)
     # revise = np.log(poisson.pmf(np.arange(1, P+1), p1.sum()))
-    revise = norm.logpdf(p1.sum() * mus, loc=np.arange(1, P+1) * mus, scale=np.sqrt(np.arange(1, P+1) * sig2s))
+    revise = norm.logpdf(p1.sum() * mus, loc=np.arange(1, P+1) * mus, scale=np.sqrt(np.arange(1, P+1) * sig2s)) - np.log(poisson.pmf(np.arange(1, P+1), p1.sum()))
     nu[:, :d_tot] = nu[:, :d_tot] + revise[:, None]
     # pp = poisson.pmf(np.arange(1, P+1), p1.sum())
     # nu[:, :d_tot][np.random.uniform(size=nu[:, :d_tot].shape) > pp[:, None] / pp.max()] = -np.inf
@@ -231,13 +234,13 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None
 
     indx = np.argsort(nu)[::-1]
     d_max = math.floor(indx[0] // P) + 1
-    num = min(min(int(np.sum(nu > nu.max() + np.log(psy_thresh))), D), 10)
+    num = min(min(int(np.sum(nu > nu.max() + np.log(psy_thresh))), d_tot * P), 20)
     nu_star = nu[indx[:num]]
     psy_star = np.exp(nu_star - nu.max()) / np.sum(np.exp(nu_star - nu.max()))
 
-    # fig = plt.figure(figsize=(6, 6))
-    # # fig.tight_layout()
-    # gs = gridspec.GridSpec(1, 1, figure=fig, left=0.15, right=0.95, top=0.9, bottom=0.15, wspace=0.4, hspace=0.5)
+    # fig = plt.figure(figsize=(12, 16))
+    # fig.tight_layout()
+    # gs = gridspec.GridSpec(3, 2, figure=fig, left=0.1, right=0.9, top=0.95, bottom=0.1, wspace=0.4, hspace=0.2)
     # ax = fig.add_subplot(gs[0, 0])
     # cp = ax.imshow(nu_bk)
     # fig.colorbar(cp, ax=ax)
@@ -247,9 +250,59 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None
     # ax.set_yticklabels(np.arange(1, P + 1).astype(str))
     # ax.set_xlabel('D')
     # ax.set_ylabel('P')
-    # ax.hlines(len(truth) - 1, 0, d_tot - 1, color='g')
     # ax.scatter([ind // P for ind in indx[:num]], [ind % P for ind in indx[:num]], c=psy_star)
     # ax.scatter(indx[0] // P, indx[0] % P, color='r')
+    # ax.hlines(len(truth) - 1, 0, d_tot - 1, color='g')
+    # cnorm = colors.Normalize(vmin=1, vmax=d_tot)
+    # cmap = cm.ScalarMappable(norm=cnorm, cmap=cm.Blues)
+    # cmap.set_array([])
+    # ax = fig.add_subplot(gs[0, 1])
+    # for d in range(1, d_tot + 1):
+    #     ax.plot(np.arange(1, P + 1), tlist[T[:, d_tot - d]], c=cmap.to_rgba(d))
+    # fig.colorbar(cmap, ticks=np.arange(D))
+    # ax.scatter([ind % P + 1 for ind in indx[:num]], [tlist[T[indx[k] % P, indx[k] // P]] for k in range(num)], s=psy_star * 100, marker='o', facecolors='none', edgecolors='r')
+    # ax.set_xticks(np.arange(1, P + 1))
+    # ax.set_xticklabels(np.arange(1, P + 1).astype(str))
+    # ax.set_xlabel('P')
+    # ax.set_ylabel('t/ns')
+    # ax = fig.add_subplot(gs[1, 0])
+    # cnorm = colors.Normalize(vmin=1, vmax=num)
+    # cmap = cm.ScalarMappable(norm=cnorm, cmap=cm.Blues)
+    # cmap.set_array([])
+    # ax.plot(np.arange(left, right), y, c='k')
+    # ax2 = ax.twinx()
+    # ax2.vlines(tlist, 0, xmmse[indx[0] % P, indx[0] // P] / mus, color='r')
+    # ax2.scatter(tlist, np.zeros_like(tlist), color='r')
+    # for t in T[:(indx[0] % P) + 1, indx[0] // P]:
+    #     xx = np.zeros_like(xmmse[0, 0])
+    #     xx[t] = xmmse[indx[0] % P, indx[0] // P][t]
+    #     ax.plot(np.arange(left, right), np.dot(A, xx), 'r')
+    # for k in range(1, num + 1):
+    #     ax.plot(np.arange(left, right), np.dot(A, xmmse[indx[num - k] % P, indx[num - k] // P]), c=cmap.to_rgba(k))
+    # ax.set_xlim(left, right)
+    # ax.set_xlabel('t/ns')
+    # ax.set_ylabel('Voltage/V')
+    # align.yaxes(ax, 0, ax2, 0)
+    # ax = fig.add_subplot(gs[1, 1])
+    # for k in range(1, num + 1):
+    #     ax.vlines(tlist, 0, xmmse[indx[num - k] % P, indx[num - k] // P] / mus, color=cmap.to_rgba(k))
+    # fig.colorbar(cmap, ticks=np.arange(num))
+    # ax.set_xlim(left, right)
+    # ax.set_xlabel('t/ns')
+    # ax.set_ylabel('Charge/nsmV')
+    # ax = fig.add_subplot(gs[2, :])
+    # ax.plot(np.arange(left, right), y, c='b')
+    # ax2 = ax.twinx()
+    # ax2.vlines(truth['HitPosInWindow'], 0, truth['Charge'] / gmu, color='k')
+    # ax2.vlines(tlist, 0, xmmse[indx[0] % P, indx[0] // P] / mus, color='r', linewidth=4.0)
+    # ax2.scatter(tlist, np.zeros_like(tlist), color='r')
+    # for t, c in zip(truth['HitPosInWindow'], truth['Charge']):
+    #     ax.plot(t + np.arange(80), spe(np.arange(80), para[0], para[1], para[2]) * c / gmu, c='g')
+    # ax2.plot(tlist, p1 / p1.max(), 'k--', alpha=0.5)
+    # ax.set_xlabel('t/ns')
+    # ax.set_ylabel('Voltage/V')
+    # ax2.set_ylabel('Charge/nsmV')
+    # align.yaxes(ax, 0, ax2, 0)
     # fig.savefig('t/' + str(i) + '.png')
     # plt.close()
 

@@ -238,7 +238,8 @@ def fbmp_inference(a0, a1):
             factor = np.sqrt(np.diag(np.matmul(A.T, A)).mean())
             A = np.matmul(A, np.diag(1. / np.sqrt(np.diag(np.matmul(A.T, A)))))
             la = mu_t * wff.convolve_exp_norm(tlist - t0_t, Tau, Sigma) / n + 1e-8
-            xmmse, xmmse_star, psy_star, nu_star, T_star, d_tot_i, d_max_i = wff.fbmpr_fxn_reduced(wave_r, A, la, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, D, stop=5, truth=truth, i=i)
+            # la = mu_t * np.ones(len(tlist)) / len(tlist)
+            xmmse, xmmse_star, psy_star, nu_star, T_star, d_tot_i, d_max_i = wff.fbmpr_fxn_reduced(wave_r, A, la, spe_pre[cid]['std'] ** 2 * 9, (gsigma * factor / gmu) ** 2, factor, D, stop=5, truth=truth, i=i, left=left_wave, right=right_wave, tlist=tlist, gmu=gmu, para=p)
             time_fbmp = time_fbmp + time.time() - time_fbmp_start
             c_star = np.zeros_like(xmmse_star).astype(int)
             for k in range(len(T_star)):
@@ -258,22 +259,22 @@ def fbmp_inference(a0, a1):
             # print('{},{}'.format(np.max(c_star[maxindex]), i))
             xmmse_most = xmmse_star[maxindex]
 
-            # mu = np.average(c_star.sum(axis=1), weights=psy_star)
-            # t0 = t0_t
+            mu = np.average(c_star.sum(axis=1), weights=psy_star)
+            t0 = t0_t
 
-            t0, mu, ys = optit0mu(t0_t, mu_t, n, xmmse_star, psy_star, c_star, la)
-            while abs(t0_t - t0) > 1e-3:
-                t0_t = t0
-                mu_t = mu
-                t0, mu, ys = optit0mu(t0_t, mu_t, n, xmmse_star, psy_star, c_star, la)
+            # t0, mu, ys = optit0mu(t0_t, mu_t, n, xmmse_star, psy_star, c_star, la)
+            # while abs(t0_t - t0) > 1e-3:
+            #     t0_t = t0
+            #     mu_t = mu
+            #     t0, mu, ys = optit0mu(t0_t, mu_t, n, xmmse_star, psy_star, c_star, la)
             
             pet = np.repeat(tlist[xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
             cha = np.repeat(xmmse_most[xmmse_most > 0] / factor / c_star[maxindex][xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
 
-            # mu_i = len(cha)
-            # t0_i = t0_t
+            mu_i = len(cha)
+            t0_i = t0_t
 
-            t0_i, mu_i, ys = optit0mu(t0, mu, n, xmmse_most[None, :], np.array([1]), c_star[maxindex][None, :], la)
+            # t0_i, mu_i, ys = optit0mu(t0, mu, n, xmmse_most[None, :], np.array([1]), c_star[maxindex][None, :], la)
         except:
             t0_i = t0_t
             mu_i = mu_t
