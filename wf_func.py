@@ -170,16 +170,25 @@ def findpeak(wave, spe_pre):
     return pet, cha
 
 def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None, left=None, right=None, tlist=None, gmu=None, para=None):
+    '''
+    p1: prior probability for each bin.
+    sig2w: variance of white noise.
+    sig2s: variance of signal x_i.
+    mus: mean of signal x_i.
+    '''
     # Only for multi-gaussian with arithmetic sequence of mu and sigma
     M, N = A.shape
 
     p = 1 - poisson.pmf(0, p1).mean()
+    # Eq. (25)
     nu_true_mean = -M / 2 - M / 2 * np.log(sig2w) - p * N / 2 * np.log(sig2s / sig2w + 1) - M / 2 * np.log(2 * np.pi) + N * np.log(1 - p) + p * N * np.log(p / (1 - p))
     nu_true_stdv = np.sqrt(M / 2 + N * p * (1 - p) * (np.log(p / (1 - p)) - np.log(sig2s / sig2w + 1) / 2) ** 2)
     nu_stop = nu_true_mean + stop * nu_true_stdv
 
     psy_thresh = 1e-4
+    # upper limit of number of PEs.
     P = math.ceil(min(M, p1.sum() + 3 * np.sqrt(p1.sum())))
+    # depth of the search
     D = min(len(p1), D)
 
     T = np.full((P, D), 0)
@@ -188,12 +197,17 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None
     cc = np.zeros((P, D, N))
     d_tot = D
 
+    # nu_root: nu for all s_n=0.
     nu_root = -0.5 * np.linalg.norm(y) ** 2 / sig2w - 0.5 * M * np.log(2 * np.pi) - 0.5 * M * np.log(sig2w) + np.log(poisson.pmf(0, p1)).sum()
+    # Eq. (29)
     cx_root = A / sig2w
-    betaxt_root = sig2s / (1 + sig2s * np.sum(A * cx_root, axis=0))
-    nuxt_root = nu_root + 0.5 * np.log(betaxt_root / sig2s) + 0.5 * betaxt_root * np.abs(np.dot(y, cx_root) + mus / sig2s) ** 2 - 0.5 * mus ** 2 / sig2s + np.log(poisson.pmf(1, p1) / poisson.pmf(0, p1))
+    # Eq. (30) sig2s = 1 sigma^2 - 0 sigma^2
+    betaxt_root = sig2s / (1 + sig2s * np.einsum('ij,ij->j', A, cx_root))
+    # Eq. (31)
+    nuxt_root = nu_root + 0.5 * (betaxt_root * (y @ cx_root + mus / sig2s) ** 2  - mus ** 2 / sig2s + np.log(betaxt_root / sig2s)) + np.log(poisson.pmf(1, p1) / poisson.pmf(0, p1))
     pan_root = np.zeros(N)
-    
+
+    # Repeated Greedy Search
     for d in range(D):
         nuxt = nuxt_root.copy()
         z = y.copy()
@@ -201,23 +215,29 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None
         betaxt = betaxt_root.copy()
         pan = pan_root.copy()
         for p in range(P):
-            nuxtshadow = np.where(np.sum(np.abs(nuxt - nu[p, :d][:, None]) < 1e-4, axis=0), -np.inf, nuxt)
+            # look for duplicates of nu and nuxt, set to -inf.
+            # only inspect the same number of PEs in Row p.
+            nuxtshadow = np.where(np.sum(np.abs(nuxt - nu[p:(p+1), :d].T) < 1e-4, axis=0), -np.inf, nuxt)
             nustar = max(nuxtshadow)
             istar = np.argmax(nuxtshadow)
             nu[p, d] = nustar
             T[p, d] = istar
             pan[istar] += 1
-            cx = cx - np.dot(betaxt[istar] * cx[:, istar].copy().reshape(M, 1), np.dot(cx[:, istar], A).copy().reshape(1, N))
+            # Eq. (33)
+            cx -= np.einsum('n,m,mp->np', betaxt[istar] * cx[:, istar], cx[:, istar], A)
 
-            z = z - A[:, istar] * mus
+            # Eq. (34)
+            z -= A[:, istar] * mus
             assist = np.zeros(N)
             t, c = np.unique(T[:p+1, d], return_counts=True)
             assist[t] = mus * c + sig2s * c * np.dot(z, cx[:, t])
             cc[p, d][t] = c
             xmmse[p, d] = assist
 
+            # Eq. (30)
             betaxt = sig2s / (1 + sig2s * np.sum(A * cx, axis=0))
-            nuxt = nustar + 0.5 * np.log(betaxt / sig2s) + 0.5 * betaxt * np.abs(np.dot(z, cx) + mus / sig2s) ** 2 - 0.5 * mus ** 2 / sig2s + np.log(poisson.pmf(pan + 1, mu=p1) / poisson.pmf(pan, mu=p1))
+            # Eq. (31)
+            nuxt = nustar + 0.5 * (betaxt * (z @ cx + mus / sig2s) ** 2 - mus ** 2 / sig2s + np.log(betaxt / sig2s)) + np.log(poisson.pmf(pan + 1, mu=p1) / poisson.pmf(pan, mu=p1))
             # nuxt[t] = -np.inf
 
         if max(nu[:, d]) > nu_stop:
