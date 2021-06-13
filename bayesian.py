@@ -240,7 +240,7 @@ def fbmp_inference(a0, a1):
             A = np.matmul(A, np.diag(1. / np.sqrt(np.diag(np.matmul(A.T, A)))))
             la = mu_t * wff.convolve_exp_norm(tlist - t0_t, Tau, Sigma) / n + 1e-8
             # la = mu_t * np.ones(len(tlist)) / len(tlist)
-            xmmse, xmmse_star, psy_star, nu_star, T_star, d_tot_i, d_max_i = wff.fbmpr_fxn_reduced(wave_r, A, la, spe_pre[cid]['std'] ** 2 * 9, (gsigma * factor / gmu) ** 2, factor, D, stop=5, truth=truth, i=i, left=left_wave, right=right_wave, tlist=tlist, gmu=gmu, para=p)
+            xmmse, xmmse_star, psy_star, nu_star, T_star, d_tot_i, d_max_i = wff.fbmpr_fxn_reduced(wave_r, A, la, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, int(D * mu_t), stop=5, truth=truth, i=i, left=left_wave, right=right_wave, tlist=tlist, gmu=gmu, para=p)
             time_fbmp = time_fbmp + time.time() - time_fbmp_start
             c_star = np.zeros_like(xmmse_star).astype(int)
             for k in range(len(T_star)):
