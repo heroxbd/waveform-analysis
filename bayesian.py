@@ -7,6 +7,7 @@ import argparse
 import pickle
 from functools import partial
 from multiprocessing import Pool, cpu_count
+import itertools as it
 
 import h5py
 import numpy as np
@@ -363,7 +364,7 @@ if method == 'mcmc':
     ts['TriggerNo'] = ent['TriggerNo']
     ts['ChannelID'] = ent['ChannelID']
     with Pool(min(args.Ncpu, cpu_count())) as pool:
-        result = pool.starmap(partial(time_numpyro), slices)
+        result = list(it.starmap(partial(time_numpyro), slices))
     ts['tswave'] = np.hstack([result[i][0] for i in range(len(slices))])
     ts['tscharge'] = np.hstack([result[i][1] for i in range(len(slices))])
     ts['consumption'] = np.hstack([result[i][2] for i in range(len(slices))])
@@ -398,7 +399,7 @@ elif method == 'fbmp':
     ts['ChannelID'] = ent['ChannelID'][:N]
     # fbmp_inference(0, 100)
     with Pool(min(args.Ncpu, cpu_count())) as pool:
-        result = pool.starmap(partial(fbmp_inference), slices)
+        result = list(it.starmap(partial(fbmp_inference), slices))
     ts['tswave'] = np.hstack([result[i][0] for i in range(len(slices))])
     ts['tscharge'] = np.hstack([result[i][1] for i in range(len(slices))])
     dt = np.hstack([result[i][2] for i in range(len(slices))])
