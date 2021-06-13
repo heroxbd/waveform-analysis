@@ -1,7 +1,7 @@
 import numpy as np
 import numpyro
 import wf_func as wff
-
+from numba import jit
 from scipy import optimize, special
 from scipy.stats import poisson
 templateProbability = np.array([68.74,16.58,8.595,6.022])
@@ -31,8 +31,37 @@ def lightCurve(t0, mu, binsT, tau, sigma, binwidth=0.1):
     return expectM
 def hypo0(expectM):
     return np.exp(-expectM)
+
 def hypo1(expecthnu, hnu2PEp):
     return np.dot(expecthnu, hnu2PEp)
+@jit(nopython=True)
+def nfactoriallog(a,n):
+    a[0] = 0
+    for i in range(1,n):
+        a[i] = a[i-1]+np.log(i)
+    return a
+@jit(nopython=True)
+def logsumexpb(values, index=None, b=None):
+    """Stole from scipy.special.logsumexp
+
+    Parameters
+    ----------
+    values : array_like Input array.
+
+    Returns
+    -------
+    res : ndarray
+        The result, ``np.log(np.sum(np.exp(a)))`` calculated in a numerically
+        more stable way. If `b` is given then ``np.log(np.sum(b*np.exp(a)))``
+        is returned.
+    """
+    a_max = np.max(values)
+    tmp = np.exp(values - a_max)
+    for i in range(values.shape[0]):
+        tmp[i] = tmp[i] * b[i] 
+    s = np.sum(tmp)
+    return np.log(s) + a_max
+
 def hypo(expectM, cstar, indexstar):
     binsp = np.tile(hypo0(expectM), (cstar.shape[0],1))
     for i in range(cstar.shape[0]):
@@ -42,11 +71,29 @@ def hypo(expectM, cstar, indexstar):
             assert(cstar[i,indexstar[i][j]]>=1)
             binsp[i, indexstar[i][j]] = hypo1(expecthnu, hnu2PEmatrix[:,cstar[i,indexstar[i][j]]])
     return binsp
+def hypolog(expectM, cstar, indexstar):
+    binsp = np.tile(-expectM, (cstar.shape[0],1))
+    nflog = nfactoriallog(np.arange(defaultHnumax+1), defaultHnumax+1)
+    for i in range(cstar.shape[0]):
+        for j in range(len(indexstar[i])):
+            # indexstar[i][j]  is the index of nonzeros
+            expecthnu = np.log(expectM[indexstar[i][j]])*np.arange(defaultHnumax+1)- expectM[indexstar[i][j]]-nflog
+            binsp[i, indexstar[i][j]] = logsumexpb(expecthnu, b=hnu2PEmatrix[:,cstar[i,indexstar[i][j]]])
+    return binsp
 def likelihood(x,*args):
     binsT, tau, sigma,c_star, p_star, index_star, mu = args
     lightC = lightCurve(x[0],mu,binsT,tau,sigma)
     prob = hypo(lightC, c_star, index_star)
     L = -special.logsumexp(np.sum(np.log(prob),axis=1),b=p_star)
+    #L = -np.dot(np.sum(np.log(prob),axis=1),p_star)
+    return L
+def likelihoodlog(x,*args):
+    binsT, tau, sigma,c_star, logp_star, index_star = args
+    lightC = lightCurve(x[0],x[1],binsT,tau,sigma)
+    #prob = hypo(lightC, c_star, index_star)
+    prob = hypolog(lightC, c_star, index_star)
+    L = -special.logsumexp(np.sum(prob,axis=1)+logp_star)
+    #L = -special.logsumexp(np.sum(np.log(prob),axis=1)+logp_star)
     #L = -np.dot(np.sum(np.log(prob),axis=1),p_star)
     return L
 def findNonzero(cstar):
@@ -61,18 +108,29 @@ def optimizet0mu(binsT, tau, sigma,c_star, p_star, t0guess,method='SLSQP'):
     for delta in np.arange(0,100,0.2):
         for n in range(1,int(expectnum)+2):
             x0 = [t0guess-delta]
-            fitresults.append((optimize.minimize(likelihood, x0, method=method,bounds=((t0guess-200, t0guess+50),(0,500)),args=(binsT, tau, sigma,c_star, p_star, index_star,n)),n))#,options={'eps':0.01}))
+            fitresults.append((optimize.minimize(likelihood, x0, method=method,bounds=((t0guess-200, t0guess+50)),args=(binsT, tau, sigma,c_star, p_star, index_star,n)),n))#,options={'eps':0.01}))
     return min(fitresults,key=lambda x:x[0].fun)
-def optimizeBotht0mu(binsT, tau, sigma,c_star, p_star, t0guess,method='SLSQP'):
+def optimizeBotht0mulog(binsT, tau, sigma,c_star, logp_star, t0guess,method='SLSQP'):
     # minimize t0 and mu both
     index_star = findNonzero(c_star)
     expectnum = np.sum(c_star)/len(c_star)
     fitresults = []
-    for delta in np.arange(0,100,0.2):
+    for delta in np.arange(-10,90,10):
         for n in range(1,int(expectnum)+2):
             x0 = [t0guess-delta, n]
-            fitresults.append(optimize.minimize(likelihood, x0, method=method,bounds=((t0guess-200, t0guess+50),(0,500)),args=(binsT, tau, sigma,c_star, p_star, index_star,n)))#,options={'eps':0.01}))
+            fitresults.append(optimize.minimize(likelihoodlog, x0, method=method,bounds=((t0guess-200, t0guess+50),(0,500)),args=(binsT, tau, sigma,c_star, logp_star, index_star)))#,options={'eps':0.01}))
     return min(fitresults,key=lambda x:x.fun)
+def optimizeBotht0mulogFromBest(binsT, tau, sigma,c_star, logp_star, t0guess,muguess,method='SLSQP'):
+    # minimize t0 and mu both
+    index_star = findNonzero(c_star)
+    expectnum = np.sum(c_star)/len(c_star)
+    fitresults = []
+    for delta in np.arange(-10,10,1):
+        for n in np.arange(1,muguess+2):
+            x0 = [t0guess-delta, n]
+            fitresults.append(optimize.minimize(likelihoodlog, x0, method=method,bounds=((t0guess-200, t0guess+50),(0,500)),args=(binsT, tau, sigma,c_star, logp_star, index_star)))#,options={'eps':0.01}))
+    return min(fitresults,key=lambda x:x.fun)
+
 # define the process from number of photon to pe
 def photon2pe(nphoton, pmf=normalTplProbability):
     return np.random.choice(np.arange(1,templateProbability.shape[0]+1),size=nphoton, p=pmf)

@@ -20,7 +20,11 @@ else
 ifeq ($(method), fbmp)
 	predict:=bayesian
 else
+ifeq ($(method), mcpfbmp)
+	predict:=mcpfbmp
+else
     predict:=fit
+endif
 endif
 endif
 endif
@@ -37,11 +41,20 @@ test : $(hist)
 solu : $(solu)
 
 sim : $(sim)
+compare: $(patsubst waveform/%.h5,result/$(method)/compare/%.pdf,$(sim))
 
+
+chars: $(char)
 define bayesian
 result/$(method)/char/%.h5 : waveform/%.h5 spe.h5
 	@mkdir -p $$(dir $$@)
 	OMP_NUM_THREADS=2 python3 bayesian.py $$< --met $(method) -N 100 --ref $$(word 2,$$^) -o $$@ > $$@.log 2>&1
+endef
+
+define mcpfbmp
+result/$(method)/char/%.h5 : waveform/%.h5 spe.h5
+	@mkdir -p $$(dir $$@)
+	OMP_NUM_THREADS=2 python3 mcpFBMP.py $$< --met $(method) -N 128 --ref $$(word 2,$$^) -o $$@ > $$@.log 2>&1
 endef
 
 define fit
@@ -66,6 +79,10 @@ result/$(method)/dist/%.h5 : waveform/%.h5 result/$(method)/char/%.h5 spe.h5
 result/$(method)/solu/%.h5 : result/$(method)/char/%.h5 waveform/%.h5 spe.h5
 	@mkdir -p $(dir $@)
 	OMP_NUM_THREADS=2 python3 toyRec.py $< --ref $(wordlist 2,3,$^) -o $@ > $@.log 2>&1
+
+result/$(method)/compare/%.pdf : result/$(method)/char/%.h5 waveform/%.h5
+	@mkdir -p $(dir $@)
+	python3 draw_t0mu.py $< --ref $(word 2,$^) -o $@ > $@.log 2>&1
 
 vs : rc.csv
 	python3 vs.py --conf $^
