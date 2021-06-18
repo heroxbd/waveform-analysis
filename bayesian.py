@@ -71,11 +71,6 @@ if Tau != 0:
 std = 1.
 Thres = {'mcmc':std / gsigma, 'lucyddm':0.1, 'fbmp':1e-6}
 mix0sigma = 1e-3
-mu0 = np.arange(1, int(Mu + 5 * np.sqrt(Mu)))
-n_t = np.arange(1, 100)
-p_t = special.comb(mu0, 2)[:, None] * np.power(wff.convolve_exp_norm(np.arange(1029) - 200, Tau, Sigma) / n_t[:, None], 2).sum(axis=1)
-n0 = np.array([n_t[p_t[i] < max(1e-2, np.sort(p_t[i])[1])].min() for i in range(len(mu0))])
-ndict = dict(zip(mu0, n0))
 
 class mNormal(numpyro.distributions.distribution.Distribution):
     arg_constraints = {'pl': numpyro.distributions.constraints.real}
@@ -178,7 +173,6 @@ def time_numpyro(a0, a1):
     dt = np.sort(dt, kind='stable', order=['TriggerNo', 'ChannelID'])
     return stime_t0, stime_cha, dt, count, time_mcmc, accep, mix0ratio
 
-D = 100
 def fbmp_inference(a0, a1):
     nsp = 4
     nstd = 3
@@ -189,6 +183,9 @@ def fbmp_inference(a0, a1):
     dt = np.zeros((a1 - a0) * window, dtype=opdt)
     d_tot = np.zeros(a1 - a0).astype(int)
     d_max = np.zeros(a1 - a0).astype(int)
+    nu_truth = np.empty(a1 - a0)
+    nu_max = np.empty(a1 - a0)
+    num = np.zeros(a1 - a0).astype(int)
     start = 0
     end = 0
     b_t0 = [0., 600.]
@@ -199,91 +196,72 @@ def fbmp_inference(a0, a1):
 
         # initialization
         mu_t = abs(wave.sum() / gmu)
-        # n = ndict[min(math.ceil(mu_t), max(mu0))]
-        # n = math.ceil(max((mu_t + 3 * np.sqrt(mu_t)) * wff.convolve_exp_norm(np.arange(-3 * Sigma, 3 * Sigma + 2 * Tau, 0.1), Tau, Sigma)) * 4)
-        n = 10
+        if Tau > 10:
+            n = min(math.ceil(20 / mu_t), 5)
+        else:
+            n = min(math.ceil(4 / mu_t), 3)
         A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Mu, Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
-        mu_t = wave_r.sum() / gmu
-        try:
-            def optit0mu(t0, mu, n, xmmse_star, psy_star, c_star, la):
-                ys = np.log(psy_star) - np.log(poisson.pmf(c_star, la)).sum(axis=1)
-                ys = np.exp(ys - ys.max()) / np.sum(np.exp(ys - ys.max()))
-                btlist = np.arange(t0 - 3 * Sigma, t0 + 3 * Sigma + 1e-6, 0.2)
-                mulist = np.arange(max(1e-8, mu - 3 * np.sqrt(mu)), mu + 3 * np.sqrt(mu), 0.1)
-                b_mu = [max(1e-8, mu - 5 * np.sqrt(mu)), mu + 5 * np.sqrt(mu)]
-                tlist_pan = np.sort(np.unique(np.hstack(np.arange(0, window)[:, None] + np.arange(0, 1, 1 / n))))
-                As = np.zeros((len(xmmse_star), len(tlist_pan)))
-                As[:, np.isin(tlist_pan, tlist)] = c_star
-                assert sum(np.sum(As, axis=0) > 0) > 0
-                
-                # optimize t0
-                logL = lambda t0 : -1 * np.sum(special.logsumexp((np.log(wff.convolve_exp_norm(tlist_pan - t0, Tau, Sigma) + 1e-8)[None, :] * As).sum(axis=1), b=ys))
-                logLv_btlist = np.vectorize(logL)(btlist)
-                t0 = opti.fmin_l_bfgs_b(logL, x0=[btlist[np.argmin(logLv_btlist)]], approx_grad=True, bounds=[b_t0], maxfun=50000)[0]
+        mu_t = abs(wave_r.sum() / gmu)
+        def optit0mu(t0, mu, n, xmmse_star, psy_star, c_star, la):
+            ys = np.log(psy_star) - np.log(poisson.pmf(c_star, la)).sum(axis=1)
+            ys = np.exp(ys - ys.max()) / np.sum(np.exp(ys - ys.max()))
+            t0list = np.arange(t0 - 3 * Sigma, t0 + 3 * Sigma + 1e-6, 0.2)
+            mulist = np.arange(max(1e-8, mu - 3 * np.sqrt(mu)), mu + 3 * np.sqrt(mu), 0.1)
+            b_mu = [max(1e-8, mu - 5 * np.sqrt(mu)), mu + 5 * np.sqrt(mu)]
+            tlist_pan = np.sort(np.unique(np.hstack(np.arange(0, window)[:, None] + np.arange(0, 1, 1 / n))))
+            As = np.zeros((len(xmmse_star), len(tlist_pan)))
+            As[:, np.isin(tlist_pan, tlist)] = c_star
+            assert sum(np.sum(As, axis=0) > 0) > 0
 
-                # optimize mu
-                def likelihood(mu):
-                    a = mu * wff.convolve_exp_norm(tlist_pan - t0, Tau, Sigma) / n + 1e-8 # use tlist_pan not tlist
-                    li = -special.logsumexp(np.log(poisson.pmf(As, a)).sum(axis=1), b=ys)
-                    return li
-                like = np.array([likelihood(mulist[j]) for j in range(len(mulist))])
-                mu = opti.fmin_l_bfgs_b(likelihood, x0=mulist[like.argmin()], approx_grad=True, bounds=[b_mu], maxfun=50000)[0]
-                return t0, mu, ys
+            def likelihood(x):
+                a = x[0] * wff.convolve_exp_norm(tlist_pan - x[1], Tau, Sigma) / n + 1e-8 # use tlist_pan not tlist
+                li = -special.logsumexp(np.log(poisson.pmf(As, a)).sum(axis=1), b=ys)
+                return li
 
-            truth = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
-            # t0_t = t0_truth[i]['T0']
-            # mu_t = len(truth)
-            # 1st FBMP
-            time_fbmp_start = time.time()
-            # Eq. (9) where the columns of A are taken to be unit-norm.
-            factor = np.sqrt(np.diag(np.matmul(A.T, A)).mean())
-            A = np.matmul(A, np.diag(1. / np.sqrt(np.diag(np.matmul(A.T, A)))))
-            la = mu_t * wff.convolve_exp_norm(tlist - t0_t, Tau, Sigma) / n + 1e-8
-            # la = mu_t * np.ones(len(tlist)) / len(tlist)
-            xmmse, xmmse_star, psy_star, nu_star, T_star, d_tot_i, d_max_i = wff.fbmpr_fxn_reduced(wave_r, A, la, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, int(D * mu_t), stop=5, truth=truth, i=i, left=left_wave, right=right_wave, tlist=tlist, gmu=gmu, para=p)
-            time_fbmp = time_fbmp + time.time() - time_fbmp_start
-            c_star = np.zeros_like(xmmse_star).astype(int)
-            for k in range(len(T_star)):
-                t, c = np.unique(T_star[k][xmmse_star[k][T_star[k]] > 0], return_counts=True)
-                c_star[k, t] = c
-            maxindex = 0
+            likemu = np.array([likelihood([mulist[j], t0]) for j in range(len(mulist))])
+            liket0 = np.array([likelihood([mu, t0list[j]]) for j in range(len(t0list))])
+            mu, t0 = opti.fmin_l_bfgs_b(likelihood, x0=[mulist[likemu.argmin()], t0list[liket0.argmin()]], approx_grad=True, bounds=[b_mu, b_t0], maxfun=50000)[0]
+            return mu, t0
 
-            # nx = np.sum([(tlist < truth['HitPosInWindow'][j] + 0.5 / n) * (tlist > truth['HitPosInWindow'][j] - 0.5 / n) for j in range(len(truth))], axis=0)
-            # cc = np.sum([np.where(tlist < truth['HitPosInWindow'][j] + 0.5 / n, np.sqrt(truth['Charge'][j]), 0) * np.where(tlist > truth['HitPosInWindow'][j] - 0.5 / n, np.sqrt(truth['Charge'][j]), 0) for j in range(len(truth))], axis=0)
-            # pp = np.arange(left_wave, right_wave)
-            # wav_ans = np.sum([np.where(pp > truth['HitPosInWindow'][j], wff.spe(pp - truth['HitPosInWindow'][j], tau=p[0], sigma=p[1], A=p[2]) * truth['Charge'][j] / gmu, 0) for j in range(len(truth))], axis=0)
-            # nu_truth = wff.nu_direct(wave_r, A, nx, factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la)
-            # rss_truth = np.power(wav_ans - np.matmul(A, cc / gmu * factor), 2).sum()
-            # nu = np.array([wff.nu_direct(wave_r, A, c_star[j], factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la) for j in range(len(psy_star))])
-            # rss = np.array([np.power(wav_ans - np.matmul(A, xmmse_star[j]), 2).sum() for j in range(len(psy_star))])
+        truth = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
+        # t0_t = t0_truth[i]['T0']
+        # mu_t = len(truth)
+        # 1st FBMP
+        time_fbmp_start = time.time()
+        # Eq. (9) where the columns of A are taken to be unit-norm.
+        factor = np.sqrt(np.diag(np.matmul(A.T, A)).mean())
+        A = np.matmul(A, np.diag(1. / np.sqrt(np.diag(np.matmul(A.T, A)))))
+        la = mu_t * wff.convolve_exp_norm(tlist - t0_t, Tau, Sigma) / n + 1e-8
+        # la = mu_t * np.ones(len(tlist)) / len(tlist)
+        xmmse, xmmse_star, psy_star, nu_star, nu_star_bk, T_star, d_tot_i, d_max_i, num_i = wff.fbmpr_fxn_reduced(wave_r, A, la, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, len(la), stop=5, truth=truth, i=i, left=left_wave, right=right_wave, tlist=tlist, gmu=gmu, para=p)
+        time_fbmp = time_fbmp + time.time() - time_fbmp_start
+        c_star = np.zeros_like(xmmse_star).astype(int)
+        for k in range(len(T_star)):
+            t, c = np.unique(T_star[k][xmmse_star[k][T_star[k]] > 0], return_counts=True)
+            c_star[k, t] = c
+        maxindex = 0
 
-            # print('{},{}'.format(np.max(c_star[maxindex]), i))
-            xmmse_most = xmmse_star[maxindex]
+        nx = np.sum([(tlist - 0.5 / n <= truth['HitPosInWindow'][j]) * (tlist + 0.5 / n > truth['HitPosInWindow'][j]) for j in range(len(truth))], axis=0)
+        cc = np.sum([np.where(tlist - 0.5 / n < truth['HitPosInWindow'][j], np.sqrt(truth['Charge'][j]), 0) * np.where(tlist + 0.5 / n > truth['HitPosInWindow'][j], np.sqrt(truth['Charge'][j]), 0) for j in range(len(truth))], axis=0)
+        pp = np.arange(left_wave, right_wave)
+        wav_ans = np.sum([np.where(pp > truth['HitPosInWindow'][j], wff.spe(pp - truth['HitPosInWindow'][j], tau=p[0], sigma=p[1], A=p[2]) * truth['Charge'][j] / gmu, 0) for j in range(len(truth))], axis=0)
+        nu_truth[i - a0] = wff.nu_direct(wave_r, A, nx, factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la)
+        rss_truth = np.power(wav_ans - np.matmul(A, cc / gmu * factor), 2).sum()
+        nu = np.array([wff.nu_direct(wave_r, A, c_star[j], factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la) for j in range(len(psy_star))])
+        nu_max[i - a0] = nu[0]
+        rss = np.array([np.power(wav_ans - np.matmul(A, xmmse_star[j]), 2).sum() for j in range(len(psy_star))])
 
-            mu = np.average(c_star.sum(axis=1), weights=psy_star)
-            t0 = t0_t
+        xmmse_most = xmmse_star[maxindex]
+        pet = np.repeat(tlist[xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
+        cha = np.repeat(xmmse_most[xmmse_most > 0] / factor / c_star[maxindex][xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
 
-            # t0, mu, ys = optit0mu(t0_t, mu_t, n, xmmse_star, psy_star, c_star, la)
-            # while abs(t0_t - t0) > 1e-3:
-            #     t0_t = t0
-            #     mu_t = mu
-            #     t0, mu, ys = optit0mu(t0_t, mu_t, n, xmmse_star, psy_star, c_star, la)
-            
-            pet = np.repeat(tlist[xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
-            cha = np.repeat(xmmse_most[xmmse_most > 0] / factor / c_star[maxindex][xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
+        mu = np.average(c_star.sum(axis=1), weights=psy_star)
+        t0 = t0_t
+        mu_i = len(cha)
+        t0_i = t0_t
 
-            mu_i = len(cha)
-            t0_i = t0_t
-
-            # t0_i, mu_i, ys = optit0mu(t0, mu, n, xmmse_most[None, :], np.array([1]), c_star[maxindex][None, :], la)
-        except:
-            t0_i = t0_t
-            mu_i = mu_t
-            d_tot_i = 0
-            d_max_i = 0
-            pet = tlist
-            cha = xmmse_most[xmmse_most > 0] / factor
-            print('Failed waveform is TriggerNo = {:05d}, ChannelID = {:02d}, i = {:05d}'.format(ent[i]['TriggerNo'], cid, i))
+        mu, t0 = optit0mu(t0_t, mu_t, n, xmmse_star, psy_star, c_star, la)
+        mu_i, t0_i = optit0mu(t0_t, mu_t, n, xmmse_most[None, :], np.array([1]), c_star[maxindex][None, :], la)
 
         d_tot[i - a0] = d_tot_i
         d_max[i - a0] = d_max_i
@@ -293,6 +271,7 @@ def fbmp_inference(a0, a1):
         t0_cha[i - a0] = t0_i
         mu_wav[i - a0] = mu
         mu_cha[i - a0] = mu_i
+        num[i - a0] = num_i
         end = start + len(cha)
         dt['HitPosInWindow'][start:end] = pet
         dt['Charge'][start:end] = cha
@@ -301,7 +280,7 @@ def fbmp_inference(a0, a1):
         start = end
     dt = dt[:end]
     dt = np.sort(dt, kind='stable', order=['TriggerNo', 'ChannelID'])
-    return t0_wav, t0_cha, dt, d_tot, d_max, time_fbmp, mu_wav, mu_cha
+    return t0_wav, t0_cha, dt, mu_wav, mu_cha, d_tot, d_max, time_fbmp, nu_truth, nu_max, num
 
 if args.Ncpu == 1:
     slices = [[0, N]]
@@ -360,41 +339,70 @@ elif method == 'fbmp':
     ts = np.zeros(N, dtype=sdtp)
     ts['TriggerNo'] = ent['TriggerNo']
     ts['ChannelID'] = ent['ChannelID']
+    fbmp_inference(0, 10)
     with Pool(min(args.Ncpu, cpu_count())) as pool:
         result = pool.starmap(partial(fbmp_inference), slices)
     ts['tswave'] = np.hstack([result[i][0] for i in range(len(slices))])
     ts['tscharge'] = np.hstack([result[i][1] for i in range(len(slices))])
     As = np.hstack([result[i][2] for i in range(len(slices))])
-    d_tot = np.hstack([result[i][3] for i in range(len(slices))])
-    d_max = np.hstack([result[i][4] for i in range(len(slices))])
-    time_fbmp = np.hstack([result[i][5] for i in range(len(slices))]).mean()
-    ts['muwave'] = np.hstack([result[i][6] for i in range(len(slices))])
-    ts['mucharge'] = np.hstack([result[i][7] for i in range(len(slices))])
+    ts['muwave'] = np.hstack([result[i][3] for i in range(len(slices))])
+    ts['mucharge'] = np.hstack([result[i][4] for i in range(len(slices))])
+    d_tot = np.hstack([result[i][5] for i in range(len(slices))])
+    d_max = np.hstack([result[i][6] for i in range(len(slices))])
+    time_fbmp = np.hstack([result[i][7] for i in range(len(slices))]).mean()
+    nu_truth = np.hstack([result[i][8] for i in range(len(slices))])
+    nu_max = np.hstack([result[i][9] for i in range(len(slices))])
+    num = np.hstack([result[i][10] for i in range(len(slices))])
     print('FBMP finished, real time {0:.02f}s'.format(time_fbmp))
+    print('nu max larger than nu truth fraction is {0:.02%}'.format((nu_max > nu_truth).sum() / len(nu_truth)))
 
     matplotlib.use('Agg')
     matplotlib.rcParams.update(matplotlib.rcParamsDefault)
-    ff = plt.figure(figsize=(16, 6))
-    ax = ff.add_subplot(121)
+    ff = plt.figure(figsize=(16, 24))
+    # ff.tight_layout()
+    ax = ff.add_subplot(321)
     # di, ci = np.unique(d_tot, return_counts=True)
     # ax.bar(di, ci, label='d_tot')
-    ax.hist(d_tot, bins=np.linspace(0, d_tot.max(), 20), label='d_tot')
+    ax.hist(d_tot, bins=np.linspace(0, d_tot.max(), 50), label='d_tot')
     ax.set_xlabel('d_tot')
     ax.set_ylabel('Count')
     ax.set_xlim(right=1.01 * d_tot.max())
     ax.set_ylim(0.5, N)
     ax.set_yscale('log')
     ax.legend(loc='upper center')
-    ax = ff.add_subplot(122)
+    ax = ff.add_subplot(322)
     # di, ci = np.unique(d_max, return_counts=True)
     # ax.bar(di, ci, label='d_max')
-    ax.hist(d_max, bins=np.linspace(0, d_tot.max(), 20), label='d_max')
+    ax.hist(d_max, bins=np.linspace(0, d_tot.max(), 50), label='d_max')
     ax.set_xlabel('d_max')
     ax.set_ylabel('Count')
     ax.set_xlim(right=1.01 * d_tot.max())
     ax.set_ylim(0.5, N)
     ax.set_yscale('log')
     ax.legend(loc='upper right')
+    ax = ff.add_subplot(323)
+    ax.hist(d_max / d_tot, label='frac', range=(0, 1), bins=100)
+    ax.set_xlabel('d_max / d_tot')
+    ax.set_ylabel('Count')
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0.5, N)
+    ax.set_yscale('log')
+    ax.legend(loc='upper right')
+    ax = ff.add_subplot(324)
+    ax.hist(nu_max - nu_truth, label=r'$\nu_{max}-\nu_{tru}$', bins=np.linspace((nu_max - nu_truth).min(), (nu_max - nu_truth).max(), 50))
+    ax.set_xlabel(r'$\Delta\nu$')
+    ax.set_ylabel('Count')
+    ax.set_ylim(0.5, N)
+    ax.set_yscale('log')
+    ax.legend(loc='upper right')
+    ax = ff.add_subplot(325)
+    ax.hist(num, bins=np.linspace(0, num.max(), 50), label=r'$N_{sam}$')
+    ax.set_xlabel(r'$N_{sam}$')
+    ax.set_ylabel('Count')
+    ax.set_ylim(0.5, N)
+    ax.set_yscale('log')
+    m = num.mean()
+    ax.legend(loc='upper right', title=fr'$E[N_{{sam}}]={m:.02f}$')
     ff.savefig(os.path.splitext(fopt)[0] + '.png')
     plt.close()
 

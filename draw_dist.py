@@ -212,8 +212,10 @@ if 'muwave' in time.dtype.names:
 
     n = np.arange(1, 1000)
     mean = np.average(n, weights=poisson.pmf(n, mu=Mu))
+    lognm = np.average(np.log(n), weights=poisson.pmf(n, mu=Mu))
     s = np.sqrt(np.average((n - mean)**2, weights=poisson.pmf(n, mu=Mu)))
-    fig.suptitle(fr'$\mu={mean:.02f},\delta_{{N_{{pe}}}}={s:.02f}$')
+    slog = np.sqrt(np.average((np.log(n) - lognm)**2, weights=poisson.pmf(n, mu=Mu)))
+    fig.suptitle(fr'$\mu={mean:.02f},\delta_{{N_{{pe}}}}={s:.02f},\delta_{{logN_{{pe}}}}={slog:.02f}$')
 
     ax0 = fig.add_subplot(gs[0, 0])
     ax0.hist(wave_sum - mean, bins=100, label=r'$\mu_{int} - \mu$')
@@ -222,9 +224,11 @@ if 'muwave' in time.dtype.names:
     ax0.set_yscale('log')
     ax0.legend()
     s = np.std(wave_sum - mean, ddof=-1)
+    slog = np.std(np.log(wave_sum), ddof=-1)
     m = np.mean(wave_sum - mean)
+    eta = m / mean
     # ax0.set_xlim(-mean, dt['NPE'].max() - mean)
-    ax0.set_title(fr'$\delta_{{int}}={s:.02f},\mathrm{{bias}}={m:.02f}$')
+    ax0.set_title(fr'$\delta_{{int}}={s:.02f},\delta_{{logint}}={slog:.02f},\mathrm{{bias}}={m:.02f},\eta={eta:.02%}$%')
 
     ax1 = fig.add_subplot(gs[0, 1])
     ax1.hist(pe_sum - mean, bins=100, label=r'$\mu_{pe} - \mu$')
@@ -233,9 +237,11 @@ if 'muwave' in time.dtype.names:
     ax1.set_yscale('log')
     ax1.legend()
     s = np.std(pe_sum - mean, ddof=-1)
+    slog = np.std(np.log(pe_sum), ddof=-1)
     m = np.mean(pe_sum - mean)
+    eta = m / mean
     # ax1.set_xlim(-mean, dt['NPE'].max() - mean)
-    ax1.set_title(fr'$\delta_{{pe}}={s:.02f},\mathrm{{bias}}={m:.02f}$')
+    ax1.set_title(fr'$\delta_{{pe}}={s:.02f},\delta_{{logpe}}={slog:.02f},\mathrm{{bias}}={m:.02f},\eta={eta:.02%}$%')
 
     ax2 = fig.add_subplot(gs[1, 0])
     ax2.hist(time['mucharge'] - mean, bins=100, label=r'$\mu_{cha} - \mu$')
@@ -244,9 +250,11 @@ if 'muwave' in time.dtype.names:
     ax2.set_yscale('log')
     ax2.legend()
     s = np.std(time['mucharge'] - mean, ddof=-1)
+    slog = np.std(np.log(time['mucharge']), ddof=-1)
     m = np.mean(time['mucharge'] - mean)
+    eta = m / mean
     # ax2.set_xlim(-mean, dt['NPE'].max() - mean)
-    ax2.set_title(fr'$\delta_{{cha}}={s:.02f},\mathrm{{bias}}={m:.02f}$')
+    ax2.set_title(fr'$\delta_{{cha}}={s:.02f},\delta_{{logcha}}={slog:.02f},\mathrm{{bias}}={m:.02f},\eta={eta:.02%}$%')
 
     ax3 = fig.add_subplot(gs[1, 1])
     ax3.hist(time['muwave'] - mean, bins=100, label=r'$\mu_{wave} - \mu$')
@@ -255,9 +263,11 @@ if 'muwave' in time.dtype.names:
     ax3.set_yscale('log')
     ax3.legend()
     s = np.std(time['muwave'] - mean, ddof=-1)
+    slog = np.std(np.log(time['muwave']), ddof=-1)
     m = np.mean(time['muwave'] - mean)
+    eta = m / mean
     # ax3.set_xlim(-v, dt['NPE'].max() - mean)
-    ax3.set_title(fr'$\delta_{{wave}}={s:.02f},\mathrm{{bias}}={m:.02f}$')
+    ax3.set_title(fr'$\delta_{{wave}}={s:.02f},\delta_{{logwave}}={slog:.02f},\mathrm{{bias}}={m:.02f},\eta={eta:.02%}$%')
 
     pdf.savefig(fig)
     plt.close(fig)
