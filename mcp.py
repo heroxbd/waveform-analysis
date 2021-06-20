@@ -4,6 +4,7 @@ import wf_func as wff
 from numba import jit
 from scipy import optimize, special
 from scipy.stats import poisson
+import math
 templateProbability = np.array([68.74,16.58,8.595,6.022])
 normalTplProbability = templateProbability/np.sum(templateProbability)
 defaultHnumax = 200
@@ -157,6 +158,197 @@ def mcpMC(pes):
     mcmc.run(rng_key,pes=pes)
     p0 = np.array(mcmc.get_samples()['p0'])
     p0 = np.array(mcmc.get_samples()['p1'])
+def fbmpr_poisson_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None, left=None, right=None, tlist=None, gmu=None, para=None):
+    '''
+    this method is for multi-gaussian, each bin obey Poisson distribution mixed with Gaussian.
+    p1: prior probability for each bin.
+    sig2w: variance of white noise.
+    sig2s: variance of signal x_i.
+    mus: mean of signal x_i.
+    '''
+    # Only for multi-gaussian with arithmetic sequence of mu and sigma
+    M, N = A.shape
+
+    p = 1 - poisson.pmf(0, p1).mean()
+    # Eq. (25)
+    nu_true_mean = -M / 2 - M / 2 * np.log(sig2w) - p * N / 2 * np.log(sig2s / sig2w + 1) - M / 2 * np.log(2 * np.pi) + N * np.log(1 - p) + p * N * np.log(p / (1 - p))
+    nu_true_stdv = np.sqrt(M / 2 + N * p * (1 - p) * (np.log(p / (1 - p)) - np.log(sig2s / sig2w + 1) / 2) ** 2)
+    nu_stop = nu_true_mean + stop * nu_true_stdv
+
+    psy_thresh = 1e-4
+    # upper limit of number of PEs.
+    P = math.ceil(min(M, p1.sum() + 3 * np.sqrt(p1.sum())))
+    # depth of the search
+    D = min(len(p1), D)
+
+    T = np.full((P, D), 0,dtype='i,i')
+    nu = np.full((P, D), -np.inf)
+    xmmse = np.zeros((P, D, N),dtype='i')
+    cc = np.zeros((P, D, N))
+    d_tot = D
+
+    # nu_root: nu for all s_n=0.
+    nu_root = -0.5 * np.linalg.norm(y) ** 2 / sig2w - 0.5 * M * np.log(2 * np.pi) - 0.5 * M * np.log(sig2w) + np.log(poisson.pmf(0, p1)).sum()
+    # Eq. (29)
+    cx_root = A / sig2w
+    # Eq. (31)
+    Q = 30
+    nuxt_root = np.zeros((N,Q))
+    lnn = np.log(np.arange(1,Q+1))
+    lnncum = np.cumsum(lnn)
+    betaxts_root = np.zeros((N,Q))
+    for i in range(Q):
+        # Eq. (30) sig2s = 1 sigma^2 - 0 sigma^2
+        betaxts_root[:,i] = (i+1)*sig2s / (1 + (i+1)*sig2s * np.einsum('ij,ij->j', A, cx_root))
+        betaxt_root = betaxts_root[:,i]
+        nuxt_root[:,i] = nu_root + 0.5 * (betaxt_root * (y @ cx_root + mus / sig2s) ** 2  - 0.5*(i+1)*mus ** 2 / sig2s + 0.5*np.log(betaxt_root/(i+1)/ sig2s)) + (i+1)*np.log(p1)-lnncum[i]# np.log(poisson.pmf(i+1, p1) / poisson.pmf(0, p1))
+    pan_root = np.zeros(N)
+
+    # Repeated Greedy Search
+    for d in range(D):
+        nuxt = nuxt_root.copy()
+        z = y.copy()
+        zs = np.tile(z,(Q,1))
+        cx = cx_root.copy()
+        cxs = np.tile(cx,(Q,1,1))
+        betaxts = betaxts_root.copy()
+        pan = pan_root.copy()
+        for p in range(P):
+            # look for duplicates of nu and nuxt, set to -inf.
+            # only inspect the same number of PEs in Row p.
+            nuxtshadow = np.where(np.sum(np.abs(nuxt - nu[np.newaxis,p:(p+1), :d].T) < 1e-4, axis=0), -np.inf, nuxt)
+            nustar = np.max(nuxtshadow)
+            #print(nustar)
+            assert(~np.isnan(nustar))
+
+            istar = np.argmax(nuxtshadow)
+            nu[p, d] = nustar
+            T[p, d] = (istar//Q, istar%Q)
+            pan[T[p,d][0]] = T[p,d][1]+1
+            istar = T[p,d][0]
+            # Eq. (33)
+            betaxt = betaxts[istar]
+            #cx = cxs[T[p,d][1]-1,:,:]
+            #cxs = cx.reshape(1,cx.shape[0],cx.shape[1]) - np.einsum('qn,y,yp->qnp', betaxt.reshape(-1,1) * cx[:, istar], cx[:, istar], A)
+            cx = cx - np.einsum('n,m,mp->np', betaxt[T[p,d][1]] * cx[:, istar], cx[:, istar], A)
+            # Eq. (34)
+            #z = zs[T[p,d][1]-1,:]
+            if p==0:
+                z = z - A[:, istar] * mus * (T[p,d][1]+1)
+            else:
+                z = z - A[:, istar] * mus * (T[p,d][1]+1-xmmse[p-1,d,T[p,d][0]])
+            for i in range(p):
+                xmmse[p, d, T[i,d][0]] = T[i,d][1]+1
+            for i in range(Q):
+                # Eq. (30)
+                selectindex = (i+1)!=xmmse[p,d,:]
+                #betaxts[:,i] = (i+1-xmmse[p,d,:])*sig2s / (1 + (i+1-xmmse[p,d,:])*sig2s * np.sum(A * cxs[i,:,:], axis=0))
+                betaxts[:,i] = (i+1-xmmse[p,d,:])*sig2s / (1 + (i+1-xmmse[p,d,:])*sig2s * np.sum(A * cx, axis=0))
+                betaxt = betaxts[:,i]
+                # Eq. (31)
+                #nuxt[selectindex,i] = (nustar + 0.5 * (betaxt * (z @ cx + mus / sig2s) ** 2 - 0.5*(i+1-xmmse[p,d,:])*mus ** 2 / sig2s + 0.5*np.log(betaxt/(i+1-xmmse[p,d,:]) / sig2s)) + np.log(poisson.pmf((i+1), mu=p1) / poisson.pmf(xmmse[p,d,:], mu=p1)))[selectindex]
+                lnncumL = lnncum[xmmse[p,d,:]-1]
+                lnncumL[xmmse[p,d,:]==0] = 0
+                #nuxt[selectindex,i] = (nustar + 0.5 * (betaxt * (z @ cxs[i,:,:] + mus / sig2s) ** 2 - 0.5*(i+1-xmmse[p,d,:])*mus ** 2 / sig2s + 0.5*np.log(betaxt/(i+1-xmmse[p,d,:]) / sig2s)) + (i+1-xmmse[p,d,:])*np.log(p1)-(lnncum[i]-lnncumL))[selectindex]
+                nuxt[selectindex,i] = (nustar + 0.5 * (betaxt * (z @ cx + mus / sig2s) ** 2 - 0.5*(i+1-xmmse[p,d,:])*mus ** 2 / sig2s + 0.5*np.log(betaxt/(i+1-xmmse[p,d,:]) / sig2s)) + (i+1-xmmse[p,d,:])*np.log(p1)-(lnncum[i]-lnncumL))[selectindex]
+                nanindex = np.where(np.isnan(nuxt[:,i]))
+                nuxt[nanindex,i] = -np.inf
+            # nuxt[t] = -np.inf
+
+        if max(nu[:, d]) > nu_stop:
+            d_tot = d + 1
+            break
+    # revise = np.log(poisson.pmf(np.arange(1, P+1), p1.sum())) - special.logsumexp(np.log(poisson.pmf(cc[:, :d_tot], p1)).sum(axis=-1), axis=1)
+    # revise = np.log(poisson.pmf(np.arange(1, P+1), p1.sum()))
+    #revise = norm.logpdf(p1.sum() * mus, loc=np.arange(1, P+1) * mus, scale=np.sqrt(np.arange(1, P+1) * sig2s)) - np.log(poisson.pmf(np.arange(1, P+1), p1.sum()))
+    #nu[:, :d_tot] = nu[:, :d_tot] + revise[:, None]
+    # pp = poisson.pmf(np.arange(1, P+1), p1.sum())
+    # nu[:, :d_tot][np.random.uniform(size=nu[:, :d_tot].shape) > pp[:, None] / pp.max()] = -np.inf
+    nu_bk = nu[:, :d_tot]
+    nu = nu[:, :d_tot].T.flatten()
+
+    indx = np.argsort(nu)[::-1]
+    d_max = math.floor(indx[0] // P) + 1
+    num = min(min(int(np.sum(nu > nu.max() + np.log(psy_thresh))), d_tot * P), 20)
+    nu_star = nu[indx[:num]]
+    psy_star = np.exp(nu_star - nu.max()) / np.sum(np.exp(nu_star - nu.max()))
+
+    # fig = plt.figure(figsize=(12, 16))
+    # fig.tight_layout()
+    # gs = gridspec.GridSpec(3, 2, figure=fig, left=0.1, right=0.9, top=0.95, bottom=0.1, wspace=0.4, hspace=0.2)
+    # ax = fig.add_subplot(gs[0, 0])
+    # cp = ax.imshow(nu_bk)
+    # fig.colorbar(cp, ax=ax)
+    # ax.set_xticks(np.arange(d_tot))
+    # ax.set_xticklabels(np.arange(1, d_tot + 1).astype(str))
+    # ax.set_yticks(np.arange(P))
+    # ax.set_yticklabels(np.arange(1, P + 1).astype(str))
+    # ax.set_xlabel('D')
+    # ax.set_ylabel('P')
+    # ax.scatter([ind // P for ind in indx[:num]], [ind % P for ind in indx[:num]], c=psy_star)
+    # ax.scatter(indx[0] // P, indx[0] % P, color='r')
+    # ax.hlines(len(truth) - 1, 0, d_tot - 1, color='g')
+    # cnorm = colors.Normalize(vmin=1, vmax=d_tot)
+    # cmap = cm.ScalarMappable(norm=cnorm, cmap=cm.Blues)
+    # cmap.set_array([])
+    # ax = fig.add_subplot(gs[0, 1])
+    # for d in range(1, d_tot + 1):
+    #     ax.plot(np.arange(1, P + 1), tlist[T[:, d_tot - d]], c=cmap.to_rgba(d))
+    # fig.colorbar(cmap, ticks=np.arange(D))
+    # ax.scatter([ind % P + 1 for ind in indx[:num]], [tlist[T[indx[k] % P, indx[k] // P]] for k in range(num)], s=psy_star * 100, marker='o', facecolors='none', edgecolors='r')
+    # ax.set_xticks(np.arange(1, P + 1))
+    # ax.set_xticklabels(np.arange(1, P + 1).astype(str))
+    # ax.set_xlabel('P')
+    # ax.set_ylabel('t/ns')
+    # ax = fig.add_subplot(gs[1, 0])
+    # cnorm = colors.Normalize(vmin=1, vmax=num)
+    # cmap = cm.ScalarMappable(norm=cnorm, cmap=cm.Blues)
+    # cmap.set_array([])
+    # ax.plot(np.arange(left, right), y, c='k')
+    # ax2 = ax.twinx()
+    # ax2.vlines(tlist, 0, xmmse[indx[0] % P, indx[0] // P] / mus, color='r')
+    # ax2.scatter(tlist, np.zeros_like(tlist), color='r')
+    # for t in T[:(indx[0] % P) + 1, indx[0] // P]:
+    #     xx = np.zeros_like(xmmse[0, 0])
+    #     xx[t] = xmmse[indx[0] % P, indx[0] // P][t]
+    #     ax.plot(np.arange(left, right), np.dot(A, xx), 'r')
+    # for k in range(1, num + 1):
+    #     ax.plot(np.arange(left, right), np.dot(A, xmmse[indx[num - k] % P, indx[num - k] // P]), c=cmap.to_rgba(k))
+    # ax.set_xlim(left, right)
+    # ax.set_xlabel('t/ns')
+    # ax.set_ylabel('Voltage/V')
+    # align.yaxes(ax, 0, ax2, 0)
+    # ax = fig.add_subplot(gs[1, 1])
+    # for k in range(1, num + 1):
+    #     ax.vlines(tlist, 0, xmmse[indx[num - k] % P, indx[num - k] // P] / mus, color=cmap.to_rgba(k))
+    # fig.colorbar(cmap, ticks=np.arange(num))
+    # ax.set_xlim(left, right)
+    # ax.set_xlabel('t/ns')
+    # ax.set_ylabel('Charge/nsmV')
+    # ax = fig.add_subplot(gs[2, :])
+    # ax.plot(np.arange(left, right), y, c='b')
+    # ax2 = ax.twinx()
+    # ax2.vlines(truth['HitPosInWindow'], 0, truth['Charge'] / gmu, color='k')
+    # ax2.vlines(tlist, 0, xmmse[indx[0] % P, indx[0] // P] / mus, color='r', linewidth=4.0)
+    # ax2.scatter(tlist, np.zeros_like(tlist), color='r')
+    # for t, c in zip(truth['HitPosInWindow'], truth['Charge']):
+    #     ax.plot(t + np.arange(80), spe(np.arange(80), para[0], para[1], para[2]) * c / gmu, c='g')
+    # ax2.plot(tlist, p1 / p1.max(), 'k--', alpha=0.5)
+    # ax.set_xlabel('t/ns')
+    # ax.set_ylabel('Voltage/V')
+    # ax2.set_ylabel('Charge/nsmV')
+    # align.yaxes(ax, 0, ax2, 0)
+    # fig.savefig('t/' + str(i) + '.png')
+    # plt.close()
+
+    T_star = [sorted(T[:(indx[k] % P) + 1, indx[k] // P],key=lambda t: t[0]) for k in range(num)]
+    xmmse_star = np.empty((num, N),dtype='i')
+    for k in range(num):
+        xmmse_star[k] = xmmse[indx[k] % P, indx[k] // P]
+
+    xmmse = np.average(xmmse_star, weights=psy_star, axis=0)
+
+    return xmmse, xmmse_star, psy_star, nu_star, T_star, d_tot, d_max
 def fbmp_multi_gaussian(y, A, p1, sig2w, sig2s, mus, D, stop=0):
     # Only for multi-gaussian with arithmetic sequence of mu and sigma
     M, N = A.shape
