@@ -180,7 +180,7 @@ def fbmpr_poisson_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=
     P = math.ceil(min(M, p1.sum() + 3 * np.sqrt(p1.sum())))
     # depth of the search
     D = min(len(p1), D)
-
+    D = 2
     T = np.full((P, D), 0,dtype='i,i')
     nu = np.full((P, D), -np.inf)
     xmmse = np.zeros((P, D, N),dtype='i')
@@ -216,7 +216,7 @@ def fbmpr_poisson_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=
         for p in range(P):
             # look for duplicates of nu and nuxt, set to -inf.
             # only inspect the same number of PEs in Row p.
-            nuxtshadow = np.where(np.sum(np.abs(nuxt - nu[np.newaxis,p:(p+1), :d].T) < 1e-4, axis=0), -np.inf, nuxt)
+            nuxtshadow = np.where(np.sum(np.abs(nuxt - nu[:, :(d+1),np.newaxis,np.newaxis]) < 1e-4, axis=(0,1)), -np.inf, nuxt)
             nustar = np.max(nuxtshadow)
             #print(nustar)
             assert(~np.isnan(nustar))
@@ -258,6 +258,7 @@ def fbmpr_poisson_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=
         if max(nu[:, d]) > nu_stop:
             d_tot = d + 1
             break
+        #print(d)
     # revise = np.log(poisson.pmf(np.arange(1, P+1), p1.sum())) - special.logsumexp(np.log(poisson.pmf(cc[:, :d_tot], p1)).sum(axis=-1), axis=1)
     # revise = np.log(poisson.pmf(np.arange(1, P+1), p1.sum()))
     #revise = norm.logpdf(p1.sum() * mus, loc=np.arange(1, P+1) * mus, scale=np.sqrt(np.arange(1, P+1) * sig2s)) - np.log(poisson.pmf(np.arange(1, P+1), p1.sum()))
@@ -345,7 +346,7 @@ def fbmpr_poisson_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=
     xmmse_star = np.empty((num, N),dtype='i')
     for k in range(num):
         xmmse_star[k] = xmmse[indx[k] % P, indx[k] // P]
-
+    #print(nu_star)
     xmmse = np.average(xmmse_star, weights=psy_star, axis=0)
 
     return xmmse, xmmse_star, psy_star, nu_star, T_star, d_tot, d_max
