@@ -458,7 +458,7 @@ def likelihoodt0(hitt, char, gmu, Tau, Sigma, mode='charge', is_delta=False):
         t0delta = abs(opti.fmin_l_bfgs_b(logLvdelta, x0=[tlist[np.argmin(np.abs(logLv_tlist - logL(t0) - 0.5))]], approx_grad=True, bounds=[b], maxfun=500000)[0] - t0)
     return t0, t0delta
 
-def initial_params(wave, spe_pre, Mu, Tau, Sigma, gmu, Thres, p, nsp, nstd, is_t0=False, is_delta=False, n=1, nshannon=1):
+def initial_params(wave, spe_pre, Tau, Sigma, gmu, Thres, p, nsp, nstd, is_t0=False, is_delta=False, n=1, nshannon=1):
     hitt, char = lucyddm(savgol_filter(wave[::nshannon], 11, 4), spe_pre['spe'][::nshannon])
     hitt, char = clip(hitt, char, Thres)
     char = char / char.sum() * np.clip(np.abs(wave[::nshannon].sum()), 1e-6, np.inf)

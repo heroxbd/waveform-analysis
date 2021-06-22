@@ -71,6 +71,11 @@ if Tau != 0:
 std = 1.
 Thres = {'mcmc':std / gsigma, 'lucyddm':0.1, 'fbmp':1e-6}
 mix0sigma = 1e-3
+mu0 = np.arange(1, int(Mu + 5 * np.sqrt(Mu)))
+n_t = np.arange(1, 20)
+p_t = special.comb(mu0, 2)[:, None] * np.power(wff.convolve_exp_norm(np.arange(1029) - 200, Tau, Sigma) / n_t[:, None], 2).sum(axis=1)
+n0 = np.array([n_t[p_t[i] < max(1e-1, np.sort(p_t[i])[1])].min() for i in range(len(mu0))])
+ndict = dict(zip(mu0, n0))
 
 class mNormal(numpyro.distributions.distribution.Distribution):
     arg_constraints = {'pl': numpyro.distributions.constraints.real}
@@ -95,8 +100,8 @@ class mNormal(numpyro.distributions.distribution.Distribution):
         return jax.scipy.special.logsumexp(prob, axis=0, b=pl)
 
 def time_numpyro(a0, a1):
-    nsp = 100
-    nstd = -5
+    nsp = 4
+    nstd = 3
     Awindow = int(window * 0.95)
     rng_key = jax.random.PRNGKey(1)
     rng_key, rng_key_ = jax.random.split(rng_key)
@@ -126,9 +131,10 @@ def time_numpyro(a0, a1):
         cid = ent[i]['ChannelID']
         wave = ent[i]['Waveform'].astype(np.float64) * spe_pre[cid]['epulse']
 
-        # n = max(math.ceil(Mu / math.sqrt(Tau ** 2 + Sigma ** 2)), 1)
-        n = 2
-        AV, wave, tlist, t0_init, t0_init_delta, A_init, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[cid], Mu, Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, n=n, nshannon=1)
+        mu = abs(wave.sum() / gmu)
+        n = ndict[min(math.ceil(mu), max(mu0))]
+        AV, wave, tlist, t0_init, t0_init_delta, A_init, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[cid], Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, n=n, nshannon=1)
+        mu = abs(wave.sum() / gmu)
         AV = jnp.array(AV)
         wave = jnp.array(wave)
         tlist = jnp.array(tlist)
@@ -140,7 +146,7 @@ def time_numpyro(a0, a1):
         mcmc = numpyro.infer.MCMC(nuts_kernel, num_samples=1000, num_warmup=1000, num_chains=1, progress_bar=False, chain_method='sequential', jit_model_args=True)
         try:
             ticrun = time.time()
-            mcmc.run(rng_key, n=n, y=wave, mu=Mu, tlist=tlist, AV=AV, t0left=t0_init - 3 * Sigma, t0right=t0_init + 3 * Sigma, extra_fields=('accept_prob', 'potential_energy'))
+            mcmc.run(rng_key, n=n, y=wave, mu=mu, tlist=tlist, AV=AV, t0left=t0_init - 3 * Sigma, t0right=t0_init + 3 * Sigma, extra_fields=('accept_prob', 'potential_energy'))
             tocrun = time.time()
             time_mcmc = time_mcmc + time.time() - time_mcmc_start
             potential_energy = np.array(mcmc.get_extra_fields()['potential_energy'])
@@ -200,7 +206,7 @@ def fbmp_inference(a0, a1):
             n = min(math.ceil(20 / mu_t), 5)
         else:
             n = min(math.ceil(4 / mu_t), 3)
-        A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Mu, Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
+        A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
         mu_t = abs(wave_r.sum() / gmu)
         def optit0mu(t0, mu, n, xmmse_star, psy_star, c_star, la):
             ys = np.log(psy_star) - np.log(poisson.pmf(c_star, la)).sum(axis=1)

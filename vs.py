@@ -415,8 +415,8 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
         ax.set_xlabel(r'$N_{\mathrm{PE}}\ \mathrm{expectation}\ \mu$')
         ax.set_ylabel(r'$\mathrm{ratio}$')
         ax.set_title(fr'$\tau={tau}\si{{ns}},\,\sigma={sigma}\si{{ns}}$')
-        # ax.set_ylim(lim['deltadiv'][i, j], 1.01)
-        ax.yaxis.get_major_formatter().set_powerlimits((0, 1))
+        ax.set_ylim(0.97, 1.52)
+        ax.yaxis.get_major_formatter().set_powerlimits((0, 0))
         ax.grid()
         if i == len(Sigma) - 1 and j == len(Tau) - 1:
             ax.legend(loc='upper left', bbox_to_anchor=(1., 0.9))
@@ -436,7 +436,8 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
         # ax.set_ylabel(r'$\mathrm{bias}$')
         ax.set_ylabel(r'$\frac{\Delta \mu}{\mu}$')
         ax.set_title(fr'$\tau={tau}\si{{ns}},\,\sigma={sigma}\si{{ns}}$')
-        ax.yaxis.get_major_formatter().set_powerlimits((0, 1))
+        ax.set_ylim(-0.03, 0.025)
+        ax.yaxis.get_major_formatter().set_powerlimits((0, 0))
         ax.grid()
         if i == len(Sigma) - 1 and j == len(Tau) - 1:
             ax.legend(loc='upper left', bbox_to_anchor=(1., 0.9))
