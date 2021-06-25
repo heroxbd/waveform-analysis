@@ -384,11 +384,13 @@ is treated as a \textit{model selection metric}.  A repeated greedy search is pe
 For each $\bm{z} \in \mathcal{Z}'$, by \eqref{eq:mgauss} the expectation estimation of $\bm{q}'$ is, 
 \begin{align}
     \hat{\bm{q}}_z = E(\bm{q}'|\bm{w},\bm{z}) &= \bm{z} + \bm{Z}\bm{V}_\mathrm{PE}^\intercal\bm{\Sigma}_z^{-1}(\bm{w}-\bm{V}_\mathrm{PE}\bm{z})
+    \label{eq:fbmpcharge}
 \end{align}
 
 Finally, all the $\bm{z} \in \mathcal{Z}'$ and their corresponding posterior probabilities $p(\bm{z}|\bm{w})$, and estimations of $\hat{\bm{q}}_z$ are collected to be the total posterior distribution. $\hat{\bm{z}}$ is the PE number in each time bin $\hat{\bm{t}}$ unartificially. $\hat{\bm{q}}$, which is the total charge in each time bin is estimated by the maximum posterior probability,
 \begin{equation}
     \begin{aligned}
+        \label{eq:zposterior}
         \hat{\bm{z}} &= \arg \underset{\bm{z}}{\max} p(\bm{z}|\bm{w}) \\
         \hat{\bm{q}} &= \hat{\bm{q}}_{\hat{z}} \\
         \hat{w}(t) &= \sum_{i} \hat{q}_i V_\mathrm{PE}(t-t'_i)

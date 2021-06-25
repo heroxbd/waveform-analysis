@@ -406,8 +406,8 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
         ax = figdd.add_subplot(gsd[i, j])
         yerr = stdlistkey['stdmuint'] / stdlistkey['stdmutru'] / np.sqrt(2 * stdlistkey['N'])
         ax.errorbar(stdlistkey['mu'], stdlistkey['stdmuint'] / stdlistkey['stdmutru'], yerr=yerr, label='$\sigma_\mathrm{int}/\sigma_{\log{\mu}}$', c=color['int'], marker=marker['int'])
-        yerr = stdlistkey['stdmupe'] / stdlistkey['stdmutru'] / np.sqrt(2 * stdlistkey['N'])
-        ax.errorbar(stdlistkey['mu'], stdlistkey['stdmupe'] / stdlistkey['stdmutru'], yerr=yerr, label='$\sigma_\mathrm{pe}/\sigma_{\log{\mu}}$', c=color['pe'], marker=marker['pe'])
+        # yerr = stdlistkey['stdmupe'] / stdlistkey['stdmutru'] / np.sqrt(2 * stdlistkey['N'])
+        # ax.errorbar(stdlistkey['mu'], stdlistkey['stdmupe'] / stdlistkey['stdmutru'], yerr=yerr, label='$\sigma_\mathrm{pe}/\sigma_{\log{\mu}}$', c=color['pe'], marker=marker['pe'])
         yerr = stdlistkey['stdmumax'] / stdlistkey['stdmutru'] / np.sqrt(2 * stdlistkey['N'])
         ax.errorbar(stdlistkey['mu'], stdlistkey['stdmumax'] / stdlistkey['stdmutru'], yerr=yerr, label='$\sigma_\mathrm{FBMPmax}/\sigma_{\log{\mu}}$', c=color['max'], marker=marker['max'])
         yerr = stdlistkey['stdmu'] / stdlistkey['stdmutru'] / np.sqrt(2 * stdlistkey['N'])
@@ -426,8 +426,8 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
         mean = np.array([np.average(n, weights=poisson.pmf(n, mu=mu)) for mu in stdlistkey['mu']])
         yerr = stdlistkey['biasmuint'] / np.sqrt(stdlistkey['N']) / mean
         ax.errorbar(stdlistkey['mu'], stdlistkey['biasmuint'] / mean, yerr=yerr, label='$\mathrm{bias}_\mathrm{int}$', c=color['int'], marker=marker['int'])
-        yerr = stdlistkey['biasmupe'] / np.sqrt(stdlistkey['N']) / mean
-        ax.errorbar(stdlistkey['mu'], stdlistkey['biasmupe'] / mean, yerr=yerr, label='$\mathrm{bias}_\mathrm{pe}$', c=color['pe'], marker=marker['pe'])
+        # yerr = stdlistkey['biasmupe'] / np.sqrt(stdlistkey['N']) / mean
+        # ax.errorbar(stdlistkey['mu'], stdlistkey['biasmupe'] / mean, yerr=yerr, label='$\mathrm{bias}_\mathrm{pe}$', c=color['pe'], marker=marker['pe'])
         yerr = stdlistkey['biasmumax'] / np.sqrt(stdlistkey['N']) / mean
         ax.errorbar(stdlistkey['mu'], stdlistkey['biasmumax'] / mean, yerr=yerr, label='$\mathrm{bias}_\mathrm{FBMPmax}$', c=color['max'], marker=marker['max'])
         yerr = stdlistkey['biasmu'] / np.sqrt(stdlistkey['N']) / mean

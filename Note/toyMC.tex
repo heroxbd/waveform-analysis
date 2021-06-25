@@ -21,6 +21,8 @@ Photons captured by a PMT are affected by transit time spread (TTS).  In our Mon
 where $\sigma$ encodes the timing uncertainty mainly from TTS.  $\phi(t)$ of Cherenkov light is a pure Gaussian without the exponential, or equivalently taking the limit $\tau \rightarrow 0$.  Figure~\ref{fig:time-pro} gives several examples of $\phi(t)$.
 
 \subsection{Single PE Response}
+\label{subsec:spe}
+
 A photon can produce a PE at the PMT photocathode.  The PE is then accelerated, collected and amplified into $\num[retain-unity-mantissa=false]{\sim 1e7}$ electrons.  The electrons forms a voltage pulse $V_\mathrm{PE}(t)$ in the PMT output and is acquired by the digitizers as a time series called a \textit{waveform} $w(t)$.
 
 \begin{figure}[H]
@@ -47,7 +49,7 @@ where $\tau_\mathrm{PE}=\SI{8}{ns}$, $\sigma_\mathrm{PE}=\SI{0.5}{ns}$ are shape
   \label{eq:lc-sample}
   \tilde{\phi}(t) = \sum_{i=1}^{N_{\mathrm{PE}}} q_i \delta(t-t_i)
 \end{equation}
-where $N_\mathrm{PE}$ is the number of PEs obeying Poisson distribution with expectation $\mu$, $t_i$ is the hittime of the $i$-th PE sampled from the light curve $\phi(t)$ in \eqref{eq:time-pro} and Fig.~\ref{fig:time-pro}, $q_i$ is the relative charge of the $i$-th PE from $\mathrm{Normal}(1,\sigma_{q}^2)$.  The waveform $w(t)$ is a convolution of $\tilde{\phi}(t)$ and $V_\mathrm{PE}(t)$ with a Gaussian white noise $\epsilon(t)$.
+where $N_\mathrm{PE}$ is the number of PEs obeying Poisson distribution with expectation $\mu$, $t_i$ is the hittime of the $i$-th PE sampled from the light curve $\phi(t)$ in \eqref{eq:time-pro} and Fig.~\ref{fig:time-pro}, $q_i$ is the relative charge of the $i$-th PE from charge distribution $\mathrm{Normal}(1,\sigma_{q}^2)$.  The waveform $w(t)$ is a convolution of $\tilde{\phi}(t)$ and $V_\mathrm{PE}(t)$ with a Gaussian white noise $\epsilon(t)$.
 \begin{equation}
   \label{eq:1}
   w(t) = \tilde{\phi}(t) \otimes V_\mathrm{PE}(t) + \epsilon(t) =  \sum_{i=1}^{N_\mathrm{PE}} q_i V_\mathrm{PE}(t-t_i) + \epsilon(t)

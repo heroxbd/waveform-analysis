@@ -53,7 +53,7 @@ The evaluation of the pedestal of waveforms is not included in this work, which 
 
 Formula \eqref{eq:pseudo} is the likelihood to estimate $t_{0}$ in formula \eqref{eq:time-pro} for methods except FBMP. But $q_{i}$ is the charge in each time bin $t_{i}$ rather the number of PE. For FBMP, formula \eqref{eq:bayesianinter} is the likelihood to estimate both $t_{0}$ and $\mu$. 
 
-The timing resolution $\delta$ using waveform analysis results (charge $\hat{q}$) of these methods are computed and collected. The $t_{0}$ reconstruction process is also MLE, which introduced by the formula \eqref{eq:pseudo}. Additionally, FBMP provides dozens of samples of $q$, which allows us to derive MLE estimation of $t_{0}$. The comparison between timing resolution using the first PE, all PE, and the 4 methods is shown in figure~\ref{fig:deltamethods}. 
+The timing resolution $\delta$ using waveform analysis results (charge $\hat{q}$) of these methods are computed and collected. The $t_{0}$ reconstruction process is also MLE, which introduced by the formula \eqref{eq:pseudo}. Additionally, FBMP provides dozens of samples of $q$, which allows us to derive MLE estimation of $t_{0}$. The comparison between timing resolution using the all PE, and the 4 methods is shown in figure~\ref{fig:deltamethods}. 
 
 \begin{figure}[H]
     \centering
@@ -63,27 +63,35 @@ The timing resolution $\delta$ using waveform analysis results (charge $\hat{q}$
 
 In the figure, $\mathrm{FBMP}$ corresponds to the estimation of $t_{0}$ with all samples provided by FBMP. 
 
-All 4 methods (LucyDDM, Fitting, CNN, FBMP) provide better timing resolution $\delta$ than only using the first PE during construction. 
+All 4 methods (LucyDDM, Fitting, CNN, FBMP) provide better timing resolution $\delta$ than only using the first PE during construction, comparing to figure~\ref{fig:reso-diff}. 
 
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/vs-bias.pgf}}
-    \caption{Timing reconstruction bias of methods}
+    \caption{\label{fig:biasmethods}Timing reconstruction bias of methods}
 \end{figure}
+
+We can also see that in figure~\ref{fig:deltamethods}, the $t_0$ estimation bias of 4 methods are all similar to the bias of estimation based on all PE. The big bias on $\tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ datasets when $\mu$ is small is intrinsic. 
 
 \subsection{Charge Reconstruction}
 \label{subsec:chargereconstruction}
 
-\begin{figure}[H]
-    \centering
-    \resizebox{\textwidth}{!}{\input{figures/vs-deltamethodsdivmu.pgf}}
-    \caption{\label{fig:deltamu} FBMP charge reconstruction ratio of resolution $\sigma/\sigma_{\log\mu}$ in different datasets}
-\end{figure}
+While methods except FBMP all include charge normalization where $\hat{q}_i$ are normalized to total charge by integration of the waveform $w(t)$, FBMP use \eqref{eq:fbmpcharge} to estimate charge directly. The normalization process will give the estimation of $\hat{\mu}=\int w(t)\mathrm{d}t$ which will be deteriorated by the randomization process such as charge distribution in \ref{subsec:spe}. 
+
+Figure~\ref{fig:biasmu} shows the $\mu$ reconstruction of both integration and FBMP, where $\mathrm{FBMPmax}$ corresponds to $\mu$ reconstruction based on maximum posterior probability of $\hat{z}$ defined in \eqref{eq:zposterior}, and $\mathrm{FBMP}$ corresponds to $\mu$ reconstruction based on \textit{all} posterior $z'$. The bias of $\mu$ is smaller than $2.5\%$ for $\mathrm{FBMP}$. 
 
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/vs-biasmu.pgf}}
     \caption{\label{fig:biasmu} FBMP charge reconstruction ratio of bias $\Delta\mu/\mu$ in different datasets}
+\end{figure}
+
+Considering the existing bias of $\mu$, the charge resolution is defined as the standrad deviation of $\log{\hat{\mu}}$. Figure~\ref{fig:deltamu} shows the charge resolution of both integration and FBMP. When $\mu$ is small, FBMP shows convincing resolution as expected. 
+
+\begin{figure}[H]
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/vs-deltamethodsdivmu.pgf}}
+    \caption{\label{fig:deltamu} FBMP charge reconstruction ratio of resolution $\sigma/\sigma_{\log\mu}$ in different datasets}
 \end{figure}
 
 % section Discussion (end)
