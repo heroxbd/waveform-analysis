@@ -88,18 +88,18 @@ By directly extracting waveform features, heuristic methods are straightforward 
 
 \subsubsection{Waveform Shifting}
 \label{sec:shifting}
-A threshold $V_\mathrm{th}$ is selected with respect to electronics noise in the waveforms. Waveform entries $w(t_i)$ exceeding $V_\mathrm{th}$ are selected and shifted by $\Delta t$ according to the shape of SPE response $V_\mathrm{PE}(t)$ in \eqref{eq:dayaspe}. $\hat{q}_i$ are normalized to total charge by integration of the waveform $w(t_i)$.  Waveform shifting does minimal analysis and serves as a baseline method.  The demonstration in Fig.~\ref{fig:shifting} gives $D_w = \SI{7.89}{ns}$.
+A threshold $V_\mathrm{th}$ is selected with respect to electronics noise in the waveforms. Waveform entries $w(t_i)$ exceeding $V_\mathrm{th}$ are selected and shifted by $\Delta t$ according to the shape of SPE response $V_\mathrm{PE}(t)$ in \eqref{eq:dayaspe}. $\hat{q}_i$ are normalized to total charge by integration of the waveform $w(t_i)$.  Waveform shifting does minimal analysis and serves as a baseline method.  The demonstration in Fig.~\ref{fig:shifting} gives $D_w = \SI{8.72}{ns}$.
 
 \begin{figure}[H]
   \begin{subfigure}{0.5\textwidth}
     \centering
     \scalebox{0.36}{\input{figures/threshold.pgf}}
-    \caption{\label{fig:shifting}Waveform shifting: $\mathrm{RSS}=\SI{2283.5}{mV^2},D_w=\SI{3.52}{ns},\Delta t_0=\SI{7.89}{ns}$}
+    \caption{\label{fig:shifting}Waveform shifting: $\mathrm{RSS}=\SI{4850.4}{mV^2},D_w=\SI{8.72}{ns},\Delta t_0=\SI{10.74}{ns}$}
   \end{subfigure}
   \begin{subfigure}{0.5\textwidth}
     \centering
     \scalebox{0.36}{\input{figures/findpeak.pgf}}
-    \caption{\label{fig:peak}Peak finding: $\mathrm{RSS}=\SI{2518.5}{mV^2},D_w=\SI{4.59}{ns},\Delta t_0=\SI{8.70}{ns}$}
+    \caption{\label{fig:peak}Peak finding: $\mathrm{RSS}=\SI{317.3}{mV^2},D_w=\SI{2.40}{ns},\Delta t_0=\SI{-1.93}{ns}$}
   \end{subfigure}
   \caption{Heuristic methods demonstrations.}
 \end{figure}
@@ -107,7 +107,7 @@ A threshold $V_\mathrm{th}$ is selected with respect to electronics noise in the
 \subsubsection{Peak Finding}
 \label{sec:findpeak}
 
-In the peak finding method, local maxima are extracted in Savitzky-Golay filter~\cite{savitzky_smoothing_1964} smoothed waveforms.  A minus shift $\Delta t$ is applied to peak positions $\hat{t}_i$ to minimize $D_w$ considering SPE response $V_\mathrm{PE}(t)$ in \eqref{eq:dayaspe}. The reconstructed charges $\hat{q}_i$ of $\hat{t}_i$ are proportional to the peak voltages, which are normalized to the total charge by integration of the waveform.  This works well for lower PE counts. When PE's pile-up closely, peaks overlap and cannot be extracted reliably. A demonstration shown in Fig.~\ref{fig:peak} has $D_w = \SI{4.59}{ns}$. 
+In the peak finding method, local maxima are extracted in Savitzky-Golay filter~\cite{savitzky_smoothing_1964} smoothed waveforms.  A minus shift $\Delta t$ is applied to peak positions $\hat{t}_i$ to minimize $D_w$ considering SPE response $V_\mathrm{PE}(t)$ in \eqref{eq:dayaspe}. The reconstructed charges $\hat{q}_i$ of $\hat{t}_i$ are proportional to the peak voltages, which are normalized to the total charge by integration of the waveform.  This works well for lower PE counts. When PE's pile-up closely, peaks overlap and cannot be extracted reliably. A demonstration shown in Fig.~\ref{fig:peak} has $D_w = \SI{2.40}{ns}$. 
 
 \subsection{Deconvolution}
 \label{sec:deconv}
@@ -147,18 +147,18 @@ where $\hat{\phi}_*'(t)$ is the normalized $\hat{\phi}'(t)$, $I(x)$ is the indic
   \end{aligned}
 \end{equation*}
 
-Figure~\ref{fig:fd} illustrates the algorithm with an example having $D_w = \SI{1.72}{ns}$. 
+Figure~\ref{fig:fd} illustrates the algorithm with an example having $D_w = \SI{2.03}{ns}$. 
 
 \begin{figure}[H]
   \begin{subfigure}{0.5\textwidth}
     \centering
     \scalebox{0.36}{\input{figures/fftrans.pgf}}
-    \caption{\label{fig:fd}Fourier deconvolution: $\mathrm{RSS}=\SI{239.5}{mV^2},D_w=\SI{1.72}{ns},\Delta t_0=\SI{2.43}{ns}$}
+    \caption{\label{fig:fd}Fourier deconvolution: $\mathrm{RSS}=\SI{189.8}{mV^2},D_w=\SI{2.03}{ns},\Delta t_0=\SI{-1.16}{ns}$}
   \end{subfigure}
   \begin{subfigure}{0.5\textwidth}
     \centering
     \scalebox{0.36}{\input{figures/lucyddm.pgf}}
-    \caption{\label{fig:lucy}Lucy direct demodulation: $\mathrm{RSS}=\SI{68.54}{mV^2},D_w=\SI{1.01}{ns},\Delta t_0=\SI{2.76}{ns}$}
+    \caption{\label{fig:lucy}Lucy direct demodulation: $\mathrm{RSS}=\SI{101.6}{mV^2},D_w=\SI{1.10}{ns},\Delta t_0=\SI{-0.75}{ns}$}
   \end{subfigure}
   \caption{Deconvolution demonstrations.}
 \end{figure}
@@ -183,7 +183,7 @@ Construct $\phi_*$ recurrence relation by replacing $\tilde{w}_*$ with the obser
     \implies \hat{\phi}_*^{n+1}(s) & = \int \frac{\hat{\phi}_*^n(s) V_{\mathrm{PE}*}(t-s)}{\int\hat{\phi}_*^n(s') V_{\mathrm{PE}*}(t-s')\mathrm{d}s'} w_*(t) \mathrm{d}t.
   \end{aligned}
 \end{equation}
-Like Fourier deconvolution in \eqref{eq:fdconv2}, this method thresholds and scales the converged $\hat{\phi}_*^{n}$. LucyDDM constructs $\hat{\phi}$ to be positive, making it more resilient to noise.  Figure~\ref{fig:lucy} shows a LucyDDM example with $D_w = \SI{1.01}{ns}$.
+Like Fourier deconvolution in \eqref{eq:fdconv2}, this method thresholds and scales the converged $\hat{\phi}_*^{n}$. LucyDDM constructs $\hat{\phi}$ to be positive, making it more resilient to noise.  Figure~\ref{fig:lucy} shows a LucyDDM example with $D_w = \SI{1.10}{ns}$.
 
 \subsection{Convolutional Neural Network}
 
@@ -210,22 +210,22 @@ The workflow of data processing consists of training and predicting. Training is
   \caption{\label{fig:CNN} Training of a CNN}
 \end{figure}
 
-The product of network training is a function that creates PE outputs $\hat{\phi}(t)$ from waveform inputs $w(t)$.  Since $D_w$ disregards normalization, $\hat{\phi}$ is scaled to $\hat{Q}\hat{\phi}_*$ following~\eqref{eq:fdconv2}. A demonstration shown in Fig.~\ref{fig:cnn} has $D_w = \SI{0.64}{ns}$. 
+The product of network training is a function that creates PE outputs $\hat{\phi}(t)$ from waveform inputs $w(t)$.  Since $D_w$ disregards normalization, $\hat{\phi}$ is scaled to $\hat{Q}\hat{\phi}_*$ following~\eqref{eq:fdconv2}. A demonstration shown in Fig.~\ref{fig:cnn} has $D_w = \SI{0.75}{ns}$. 
 
-The result of $\hat{\phi}(t)$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ is shown in Fig.~\ref{fig:cnn-npe}. The left panel is the boxplot which shows the $D_d$ percentile vs $N_{pe}$, and the right panel is the overall histogram of $D_d$. 
+The result of $\hat{\phi}(t)$ when $\mu=4, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ is shown in Fig.~\ref{fig:cnn-npe}. The left panel is the boxplot which shows the $D_d$ percentile vs $N_{pe}$, and the right panel is the overall histogram of $D_d$. 
 
 \begin{figure}[H]
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/takara.pgf}}
-    \caption{\label{fig:cnn}$\mathrm{RSS}=\SI{62.77}{mV^2},D_w=\SI{0.64}{ns},\Delta t_0=\SI{2.86}{ns}$}
+    \caption{\label{fig:cnn}$\mathrm{RSS}=\SI{14.0}{mV^2},D_w=\SI{0.75}{ns},\Delta t_0=\SI{-2.85}{ns}$}
   \end{subfigure}
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/takarachargestats.pgf}}
     \caption{\label{fig:cnn-npe} $D_d$ vs $N_{pe}$ Histogram \& Boxplot}
   \end{subfigure}
-  \caption{CNN when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$}
+  \caption{CNN when $\mu=4, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$}
 \end{figure}
 
 \subsection{Regression Analysis}
@@ -255,25 +255,26 @@ Construct estimators $\hat{q}_i$ by minimizing RSS of $w'(t)$ and $w(t)$,
   \bm{\hat{q}} = \arg \underset{\bm{q'}}{\min} \mathrm{RSS}\left[w'(t),w(t)\right].
 \end{equation}
 
-The optimizer is realized with limited-memory Broyden-Fletcher-Goldfarb-Shanno algorithm with bound constraint~\cite{byrd_limited_1995}.  It can impose constraints of $q'_i > 0$. The demonstration~\ref{fig:fitting} here shows a result with $D_w = \SI{0.71}{ns}$.
+The optimizer is realized with limited-memory Broyden-Fletcher-Goldfarb-Shanno algorithm with bound constraint~\cite{byrd_limited_1995}.  It can impose constraints of $q'_i > 0$. The demonstration~\ref{fig:fitting} here shows a result with $D_w = \SI{0.75}{ns}$.
 
 \begin{figure}[H]
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/xiaopeip.pgf}}
-    \caption{\label{fig:fitting}$\mathrm{RSS}=\SI{44.97}{mV^2},D_w=\SI{0.71}{ns},\Delta{t_0}=\SI{3.14}{ns}$}
+    \caption{\label{fig:fitting}$\mathrm{RSS}=\SI{30.5}{mV^2},D_w=\SI{0.75}{ns},\Delta{t_0}=\SI{-2.27}{ns}$}
   \end{subfigure}
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/xiaopeipchargestats.pgf}}
     \caption{\label{fig:fitting-npe} $D_d$ vs $N_{pe}$ Boxplot \& Histogram}
   \end{subfigure}
-  \caption{Gradient descent when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$}
+  \caption{Gradient descent when $\mu=4, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$}
 \end{figure}
 
-The result of $\hat{q}$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ is shown in Fig.~\ref{fig:fitting-npe}. The left panel is the boxplot which shows the $D_d$ percentile vs $N_{pe}$, and the right panel is the overall histogram of $D_d$. 
+The result of $\hat{q}$ when $\mu=4, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ is shown in Fig.~\ref{fig:fitting-npe}. The left panel is the boxplot which shows the $D_d$ percentile vs $N_{pe}$, and the right panel is the overall histogram of $D_d$. 
 
 \subsubsection{Markov Chain Monte Carlo}
+\label{subsec:mcmc}
 The optimization problem in \eqref{eq:gd-q} is in general not convex and may be stuck in local minima.  Markov Chain Monte Carlo~(MCMC) has the potential to overcome this difficulty.
 
 Hamiltonian Monte Carlo~(HMC) is an efficient MCMC for high dimensional distributions~\cite{neal_mcmc_2012} such as the posterior of $\bm{q'}$.  The posterior is combined with a $\bm{q'}$ prior conditioned on $t_0$ to form a hierarchical model,
@@ -300,19 +301,19 @@ $\hat{t}_0$ and $\hat{q}_i$ are constructed as the mean estimators of posterior 
   \hat{\phi}(t) = \sum_{i=1}^{N_s}\hat{q}_i\delta(t-t'_i).
 \end{equation}
 
-$D_w$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ is shown in Fig.~\ref{fig:mcmc}.
+$D_w$ when $\mu=4, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ is shown in Fig.~\ref{fig:mcmc}.
 \begin{figure}[H]
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/mcmc.pgf}}
-    \caption{\label{fig:mcmc}$\mathrm{RSS}=\SI{}{mV^2},D_w=\SI{}{ns},\Delta{t_0}=\SI{}{ns}$}
+    \caption{\label{fig:mcmc}$\mathrm{RSS}=\SI{16.25}{mV^2},D_w=\SI{0.76}{ns},\Delta{t_0}=\SI{-2.48}{ns}$}
   \end{subfigure}
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/mcmcchargestats.pgf}}
     \caption{\label{fig:mcmc-npe} $D_d$ vs $N_{pe}$ Boxplot \& Histogram}
   \end{subfigure}
-  \caption{MCMC results when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$}
+  \caption{MCMC results when $\mu=4, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$}
 \end{figure}
 
 \subsubsection{Fast Bayesian Matching Pursuit}
@@ -343,9 +344,17 @@ where $\bm{z}$ controls which $t'_i$ are used.  In the numerical calculation, th
     \bm{\Sigma}_z &= \bm{V}_\mathrm{PE}\bm{Z}\bm{V}_\mathrm{PE}^\intercal+\sigma_\epsilon^2\bm{I}
 \end{aligned}
 \end{equation}
-where $\bm{Z}$ is the diagonal matrix of vector $\bm{z}$ controlling $q'_i$. $\bm{I}$ is a unit matrix.
+where $\bm{Z}$ is the diagonal matrix of vector $\bm{z}$ controlling $q'_i$. $\bm{I}$ is a unit matrix. Here $\bm{z}$ is not the same as it in \ref{subsec:mcmc}: 
 
-Denote a set $\mathcal{Z}$ to contain the $2^{N_s}$ combinations of $\bm{z}$. Only few $\bm{z}$'s gives finite probabilities of $\bm{w}$, leading to Fast Bayesian Matching Pursuit~(FBMP), a parameter estimation method for sparse linear models~\cite{schniter_fast_nodate}.  FBMP defines a subset $\mathcal{Z}'$ of $\mathcal{Z}$ with only the $\bm{z}$ giving non-negligible $p(\bm{w}|\bm{z})$.  The posterior of $\bm{z}$ is approximated as
+\begin{equation}
+  \begin{aligned}
+    p_i &= \mu \int_{t'_i-\frac{\Delta t'}{2}}^{t'_i+\frac{\Delta t'}{2}} \phi(t' - t_0)\mathrm{d}t' \\
+    z_i &\sim \mathrm{Poisson}(p_i)
+  \end{aligned}
+  \label{eq:poissonfbmp}
+\end{equation}
+
+Denote a set $\mathcal{Z}$ to contain infinite combinations of $\bm{z}$. Only few $\bm{z}$'s gives finite probabilities of $\bm{w}$, leading to Fast Bayesian Matching Pursuit~(FBMP), a parameter estimation method for sparse linear models~\cite{schniter_fast_nodate}.  FBMP defines a subset $\mathcal{Z}'$ of $\mathcal{Z}$ with only the $\bm{z}$ giving non-negligible $p(\bm{w}|\bm{z})$.  The posterior of $\bm{z}$ is approximated as
 \begin{equation}
     \label{eq:z}
     \begin{aligned}
@@ -353,15 +362,13 @@ Denote a set $\mathcal{Z}$ to contain the $2^{N_s}$ combinations of $\bm{z}$. On
     &\approx \frac{p(\bm{w}|\bm{z})p(\bm{z})}{\sum_{\bm{z}'\in\mathcal{Z}'}p(\bm{w}|\bm{z'})p(\bm{z'})}.
     \end{aligned}
 \end{equation}
-The prior $p(\bm{z})$ is given by the Bernoulli distributions of binned light curve,
+The prior $p(\bm{z})$ is given by the Poisson distributions of binned light curve,
 \begin{equation}
 \begin{aligned}
-    p(\bm{z}|t_0, \mu) &= \prod_{i|z_i=0}(1-\mu \phi(t'_i - t_0) \Delta t') \prod_{i|z_i=1} \mu \phi(t'_i - t_0) \Delta t' \\
-    &= \prod_{i}(1-\mu \phi(t'_i - t_0) \Delta t') \prod_{i|z_i=1} \frac{\mu \phi(t'_i - t_0) \Delta t'}{1-\mu \phi(t'_i - t_0) \Delta t'} \\
-    &\approx e^{-\mu} \prod_{i|z_i=1} \frac{\mu \phi(t'_i - t_0) \Delta t'}{1-\mu \phi(t'_i - t_0) \Delta t'}
-\end{aligned},
+    p(\bm{z}|t_0, \mu) &= \prod_{i}\mathrm{Poisson}(z_i,p_i)
+\end{aligned}
 \end{equation}
-where $\mu$ is the expected number of PEs and $\sum_i \phi(t'_i - t_0)\Delta t' = 1$ by the normalization condition.
+where $\mu$ is the prior expected number of PEs and $\sum_i p_i = \mu$ by the normalization condition. 
 
 The nominator logarithm of \eqref{eq:z},
 \begin{equation}
@@ -369,7 +376,7 @@ The nominator logarithm of \eqref{eq:z},
     \begin{aligned}
         \log[p(\bm{w},\bm{z})] =& \log[p(\bm{w}|\bm{z})p(\bm{z})] \\
         =& -\frac{1}{2}(\bm{w}-\bm{V}_\mathrm{PE}\bm{z})^\intercal\bm{\Sigma}_z^{-1}(\bm{w}-\bm{V}_\mathrm{PE}\bm{z})-\frac{1}{2}\log\det\bm{\Sigma}_z-\frac{N_s}{2}\log2\pi \\
-        & -\mu + \sum_{i|z_i=1}\log \frac{\mu \phi(t'_i - t_0) \Delta t'}{1-\mu \phi(t'_i - t_0) \Delta t'}
+        & +\sum_{i}\log{\mathrm{Poisson}(z_i,p_i)}
     \end{aligned}
 \end{equation}
 is treated as a \textit{model selection metric}.  A repeated greedy search is performed to construct the target set $\mathcal{Z}'$ guided by \eqref{eq:metric}. Additionally, a linear algebraic iteration reduces the complexity of $p(\bm{z}|\bm{w})$ calculation~\cite{schniter_fast_nodate}. 
@@ -379,12 +386,12 @@ For each $\bm{z} \in \mathcal{Z}'$, by \eqref{eq:mgauss} the expectation estimat
     \hat{\bm{q}}_z = E(\bm{q}'|\bm{w},\bm{z}) &= \bm{z} + \bm{Z}\bm{V}_\mathrm{PE}^\intercal\bm{\Sigma}_z^{-1}(\bm{w}-\bm{V}_\mathrm{PE}\bm{z})
 \end{align}
 
-Finally, all the $\bm{z} \in \mathcal{Z}'$ and their corresponding posterior probabilities $p(\bm{z}|\bm{w})$, and estimations of $\hat{\bm{q}}_z$ are collected to be the total posterior distribution.  $\hat{\bm{q}}$ is estimated by the maximum posterior probability,
+Finally, all the $\bm{z} \in \mathcal{Z}'$ and their corresponding posterior probabilities $p(\bm{z}|\bm{w})$, and estimations of $\hat{\bm{q}}_z$ are collected to be the total posterior distribution. $\hat{\bm{z}}$ is the PE number in each time bin $\hat{\bm{t}}$ unartificially. $\hat{\bm{q}}$, which is the total charge in each time bin is estimated by the maximum posterior probability,
 \begin{equation}
     \begin{aligned}
         \hat{\bm{z}} &= \arg \underset{\bm{z}}{\max} p(\bm{z}|\bm{w}) \\
         \hat{\bm{q}} &= \hat{\bm{q}}_{\hat{z}} \\
-        \hat{w}(t) &= \sum_{i|\hat{z}_i=1} \hat{q}_i V_\mathrm{PE}(t-t'_i)
+        \hat{w}(t) &= \sum_{i} \hat{q}_i V_\mathrm{PE}(t-t'_i)
     \end{aligned}
 \end{equation}
 
@@ -393,40 +400,41 @@ Figure~\ref{fig:fbmp} shows one of the FBMP results. We can see the original wav
 \begin{figure}[H]
     \centering
     \scalebox{0.4}{\input{figures/demoe2c0.pgf}}
-    \caption{\label{fig:fbmp} FBMP Demo, $\mathrm{RSS}=\SI{24.30}{mV^2},D_w=\SI{0.48}{ns},\Delta{t_0}=\SI{2.91}{ns}$}
+    \caption{\label{fig:fbmp} FBMP Demo, $\mathrm{RSS}=\SI{11.9}{mV^2},D_w=\SI{0.67}{ns},\Delta{t_0}=\SI{-3.94}{ns}$}
 \end{figure}
 
-The result of $\hat{q}$ when $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ is shown in Fig.~\ref{fig:fbmp-npe}. The left panel is the boxplot which shows the $D_w$ percentiles vs $N_{pe}$, and the right panel is the overall histogram of $D_w$. 
+The result of $\hat{q}$ when $\mu=4, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ is shown in Fig.~\ref{fig:fbmp-npe}. The left panel is the boxplot which shows the $D_w$ percentiles vs $N_{pe}$, and the right panel is the overall histogram of $D_w$. 
 
 \begin{figure}[H]
     \centering
     \resizebox{0.5\textwidth}{!}{\input{figures/fbmpchargestats.pgf}}
-    \caption{\label{fig:fbmp-npe} $D_w$ vs $N_{pe}$ Boxplot \& Histogram, $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$, method is FBMP}
+    \caption{\label{fig:fbmp-npe} $D_w$ vs $N_{pe}$ Boxplot \& Histogram, $\mu=4, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$, method is FBMP}
 \end{figure}
 
 The denominator of \eqref{eq:z} is actually the evidence $p(\bm{w}|t_0, \mu)$, which provides a superior estimator of $\mu$ and $t_0$ to \eqref{eq:pseudo},
 \begin{equation}
 \begin{aligned}
+    \label{eq:bayesianinter}
     \left(\hat{t}_0, \hat{\mu}\right) &= \arg\underset{t_0,\mu}{\max} p(\bm{w} | t_0, \mu) \\
     p(\bm{w}|t_0, \mu) &= \sum_{\bm{z}'\in\mathcal{Z}'}p(\bm{w}|\bm{z}',t_0,\mu)p(\bm{z}'|t_0,\mu) \\
     &= \sum_{\bm{z}'\in\mathcal{Z}'}p(\bm{w}|\bm{z}')p(\bm{z}'|t_0,\mu).
 \end{aligned}
 \end{equation}
-where $p(\bm{w}|z', t_0, \mu) = p(\bm{w}|')$ because $\bm{w}$ does not depend on $t_0$ or $\mu$ if $z'$ is given.  If $t_0$ and $\mu$ are predicted by a event model $p(t_0, \mu | \mathcal{E})$, FBMP is extended to event reconstruction bypassing the need to save PE $\bm{t}'$ and $\bm{q}'$.  It is however out of the scope of this article and will be covered elsewhere.
+where $p(\bm{w}|z', t_0, \mu) = p(\bm{w}|')$ because $\bm{w}$ does not depend on $t_0$ or $\mu$ if $z'$ is given.  If $t_0$ and $\mu$ are predicted by a event model $p(t_0, \mu | \mathcal{E})$, FBMP is extended to event reconstruction bypassing the need to save PE $\bm{t}'$ and $\bm{q}'$.  While FBMP provide the Bayesian interface of waveform analysis and event reconstruction, it is however out of the scope of this article and will be covered elsewhere.
 
 \subsection{Performance}
 
 % Methods
 
-The $D_w$ summary of all methods is plotted in Fig.~\ref{fig:chargesummary}, with all dataset parameters $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$. The errorbar shows 5 to 95 percentile of Wasserstein distance distribution. 
+The $D_w$ summary of all methods is plotted in Fig.~\ref{fig:chargesummary}, with all dataset parameters $\tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$. The errorbar shows 5 to 95 percentile of Wasserstein distance distribution. 
 
 \begin{figure}[H]
     \centering
     \scalebox{0.6}{\input{figures/summarycharge.pgf}}
-    \caption{\label{fig:chargesummary} $W_{d}$ of methods with light curve $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$}
+    \caption{\label{fig:chargesummary} $W_{d}$ of methods with light curve $\mu=4, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$}
 \end{figure}
 
-It is apparent that FindPeak, Shift, and FFT are second-rate among all 8 methods, and MCMC [...] so we will only discuss the other 4 methods below. 
+It is apparent that FindPeak, Shift, and FFT are second-rate among all 8 methods, and on time resolution and charge reconstruction which we will discuss in \ref{subsec:timeresolution} and \ref{subsec:chargereconstruction}, MCMC dose not perform good. So we will only discuss the other 4 methods below. 
 
 % Figure of Merits
 

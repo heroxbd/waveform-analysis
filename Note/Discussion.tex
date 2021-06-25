@@ -12,10 +12,10 @@ The efficiency of 4 performant methods on our simulation dataset show in Table~\
         \hline
         & Performance/$10^{5}$Waveform \\
         \hline
-        CNN & 7.5s (GPU\tablefootnote{one graphics card of NVIDIA\textsuperscript{\textregistered} Tesla\textsuperscript{\textregistered} K80.}) \\
-        FBMP & 432.7s (CPU\tablefootnote{100 CPU cores of AMD EYPC\texttrademark\ 7702}) \\
-        Gradient Descent & 1072.5s (CPU) \\
-        LucyDDM & 362.7s (CPU) \\
+        CNN & 15.7s (GPU\tablefootnote{one graphics card of NVIDIA\textsuperscript{\textregistered} A100.}) \\
+        Gradient Descent & 754.1s (CPU\tablefootnote{100 CPU cores of AMD EYPC\texttrademark\ 7702}) \\
+        LucyDDM & 845.9s (CPU) \\
+        FBMP & 695.4s (CPU) \\
         \hline
     \end{tabular}
 \end{table}
@@ -25,14 +25,14 @@ The efficiency of 4 performant methods on our simulation dataset show in Table~\
 \begin{figure}[H]
     \centering
     \resizebox{0.6\textwidth}{!}{\input{figures/recchargehist.pgf}}
-    \caption{\label{fig:recchargehist}  $\hat{q}$ distribution, $\mu=5, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$}
+    \caption{\label{fig:recchargehist}  $\hat{q}$ distribution, $\mu=4, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$}
 \end{figure}
 
-The charge of reconstruction, $\hat{q}$, result distribution when $\mu=5, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$ shows in figure (see figure~\ref{fig:recchargehist}). 
+The charge of reconstruction, $\hat{q}$, result distribution when $\mu=4, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$ shows in figure (see figure~\ref{fig:recchargehist}). 
 
 The steep edge near 0 in these distributions results from the cut of the original $\hat{q}$, which is intended to remove fragment values of $\hat{q}$. But as we can see in figure~\ref{fig:recchargehist}, the charge distribution of LucyDDM, Fitting, and CNN are severely distorted, while the charge distribution of FBMP partly retains the shape of the original (or prior) distribution of charge and only some skewing persists. 
 
-During optimization of Wasserstein distance between $\hat{q}(t)$ and $q_{tru}(t)$ (e.g. CNN) or RSS between the origin wave $v_{w}(t)$ and reconstructed wave $v_{r}(t)$ (e.g. Fitting and LucyDDM), the total number of hittime which is the degree of freedom (DOF) of parameters is a constant, and the analysis process is not treated as a sparse regression problem. So a lot of parameters in $q$ turn out to be fragment values, which distorts the $\hat{q}$ distribution. So the reduction of DOF before estimation of parameters in FBMP gives relatively good results in sparsity, though it is still noticeable that the skewness of charge distribution of FBMP persists. 
+During optimization of Wasserstein distance between $\hat{q}(t)$ and $q_{tru}(t)$ (e.g. CNN) or RSS between the origin wave $v_{w}(t)$ and reconstructed wave $v_{r}(t)$ (e.g. Fitting and LucyDDM), the total number of hittime which is the degree of freedom (DOF) of parameters is a constant, and the analysis process is not treated as a sparse regression problem. So a lot of parameters in $q$ turn out to be fragment values, which distorts the $\hat{q}$ distribution. So the reduction of DOF before estimation of parameters in FBMP gives relatively good results in sparsity, though it is still noticeable that the slight skewness of charge distribution of FBMP persists. 
 
 % Bayesian
 
@@ -47,23 +47,43 @@ But as we see, the reconstruction results of hittime, $\hat{t}$, are discrete va
 The evaluation of the pedestal of waveforms is not included in this work, which is a potential future work to do. Additionally, widely equipped PMTs bring the storage pressure of readout data. This problem can be solved by a voltage data pre-process hardware where waveform analysis is implemented, which is equivalent, or even more effective than data compression. 
 
 \subsection{Timing Resolution}
+\label{subsec:timeresolution}
 
 % Likelihood
 
-Formula \eqref{eq:pseudo} is the likelihood to estimate $t_{0}$ in formula \eqref{eq:time-pro}. But $q_{i}$ is the charge in each time bin $t_{i}$ rather the number of PE. 
+Formula \eqref{eq:pseudo} is the likelihood to estimate $t_{0}$ in formula \eqref{eq:time-pro} for methods except FBMP. But $q_{i}$ is the charge in each time bin $t_{i}$ rather the number of PE. For FBMP, formula \eqref{eq:bayesianinter} is the likelihood to estimate both $t_{0}$ and $\mu$. 
 
 The timing resolution $\delta$ using waveform analysis results (charge $\hat{q}$) of these methods are computed and collected. The $t_{0}$ reconstruction process is also MLE, which introduced by the formula \eqref{eq:pseudo}. Additionally, FBMP provides dozens of samples of $q$, which allows us to derive MLE estimation of $t_{0}$. The comparison between timing resolution using the first PE, all PE, and the 4 methods is shown in figure~\ref{fig:deltamethods}. 
 
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/vs-deltamethodsdiv.pgf}}
-    \caption{\label{fig:deltamethods} Timing resolution ratio $\delta_{\mathrm{1st}}/\delta_{\mathrm{all}}$ of methods}
+    \caption{\label{fig:deltamethods} Timing reconstruction ratio of resolution $\delta/\delta_{\mathrm{all}}$ of methods}
 \end{figure}
 
 In the figure, $\mathrm{FBMP}$ corresponds to the estimation of $t_{0}$ with all samples provided by FBMP. 
 
 All 4 methods (LucyDDM, Fitting, CNN, FBMP) provide better timing resolution $\delta$ than only using the first PE during construction. 
 
+\begin{figure}[H]
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/vs-bias.pgf}}
+    \caption{Timing reconstruction bias of methods}
+\end{figure}
+
 \subsection{Charge Reconstruction}
+\label{subsec:chargereconstruction}
+
+\begin{figure}[H]
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/vs-deltamethodsdivmu.pgf}}
+    \caption{\label{fig:deltamu} FBMP charge reconstruction ratio of resolution $\sigma/\sigma_{\log\mu}$ in different datasets}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/vs-biasmu.pgf}}
+    \caption{\label{fig:biasmu} FBMP charge reconstruction ratio of bias $\Delta\mu/\mu$ in different datasets}
+\end{figure}
 
 % section Discussion (end)

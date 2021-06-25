@@ -58,7 +58,7 @@ mtsi['wdist'] = np.nan
 mtsi['RSS'] = np.nan
 mtsi = np.sort(mtsi, kind='stable', order=['mu', 'tau', 'sigma'])
 
-mts = {'findpeak':mtsi.copy(), 'threshold':mtsi.copy(), 'fftrans':mtsi.copy(), 'mcmc':mtsi.copy(), 'lucyddm':mtsi.copy(), 'xiaopeip':mtsi.copy(), 'takara':mtsi.copy(), 'fbmp':mtsi.copy()}
+mts = {'findpeak':mtsi.copy(), 'threshold':mtsi.copy(), 'fftrans':mtsi.copy(), 'mcmc':mtsi.copy(), 'takara':mtsi.copy(), 'xiaopeip':mtsi.copy(), 'lucyddm':mtsi.copy(), 'fbmp':mtsi.copy()}
 deltalabel = {'1st':'\mathrm{1st}', 'tru':'\mathrm{ALL}', 'findpeak':'\mathrm{FindPeak}', 'threshold':'\mathrm{Shift}', 'fftrans':'\mathrm{FFT}', 'lucyddm':'\mathrm{LucyDDM}', 'xiaopeip':'\mathrm{Fitting}', 'takara':'\mathrm{CNN}', 'fbmp':'\mathrm{FBMP}', 'fbmpone':'\mathrm{FBMPmax}', 'mcmc':'\mathrm{MCMCt0}', 'mcmcone':'\mathrm{MCMCcha}'}
 label = {'1st':'\mathrm{1st}', 'tru':'\mathrm{ALL}', 'findpeak':'\mathrm{FindPeak}', 'threshold':'\mathrm{Shift}', 'fftrans':'\mathrm{FFT}', 'lucyddm':'\mathrm{LucyDDM}', 'xiaopeip':'\mathrm{Fitting}', 'takara':'\mathrm{CNN}', 'fbmp':'\mathrm{FBMP}', 'mcmc':'\mathrm{MCMC}'}
 marker = {'1st':'o', 'tru':'h', 'findpeak':',', 'threshold':'1', 'fftrans':'+', 'lucyddm':'p', 'xiaopeip':'*', 'takara':'x', 'fbmp':'s', 'fbmpone':'^', 'mcmc':'X', 'mcmcone':'>'}
@@ -104,16 +104,16 @@ whigh = np.max(whigh[~np.isnan(whigh)]) * 1.05
 rhigh = np.array([[np.max(mts[key]['RSS'])] for key in mts.keys()])
 rhigh = np.max(rhigh[~np.isnan(rhigh)]) * 1.05
 
-figd = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 4.5))
-gsd = gridspec.GridSpec(len(Sigma), len(Tau), figure=figd, left=0.1, right=0.8, top=0.93, bottom=0.1, wspace=0.3, hspace=0.35)
-figb = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 4.5))
-gsb = gridspec.GridSpec(len(Sigma), len(Tau), figure=figd, left=0.1, right=0.8, top=0.93, bottom=0.1, wspace=0.3, hspace=0.35)
-figdd = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 4.5))
-gsdd = gridspec.GridSpec(len(Sigma), len(Tau), figure=figd, left=0.1, right=0.8, top=0.93, bottom=0.1, wspace=0.3, hspace=0.35)
-figw = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 4.5))
-gsw = gridspec.GridSpec(len(Sigma), len(Tau), figure=figw, left=0.1, right=0.8, top=0.93, bottom=0.1, wspace=0.3, hspace=0.35)
-figr = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 4.5))
-gsr = gridspec.GridSpec(len(Sigma), len(Tau), figure=figr, left=0.1, right=0.8, top=0.93, bottom=0.1, wspace=0.3, hspace=0.35)
+figd = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
+gsd = gridspec.GridSpec(len(Sigma), len(Tau), figure=figd, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
+figb = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
+gsb = gridspec.GridSpec(len(Sigma), len(Tau), figure=figd, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
+figdd = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
+gsdd = gridspec.GridSpec(len(Sigma), len(Tau), figure=figd, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
+figw = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
+gsw = gridspec.GridSpec(len(Sigma), len(Tau), figure=figw, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
+figr = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
+gsr = gridspec.GridSpec(len(Sigma), len(Tau), figure=figr, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
 alpha = 0.05
 lim = {'deltadiv':np.array([[0.3, 0.5]]), 'wdist':np.array([[1.5, 3.0]]), 'rss':np.array([[0.55e3, 2.2e3]])}
 keylist = list(mts.keys())
@@ -144,9 +144,9 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
 
         ax = figb.add_subplot(gsb[i, j])
         stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == tau) & (mts['lucyddm']['sigma'] == sigma)]
-        yerr1st = np.vstack([stdlist['bias1sttruth']-t.ppf(1-alpha/2, stdlist['N'])*stdlist['std1sttruth']/np.sqrt(stdlist['N']), t.ppf(1-alpha/2, stdlist['N'])*stdlist['std1sttruth']/np.sqrt(stdlist['N'])-stdlist['bias1sttruth']])
+        # yerr1st = np.vstack([stdlist['bias1sttruth']-t.ppf(1-alpha/2, stdlist['N'])*stdlist['std1sttruth']/np.sqrt(stdlist['N']), t.ppf(1-alpha/2, stdlist['N'])*stdlist['std1sttruth']/np.sqrt(stdlist['N'])-stdlist['bias1sttruth']])
         yerrall = np.vstack([stdlist['biastruth']-t.ppf(1-alpha/2, stdlist['N'])*stdlist['stdtruth']/np.sqrt(stdlist['N']), t.ppf(1-alpha/2, stdlist['N'])*stdlist['stdtruth']/np.sqrt(stdlist['N'])-stdlist['biastruth']])
-        ax.errorbar(stdlist['mu'] + jitter['1st'], stdlist['bias1sttruth'], yerr=yerr1st, c=color['1st'], label='$\mathrm{bias}_'+deltalabel['1st']+'$', marker=marker['1st'])
+        # ax.errorbar(stdlist['mu'] + jitter['1st'], stdlist['bias1sttruth'], yerr=yerr1st, c=color['1st'], label='$\mathrm{bias}_'+deltalabel['1st']+'$', marker=marker['1st'])
         ax.errorbar(stdlist['mu'] + jitter['tru'], stdlist['biastruth'], yerr=yerrall, c=color['tru'], label='$\mathrm{bias}_'+deltalabel['tru']+'$', marker=marker['tru'])
         for key in keylist:
             if key in badkey:
@@ -241,7 +241,7 @@ alpha = 0.05
 marker = [['s', '^']]
 colors = [['r', 'b']]
 fig = plt.figure(figsize=(8, 4))
-gs = gridspec.GridSpec(1, 2, figure=fig, left=0.1, right=0.85, top=0.93, bottom=0.15, wspace=0.25, hspace=0.2)
+gs = gridspec.GridSpec(1, 2, figure=fig, left=0.1, right=0.85, top=0.92, bottom=0.15, wspace=0.25, hspace=0.2)
 ax = fig.add_subplot(gs[0, 0])
 std1sttruth = np.empty(len(stdlist['mu']))
 stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == Tau[0]) & (mts['lucyddm']['sigma'] == Sigma[0])]
@@ -396,10 +396,10 @@ for key in mts.keys():
             pass
 
 key = 'fbmp'
-figdd = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 4.5))
-gs = gridspec.GridSpec(1, 2, figure=figdd, left=0.1, right=0.8, top=0.93, bottom=0.1, wspace=0.3, hspace=0.35)
-figb = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 4.5))
-gs = gridspec.GridSpec(1, 2, figure=figb, left=0.1, right=0.8, top=0.93, bottom=0.1, wspace=0.3, hspace=0.35)
+figdd = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
+gs = gridspec.GridSpec(1, 2, figure=figdd, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
+figb = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
+gs = gridspec.GridSpec(1, 2, figure=figb, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
 for sigma, i in zip(Sigma, list(range(len(Sigma)))):
     for tau, j in zip(Tau, list(range(len(Tau)))):
         stdlistkey = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
