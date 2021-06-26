@@ -249,6 +249,9 @@ def fbmp_inference(a0, a1):
 
         nx = np.sum([(tlist - 0.5 / n <= truth['HitPosInWindow'][j]) * (tlist + 0.5 / n > truth['HitPosInWindow'][j]) for j in range(len(truth))], axis=0)
         cc = np.sum([np.where(tlist - 0.5 / n < truth['HitPosInWindow'][j], np.sqrt(truth['Charge'][j]), 0) * np.where(tlist + 0.5 / n > truth['HitPosInWindow'][j], np.sqrt(truth['Charge'][j]), 0) for j in range(len(truth))], axis=0)
+        c_star_truth = np.sum([np.where(tlist - 0.5 / n < truth['HitPosInWindow'][j], 1, 0) * np.where(tlist + 0.5 / n > truth['HitPosInWindow'][j], 1, 0) for j in range(len(truth))], axis=0)
+        if c_star_truth.sum() == 0:
+            c_star_truth[0] = 1
         pp = np.arange(left_wave, right_wave)
         wav_ans = np.sum([np.where(pp > truth['HitPosInWindow'][j], wff.spe(pp - truth['HitPosInWindow'][j], tau=p[0], sigma=p[1], A=p[2]) * truth['Charge'][j] / gmu, 0) for j in range(len(truth))], axis=0)
         nu_truth[i - a0] = wff.nu_direct(wave_r, A, nx, factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la)
@@ -266,6 +269,7 @@ def fbmp_inference(a0, a1):
         mu_i = len(cha)
         t0_i = t0_t
 
+        # mu, t0 = optit0mu(t0_t, mu_t, n, np.empty(len(la))[None, :], np.array([1]), c_star_truth[None, :], la)
         mu, t0 = optit0mu(t0_t, mu_t, n, xmmse_star, psy_star, c_star, la)
         mu_i, t0_i = optit0mu(t0_t, mu_t, n, xmmse_most[None, :], np.array([1]), c_star[maxindex][None, :], la)
 
@@ -345,7 +349,6 @@ elif method == 'fbmp':
     ts = np.zeros(N, dtype=sdtp)
     ts['TriggerNo'] = ent['TriggerNo']
     ts['ChannelID'] = ent['ChannelID']
-    fbmp_inference(0, 10)
     with Pool(min(args.Ncpu, cpu_count())) as pool:
         result = pool.starmap(partial(fbmp_inference), slices)
     ts['tswave'] = np.hstack([result[i][0] for i in range(len(slices))])

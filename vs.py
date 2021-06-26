@@ -368,11 +368,9 @@ for key in mts.keys():
             wave_sum = waves['Waveform'].sum(axis=1) / gmu
             n = np.arange(1, 1000)
             mean = np.average(n, weights=poisson.pmf(n, mu=mu))
-            s = np.sqrt(np.average((n - mean)**2, weights=poisson.pmf(n, mu=mu)))
             lognm = np.average(np.log(n), weights=poisson.pmf(n, mu=mu))
             slog = np.sqrt(np.average((np.log(n) - lognm)**2, weights=poisson.pmf(n, mu=mu)))
             mts[key][i]['stdmutru'] = slog
-            s = np.std(wave_sum[vali], ddof=-1)
             slog = np.std(np.log(wave_sum[vali]), ddof=-1)
             m = np.mean(wave_sum[vali]) - mean
             mts[key][i]['stdmuint'] = slog
