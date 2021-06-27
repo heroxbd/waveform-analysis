@@ -14,6 +14,7 @@ import numpy as np
 import scipy
 import scipy.stats
 from scipy.stats import poisson, uniform, norm
+import scipy.integrate as integrate
 from scipy import optimize as opti
 import scipy.special as special
 import pandas as pd
@@ -230,14 +231,24 @@ def fbmp_inference(a0, a1):
             return mu, t0
 
         truth = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
+
+        # tlist = truth['HitPosInWindow'][truth['HitPosInWindow'] < right_wave - 1]
+        # if len(tlist) == 1:
+        #     tlist_edge = np.array([tlist[0] - 0.5, tlist[0] + 0.5])
+        # else:
+        #     tlist_edge = np.concatenate([[tlist[0] - np.diff(tlist)[0] / 2], (tlist[1:] + tlist[:-1]) / 2, [tlist[-1] + np.diff(tlist)[-1] / 2]])
+        # t_auto = (np.arange(left_wave, right_wave) / wff.nshannon)[:, None] - tlist
+        # A = p[2] * np.exp(-1 / 2 * (np.log((t_auto + np.abs(t_auto)) / p[0] / 2) / p[1]) ** 2)
+
         # t0_t = t0_truth[i]['T0']
         # mu_t = len(truth)
         # 1st FBMP
         time_fbmp_start = time.time()
         # Eq. (9) where the columns of A are taken to be unit-norm.
-        factor = np.sqrt(np.diag(np.matmul(A.T, A)).mean())
+        factor = np.sqrt(np.diag(np.matmul(A.T, A)))
         A = np.matmul(A, np.diag(1. / np.sqrt(np.diag(np.matmul(A.T, A)))))
         la = mu_t * wff.convolve_exp_norm(tlist - t0_t, Tau, Sigma) / n + 1e-8
+        # la = mu_t * np.array([integrate.quad(lambda t : wff.convolve_exp_norm(t - t0_t, Tau, Sigma), tlist_edge[i], tlist_edge[i+1])[0] for i in range(len(tlist))]) + 1e-8
         # la = mu_t * np.ones(len(tlist)) / len(tlist)
         xmmse, xmmse_star, psy_star, nu_star, nu_star_bk, T_star, d_tot_i, d_max_i, num_i = wff.fbmpr_fxn_reduced(wave_r, A, la, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, len(la), stop=5, truth=truth, i=i, left=left_wave, right=right_wave, tlist=tlist, gmu=gmu, para=p)
         time_fbmp = time_fbmp + time.time() - time_fbmp_start
@@ -262,14 +273,15 @@ def fbmp_inference(a0, a1):
 
         xmmse_most = xmmse_star[maxindex]
         pet = np.repeat(tlist[xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
-        cha = np.repeat(xmmse_most[xmmse_most > 0] / factor / c_star[maxindex][xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
+        cha = np.repeat(xmmse_most[xmmse_most > 0] / factor[xmmse_most > 0] / c_star[maxindex][xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
 
-        mu = np.average(c_star.sum(axis=1), weights=psy_star)
-        t0 = t0_t
-        mu_i = len(cha)
-        t0_i = t0_t
+        # mu = np.average(c_star.sum(axis=1), weights=psy_star)
+        # t0 = t0_t
+        # mu_i = len(cha)
+        # t0_i = t0_t
 
         # mu, t0 = optit0mu(t0_t, mu_t, n, np.empty(len(la))[None, :], np.array([1]), c_star_truth[None, :], la)
+
         mu, t0 = optit0mu(t0_t, mu_t, n, xmmse_star, psy_star, c_star, la)
         mu_i, t0_i = optit0mu(t0_t, mu_t, n, xmmse_most[None, :], np.array([1]), c_star[maxindex][None, :], la)
 

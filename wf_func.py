@@ -183,11 +183,11 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None
     # Eq. (25)
     nu_true_mean = -M / 2 - M / 2 * np.log(sig2w) - p * N / 2 * np.log(sig2s / sig2w + 1) - M / 2 * np.log(2 * np.pi) + N * np.log(1 - p) + p * N * np.log(p / (1 - p))
     nu_true_stdv = np.sqrt(M / 2 + N * p * (1 - p) * (np.log(p / (1 - p)) - np.log(sig2s / sig2w + 1) / 2) ** 2)
-    nu_stop = nu_true_mean + stop * nu_true_stdv
+    nu_stop = (nu_true_mean + stop * nu_true_stdv).max()
 
     psy_thresh = 1e-4
     # upper limit of number of PEs.
-    P = math.ceil(min(M, p1.sum() + 3 * np.sqrt(p1.sum())))
+    P = max(math.ceil(min(M, p1.sum() + 3 * np.sqrt(p1.sum()))), 1)
 
     T = np.full((P, D), 0)
     nu = np.full((P, D), -np.inf)
@@ -225,10 +225,10 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None
             cx -= np.einsum('n,m,mp->np', betaxt[istar] * cx[:, istar], cx[:, istar], A, optimize=True)
 
             # Eq. (34)
-            z -= A[:, istar] * mus
+            z -= A[:, istar] * mus[istar]
             assist = np.zeros(N)
             t, c = np.unique(T[:p+1, d], return_counts=True)
-            assist[t] = mus * c + sig2s * c * np.dot(z, cx[:, t])
+            assist[t] = mus[t] * c + sig2s[t] * c * np.dot(z, cx[:, t])
             cc[p, d][t] = c
             xmmse[p, d] = assist
 
@@ -242,17 +242,11 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None
             d_tot = d + 1
             break
     nu_bk = nu[:, :d_tot].copy()
-    # revise = np.log(poisson.pmf(np.arange(1, P+1), p1.sum())) - special.logsumexp(np.log(poisson.pmf(cc[:, :d_tot], p1)).sum(axis=-1), axis=1)
-    # revise = np.log(poisson.pmf(np.arange(1, P+1), p1.sum()))
-    # revise = norm.logpdf(p1.sum() * mus, loc=np.arange(1, P+1) * mus, scale=np.sqrt(np.arange(1, P+1) * sig2s)) - np.log(poisson.pmf(np.arange(1, P+1), p1.sum()))
-    # nu[:, :d_tot] = nu[:, :d_tot] + revise[:, None]
-    # pp = poisson.pmf(np.arange(1, P+1), p1.sum())
-    # nu[:, :d_tot][np.random.uniform(size=nu[:, :d_tot].shape) > pp[:, None] / pp.max()] = -np.inf
     nu = nu[:, :d_tot].T.flatten()
 
     indx = np.argsort(nu)[::-1]
     d_max = math.floor(indx[0] // P) + 1
-    num = min(int(np.sum(nu > nu.max() + np.log(psy_thresh))), d_tot * P)
+    num = min(math.ceil(np.sum(nu > nu.max() + np.log(psy_thresh))), d_tot * P)
     nu_star = nu[indx[:num]]
     nu_star_bk = nu_bk.T.flatten()[indx[:num]]
     psy_star = np.exp(nu_star - nu.max()) / np.sum(np.exp(nu_star - nu.max()))
