@@ -11,6 +11,8 @@
 \usepackage{color,xcolor}
 \usepackage{enumerate}
 \usepackage{minted}
+\usepackage{caption}
+\usepackage{subcaption}
 
 \title{Poisson-FBMP Note}
 \date{}
@@ -111,6 +113,99 @@ Result: prior used in FBMP is not the origin of $\mu$ bias.
 
 \begin{figure}[H]
     \includegraphics[width=\textwidth]{vs-biasmu-truprior.png}
+\end{figure}
+
+\section{P-FBMP using different bin width}
+
+\begin{lstlisting}
+mu_t = abs(wave.sum() / gmu)
+A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
+mu_t = abs(wave_r.sum() / gmu)
+def optit0mu(t0, mu, n, xmmse_star, psy_star, c_star, la):
+    ys = np.log(psy_star) - np.log(poisson.pmf(c_star, la)).sum(axis=1)
+    ys = np.exp(ys - ys.max()) / np.sum(np.exp(ys - ys.max()))
+    t0list = np.arange(t0 - 3 * Sigma, t0 + 3 * Sigma + 1e-6, 0.2)
+    mulist = np.arange(max(1e-8, mu - 3 * np.sqrt(mu)), mu + 3 * np.sqrt(mu), 0.1)
+    b_mu = [max(1e-8, mu - 5 * np.sqrt(mu)), mu + 5 * np.sqrt(mu)]
+    tlist_pan = np.sort(np.unique(np.hstack(np.arange(0, window)[:, None] + np.arange(0, 1, 1 / n))))
+    As = np.zeros((len(xmmse_star), len(tlist_pan)))
+    As[:, np.isin(tlist_pan, tlist)] = c_star
+    assert sum(np.sum(As, axis=0) > 0) > 0
+
+    def likelihood(x):
+        a = x[0] * wff.convolve_exp_norm(tlist_pan - x[1], Tau, Sigma) / n + 1e-8 # use tlist_pan not tlist
+        li = -special.logsumexp(np.log(poisson.pmf(As, a)).sum(axis=1), b=ys)
+        return li
+
+    likemu = np.array([likelihood([mulist[j], t0]) for j in range(len(mulist))])
+    liket0 = np.array([likelihood([mu, t0list[j]]) for j in range(len(t0list))])
+    mu, t0 = opti.fmin_l_bfgs_b(likelihood, x0=[mulist[likemu.argmin()], t0list[liket0.argmin()]], approx_grad=True, bounds=[b_mu, b_t0], maxfun=50000)[0]
+    return mu, t0
+
+truth = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
+
+factor = np.sqrt(np.diag(np.matmul(A.T, A)))
+A = np.matmul(A, np.diag(1. / np.sqrt(np.diag(np.matmul(A.T, A)))))
+la = mu_t * wff.convolve_exp_norm(tlist - t0_t, Tau, Sigma) / n + 1e-8
+xmmse, xmmse_star, psy_star, nu_star, nu_star_bk, T_star, d_tot_i, d_max_i, num_i = wff.fbmpr_fxn_reduced(wave_r, A, la, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, len(la), stop=5, truth=truth, i=i, left=left_wave, right=right_wave, tlist=tlist, gmu=gmu, para=p)
+time_fbmp = time_fbmp + time.time() - time_fbmp_start
+c_star = np.zeros_like(xmmse_star).astype(int)
+for k in range(len(T_star)):
+    t, c = np.unique(T_star[k][xmmse_star[k][T_star[k]] > 0], return_counts=True)
+    c_star[k, t] = c
+maxindex = 0
+
+xmmse_most = xmmse_star[maxindex]
+pet = np.repeat(tlist[xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
+cha = np.repeat(xmmse_most[xmmse_most > 0] / factor[xmmse_most > 0] / c_star[maxindex][xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
+
+mu, t0 = optit0mu(t0_t, mu_t, n, xmmse_star, psy_star, c_star, la)
+mu_i, t0_i = optit0mu(t0_t, mu_t, n, xmmse_most[None, :], np.array([1]), c_star[maxindex][None, :], la)
+\end{lstlisting}
+
+Motivation: to demonstrate the bin width's influence on $\mu$ bias. 
+
+Progress: $1/n$ is the bin width, $n=\{1,2,5,10\}$
+
+\begin{figure}[H]
+    \includegraphics[width=\textwidth]{vs-biasmu-bin.png}
+\end{figure}
+
+\section{$N_{PE}$ estimation in one bin}
+
+\begin{lstlisting}
+def getm(i):
+    N = 10000
+    bias = np.empty(N)
+    np.random.seed(i)
+    Mu = 10
+    gmu = 160
+    gsigma = 40
+    npan = np.arange(1, 50)
+    for i in range(N):
+        n = poisson.ppf(1 - uniform.rvs(scale=1-poisson.cdf(0, Mu), size=1), Mu).astype(int)
+        cha = norm.ppf(1 - uniform.rvs(scale=1-norm.cdf(0, loc=gmu, scale=gsigma), size=n), loc=gmu, scale=gsigma)
+        cha = cha.sum()
+        weight = poisson.pmf(npan, Mu) * norm.pdf(cha, loc=gmu * npan, scale=gsigma * np.sqrt(npan))
+#         weight = norm.pdf(cha, loc=gmu * npan, scale=gsigma * np.sqrt(npan))
+        weight = weight / weight.sum()
+        bias[i] = np.sum(npan * weight) - n
+    m = bias.mean()
+    return m
+slices = np.arange(1000)[None, :].T.tolist()
+with Pool(100) as pool:
+    result = np.hstack([pool.starmap(getm, slices)])
+\end{lstlisting}
+
+Motivation: to estimate bias of $\mu$ based on toy simulation in one bin
+
+Progress: set $\mu$. Sampling: $n\sim\mathrm{Poisson}(n|\mu)$, $q_i\sim\mathrm{Gaussian}(q_i|1,\sigma_q^2),i=\{1,\cdots,n\}$, $Q=\sum_i q_i$. Estimation: $p(n|Q) = \frac{\mathrm{Poisson}(n|\mu) \cdot \mathrm{Gaussian}(Q|n,n\sigma_q^2)}{\sum_{j=1}^n \mathrm{Poisson}(j|\mu) \cdot \mathrm{Gaussian}(Q|j,j\sigma_q^2)}$ or $p(n|Q) = \frac{\mathrm{Gaussian}(Q|n,n\sigma_q^2)}{\sum_{j=1}^n \mathrm{Gaussian}(Q|j,j\sigma_q^2)}$
+
+Result: when using Poisson prior, there is \textbf{no} bias, when using flat prior, there is bias. 
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{onebinbias.png}
 \end{figure}
 
 \end{document}
