@@ -174,7 +174,7 @@ Progress: $1/n$ is the bin width, $n=\{1,2,5,10\}$
 \section{$N_{PE}$ estimation in one bin}
 
 \begin{lstlisting}
-def getm(i):
+def getm(i, p):
     N = 10000
     bias = np.empty(N)
     np.random.seed(i)
@@ -186,15 +186,19 @@ def getm(i):
         n = poisson.ppf(1 - uniform.rvs(scale=1-poisson.cdf(0, Mu), size=1), Mu).astype(int)
         cha = norm.ppf(1 - uniform.rvs(scale=1-norm.cdf(0, loc=gmu, scale=gsigma), size=n), loc=gmu, scale=gsigma)
         cha = cha.sum()
-        weight = poisson.pmf(npan, Mu) * norm.pdf(cha, loc=gmu * npan, scale=gsigma * np.sqrt(npan))
-#         weight = norm.pdf(cha, loc=gmu * npan, scale=gsigma * np.sqrt(npan))
+        if p:
+            weight = poisson.pmf(npan, Mu) * norm.pdf(cha, loc=gmu * npan, scale=gsigma * np.sqrt(npan))
+        else:
+            weight = norm.pdf(cha, loc=gmu * npan, scale=gsigma * np.sqrt(npan))
         weight = weight / weight.sum()
         bias[i] = np.sum(npan * weight) - n
     m = bias.mean()
     return m
-slices = np.arange(1000)[None, :].T.tolist()
+slices = np.arange(1000).T.tolist()
 with Pool(100) as pool:
-    result = np.hstack([pool.starmap(getm, slices)])
+    resultpoisson = np.hstack([pool.starmap(getm, zip(slices, [True] * len(slices)))])
+with Pool(100) as pool:
+    resultflat = np.hstack([pool.starmap(getm, zip(slices, [False] * len(slices)))])
 \end{lstlisting}
 
 Motivation: to estimate bias of $\mu$ based on toy simulation in one bin
