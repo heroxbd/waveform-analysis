@@ -23,6 +23,77 @@
 \newcommand{\ud}{\mathrm{d}}
 
 \maketitle
+\tableofcontents
+
+\section{P-FBMP with magic time bin}
+
+\begin{lstlisting}
+mu_t = abs(wave.sum() / gmu)
+if Tau > 10:
+    n = min(math.ceil(20 / mu_t), 5)
+else:
+    n = min(math.ceil(4 / mu_t), 3)
+A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Mu, Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
+mu_t = abs(wave_r.sum() / gmu)
+def optit0mu(t0, mu, n, xmmse_star, psy_star, c_star, la):
+    ys = np.log(psy_star) - np.log(poisson.pmf(c_star, la)).sum(axis=1)
+    ys = np.exp(ys - ys.max()) / np.sum(np.exp(ys - ys.max()))
+    t0list = np.arange(t0 - 3 * Sigma, t0 + 3 * Sigma + 1e-6, 0.2)
+    mulist = np.arange(max(1e-8, mu - 3 * np.sqrt(mu)), mu + 3 * np.sqrt(mu), 0.1)
+    b_mu = [max(1e-8, mu - 5 * np.sqrt(mu)), mu + 5 * np.sqrt(mu)]
+    tlist_pan = np.sort(np.unique(np.hstack(np.arange(0, window)[:, None] + np.arange(0, 1, 1 / n))))
+    As = np.zeros((len(xmmse_star), len(tlist_pan)))
+    As[:, np.isin(tlist_pan, tlist)] = c_star
+    assert sum(np.sum(As, axis=0) > 0) > 0
+
+    def likelihood(x):
+        a = x[0] * wff.convolve_exp_norm(tlist_pan - x[1], Tau, Sigma) / n + 1e-8 # use tlist_pan not tlist
+        li = -special.logsumexp(np.log(poisson.pmf(As, a)).sum(axis=1), b=ys)
+        return li
+
+    likemu = np.array([likelihood([mulist[j], t0]) for j in range(len(mulist))])
+    liket0 = np.array([likelihood([mu, t0list[j]]) for j in range(len(t0list))])
+    mu, t0 = opti.fmin_l_bfgs_b(likelihood, x0=[mulist[likemu.argmin()], t0list[liket0.argmin()]], approx_grad=True, bounds=[b_mu, b_t0], maxfun=50000)[0]
+    return mu, t0
+
+truth = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
+time_fbmp_start = time.time()
+factor = np.sqrt(np.diag(np.matmul(A.T, A)).mean())
+A = np.matmul(A, np.diag(1. / np.sqrt(np.diag(np.matmul(A.T, A)))))
+la = mu_t * wff.convolve_exp_norm(tlist - t0_t, Tau, Sigma) / n + 1e-8
+xmmse, xmmse_star, psy_star, nu_star, nu_star_bk, T_star, d_tot_i, d_max_i, num_i = wff.fbmpr_fxn_reduced(wave_r, A, la, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, len(la), stop=5, truth=truth, i=i, left=left_wave, right=right_wave, tlist=tlist, gmu=gmu, para=p)
+time_fbmp = time_fbmp + time.time() - time_fbmp_start
+c_star = np.zeros_like(xmmse_star).astype(int)
+for k in range(len(T_star)):
+    t, c = np.unique(T_star[k][xmmse_star[k][T_star[k]] > 0], return_counts=True)
+    c_star[k, t] = c
+maxindex = 0
+
+xmmse_most = xmmse_star[maxindex]
+pet = np.repeat(tlist[xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
+cha = np.repeat(xmmse_most[xmmse_most > 0] / factor / c_star[maxindex][xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
+
+mu, t0 = optit0mu(t0_t, mu_t, n, xmmse_star, psy_star, c_star, la)
+mu_i, t0_i = optit0mu(t0_t, mu_t, n, xmmse_most[None, :], np.array([1]), c_star[maxindex][None, :], la)
+\end{lstlisting}
+
+Motivation: demonstrate magic time binning on $\mu$ bias
+
+Progress: magic time bin is
+\begin{lstlisting}
+mu_t = abs(wave.sum() / gmu)
+if Tau > 10:
+    n = min(math.ceil(20 / mu_t), 5)
+else:
+    n = min(math.ceil(4 / mu_t), 3)
+\end{lstlisting}
+
+Result: relative $\mu$ bias are less than $2.5\%$
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{vs-biasmu-magic.png}
+\end{figure}
 
 \section{P-FBMP only fitting}
 
@@ -320,6 +391,77 @@ Result: there is \textbf{no} bias from lucyddm waveform cut initialization
 \begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{vs-biasmu-lucyddmwave.png}
+\end{figure}
+
+\section{Iterative P-FBMP}
+
+\begin{lstlisting}
+mu_t = abs(wave.sum() / gmu)
+if Tau > 10:
+    n = min(math.ceil(20 / mu_t), 5)
+else:
+    n = min(math.ceil(4 / mu_t), 3)
+A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
+mu_t = abs(wave_r.sum() / gmu)
+def optit0mu(t0, mu, n, xmmse_star, psy_star, c_star, la):
+    ys = np.log(psy_star) - np.log(poisson.pmf(c_star, la)).sum(axis=1)
+    ys = np.exp(ys - ys.max()) / np.sum(np.exp(ys - ys.max()))
+    t0list = np.arange(t0 - 3 * Sigma, t0 + 3 * Sigma + 1e-6, 0.2)
+    mulist = np.arange(max(1e-8, mu - 3 * np.sqrt(mu)), mu + 3 * np.sqrt(mu), 0.1)
+    b_mu = [max(1e-8, mu - 5 * np.sqrt(mu)), mu + 5 * np.sqrt(mu)]
+    tlist_pan = np.sort(np.unique(np.hstack(np.arange(0, window)[:, None] + np.arange(0, 1, 1 / n))))
+    As = np.zeros((len(xmmse_star), len(tlist_pan)))
+    As[:, np.isin(tlist_pan, tlist)] = c_star
+    assert sum(np.sum(As, axis=0) > 0) > 0
+
+    def likelihood(x):
+        a = x[0] * wff.convolve_exp_norm(tlist_pan - x[1], Tau, Sigma) / n + 1e-8 # use tlist_pan not tlist
+        li = -special.logsumexp(np.log(poisson.pmf(As, a)).sum(axis=1), b=ys)
+        return li
+
+    likemu = np.array([likelihood([mulist[j], t0]) for j in range(len(mulist))])
+    liket0 = np.array([likelihood([mu, t0list[j]]) for j in range(len(t0list))])
+    mu, t0 = opti.fmin_l_bfgs_b(likelihood, x0=[mulist[likemu.argmin()], t0list[liket0.argmin()]], approx_grad=True, bounds=[b_mu, b_t0], maxfun=50000)[0]
+    return mu, t0
+
+truth = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
+time_fbmp_start = time.time()
+factor = np.sqrt(np.diag(np.matmul(A.T, A)).mean())
+A = np.matmul(A, np.diag(1. / np.sqrt(np.diag(np.matmul(A.T, A)))))
+
+t0_bk = np.inf
+mu_bk = np.inf
+iterc_i = 0
+while abs(mu_bk - mu_t) > 1e-3 or abs(t0_bk - t0_t) > 1e-3:
+    iterc_i += 1
+    t0_bk = t0_t
+    mu_bk = mu_t
+    la = mu_t * wff.convolve_exp_norm(tlist - t0_t, Tau, Sigma) / n + 1e-8
+    xmmse, xmmse_star, psy_star, nu_star, nu_star_bk, T_star, d_tot_i, d_max_i, num_i = wff.fbmpr_fxn_reduced(wave_r, A, la, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, len(la), stop=5, truth=truth, i=i, left=left_wave, right=right_wave, tlist=tlist, gmu=gmu, para=p)
+    time_fbmp = time_fbmp + time.time() - time_fbmp_start
+    c_star = np.zeros_like(xmmse_star).astype(int)
+    for k in range(len(T_star)):
+        t, c = np.unique(T_star[k][xmmse_star[k][T_star[k]] > 0], return_counts=True)
+        c_star[k, t] = c
+
+    mu_t, t0_t = optit0mu(t0_t, mu_t, n, xmmse_star, psy_star, c_star, la)
+    if iterc_i >= 10:
+        break
+
+mu = mu_t
+t0 = t0_t
+mu_i, t0_i = optit0mu(t0_t, mu_t, n, xmmse_most[None, :], np.array([1]), c_star[maxindex][None, :], la)
+\end{lstlisting}
+
+Motivation: demonstrate whether iteration can reduce $\mu$ bias
+
+Progress: set $\mu=10$ to save time, iteration after FBMP sampling and fitting until $\mu$ and $t_0$ are stable
+
+Result: iteration can \textbf{not} reduce $\mu$ bias
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{vs-biasmu-iter.png}
 \end{figure}
 
 \end{document}
