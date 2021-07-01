@@ -275,4 +275,51 @@ Result: there is \textbf{no} bias on this configuration
     \includegraphics[width=0.5\textwidth]{toybias.png}
 \end{figure}
 
+\section{Influence of lucyddm \texttt{tlist} initialization on $\mu$ bias}
+
+\begin{lstlisting}
+n = 2
+A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
+
+truth = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
+
+c_star_truth = np.sum([np.where(tlist - 0.5 / n < truth['HitPosInWindow'][j], 1, 0) * np.where(tlist + 0.5 / n > truth['HitPosInWindow'][j], 1, 0) for j in range(len(truth))], axis=0)
+
+mu = c_star_truth.sum()
+t0 = t0_t
+\end{lstlisting}
+
+Motivation: to test the influence of lucyddm time bin initialization on $\mu$ bias
+
+Progress: lucyddm initialization, estimate $\mu$ as number of truth \textit{HitPosInWindow} in \texttt{tlist}
+
+Result: there is \textbf{no} bias from lucyddm \texttt{tlist} initialization
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{vs-biasmu-lucyddmtlist.png}
+\end{figure}
+
+\section{Influence of lucyddm \texttt{wave\_r} initialization on $\mu$ bias}
+
+\begin{lstlisting}
+mu_t = abs(wave.sum() / gmu)
+n = 2
+A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
+mu_t = abs(wave_r.sum() / gmu)
+mu = mu_t
+t0 = t0_t
+\end{lstlisting}
+
+Motivation: to test the influence of waveform cut in lucyddm initialization on $\mu$ bias
+
+Progress: lucyddm initialization, estimate $\mu$ as number of integral of truncated waveform \texttt{wave\_r}
+
+Result: there is \textbf{no} bias from lucyddm waveform cut initialization
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{vs-biasmu-lucyddmwave.png}
+\end{figure}
+
 \end{document}
