@@ -401,7 +401,7 @@ gs = gridspec.GridSpec(1, 2, figure=figb, left=0.1, right=0.8, top=0.92, bottom=
 for sigma, i in zip(Sigma, list(range(len(Sigma)))):
     for tau, j in zip(Tau, list(range(len(Tau)))):
         stdlistkey = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
-        ax = figdd.add_subplot(gsd[i, j])
+        ax = figdd.add_subplot(gs[i, j])
         yerr = stdlistkey['stdmuint'] / stdlistkey['stdmutru'] / np.sqrt(2 * stdlistkey['N'])
         ax.errorbar(stdlistkey['mu'], stdlistkey['stdmuint'] / stdlistkey['stdmutru'], yerr=yerr, label='$\sigma_\mathrm{int}/\sigma_{\log{\mu}}$', c=color['int'], marker=marker['int'])
         # yerr = stdlistkey['stdmupe'] / stdlistkey['stdmutru'] / np.sqrt(2 * stdlistkey['N'])
@@ -419,7 +419,7 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
         if i == len(Sigma) - 1 and j == len(Tau) - 1:
             ax.legend(loc='upper left', bbox_to_anchor=(1., 0.9))
         
-        ax = figb.add_subplot(gsd[i, j])
+        ax = figb.add_subplot(gs[i, j])
         n = np.arange(1, 1000)
         mean = np.array([np.average(n, weights=poisson.pmf(n, mu=mu)) for mu in stdlistkey['mu']])
         yerr = stdlistkey['biasmuint'] / np.sqrt(stdlistkey['N']) / mean
