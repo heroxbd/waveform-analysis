@@ -259,6 +259,7 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None
     # fig.tight_layout()
     # gs = gridspec.GridSpec(3, 2, figure=fig, left=0.1, right=0.9, top=0.95, bottom=0.1, wspace=0.2, hspace=0.2)
     # ax = fig.add_subplot(gs[0, :])
+    # # cp = ax.imshow(nu_bk - nu_bk.min() + 1, aspect='auto', norm=colors.LogNorm())
     # cp = ax.imshow(nu_bk, aspect='auto')
     # fig.colorbar(cp, ax=ax)
     # ax.set_xticks(np.arange(d_tot))
@@ -269,7 +270,7 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None
     # ax.set_ylabel('P')
     # ax.scatter([ind // P for ind in indx[:num]], [ind % P for ind in indx[:num]], c=psy_star)
     # ax.scatter(indx[0] // P, indx[0] % P, s=36.0, marker='o', facecolors='none', edgecolors='r')
-    # ax.hlines(len(truth) - 1, 0, d_tot - 1, color='g')
+    # ax.hlines(len(truth) - 1, -0.5, d_tot - 0.5, color='g')
 
     # ax = fig.add_subplot(gs[1, 0])
     # for k in range(1, num + 1):
@@ -293,18 +294,17 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None
     # for k in range(1, num + 1):
     #     ax.plot(np.arange(left, right), np.dot(A, xmmse[indx[num - k] % P, indx[num - k] // P]), c=cmap.to_rgba(psy_star[num - k]))
     # ax2.plot(tlist, p1 / p1.max(), 'k--', alpha=0.5)
-    # ax.set_xlim(left, right)
-    # ax.set_ylim(top=truth['Charge'] * 1.05 / gmu)
     # ax.set_xlabel('t/ns')
     # ax.set_ylabel('Voltage/V')
     # ax2.set_ylabel('Charge/nsmV')
+    # xmin, xmax = ax.get_xlim()
     # align.yaxes(ax, 0, ax2, 0)
 
     # ax = fig.add_subplot(gs[2, 0])
     # for k in range(1, num + 1):
     #     ax.vlines(tlist, 0, xmmse[indx[num - k] % P, indx[num - k] // P] / mus, color=cmap.to_rgba(psy_star[num - k]))
     # fig.colorbar(cmap, ticks=np.arange(0, 1, 0.1))
-    # ax.set_xlim(left, right)
+    # ax.set_xlim(xmin, xmax)
     # ax.set_xlabel('t/ns')
     # ax.set_ylabel('Charge/nsmV')
 
@@ -316,7 +316,6 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None
     # for t, c in zip(truth['HitPosInWindow'], truth['Charge']):
     #     ax.plot(t + np.arange(80), spe(np.arange(80), para[0], para[1], para[2]) * c / gmu, c='g')
     # ax2.plot(tlist, p1 / p1.max(), 'k--', alpha=0.5)
-    # ax.set_ylim(top=truth['Charge'] * 1.05 / gmu)
     # ax.set_xlabel('t/ns')
     # ax.set_ylabel('Voltage/V')
     # ax2.set_ylabel('Charge/nsmV')

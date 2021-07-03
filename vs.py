@@ -37,7 +37,7 @@ with open(args.conf) as f:
     Sigma = next(f_csv)
     Sigma = [float(i) for i in Sigma]
 
-filelist = os.listdir('result/lucyddm/solu')
+filelist = os.listdir('result/fbmp/solu')
 filelist = [f for f in filelist if f[0] != '.' and os.path.splitext(f)[-1] == '.h5']
 numbers = [[float(i) for i in f[:-3].split('-')] for f in filelist]
 stype = np.dtype([('mu', np.float64), ('tau', np.float64), ('sigma', np.float64), ('n', np.uint), ('std1sttruth', np.float64), ('stdtruth', np.float64), ('std', np.float64), ('stdone', np.float64), ('bias1sttruth', np.float64), ('biastruth', np.float64), ('bias', np.float64), ('biasone', np.float64), ('wdist', np.float64, 3), ('RSS', np.float64, 3), ('N', np.uint), ('stdsuccess', np.uint), ('stdonesuccess', np.uint)])
@@ -79,7 +79,7 @@ for key in mts.keys():
                 start = wavef['SimTruth/T'][:]
                 r = wavef['SimTruth/T'].attrs['r']
             mts[key][i]['N'] = len(start)
-            vali = np.abs(time['tscharge'] - start['T0'] - np.mean(time['tscharge'] - start['T0'])) < r * np.std(time['tscharge'] - start['T0'], ddof=-1)
+            vali = np.abs(time['tscharge'] - start['T0'] - np.mean(time['tscharge'] - start['T0'])) <= r * np.std(time['tscharge'] - start['T0'], ddof=-1)
             mts[key][i]['std1sttruth'] = np.std(start['ts1sttruth'] - start['T0'], ddof=-1)
             mts[key][i]['stdtruth'] = np.std(start['tstruth'] - start['T0'], ddof=-1)
             mts[key][i]['std'], mts[key][i]['stdsuccess'] = wff.stdrmoutlier(time['tscharge'] - start['T0'], r)
@@ -359,7 +359,7 @@ for key in mts.keys():
                 gsigma = wavef['SimTriggerInfo/PEList'].attrs['gsigma']
                 r = wavef['SimTruth/T'].attrs['r']
             mts[key][i]['N'] = len(start)
-            vali = np.abs(time['tscharge'] - start['T0'] - np.mean(time['tscharge'] - start['T0'])) < r * np.std(time['tscharge'] - start['T0'], ddof=-1)
+            vali = np.abs(time['tscharge'] - start['T0'] - np.mean(time['tscharge'] - start['T0'])) <= r * np.std(time['tscharge'] - start['T0'], ddof=-1)
             mts[key][i]['N'] = len(start)
             Chnum = len(np.unique(pelist['PMTId']))
             e_ans, i_ans = np.unique(pelist['TriggerNo'] * Chnum + pelist['PMTId'], return_index=True)
@@ -434,7 +434,7 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
         # ax.set_ylabel(r'$\mathrm{bias}$')
         ax.set_ylabel(r'$\frac{\Delta \mu}{\mu}$')
         ax.set_title(fr'$\tau={tau}\si{{ns}},\,\sigma={sigma}\si{{ns}}$')
-        ax.set_ylim(-0.03, 0.025)
+        # ax.set_ylim(-0.03, 0.025)
         ax.yaxis.get_major_formatter().set_powerlimits((0, 0))
         ax.grid()
         if i == len(Sigma) - 1 and j == len(Tau) - 1:

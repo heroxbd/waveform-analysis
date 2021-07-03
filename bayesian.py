@@ -246,7 +246,7 @@ def fbmp_inference(a0, a1):
         time_fbmp_start = time.time()
         # Eq. (9) where the columns of A are taken to be unit-norm.
         factor = np.sqrt(np.diag(np.matmul(A.T, A)))
-        A = np.matmul(A, np.diag(1. / np.sqrt(np.diag(np.matmul(A.T, A)))))
+        A = A / factor
         la = mu_t * wff.convolve_exp_norm(tlist - t0_t, Tau, Sigma) / n + 1e-8
         # la = mu_t * np.array([integrate.quad(lambda t : wff.convolve_exp_norm(t - t0_t, Tau, Sigma), tlist_edge[i], tlist_edge[i+1])[0] for i in range(len(tlist))]) + 1e-8
         # la = mu_t * np.ones(len(tlist)) / len(tlist)

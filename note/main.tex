@@ -274,7 +274,7 @@ with Pool(100) as pool:
 
 Motivation: to estimate bias of $\mu$ based on toy simulation in one bin
 
-Progress: set $\mu$. Sampling: $n\sim\mathrm{Poisson}(n|\mu)$, $q_i\sim\mathrm{Gaussian}(q_i|1,\sigma_q^2),i=\{1,\cdots,n\}$, $Q=\sum_i q_i$. Estimation: $p(n|Q) = \frac{\mathrm{Poisson}(n|\mu) \cdot \mathrm{Gaussian}(Q|n,n\sigma_q^2)}{\sum_{j=1}^n \mathrm{Poisson}(j|\mu) \cdot \mathrm{Gaussian}(Q|j,j\sigma_q^2)}$ or $p(n|Q) = \frac{\mathrm{Gaussian}(Q|n,n\sigma_q^2)}{\sum_{j=1}^n \mathrm{Gaussian}(Q|j,j\sigma_q^2)}$
+Progress: set $\mu$. Sampling: $n\sim\mathrm{Poisson}(n|\mu)$, $q_i\sim\mathrm{Gaussian}(q_i|1,\sigma_q^2),i=\{1,2,\cdots,n\}$, $Q=\sum_i q_i$. Estimation: $p(n|Q) = \frac{\mathrm{Poisson}(n|\mu) \cdot \mathrm{Gaussian}(Q|n,n\sigma_q^2)}{\sum_{j=1}^n \mathrm{Poisson}(j|\mu) \cdot \mathrm{Gaussian}(Q|j,j\sigma_q^2)}$ or $p(n|Q) = \frac{\mathrm{Gaussian}(Q|n,n\sigma_q^2)}{\sum_{j=1}^n \mathrm{Gaussian}(Q|j,j\sigma_q^2)}$
 
 Result: when using Poisson prior, there is \textbf{no} bias, when using flat prior, there is bias. 
 
@@ -462,6 +462,90 @@ Result: iteration can \textbf{not} reduce $\mu$ bias
 \begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{vs-biasmu-iter.png}
+\end{figure}
+
+\section{Waveform simulation with fixed \textit{HitPosInWindow}}
+
+Waveform simulation:
+
+\begin{lstlisting}
+np.random.seed(a0 + round(Tau + Sigma))
+npe = poisson.ppf(1 - uniform.rvs(scale=1-poisson.cdf(0, mu), size=a1 - a0), mu).astype(int)
+t0 = np.random.uniform(100., 500., size=a1 - a0)
+sams = [np.vstack((np.arange(npe[i]) + t0[i], wff.charge(npe[i], gmu=gmu, gsigma=gsigma, thres=0))).T for i in range(a1 - a0)]
+wdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('Waveform', np.float, window * wff.nshannon)])
+waves = np.empty(a1 - a0).astype(wdtp)
+pan = np.arange(0, window, 1 / wff.nshannon)
+for i in range(a1 - a0):
+    wave = np.sum([np.where(pan > sams[i][j, 0], wff.spe(pan - sams[i][j, 0], tau=p[0], sigma=p[1], A=p[2]) * sams[i][j, 1] / gmu, 0) for j in range(len(sams[i]))], axis=0)
+    if args.noi:
+        wave = wave + np.random.normal(0, std, size=window * wff.nshannon)
+    waves[i]['Waveform'] = wave
+tdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('T0', np.float64)])
+t = np.empty(a1 - a0).astype(tdtp)
+t['TriggerNo'] = np.arange(a0, a1).astype(np.uint32)
+t['T0'] = t0
+t['ChannelID'] = 0
+waves['TriggerNo'] = np.arange(a0, a1).astype(np.uint32)
+waves['ChannelID'] = 0
+sdtp = np.dtype([('TriggerNo', np.uint32), ('PMTId', np.uint32), ('HitPosInWindow', np.float64), ('Charge', np.float64)])
+pelist = np.empty(sum([len(sams[i]) for i in range(a1 - a0)])).astype(sdtp)
+pelist['TriggerNo'] = np.repeat(np.arange(a0, a1), [len(sams[i]) for i in range(a1 - a0)]).astype(np.uint32)
+pelist['PMTId'] = 0
+pelist['HitPosInWindow'] = np.hstack([sams[i][:, 0] for i in range(a1 - a0)])
+pelist['Charge'] = np.hstack([sams[i][:, 1] for i in range(a1 - a0)])
+\end{lstlisting}
+
+P-FBMP:
+
+\begin{lstlisting}
+mu_t = abs(wave.sum() / gmu)
+if Tau > 10:
+    n = min(math.ceil(20 / mu_t), 5)
+else:
+    n = min(math.ceil(4 / mu_t), 3)
+A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
+
+truth = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
+
+tlist = truth['HitPosInWindow'][truth['HitPosInWindow'] < right_wave - 1]
+if len(tlist) == 0:
+    tlist = np.array([300])
+t_auto = (np.arange(left_wave, right_wave) / wff.nshannon)[:, None] - tlist
+A = p[2] * np.exp(-1 / 2 * (np.log((t_auto + np.abs(t_auto)) / p[0] / 2) / p[1]) ** 2)
+
+t0_t = t0_truth[i]['T0']
+mu_t = len(truth)
+factor = np.sqrt(np.diag(np.matmul(A.T, A)))
+A = np.matmul(A, np.diag(1. / np.sqrt(np.diag(np.matmul(A.T, A)))))
+la = mu_t * np.ones(len(tlist)) / len(tlist)
+xmmse, xmmse_star, psy_star, nu_star, nu_star_bk, T_star, d_tot_i, d_max_i, num_i = wff.fbmpr_fxn_reduced(wave_r, A, la, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, len(la), stop=5, truth=truth, i=i, left=left_wave, right=right_wave, tlist=tlist, gmu=gmu, para=p)
+time_fbmp = time_fbmp + time.time() - time_fbmp_start
+c_star = np.zeros_like(xmmse_star).astype(int)
+for k in range(len(T_star)):
+    t, c = np.unique(T_star[k][xmmse_star[k][T_star[k]] > 0], return_counts=True)
+    c_star[k, t] = c
+maxindex = 0
+
+xmmse_most = xmmse_star[maxindex]
+pet = np.repeat(tlist[xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
+cha = np.repeat(xmmse_most[xmmse_most > 0] / factor[xmmse_most > 0] / c_star[maxindex][xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
+
+mu = np.average(c_star.sum(axis=1), weights=psy_star)
+t0 = t0_t
+mu_i = len(cha)
+t0_i = t0_t
+\end{lstlisting}
+
+Motivation: to further reduce the influence of binning
+
+Progress: when PE number is $N_{PE}$, set \textit{HitPosInWindow} relatively (to $t_0$) $\{0,1,\cdots,N_{PE}-1\}$, sample \textit{Charge} then P-FBMP process with truth prior. 
+
+Result: there is still bias with fixed \textit{HitPosInWindow}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{vs-biasmu-simfixedtime.png}
 \end{figure}
 
 \end{document}
