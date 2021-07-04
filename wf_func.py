@@ -169,7 +169,7 @@ def findpeak(wave, spe_pre):
         cha = np.array([1])
     return pet, cha
 
-def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None, left=None, right=None, tlist=None, gmu=None, para=None):
+def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None, left=None, right=None, tlist=None, gmu=None, para=None, prior=True):
     '''
     p1: prior probability for each bin.
     sig2w: variance of white noise.
@@ -181,8 +181,12 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None
 
     p = 1 - poisson.pmf(0, p1).mean()
     # Eq. (25)
-    nu_true_mean = -M / 2 - M / 2 * np.log(sig2w) - p * N / 2 * np.log(sig2s / sig2w + 1) - M / 2 * np.log(2 * np.pi) + N * np.log(1 - p) + p * N * np.log(p / (1 - p))
-    nu_true_stdv = np.sqrt(M / 2 + N * p * (1 - p) * (np.log(p / (1 - p)) - np.log(sig2s / sig2w + 1) / 2) ** 2)
+    if prior:
+        nu_true_mean = -M / 2 - M / 2 * np.log(sig2w) - p * N / 2 * np.log(sig2s / sig2w + 1) - M / 2 * np.log(2 * np.pi) + N * np.log(1 - p) + p * N * np.log(p / (1 - p))
+        nu_true_stdv = np.sqrt(M / 2 + N * p * (1 - p) * (np.log(p / (1 - p)) - np.log(sig2s / sig2w + 1) / 2) ** 2)
+    else:
+        nu_true_mean = -M / 2 - M / 2 * np.log(sig2w) - p * N / 2 * np.log(sig2s / sig2w + 1) - M / 2 * np.log(2 * np.pi)
+        nu_true_stdv = np.sqrt(M / 2 + N * p * (1 - p) * (np.log(sig2s / sig2w + 1) / 2) ** 2)
     nu_stop = (nu_true_mean + stop * nu_true_stdv).max()
 
     psy_thresh = 1e-4
@@ -196,13 +200,19 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None
     d_tot = D
 
     # nu_root: nu for all s_n=0.
-    nu_root = -0.5 * np.linalg.norm(y) ** 2 / sig2w - 0.5 * M * np.log(2 * np.pi) - 0.5 * M * np.log(sig2w) + np.log(poisson.pmf(0, p1)).sum()
+    if prior:
+        nu_root = -0.5 * np.linalg.norm(y) ** 2 / sig2w - 0.5 * M * np.log(2 * np.pi) - 0.5 * M * np.log(sig2w) + np.log(poisson.pmf(0, p1)).sum()
+    else:
+        nu_root = -0.5 * np.linalg.norm(y) ** 2 / sig2w - 0.5 * M * np.log(2 * np.pi) - 0.5 * M * np.log(sig2w)
     # Eq. (29)
     cx_root = A / sig2w
     # Eq. (30) sig2s = 1 sigma^2 - 0 sigma^2
     betaxt_root = sig2s / (1 + sig2s * np.einsum('ij,ij->j', A, cx_root, optimize=True))
     # Eq. (31)
-    nuxt_root = nu_root + 0.5 * (betaxt_root * (y @ cx_root + mus / sig2s) ** 2  - mus ** 2 / sig2s + np.log(betaxt_root / sig2s)) + np.log(poisson.pmf(1, p1) / poisson.pmf(0, p1))
+    if prior:
+        nuxt_root = nu_root + 0.5 * (betaxt_root * (y @ cx_root + mus / sig2s) ** 2  - mus ** 2 / sig2s + np.log(betaxt_root / sig2s)) + np.log(poisson.pmf(1, p1) / poisson.pmf(0, p1))
+    else:
+        nuxt_root = nu_root + 0.5 * (betaxt_root * (y @ cx_root + mus / sig2s) ** 2  - mus ** 2 / sig2s + np.log(betaxt_root / sig2s))
     pan_root = np.zeros(N)
 
     # Repeated Greedy Search
@@ -235,7 +245,10 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None
             # Eq. (30)
             betaxt = sig2s / (1 + sig2s * np.sum(A * cx, axis=0))
             # Eq. (31)
-            nuxt = nustar + 0.5 * (betaxt * (z @ cx + mus / sig2s) ** 2 - mus ** 2 / sig2s + np.log(betaxt / sig2s)) + np.log(poisson.pmf(pan + 1, mu=p1) / poisson.pmf(pan, mu=p1))
+            if prior:
+                nuxt = nustar + 0.5 * (betaxt * (z @ cx + mus / sig2s) ** 2 - mus ** 2 / sig2s + np.log(betaxt / sig2s)) + np.log(poisson.pmf(pan + 1, mu=p1) / poisson.pmf(pan, mu=p1))
+            else:
+                nuxt = nustar + 0.5 * (betaxt * (z @ cx + mus / sig2s) ** 2 - mus ** 2 / sig2s + np.log(betaxt / sig2s))
             # nuxt[t] = -np.inf
 
         if max(nu[:, d]) > nu_stop:
@@ -332,13 +345,16 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None
 
     return xmmse, xmmse_star, psy_star, nu_star, nu_star_bk, T_star, d_tot, d_max, num
 
-def nu_direct(y, A, nx, mus, sig2s, sig2w, la):
+def nu_direct(y, A, nx, mus, sig2s, sig2w, la, prior=True):
     M, N = A.shape
     Phi = np.matmul(np.matmul(A, np.diagflat(sig2s * nx)), A.T) + np.eye(M) * sig2w
     z = y - np.dot(A, (mus * nx))
     invPhi = np.linalg.inv(Phi)
     detPhi = np.linalg.det(Phi)
-    nu = -0.5 * np.matmul(np.matmul(z, invPhi), z) - 0.5 * np.log(detPhi) - 0.5 * M * np.log(2 * np.pi) + np.log(poisson.pmf(nx, mu=la)).sum()
+    if prior:
+        nu = -0.5 * np.matmul(np.matmul(z, invPhi), z) - 0.5 * np.log(detPhi) - 0.5 * M * np.log(2 * np.pi) + np.log(poisson.pmf(nx, mu=la)).sum()
+    else:
+        nu = -0.5 * np.matmul(np.matmul(z, invPhi), z) - 0.5 * np.log(detPhi) - 0.5 * M * np.log(2 * np.pi)
     return nu
 
 def shannon_interpolation(w, n):

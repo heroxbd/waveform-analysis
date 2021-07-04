@@ -181,6 +181,7 @@ def time_numpyro(a0, a1):
     return stime_t0, stime_cha, dt, count, time_mcmc, accep, mix0ratio
 
 def fbmp_inference(a0, a1):
+    prior = False
     nsp = 4
     nstd = 3
     t0_wav = np.empty(a1 - a0)
@@ -250,7 +251,7 @@ def fbmp_inference(a0, a1):
         la = mu_t * wff.convolve_exp_norm(tlist - t0_t, Tau, Sigma) / n + 1e-8
         # la = mu_t * np.array([integrate.quad(lambda t : wff.convolve_exp_norm(t - t0_t, Tau, Sigma), tlist_edge[i], tlist_edge[i+1])[0] for i in range(len(tlist))]) + 1e-8
         # la = mu_t * np.ones(len(tlist)) / len(tlist)
-        xmmse, xmmse_star, psy_star, nu_star, nu_star_bk, T_star, d_tot_i, d_max_i, num_i = wff.fbmpr_fxn_reduced(wave_r, A, la, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, len(la), stop=5, truth=truth, i=i, left=left_wave, right=right_wave, tlist=tlist, gmu=gmu, para=p)
+        xmmse, xmmse_star, psy_star, nu_star, nu_star_bk, T_star, d_tot_i, d_max_i, num_i = wff.fbmpr_fxn_reduced(wave_r, A, la, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, len(la), stop=5, truth=truth, i=i, left=left_wave, right=right_wave, tlist=tlist, gmu=gmu, para=p, prior=prior)
         time_fbmp = time_fbmp + time.time() - time_fbmp_start
         c_star = np.zeros_like(xmmse_star).astype(int)
         for k in range(len(T_star)):
@@ -265,9 +266,9 @@ def fbmp_inference(a0, a1):
             c_star_truth[0] = 1
         pp = np.arange(left_wave, right_wave)
         wav_ans = np.sum([np.where(pp > truth['HitPosInWindow'][j], wff.spe(pp - truth['HitPosInWindow'][j], tau=p[0], sigma=p[1], A=p[2]) * truth['Charge'][j] / gmu, 0) for j in range(len(truth))], axis=0)
-        nu_truth[i - a0] = wff.nu_direct(wave_r, A, nx, factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la)
+        nu_truth[i - a0] = wff.nu_direct(wave_r, A, nx, factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la, prior=prior)
         rss_truth = np.power(wav_ans - np.matmul(A, cc / gmu * factor), 2).sum()
-        nu = np.array([wff.nu_direct(wave_r, A, c_star[j], factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la) for j in range(len(psy_star))])
+        nu = np.array([wff.nu_direct(wave_r, A, c_star[j], factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la, prior=prior) for j in range(len(psy_star))])
         nu_max[i - a0] = nu[0]
         rss = np.array([np.power(wav_ans - np.matmul(A, xmmse_star[j]), 2).sum() for j in range(len(psy_star))])
 
