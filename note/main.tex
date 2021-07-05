@@ -545,7 +545,158 @@ Result: there is still bias with fixed \textit{HitPosInWindow}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=\textwidth]{vs-biasmu-simfixedtime.png}
+    \includegraphics[width=\textwidth]{vs-biasmu-fixtlist.png}
+\end{figure}
+
+\section{Waveform simulation with fixed \textit{HitPosInWindow} \textbf{without} truth prior}
+
+Waveform simulation:
+
+\begin{lstlisting}
+sams = [np.vstack((np.arange(npe[i]) + t0[i], wff.charge(npe[i], gmu=gmu, gsigma=gsigma, thres=0))).T for i in range(a1 - a0)]
+\end{lstlisting}
+
+P-FBMP:
+
+\begin{lstlisting}
+    def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None, left=None, right=None, tlist=None, gmu=None, para=None, prior=True):
+    '''
+    p1: prior probability for each bin.
+    sig2w: variance of white noise.
+    sig2s: variance of signal x_i.
+    mus: mean of signal x_i.
+    '''
+    # Only for multi-gaussian with arithmetic sequence of mu and sigma
+    M, N = A.shape
+
+    p = 1 - poisson.pmf(0, p1).mean()
+    # Eq. (25)
+    if prior:
+        nu_true_mean = -M / 2 - M / 2 * np.log(sig2w) - p * N / 2 * np.log(sig2s / sig2w + 1) - M / 2 * np.log(2 * np.pi) + N * np.log(1 - p) + p * N * np.log(p / (1 - p))
+        nu_true_stdv = np.sqrt(M / 2 + N * p * (1 - p) * (np.log(p / (1 - p)) - np.log(sig2s / sig2w + 1) / 2) ** 2)
+    else:
+        nu_true_mean = -M / 2 - M / 2 * np.log(sig2w) - p * N / 2 * np.log(sig2s / sig2w + 1) - M / 2 * np.log(2 * np.pi)
+        nu_true_stdv = np.sqrt(M / 2 + N * p * (1 - p) * (np.log(sig2s / sig2w + 1) / 2) ** 2)
+    nu_stop = (nu_true_mean + stop * nu_true_stdv).max()
+
+    psy_thresh = 1e-4
+    # upper limit of number of PEs.
+    P = max(math.ceil(min(M, p1.sum() + 3 * np.sqrt(p1.sum()))), 1)
+
+    T = np.full((P, D), 0)
+    nu = np.full((P, D), -np.inf)
+    xmmse = np.zeros((P, D, N))
+    cc = np.zeros((P, D, N))
+    d_tot = D
+
+    # nu_root: nu for all s_n=0.
+    if prior:
+        nu_root = -0.5 * np.linalg.norm(y) ** 2 / sig2w - 0.5 * M * np.log(2 * np.pi) - 0.5 * M * np.log(sig2w) + np.log(poisson.pmf(0, p1)).sum()
+    else:
+        nu_root = -0.5 * np.linalg.norm(y) ** 2 / sig2w - 0.5 * M * np.log(2 * np.pi) - 0.5 * M * np.log(sig2w)
+    # Eq. (29)
+    cx_root = A / sig2w
+    # Eq. (30) sig2s = 1 sigma^2 - 0 sigma^2
+    betaxt_root = sig2s / (1 + sig2s * np.einsum('ij,ij->j', A, cx_root, optimize=True))
+    # Eq. (31)
+    if prior:
+        nuxt_root = nu_root + 0.5 * (betaxt_root * (y @ cx_root + mus / sig2s) ** 2  - mus ** 2 / sig2s + np.log(betaxt_root / sig2s)) + np.log(poisson.pmf(1, p1) / poisson.pmf(0, p1))
+    else:
+        nuxt_root = nu_root + 0.5 * (betaxt_root * (y @ cx_root + mus / sig2s) ** 2  - mus ** 2 / sig2s + np.log(betaxt_root / sig2s))
+    pan_root = np.zeros(N)
+
+    # Repeated Greedy Search
+    for d in range(D):
+        nuxt = nuxt_root.copy()
+        z = y.copy()
+        cx = cx_root.copy()
+        betaxt = betaxt_root.copy()
+        pan = pan_root.copy()
+        for p in range(P):
+            # look for duplicates of nu and nuxt, set to -inf.
+            # only inspect the same number of PEs in Row p.
+            nuxtshadow = np.where(np.sum(np.abs(nuxt - nu[p:(p+1), :d].T) < 1e-4, axis=0), -np.inf, nuxt)
+            nustar = max(nuxtshadow)
+            istar = np.argmax(nuxtshadow)
+            nu[p, d] = nustar
+            T[p, d] = istar
+            pan[istar] += 1
+            # Eq. (33)
+            cx -= np.einsum('n,m,mp->np', betaxt[istar] * cx[:, istar], cx[:, istar], A, optimize=True)
+
+            # Eq. (34)
+            z -= A[:, istar] * mus[istar]
+            assist = np.zeros(N)
+            t, c = np.unique(T[:p+1, d], return_counts=True)
+            assist[t] = mus[t] * c + sig2s[t] * c * np.dot(z, cx[:, t])
+            cc[p, d][t] = c
+            xmmse[p, d] = assist
+
+            # Eq. (30)
+            betaxt = sig2s / (1 + sig2s * np.sum(A * cx, axis=0))
+            # Eq. (31)
+            if prior:
+                nuxt = nustar + 0.5 * (betaxt * (z @ cx + mus / sig2s) ** 2 - mus ** 2 / sig2s + np.log(betaxt / sig2s)) + np.log(poisson.pmf(pan + 1, mu=p1) / poisson.pmf(pan, mu=p1))
+            else:
+                nuxt = nustar + 0.5 * (betaxt * (z @ cx + mus / sig2s) ** 2 - mus ** 2 / sig2s + np.log(betaxt / sig2s))
+            # nuxt[t] = -np.inf
+
+        if max(nu[:, d]) > nu_stop:
+            d_tot = d + 1
+            break
+    nu_bk = nu[:, :d_tot].copy()
+    nu = nu[:, :d_tot].T.flatten()
+
+    indx = np.argsort(nu)[::-1]
+    d_max = math.floor(indx[0] // P) + 1
+    num = min(math.ceil(np.sum(nu > nu.max() + np.log(psy_thresh))), d_tot * P)
+    nu_star = nu[indx[:num]]
+    nu_star_bk = nu_bk.T.flatten()[indx[:num]]
+    # psy_star = np.exp(nu_star - nu.max()) / np.sum(np.exp(nu_star - nu.max()))
+    T_star = [np.sort(T[:(indx[k] % P) + 1, indx[k] // P]) for k in range(num)]
+    xmmse_star = np.empty((num, N))
+    for k in range(num):
+        xmmse_star[k] = xmmse[indx[k] % P, indx[k] // P]
+
+    psy_star = np.exp(nu_star - nu.max()) / np.sum(np.exp(nu_star - nu.max()))
+
+    xmmse = np.average(xmmse_star, weights=psy_star, axis=0)
+
+    return xmmse, xmmse_star, psy_star, nu_star, nu_star_bk, T_star, d_tot, d_max, num
+\end{lstlisting}
+
+\begin{lstlisting}
+prior = False
+truth = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
+
+tlist = truth['HitPosInWindow'][truth['HitPosInWindow'] < right_wave - 1]
+if len(tlist) == 0:
+    tlist = np.array([300])
+t_auto = (np.arange(left_wave, right_wave) / wff.nshannon)[:, None] - tlist
+A = p[2] * np.exp(-1 / 2 * (np.log((t_auto + np.abs(t_auto)) / p[0] / 2) / p[1]) ** 2)
+
+t0_t = t0_truth[i]['T0']
+mu_t = len(truth)
+factor = np.sqrt(np.diag(np.matmul(A.T, A)))
+A = A / factor
+la = mu_t * np.ones(len(tlist)) / len(tlist)
+xmmse, xmmse_star, psy_star, nu_star, nu_star_bk, T_star, d_tot_i, d_max_i, num_i = wff.fbmpr_fxn_reduced(wave_r, A, la, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, len(la), stop=5, truth=truth, i=i, left=left_wave, right=right_wave, tlist=tlist, gmu=gmu, para=p, prior=prior)
+
+mu = np.average(c_star.sum(axis=1), weights=psy_star)
+t0 = t0_t
+mu_i = len(cha)
+t0_i = t0_t
+\end{lstlisting}
+
+Motivation: to further reduce the influence of prior
+
+Progress: set \textit{HitPosInWindow} relatively (to $t_0$) $\{0,1,\cdots,N_{PE}-1\}$, P-FBMP process \textbf{without} truth prior. 
+
+Result: all biases \textbf{are larger} than 0
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{vs-biasmu-fixtlistnoprior.png}
 \end{figure}
 
 \end{document}
