@@ -436,7 +436,7 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
         # ax.set_ylabel(r'$\mathrm{bias}$')
         ax.set_ylabel(r'$\frac{\Delta \mu}{\mu}$')
         ax.set_title(fr'$\tau={tau}\si{{ns}},\,\sigma={sigma}\si{{ns}}$')
-        ax.set_ylim(-0.03, 0.025)
+        # ax.set_ylim(-0.03, 0.025)
         ax.yaxis.get_major_formatter().set_powerlimits((0, 0))
         ax.grid()
         if i == len(Sigma) - 1 and j == len(Tau) - 1:

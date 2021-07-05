@@ -13,6 +13,8 @@
 \usepackage{minted}
 \usepackage{caption}
 \usepackage{subcaption}
+\usepackage{amssymb}
+\usepackage{hyperref}
 
 \title{Poisson-FBMP Note}
 \date{}
@@ -25,7 +27,9 @@
 \maketitle
 \tableofcontents
 
-\section{P-FBMP with magic time bin}
+\section{Phenomenon}
+
+\subsection{P-FBMP with magic time bin}
 
 \begin{lstlisting}
 mu_t = abs(wave.sum() / gmu)
@@ -95,7 +99,7 @@ Result: relative $\mu$ bias are less than $2.5\%$
     \includegraphics[width=\textwidth]{vs-biasmu-magic.png}
 \end{figure}
 
-\section{P-FBMP only fitting}
+\subsection{P-FBMP only fitting}
 
 \begin{lstlisting}
 def optit0mu(t0, mu, n, xmmse_star, psy_star, c_star, la):
@@ -152,7 +156,7 @@ Result: fitting process is not related to bias of $\mu$.
     \includegraphics[width=\textwidth]{vs-biasmu-trufit.png}
 \end{figure}
 
-\section{P-FBMP with truth prior}
+\subsection{P-FBMP with truth prior}
 
 \begin{lstlisting}
 tlist = truth['HitPosInWindow'][truth['HitPosInWindow'] < right_wave - 1]
@@ -186,7 +190,7 @@ Result: prior used in FBMP is not the origin of $\mu$ bias.
     \includegraphics[width=\textwidth]{vs-biasmu-truprior.png}
 \end{figure}
 
-\section{P-FBMP using different bin width}
+\subsection{P-FBMP using different bin width}
 
 \begin{lstlisting}
 mu_t = abs(wave.sum() / gmu)
@@ -242,7 +246,7 @@ Progress: $1/n$ is the bin width, $n=\{1,2,5\}$
     \includegraphics[width=\textwidth]{vs-biasmu-bin.png}
 \end{figure}
 
-\section{$N_{PE}$ estimation in one bin}
+\subsection{$N_{PE}$ estimation in one bin}
 
 \begin{lstlisting}
 def getm(i, p):
@@ -283,7 +287,7 @@ Result: when using Poisson prior, there is \textbf{no} bias, when using flat pri
     \includegraphics[width=0.5\textwidth]{onebinbias.png}
 \end{figure}
 
-\section{$N_{PE}$ estimation based on toy simulation}
+\subsection{$N_{PE}$ estimation based on toy simulation}
 
 \begin{lstlisting}
 n = 10000
@@ -346,7 +350,7 @@ Result: there is \textbf{no} bias on this configuration
     \includegraphics[width=0.5\textwidth]{toybias.png}
 \end{figure}
 
-\section{Influence of lucyddm \texttt{tlist} initialization on $\mu$ bias}
+\subsection{Influence of lucyddm \texttt{tlist} initialization on $\mu$ bias}
 
 \begin{lstlisting}
 n = 2
@@ -371,7 +375,7 @@ Result: there is \textbf{no} bias from lucyddm \texttt{tlist} initialization
     \includegraphics[width=\textwidth]{vs-biasmu-lucyddmtlist.png}
 \end{figure}
 
-\section{Influence of lucyddm \texttt{wave\_r} initialization on $\mu$ bias}
+\subsection{Influence of lucyddm \texttt{wave\_r} initialization on $\mu$ bias}
 
 \begin{lstlisting}
 mu_t = abs(wave.sum() / gmu)
@@ -393,7 +397,7 @@ Result: there is \textbf{no} bias from lucyddm waveform cut initialization
     \includegraphics[width=\textwidth]{vs-biasmu-lucyddmwave.png}
 \end{figure}
 
-\section{Iterative P-FBMP}
+\subsection{Iterative P-FBMP}
 
 \begin{lstlisting}
 mu_t = abs(wave.sum() / gmu)
@@ -464,7 +468,7 @@ Result: iteration can \textbf{not} reduce $\mu$ bias
     \includegraphics[width=\textwidth]{vs-biasmu-iter.png}
 \end{figure}
 
-\section{Waveform simulation with fixed \textit{HitPosInWindow}}
+\subsection{Waveform simulation with fixed \textit{HitPosInWindow}}
 
 Waveform simulation:
 
@@ -548,7 +552,7 @@ Result: there is still bias with fixed \textit{HitPosInWindow}
     \includegraphics[width=\textwidth]{vs-biasmu-fixtlist.png}
 \end{figure}
 
-\section{Waveform simulation with fixed \textit{HitPosInWindow} \textbf{without} truth prior}
+\subsection{Waveform simulation with fixed \textit{HitPosInWindow} \textbf{without} truth prior}
 
 Waveform simulation:
 
@@ -698,5 +702,117 @@ Result: all biases \textbf{are larger} than 0
     \centering
     \includegraphics[width=\textwidth]{vs-biasmu-fixtlistnoprior.png}
 \end{figure}
+
+\section{Theory}
+
+\subsection{Why bias}
+
+\subsubsection{Model}
+
+\begin{equation}
+\begin{aligned}
+    \left.
+    \begin{bmatrix}
+        \bm{w} \\
+        \bm{q}'
+    \end{bmatrix}
+    \right\vert\bm{z}
+    &\sim \mathrm{Normal}\left(
+    \begin{bmatrix}
+        \bm{V}_\mathrm{PE}\bm{z} \\
+        \bm{z}
+    \end{bmatrix}, 
+    \begin{bmatrix}
+        \bm{\Sigma} & \bm{V}_\mathrm{PE}\bm{Z} \\
+        \bm{Z}\bm{V}_\mathrm{PE}^\intercal & \bm{Z}
+    \end{bmatrix}
+    \right) \\
+    \bm{\Sigma} &= \bm{V}_\mathrm{PE}\bm{Z}\bm{V}_\mathrm{PE}^\intercal+\sigma_\epsilon^2\bm{I}_M 
+\end{aligned}
+\end{equation}
+
+\begin{equation}
+\begin{aligned}
+    \nu =& \log[p(\bm{w},\bm{z})] = \log[p(\bm{w}|\bm{z})p(\bm{z})] \\
+    =& -\frac{1}{2}(\bm{w}-\bm{V}_\mathrm{PE}\bm{z})^\intercal\bm{\Sigma}^{-1}(\bm{w}-\bm{V}_\mathrm{PE}\bm{z})-\frac{1}{2}\log\det\bm{\Sigma}-\frac{N}{2}\log2\pi \\
+    & +\sum_{i}\log{\mathrm{Poisson}(z_i,p_i)}
+\end{aligned}
+\end{equation}
+
+\subsubsection{Simplification}
+
+\begin{itemize}
+    \item Poisson $\rightarrow$ Bernoulli, $z_i=0,\bm{Z}_{ii}=0$ or $z_i=1,\bm{Z}_{ii}=\sigma^2$
+    \item SPE $\rightarrow$ delta SPE, $\bm{V}_{PE}=\begin{bmatrix}
+        \bm{I} \\
+        \bm{O}
+    \end{bmatrix}$, $w_i\sim \mathrm{Normal}(1,\sigma^2+\sigma_\epsilon^2)$
+    \item flat prior, $\begin{cases}
+        \lambda & \text{ if } z_i=1 \\ 
+        1-\lambda & \text{ if } z_i=0 
+    \end{cases}$
+\end{itemize}
+
+\subsubsection{Evaluation}
+
+for a certain $(\bm{w}, \bm{z})$, let $K=\{i|z_i=1\}$, $|K|=n$
+
+\begin{align}
+    \bm{\Sigma} &= \begin{bmatrix}
+        \bm{Z} & \bm{O} \\
+        \bm{O} & \bm{O}
+    \end{bmatrix} + \sigma_\epsilon^2\bm{I}_M \\
+    \det\bm{\Sigma} &= \Pi_i (z_i\sigma^2+\sigma_\epsilon^2) \\
+    \bm{\Sigma}_{ij}^{-1} &= \begin{cases}
+        \frac{1}{z_i\sigma^2+\sigma_\epsilon^2} & \text{ if }  i=j \\ 
+        0 & \text{ if }  i\neq j 
+    \end{cases}
+\end{align}
+
+Thus, 
+
+\begin{align}
+    -2\nu =& \sum_{i\in K}\frac{(w_i - 1)^2}{\sigma^2+\sigma_\epsilon^2} + \sum_{i\in \bar{K}}\frac{w_i^2}{\sigma_\epsilon^2} \\ 
+    +& n\log(\sigma^2+\sigma_\epsilon^2) + (N-n)\log\sigma_\epsilon^2 \\
+    -& 2n\log\lambda - 2(N-n)\log(1-\lambda)
+\end{align}
+
+Additionally, 
+
+\begin{align}
+    \sum_{i\in K}\frac{(w_i - 1)^2}{\sigma^2+\sigma_\epsilon^2} &\sim \chi^2(n) \\
+    \frac{w_i^2}{\sigma_\epsilon^2} &= \frac{1}{\sigma_\epsilon^2}((\sigma^2+\sigma_\epsilon^2)\frac{(w_i - 1)^2}{\sigma^2+\sigma_\epsilon^2} + 2(w_i - 1) + 1)
+\end{align}
+
+Calculate expectation on distribution of $\bm{w}$ and $\bm{z}$ with $|K|=|\bm{z}|=n$, 
+
+\begin{align}
+    -2E(\nu)_n =& n + (N - n)\frac{\sigma^2+\sigma_\epsilon^2}{\sigma_\epsilon^2} + (N - n)\frac{1}{\sigma_\epsilon^2} \\ 
+    +& n\log(\sigma^2+\sigma_\epsilon^2) + (N-n)\log\sigma_\epsilon^2 \\
+    -& 2n\log\lambda - 2(N-n)\log(1-\lambda)
+\end{align}
+
+Thus, 
+
+\begin{align}
+    -2D(\nu)_n &= -2E(\nu)_n - (-2E(\nu)_{n-1}) \\ 
+    &= 1 - \frac{\sigma^2+\sigma_\epsilon^2}{\sigma_\epsilon^2} - \frac{1}{\sigma_\epsilon^2} \\
+    &+ \log(\sigma^2+\sigma_\epsilon^2) - \log\sigma_\epsilon^2 \\
+    &- 2\log\lambda + 2\log(1-\lambda)
+\end{align}
+
+Remember that $\sigma^2 \gg \sigma_\epsilon^2$ and $\lambda \ll 1$, set $x=\sigma^2/\sigma_\epsilon^2$, then,
+
+\begin{align}
+    D(\nu)_n &\approx \frac{1}{2}x - \frac{1}{2}\log x + \log\lambda
+\end{align}
+
+while $x \gg 1$, $\frac{1}{2}x - \frac{1}{2}\log x \gg 1$, the sign of $D(\nu)_n$ is defined by the relative magnitude of $\frac{1}{2}x - \frac{1}{2}\log x$ and $\log\lambda$. 
+
+When the time bin is very thin, $\log\lambda \ll 0$, $D(\nu)_n < 0$. When Bernoulli approximation fails, $D(\nu)_n > 0$. 
+
+\subsubsection{Discussion}
+
+While we may reasonably assume $E(\nu)_n$ will be its maximum when $n=N_{PE}$, considering the fact that RGS in FBMP has imperfect ergodicity, the bias will be positive given $D(\nu)_n > 0$ as RGS will \textbf{not} stop immediately when $n=N_{PE}$. Given $D(\nu)_n > 0$, the bias will be negative. 
 
 \end{document}

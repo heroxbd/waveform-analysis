@@ -181,7 +181,7 @@ def time_numpyro(a0, a1):
     return stime_t0, stime_cha, dt, count, time_mcmc, accep, mix0ratio
 
 def fbmp_inference(a0, a1):
-    prior = False
+    prior = True
     nsp = 4
     nstd = 3
     t0_wav = np.empty(a1 - a0)
