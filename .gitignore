@@ -36,3 +36,4 @@ dataset
 *.pkl
 *jupyterhub*
 *.pstats
+*.gif
