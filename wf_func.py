@@ -262,7 +262,26 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None
     num = min(math.ceil(np.sum(nu > nu.max() + np.log(psy_thresh))), d_tot * P)
     nu_star = nu[indx[:num]]
     nu_star_bk = nu_bk.T.flatten()[indx[:num]]
-    psy_star = np.exp(nu_star - nu.max()) / np.sum(np.exp(nu_star - nu.max()))
+    # psy_star = np.exp(nu_star - nu.max()) / np.sum(np.exp(nu_star - nu.max()))
+    T_star = [np.sort(T[:(indx[k] % P) + 1, indx[k] // P]) for k in range(num)]
+    xmmse_star = np.empty((num, N))
+    for k in range(num):
+        xmmse_star[k] = xmmse[indx[k] % P, indx[k] // P]
+    theta = 0
+
+    nz = np.where(xmmse_star != 0, 1, 0).sum(axis=1)
+
+    def ftheta(theta):
+        pass
+
+    def qtheta(theta):
+        pass
+
+    def minuselbo(theta):
+        e = -np.sum(nu_star * qtheta(theta)) + np.sum(qtheta(theta) * np.log(qtheta(theta)))
+        return e
+    theta = opti.fmin_l_bfgs_b(minuselbo, x0=[1], approx_grad=True, bounds=[[0, np.inf]], epsilon=1e-3, maxfun=50000)[0]
+    psy_star = qtheta(theta)
 
     if plot:
         cnorm = colors.Normalize(vmin=0, vmax=psy_star[0])
@@ -336,11 +355,6 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None
         align.yaxes(ax, 0, ax2, 0)
         fig.savefig('t/' + str(i) + '.png')
         plt.close()
-
-    T_star = [np.sort(T[:(indx[k] % P) + 1, indx[k] // P]) for k in range(num)]
-    xmmse_star = np.empty((num, N))
-    for k in range(num):
-        xmmse_star[k] = xmmse[indx[k] % P, indx[k] // P]
 
     xmmse = np.average(xmmse_star, weights=psy_star, axis=0)
 

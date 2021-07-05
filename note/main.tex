@@ -815,4 +815,29 @@ When the time bin is very thin, $\log\lambda \ll 0$, $D(\nu)_n < 0$. When Bernou
 
 While we may reasonably assume $E(\nu)_n$ will be its maximum when $n=N_{PE}$, considering the fact that RGS in FBMP has imperfect ergodicity, the bias will be positive given $D(\nu)_n > 0$ as RGS will \textbf{not} stop immediately when $n=N_{PE}$. Given $D(\nu)_n > 0$, the bias will be negative. 
 
+\section{Ratification}
+
+Induce \textbf{ELBO}. 
+
+\begin{align}
+    \mathrm{ELBO} &= E_q(\log(p(\bm{w}|\bm{z}))) - \mathrm{KL}(q|p(\bm{z})) \\
+    &= E_q(\log(p(\bm{w}|\bm{z}))) - E_q(\log\frac{q(\bm{z})}{p(\bm{z})}) \\
+    &= E_q(\log(p(\bm{w}|\bm{z})p(\bm{z}))) - E_q(\log q(\bm{z})) \\
+    &= E_q(\nu) + S_q
+\end{align}
+
+where $S$ is entropy. 
+
+Let
+
+\begin{align}
+    q(\bm{z})_{\bm{\theta}} &= \begin{cases}
+        \frac{f(\bm{\theta},\bm{z})}{\sum_{\bm{z}\in\mathcal{Z}'}f(\bm{\theta},\bm{z})} & \text{ if } \bm{z} \in \mathcal{Z}' \\ 
+        0 & \text{ if } \bm{z} \notin \mathcal{Z}'
+    \end{cases} \\
+    \forall &\bm{z}\in\mathcal{Z}', f(\bm{\theta},\bm{z}) > 0
+\end{align}
+
+Noted, $f(\bm{\theta},\bm{z})=\exp{(\nu+g(\bm{\theta},|\bm{z}|))}$ are bad. 
+
 \end{document}
