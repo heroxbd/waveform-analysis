@@ -182,6 +182,7 @@ def time_numpyro(a0, a1):
 
 def fbmp_inference(a0, a1):
     prior = True
+    elbo = True
     nsp = 4
     nstd = 3
     t0_wav = np.empty(a1 - a0)
@@ -220,12 +221,10 @@ def fbmp_inference(a0, a1):
             As = np.zeros((len(xmmse_star), len(tlist_pan)))
             As[:, np.isin(tlist_pan, tlist)] = c_star
             assert sum(np.sum(As, axis=0) > 0) > 0
-
             def likelihood(x):
                 a = x[0] * wff.convolve_exp_norm(tlist_pan - x[1], Tau, Sigma) / n + 1e-8 # use tlist_pan not tlist
                 li = -special.logsumexp(np.log(poisson.pmf(As, a)).sum(axis=1), b=ys)
                 return li
-
             likemu = np.array([likelihood([mulist[j], t0]) for j in range(len(mulist))])
             liket0 = np.array([likelihood([mu, t0list[j]]) for j in range(len(t0list))])
             mu, t0 = opti.fmin_l_bfgs_b(likelihood, x0=[mulist[likemu.argmin()], t0list[liket0.argmin()]], approx_grad=True, bounds=[b_mu, b_t0], maxfun=50000)[0]
@@ -251,13 +250,13 @@ def fbmp_inference(a0, a1):
         la = mu_t * wff.convolve_exp_norm(tlist - t0_t, Tau, Sigma) / n + 1e-8
         # la = mu_t * np.array([integrate.quad(lambda t : wff.convolve_exp_norm(t - t0_t, Tau, Sigma), tlist_edge[i], tlist_edge[i+1])[0] for i in range(len(tlist))]) + 1e-8
         # la = mu_t * np.ones(len(tlist)) / len(tlist)
-        xmmse, xmmse_star, psy_star, nu_star, nu_star_bk, T_star, d_tot_i, d_max_i, num_i = wff.fbmpr_fxn_reduced(wave_r, A, la, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, len(la), stop=5, truth=truth, i=i, left=left_wave, right=right_wave, tlist=tlist, gmu=gmu, para=p, prior=prior)
+        xmmse, xmmse_star, psy_star, nu_star, nu_star_bk, T_star, d_tot_i, d_max_i, num_i = wff.fbmpr_fxn_reduced(wave_r, A, la, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, len(la), stop=5, truth=truth, i=i, left=left_wave, right=right_wave, tlist=tlist, gmu=gmu, para=p, prior=prior, elbo=elbo)
         time_fbmp = time_fbmp + time.time() - time_fbmp_start
         c_star = np.zeros_like(xmmse_star).astype(int)
         for k in range(len(T_star)):
             t, c = np.unique(T_star[k][xmmse_star[k][T_star[k]] > 0], return_counts=True)
             c_star[k, t] = c
-        maxindex = 0
+        maxindex = psy_star.argmax()
 
         nx = np.sum([(tlist - 0.5 / n <= truth['HitPosInWindow'][j]) * (tlist + 0.5 / n > truth['HitPosInWindow'][j]) for j in range(len(truth))], axis=0)
         cc = np.sum([np.where(tlist - 0.5 / n < truth['HitPosInWindow'][j], np.sqrt(truth['Charge'][j]), 0) * np.where(tlist + 0.5 / n > truth['HitPosInWindow'][j], np.sqrt(truth['Charge'][j]), 0) for j in range(len(truth))], axis=0)

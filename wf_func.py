@@ -169,7 +169,7 @@ def findpeak(wave, spe_pre):
         cha = np.array([1])
     return pet, cha
 
-def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None, left=None, right=None, tlist=None, gmu=None, para=None, prior=True, plot=False):
+def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None, left=None, right=None, tlist=None, gmu=None, para=None, prior=True, plot=False, elbo=False):
     '''
     p1: prior probability for each bin.
     sig2w: variance of white noise.
@@ -268,19 +268,16 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None
     for k in range(num):
         xmmse_star[k] = xmmse[indx[k] % P, indx[k] // P]
     theta = 0
-
     nz = np.where(xmmse_star != 0, 1, 0).sum(axis=1)
-
     def ftheta(theta):
-        pass
-
+        return theta * poisson.pmf(nz, mu=p1.sum())
     def qtheta(theta):
-        pass
-
-    def minuselbo(theta):
-        e = -np.sum(nu_star * qtheta(theta)) + np.sum(qtheta(theta) * np.log(qtheta(theta)))
-        return e
-    theta = opti.fmin_l_bfgs_b(minuselbo, x0=[1], approx_grad=True, bounds=[[0, np.inf]], epsilon=1e-3, maxfun=50000)[0]
+        return np.exp((nu_star - nu.max()) * ftheta(theta)) / np.sum(np.exp((nu_star - nu.max()) * ftheta(theta)))
+    if elbo:
+        def minuselbo(theta):
+            e = -np.sum(nu_star * qtheta(theta)) + np.sum(qtheta(theta) * np.log(qtheta(theta)))
+            return e
+        theta = opti.fmin_l_bfgs_b(minuselbo, x0=[1], approx_grad=True, bounds=[[-np.inf, np.inf]], epsilon=1e-3, maxfun=50000)[0]
     psy_star = qtheta(theta)
 
     if plot:

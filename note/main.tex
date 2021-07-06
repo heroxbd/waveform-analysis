@@ -735,7 +735,7 @@ Result: all biases \textbf{are larger} than 0
 \begin{aligned}
     \nu =& \log[p(\bm{w},\bm{z})] = \log[p(\bm{w}|\bm{z})p(\bm{z})] \\
     =& -\frac{1}{2}(\bm{w}-\bm{V}_\mathrm{PE}\bm{z})^\intercal\bm{\Sigma}^{-1}(\bm{w}-\bm{V}_\mathrm{PE}\bm{z})-\frac{1}{2}\log\det\bm{\Sigma}-\frac{N}{2}\log2\pi \\
-    & +\sum_{i}\log{\mathrm{Poisson}(z_i,p_i)}
+    &+ \sum_{i}\log{\mathrm{Poisson}(z_i,p_i)}
 \end{aligned}
 \end{equation}
 
@@ -773,8 +773,8 @@ Thus,
 
 \begin{align}
     -2\nu =& \sum_{i\in K}\frac{(w_i - 1)^2}{\sigma^2+\sigma_\epsilon^2} + \sum_{i\in \bar{K}}\frac{w_i^2}{\sigma_\epsilon^2} \\ 
-    +& n\log(\sigma^2+\sigma_\epsilon^2) + (N-n)\log\sigma_\epsilon^2 \\
-    -& 2n\log\lambda - 2(N-n)\log(1-\lambda)
+    &+ n\log(\sigma^2+\sigma_\epsilon^2) + (N-n)\log\sigma_\epsilon^2 \\
+    &- 2n\log\lambda - 2(N-n)\log(1-\lambda)
 \end{align}
 
 Additionally, 
@@ -788,15 +788,15 @@ Calculate expectation on distribution of $\bm{w}$ and $\bm{z}$ with $|K|=|\bm{z}
 
 \begin{align}
     -2E(\nu)_n =& n + (N - n)\frac{\sigma^2+\sigma_\epsilon^2}{\sigma_\epsilon^2} + (N - n)\frac{1}{\sigma_\epsilon^2} \\ 
-    +& n\log(\sigma^2+\sigma_\epsilon^2) + (N-n)\log\sigma_\epsilon^2 \\
-    -& 2n\log\lambda - 2(N-n)\log(1-\lambda)
+    &+ n\log(\sigma^2+\sigma_\epsilon^2) + (N-n)\log\sigma_\epsilon^2 \\
+    &- 2n\log\lambda - 2(N-n)\log(1-\lambda)
 \end{align}
 
 Thus, 
 
 \begin{align}
-    -2D(\nu)_n &= -2E(\nu)_n - (-2E(\nu)_{n-1}) \\ 
-    &= 1 - \frac{\sigma^2+\sigma_\epsilon^2}{\sigma_\epsilon^2} - \frac{1}{\sigma_\epsilon^2} \\
+    -2D(\nu)_n =& -2E(\nu)_n - (-2E(\nu)_{n-1}) \\ 
+    =& 1 - \frac{\sigma^2+\sigma_\epsilon^2}{\sigma_\epsilon^2} - \frac{1}{\sigma_\epsilon^2} \\
     &+ \log(\sigma^2+\sigma_\epsilon^2) - \log\sigma_\epsilon^2 \\
     &- 2\log\lambda + 2\log(1-\lambda)
 \end{align}
@@ -839,5 +839,18 @@ Let
 \end{align}
 
 Noted, $f(\bm{\theta},\bm{z})=\exp{(\nu+g(\bm{\theta},|\bm{z}|))}$ are bad. 
+
+\begin{align}
+    \mathrm{ELBO}_{\bm{\theta}}' =& (\sum_{\bm{z}\in\mathcal{Z}'}\frac{\mathrm{e}^{\nu+g(\bm{\theta},|\bm{z}|)}}{\sum_{\bm{z}\in\mathcal{Z}'}\mathrm{e}^{\nu+g(\bm{\theta},|\bm{z}|)}}\nu \\
+    &- \sum_{\bm{z}\in\mathcal{Z}'}\frac{\mathrm{e}^{\nu+g(\bm{\theta},|\bm{z}|)}}{\sum_{\bm{z}\in\mathcal{Z}'}\mathrm{e}^{\nu+g(\bm{\theta},|\bm{z}|)}}\log\frac{\mathrm{e}^{\nu+g(\bm{\theta},|\bm{z}|)}}{\sum_{\bm{z}\in\mathcal{Z}'}\mathrm{e}^{\nu+g(\bm{\theta},|\bm{z}|)}})' \\
+    =& (-\sum_{\bm{z}\in\mathcal{Z}'}\frac{\mathrm{e}^{\nu+g(\bm{\theta},|\bm{z}|)}}{\sum_{\bm{z}\in\mathcal{Z}'}\mathrm{e}^{\nu+g(\bm{\theta},|\bm{z}|)}}g(\bm{\theta},|\bm{z}|) \\
+    &+ \sum_{\bm{z}\in\mathcal{Z}'}\frac{\mathrm{e}^{\nu+g(\bm{\theta},|\bm{z}|)}}{\sum_{\bm{z}\in\mathcal{Z}'}\mathrm{e}^{\nu+g(\bm{\theta},|\bm{z}|)}}\log\sum_{\bm{z}\in\mathcal{Z}'}\mathrm{e}^{\nu+g(\bm{\theta},|\bm{z}|)})' \\
+    =& -\sum_{\bm{z}\in\mathcal{Z}'}\frac{\mathrm{e}^{\nu+g(\bm{\theta},|\bm{z}|)}}{\sum_{\bm{z}\in\mathcal{Z}'}\mathrm{e}^{\nu+g(\bm{\theta},|\bm{z}|)}}g'(\bm{\theta},|\bm{z}|) \\
+    &- \sum_{\bm{z}\in\mathcal{Z}'}(\frac{\mathrm{e}^{\nu+g(\bm{\theta},|\bm{z}|)}}{\sum_{\bm{z}\in\mathcal{Z}'}\mathrm{e}^{\nu+g(\bm{\theta},|\bm{z}|)}})'g(\bm{\theta},|\bm{z}|) \\
+    &+ \frac{(\sum_{\bm{z}\in\mathcal{Z}'}\mathrm{e}^{\nu+g(\bm{\theta},|\bm{z}|)})'}{\sum_{\bm{z}\in\mathcal{Z}'}\mathrm{e}^{\nu+g(\bm{\theta},|\bm{z}|)}} \\
+    =& -\sum_{\bm{z}\in\mathcal{Z}'}(\frac{\mathrm{e}^{\nu+g(\bm{\theta},|\bm{z}|)}}{\sum_{\bm{z}\in\mathcal{Z}'}\mathrm{e}^{\nu+g(\bm{\theta},|\bm{z}|)}})'g(\bm{\theta},|\bm{z}|)
+\end{align}
+
+when $\forall \bm{z}, g(\bm{\theta},|\bm{z}|)=0$, $\mathrm{ELBO}_{\bm{\theta}}'=0$. 
 
 \end{document}
