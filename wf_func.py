@@ -270,14 +270,40 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None
     theta = 0
     nz = np.where(xmmse_star != 0, 1, 0).sum(axis=1)
     def ftheta(theta):
-        return theta * poisson.pmf(nz, mu=p1.sum())
+        return np.where(poisson.pmf(nz, mu=p1.sum()) >= theta, np.exp(nu_star - nu.max()), 0)
     def qtheta(theta):
-        return np.exp((nu_star - nu.max()) * ftheta(theta)) / np.sum(np.exp((nu_star - nu.max()) * ftheta(theta)))
+        return ftheta(theta) / np.sum(ftheta(theta))
+    
     if elbo:
         def minuselbo(theta):
-            e = -np.sum(nu_star * qtheta(theta)) + np.sum(qtheta(theta) * np.log(qtheta(theta)))
+            e = -np.sum(nu_star * qtheta(theta)) + np.sum(np.log(qtheta(theta) ** qtheta(theta)))
             return e
-        theta = opti.fmin_l_bfgs_b(minuselbo, x0=[1], approx_grad=True, bounds=[[-np.inf, np.inf]], epsilon=1e-3, maxfun=50000)[0]
+        thetalist = np.linspace(poisson.pmf(nz, mu=p1.sum()).min(), poisson.pmf(nz, mu=p1.sum()).max(), 100) - 1e-6
+        theta = thetalist[np.vectorize(minuselbo)(thetalist).argmin()]
+        # thetamin = (-np.exp(nu_star - nu.max()) / poisson.pmf(nz, mu=p1.sum())).min()
+        # thetamin = 0
+        # theta = opti.fmin_l_bfgs_b(minuselbo, x0=[1], approx_grad=True, bounds=[[thetamin, np.inf]], epsilon=1e-3, maxfun=50000)[0]
+    # print(theta)
+    # pa = qtheta(theta)
+    # pa = pa / pa.sum()
+    # pb = qtheta(0)
+    # pb = pb / pb.sum()
+    # pc = poisson.pmf(nz, mu=p1.sum())
+    # pc = pc / pc.sum()
+    # fig = plt.figure(figsize=(8, 6))
+    # fig.tight_layout()
+    # gs = gridspec.GridSpec(1, 1, figure=fig, left=0.1, right=0.9, top=0.95, bottom=0.1, wspace=0.2, hspace=0.2)
+    # ax = fig.add_subplot(gs[0, :])
+    # nzlist = np.arange(len(nz))
+    # ax.bar(nzlist, pa, alpha=0.5, color='r', label='ELBO')
+    # ax.bar(nzlist, pb, alpha=0.5, color='b', label='RGS')
+    # ax.bar(nzlist, pc, alpha=0.5, color='g', label='Poisson')
+    # ax.scatter(nzlist[nz == len(p1)], np.zeros_like(nzlist[nz == len(p1)]), color='r', marker='o', s=100)
+    # ax.legend()
+    # ax.set_xlabel('N')
+    # ax.set_ylabel('P')
+    # ax.grid()
+    # fig.savefig('t/' + str(i) + '.png')
     psy_star = qtheta(theta)
 
     if plot:
