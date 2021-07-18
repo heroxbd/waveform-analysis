@@ -172,7 +172,7 @@ def findpeak(wave, spe_pre):
         cha = np.array([1])
     return pet, cha
 
-def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None, left=None, right=None, tlist=None, gmu=None, para=None, prior=True, space=True, plot=False, elbo=False):
+def fbmpr_fxn_reduced(y, A, sig2w, sig2s, mus, D, p1, stop=0, truth=None, i=None, left=None, right=None, tlist=None, gmu=None, para=None, prior=True, space=True, plot=False):
     '''
     p1: prior probability for each bin.
     sig2w: variance of white noise.
@@ -182,7 +182,7 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None
     # Only for multi-gaussian with arithmetic sequence of mu and sigma
     M, N = A.shape
 
-    psy_thresh = 1e-4
+    psy_thresh = 0.1
     # upper limit of number of PEs.
     P = max(math.ceil(min(M, p1.sum() + 3 * np.sqrt(p1.sum()))), 1)
 
@@ -387,7 +387,7 @@ def read_model(spe_path, n=1):
         ax.grid()
         ax.set_xlabel(r'$\mathrm{Time}/\si{ns}$')
         ax.set_ylabel(r'$\mathrm{Voltage}/\si{mV}$')
-        fig.savefig('Note/figures/pmtspe.pdf')
+        # fig.savefig('Note/figures/pmtspe.pdf')
         plt.close()
     return spe_pre
 

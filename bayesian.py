@@ -182,9 +182,8 @@ def time_numpyro(a0, a1):
     return stime_t0, stime_cha, dt, count, time_mcmc, accep, mix0ratio
 
 def fbmp_inference(a0, a1):
-    prior = True
+    prior = False
     space = True
-    elbo = True
     nsp = 4
     nstd = 3
     t0_wav = np.empty(a1 - a0)
@@ -207,7 +206,7 @@ def fbmp_inference(a0, a1):
 
         # initialization
         mu_t = abs(wave.sum() / gmu)
-        n = min(max(round(20 / mu_t), 1), 10)
+        n = 5
         A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
         mu_t = abs(wave_r.sum() / gmu)
         def optit0mu(t0, mu, n, xmmse_star, psy_star, c_star, la):
@@ -244,12 +243,10 @@ def fbmp_inference(a0, a1):
         factor = np.sqrt(np.diag(np.matmul(A.T, A)))
         A = A / factor
         # la = mu_t * wff.convolve_exp_norm(tlist - t0_t, Tau, Sigma) / n + 1e-8
-        # la = mu_t * np.ones(len(tlist)) / len(tlist)
-        la = np.ones(len(tlist))
+        la = mu_t * np.ones(len(tlist)) / len(tlist)
         # la = mu_t * np.ones(len(tlist))
         # la = cha / cha.sum() * mu_t + 1e-8
-        # la = la / la.sum() * mu_t
-        xmmse, xmmse_star, psy_star, nu_star, nu_star_bk, T_star, d_max_i, num_i = wff.fbmpr_fxn_reduced(wave_r, A, la, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, len(la), stop=5, truth=truth, i=i, left=left_wave, right=right_wave, tlist=tlist, gmu=gmu, para=p, prior=prior, space=space, elbo=elbo)
+        xmmse, xmmse_star, psy_star, nu_star, nu_star_bk, T_star, d_max_i, num_i = wff.fbmpr_fxn_reduced(wave_r, A, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, len(la), p1=la / la.sum() * mu_t, stop=5, truth=truth, i=i, left=left_wave, right=right_wave, tlist=tlist, gmu=gmu, para=p, prior=prior, space=space)
         time_fbmp = time_fbmp + time.time() - time_fbmp_start
         c_star = np.zeros_like(xmmse_star).astype(int)
         for k in range(len(T_star)):
