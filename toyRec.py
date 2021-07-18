@@ -59,11 +59,20 @@ with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as ipt, h5py.File(args
     # if False:
         ts = ipt['starttime'][:]
     else:
-        sdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('tscharge', np.float64), ('tswave', np.float64)])
+        if method == 'takara':
+            sdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('tscharge', np.float64), ('tswave', np.float64), ('mucharge', np.float64), ('muwave', np.float64)])
+        else:
+            sdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('tscharge', np.float64), ('tswave', np.float64)])
         ts = np.zeros(N, dtype=sdtp)
         ts['TriggerNo'] = tc['TriggerNo']
         ts['ChannelID'] = tc['ChannelID']
         ts['tswave'] = np.full(N, np.nan)
+        if method == 'takara':
+            ts['mucharge'] = np.full(N, np.nan)
+            e_ans, i_ans = np.unique(charge['TriggerNo'] * Chnum + charge['ChannelID'], return_index=True)
+            i_ans = np.append(i_ans, len(charge))
+            cha_sum = np.array([charge[i_ans[i]:i_ans[i+1]]['Charge'].sum() for i in range(len(e_ans))]) / gmu
+            ts['muwave'] = cha_sum
 
         chunk = N // args.Ncpu + 1
         slices = np.vstack((np.arange(0, N, chunk), np.append(np.arange(chunk, N, chunk), N))).T.astype(int).tolist()

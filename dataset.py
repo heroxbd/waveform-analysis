@@ -38,7 +38,7 @@ def Make_Time_Vector(GroundTruth, Waveforms_and_info, mode) :
         Mode = np.ones(len(HitPosInWindow), dtype=np.float64)
     for j in range(len(Waveforms_and_info)) :
         while i < nt and Wave_TriggerNo[j] == Truth_TriggerNo[i] :
-            Time_Series[j][HitPosInWindow[i]] = Time_Series[j][HitPosInWindow[i]] + Mode[i]
+            Time_Series[j][HitPosInWindow[i]] = Time_Series[j][HitPosInWindow[i]] + Mode[i] / wff.gmu
             i = i + 1
     return Time_Series
 

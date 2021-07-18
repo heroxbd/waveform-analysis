@@ -118,6 +118,7 @@ alpha = 0.05
 lim = {'deltadiv':np.array([[0.3, 0.5]]), 'wdist':np.array([[1.5, 3.0]]), 'rss':np.array([[0.55e3, 2.2e3]])}
 keylist = list(mts.keys())
 badkey = ['findpeak', 'threshold', 'fftrans', 'mcmc']
+# badkey = ['findpeak', 'threshold', 'fftrans', 'mcmc', 'takara']
 for sigma, i in zip(Sigma, list(range(len(Sigma)))):
     for tau, j in zip(Tau, list(range(len(Tau)))):
         ax = figd.add_subplot(gsd[i, j])
@@ -338,9 +339,11 @@ mtsi['biasmu'] = np.nan
 mtsi = np.sort(mtsi, kind='stable', order=['mu', 'tau', 'sigma'])
 
 mts = {'fbmp':mtsi.copy()}
+# mts = {'fbmp':mtsi.copy(), 'takara':mtsi.copy()}
 
-marker = {'int':'o', 'tru':'h', 'pe':'p', 'fbmp':'s', 'max':'^'}
-color = {'int':'g', 'tru':'k', 'pe':'y', 'fbmp':'r', 'max':'b'}
+marker = {'int':'o', 'tru':'h', 'pe':'p', 'fbmp':'s', 'max':'^', 'takara':'>'}
+color = {'int':'g', 'tru':'k', 'pe':'y', 'fbmp':'r', 'max':'b', 'takara':'m'}
+label = {'fbmp':'\mathrm{FBMP}', 'takara':'\mathrm{CNN}'}
 
 for key in mts.keys():
     for i in range(len(mts[key])):
@@ -393,7 +396,7 @@ for key in mts.keys():
         except:
             pass
 
-key = 'fbmp'
+keylist = mts.keys()
 figdd = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
 gs = gridspec.GridSpec(1, 2, figure=figdd, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
 figbr = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
@@ -402,16 +405,18 @@ figb = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
 gs = gridspec.GridSpec(1, 2, figure=figb, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
 for sigma, i in zip(Sigma, list(range(len(Sigma)))):
     for tau, j in zip(Tau, list(range(len(Tau)))):
-        stdlistkey = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
+        # charge std
+        stdlistkey = mts['fbmp'][(mts['fbmp']['tau'] == tau) & (mts['fbmp']['sigma'] == sigma)]
         ax = figdd.add_subplot(gs[i, j])
         yerr = stdlistkey['stdmuint'] / stdlistkey['stdmutru'] / np.sqrt(2 * stdlistkey['N'])
         ax.errorbar(stdlistkey['mu'], stdlistkey['stdmuint'] / stdlistkey['stdmutru'], yerr=yerr, label='$\sigma_\mathrm{int}/\sigma_{\log{\mu}}$', c=color['int'], marker=marker['int'])
-        # yerr = stdlistkey['stdmupe'] / stdlistkey['stdmutru'] / np.sqrt(2 * stdlistkey['N'])
-        # ax.errorbar(stdlistkey['mu'], stdlistkey['stdmupe'] / stdlistkey['stdmutru'], yerr=yerr, label='$\sigma_\mathrm{pe}/\sigma_{\log{\mu}}$', c=color['pe'], marker=marker['pe'])
-        yerr = stdlistkey['stdmumax'] / stdlistkey['stdmutru'] / np.sqrt(2 * stdlistkey['N'])
-        ax.errorbar(stdlistkey['mu'], stdlistkey['stdmumax'] / stdlistkey['stdmutru'], yerr=yerr, label='$\sigma_\mathrm{FBMPmax}/\sigma_{\log{\mu}}$', c=color['max'], marker=marker['max'])
-        yerr = stdlistkey['stdmu'] / stdlistkey['stdmutru'] / np.sqrt(2 * stdlistkey['N'])
-        ax.errorbar(stdlistkey['mu'], stdlistkey['stdmu'] / stdlistkey['stdmutru'], yerr=yerr, label='$\sigma_\mathrm{FBMP}/\sigma_{\log{\mu}}$', c=color['fbmp'], marker=marker['fbmp'])
+        for key in keylist:
+            stdlistkey = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
+            if key == 'fbmp':
+                yerr = stdlistkey['stdmumax'] / stdlistkey['stdmutru'] / np.sqrt(2 * stdlistkey['N'])
+                ax.errorbar(stdlistkey['mu'], stdlistkey['stdmumax'] / stdlistkey['stdmutru'], yerr=yerr, label='$\sigma_\mathrm{FBMPmax}/\sigma_{\log{\mu}}$', c=color['max'], marker=marker['max'])
+            yerr = stdlistkey['stdmu'] / stdlistkey['stdmutru'] / np.sqrt(2 * stdlistkey['N'])
+            ax.errorbar(stdlistkey['mu'], stdlistkey['stdmu'] / stdlistkey['stdmutru'], yerr=yerr, label='$\sigma_' + label[key] + '/\sigma_{\log{\mu}}$', c=color[key], marker=marker[key])
         ax.set_xlabel(r'$N_{\mathrm{PE}}\ \mathrm{expectation}\ \mu$')
         ax.set_ylabel(r'$\mathrm{ratio}$')
         ax.set_title(fr'$\tau={tau}\si{{ns}},\,\sigma={sigma}\si{{ns}}$')
@@ -421,17 +426,20 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
         if i == len(Sigma) - 1 and j == len(Tau) - 1:
             ax.legend(loc='upper left', bbox_to_anchor=(1., 0.9))
         
+        # charge bias ratio
+        stdlistkey = mts['fbmp'][(mts['fbmp']['tau'] == tau) & (mts['fbmp']['sigma'] == sigma)]
         ax = figbr.add_subplot(gs[i, j])
         n = np.arange(1, 1000)
         mean = np.array([np.average(n, weights=poisson.pmf(n, mu=mu)) for mu in stdlistkey['mu']])
         yerr = stdlistkey['biasmuint'] / np.sqrt(stdlistkey['N']) / mean
         ax.errorbar(stdlistkey['mu'], stdlistkey['biasmuint'] / mean, yerr=yerr, label='$\mathrm{bias}_\mathrm{int}$', c=color['int'], marker=marker['int'])
-        # yerr = stdlistkey['biasmupe'] / np.sqrt(stdlistkey['N']) / mean
-        # ax.errorbar(stdlistkey['mu'], stdlistkey['biasmupe'] / mean, yerr=yerr, label='$\mathrm{bias}_\mathrm{pe}$', c=color['pe'], marker=marker['pe'])
-        yerr = stdlistkey['biasmumax'] / np.sqrt(stdlistkey['N']) / mean
-        ax.errorbar(stdlistkey['mu'], stdlistkey['biasmumax'] / mean, yerr=yerr, label='$\mathrm{bias}_\mathrm{FBMPmax}$', c=color['max'], marker=marker['max'])
-        yerr = stdlistkey['biasmu'] / np.sqrt(stdlistkey['N']) / mean
-        ax.errorbar(stdlistkey['mu'], stdlistkey['biasmu'] / mean, yerr=yerr, label='$\mathrm{bias}_\mathrm{FBMP}$', c=color['fbmp'], marker=marker['fbmp'])
+        for key in keylist:
+            stdlistkey = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
+            if key == 'fbmp':
+                yerr = stdlistkey['biasmumax'] / np.sqrt(stdlistkey['N']) / mean
+                ax.errorbar(stdlistkey['mu'], stdlistkey['biasmumax'] / mean, yerr=yerr, label='$\mathrm{bias}_\mathrm{FBMPmax}$', c=color['max'], marker=marker['max'])
+            yerr = stdlistkey['biasmu'] / np.sqrt(stdlistkey['N']) / mean
+            ax.errorbar(stdlistkey['mu'], stdlistkey['biasmu'] / mean, yerr=yerr, label='$\mathrm{bias}_' + label[key] + '$', c=color[key], marker=marker[key])
         ax.set_xlabel(r'$N_{\mathrm{PE}}\ \mathrm{expectation}\ \mu$')
         # ax.set_ylabel(r'$\mathrm{bias}$')
         ax.set_ylabel(r'$\frac{\Delta \mu}{\mu}$')
@@ -442,16 +450,19 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
         if i == len(Sigma) - 1 and j == len(Tau) - 1:
             ax.legend(loc='upper left', bbox_to_anchor=(1., 0.9))
 
+        # charge bias
+        stdlistkey = mts['fbmp'][(mts['fbmp']['tau'] == tau) & (mts['fbmp']['sigma'] == sigma)]
         ax = figb.add_subplot(gs[i, j])
         n = np.arange(1, 1000)
         yerr = stdlistkey['biasmuint'] / np.sqrt(stdlistkey['N'])
         ax.errorbar(stdlistkey['mu'], stdlistkey['biasmuint'], yerr=yerr, label='$\mathrm{bias}_\mathrm{int}$', c=color['int'], marker=marker['int'])
-        # yerr = stdlistkey['biasmupe'] / np.sqrt(stdlistkey['N'])
-        # ax.errorbar(stdlistkey['mu'], stdlistkey['biasmupe'], yerr=yerr, label='$\mathrm{bias}_\mathrm{pe}$', c=color['pe'], marker=marker['pe'])
-        yerr = stdlistkey['biasmumax'] / np.sqrt(stdlistkey['N'])
-        ax.errorbar(stdlistkey['mu'], stdlistkey['biasmumax'], yerr=yerr, label='$\mathrm{bias}_\mathrm{FBMPmax}$', c=color['max'], marker=marker['max'])
-        yerr = stdlistkey['biasmu'] / np.sqrt(stdlistkey['N'])
-        ax.errorbar(stdlistkey['mu'], stdlistkey['biasmu'], yerr=yerr, label='$\mathrm{bias}_\mathrm{FBMP}$', c=color['fbmp'], marker=marker['fbmp'])
+        for key in keylist:
+            stdlistkey = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
+            if key == 'fbmp':
+                yerr = stdlistkey['biasmumax'] / np.sqrt(stdlistkey['N'])
+                ax.errorbar(stdlistkey['mu'], stdlistkey['biasmumax'], yerr=yerr, label='$\mathrm{bias}_\mathrm{FBMPmax}$', c=color['max'], marker=marker['max'])
+            yerr = stdlistkey['biasmu'] / np.sqrt(stdlistkey['N'])
+            ax.errorbar(stdlistkey['mu'], stdlistkey['biasmu'], yerr=yerr, label='$\mathrm{bias}_' + label[key] + '$', c=color[key], marker=marker[key])
         ax.set_xlabel(r'$N_{\mathrm{PE}}\ \mathrm{expectation}\ \mu$')
         # ax.set_ylabel(r'$\mathrm{bias}$')
         ax.set_ylabel(r'$\Delta \mu$')

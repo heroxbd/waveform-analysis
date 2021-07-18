@@ -31,15 +31,15 @@ from torch.nn import functional as F
 from multiprocessing import Pool, cpu_count
 import wf_func as wff
 
-def Read_Data(startentry, endentry) :
+def Read_Data(startentry, endentry):
     RawDataFile = tables.open_file(filename, 'r')
     WaveformTable = RawDataFile.root.Readout.Waveform
     Waveforms_and_info = WaveformTable[startentry:endentry]
     Shifted_Waves_and_info = np.empty(Waveforms_and_info.shape, dtype=gpufloat_dtype)
-    for name in origin_dtype.names :
-        if name != 'Waveform' :
+    for name in origin_dtype.names:
+        if name != 'Waveform':
             Shifted_Waves_and_info[name] = Waveforms_and_info[name]
-    for i in range(len(Waveforms_and_info)) :
+    for i in range(len(Waveforms_and_info)):
         channelid = Waveforms_and_info[i]['ChannelID']
         Shifted_Waves_and_info[i]['Waveform'] = Waveforms_and_info[i]['Waveform'].astype(np.float64) * spe_pre[channelid]['epulse']
     RawDataFile.close()
@@ -78,15 +78,16 @@ tic = time.time()
 Device = int(Device)
 device = torch.device(Device)
 nets = dict([])
+alphas = dict([])
 for channelid in tqdm(channelid_set, desc='Loading Nets of each channel') :
     nets[channelid] = torch.load(NetDir + '/Channel{:02d}.torch_net'.format(channelid), map_location=device)
+    alphas[channelid] = torch.load(NetDir + '/alpha_Channel{:02d}.torch_net'.format(channelid), map_location=device)
 print('Net Loaded, consuming {0:.02f}s'.format(time.time() - tic))
 
 filter_limit = 0.05
 Timeline = np.arange(WindowSize).reshape(1, WindowSize)
 
-def Forward(channelid) :
-    SPECharge = spe_pre[channelid]['spe'].sum()
+def Forward(channelid):
     Data_of_this_channel = Channel_Grouped_Waveform.get_group(channelid)
     Shifted_Wave = np.vstack(Data_of_this_channel['Waveform'])
     TriggerNos = np.array(Data_of_this_channel['TriggerNo'])
@@ -94,27 +95,29 @@ def Forward(channelid) :
     PEmeasure = np.empty(0, dtype=np.float32)
     EventData = np.empty(0, dtype=np.int64)
     slices = np.append(np.arange(0, len(Shifted_Wave), BATCHSIZE), len(Shifted_Wave))
-    for i in range(len(slices) - 1) :
+    for i in range(len(slices) - 1):
         inputs = Shifted_Wave[slices[i]:slices[i + 1]]
-        Total = np.abs(np.sum(inputs, axis=1)) / SPECharge
-        Total = np.where(Total > 1e-4, Total, 1e-4)
-        Prediction = nets[channelid].forward(torch.from_numpy(inputs).to(device=device)).data.cpu().numpy()
+        Total = np.abs(np.sum(inputs, axis=1))
+        Total = np.clip(Total, 1e-4, np.inf)
+        Prediction = nets[channelid].forward(torch.from_numpy(inputs).to(device=device)).data
+        Prediction = alphas[channelid].forward(Prediction).data.cpu().numpy()
         sumPrediction = np.sum(Prediction, axis=1)
-        sumPrediction = np.where(sumPrediction > 1e-4, sumPrediction, 1e-4)
+        sumPrediction = np.clip(sumPrediction, 1e-4, np.inf)
+        # After alpha implementation, this line will be commented
         Prediction = Prediction / sumPrediction[:, None] * Total[:, None]
         HitPosInWindow = Prediction > filter_limit
         pe_numbers = HitPosInWindow.sum(axis=1)
         no_pe_found = pe_numbers == 0
-        if no_pe_found.any() :
+        if no_pe_found.any():
             guessed_risetime = np.around(inputs[no_pe_found].argmax(axis=1) - spe_pre[channelid]['peak_c'])
             guessed_risetime = np.where(guessed_risetime > 0, guessed_risetime, 0)
             HitPosInWindow[no_pe_found, guessed_risetime] = True
             Prediction[no_pe_found, guessed_risetime] = 1
             pe_numbers[no_pe_found] = 1
         Prediction = np.where(Prediction > filter_limit, Prediction, 0)
+        # After alpha implementation, this line will be commented
         Prediction = Prediction / np.sum(Prediction, axis=1)[:, None] * Total[:, None]
-        Prediction = Prediction * SPECharge
-        Prediction = Prediction[HitPosInWindow]
+        Prediction = Prediction[HitPosInWindow] * wff.gmu
         PEmeasure = np.append(PEmeasure, Prediction)
         TimeMatrix = np.repeat(Timeline, len(HitPosInWindow), axis=0)[HitPosInWindow]
         HitPosInWindows = np.append(HitPosInWindows, TimeMatrix)

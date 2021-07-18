@@ -53,7 +53,7 @@ endef
 define nn
 result/takara/char/%.h5 : waveform/%.h5 spe.h5 $(Nets)
 	@mkdir -p $$(dir $$@)
-	python3 -u prediction.py $$< --met takara -o $$@ --ref $$(word 2,$$^) -N result/takara/char/Nets -D 0 > $$@.log 2>&1
+	python3 -u predict.py $$< --met takara -o $$@ --ref $$(word 2,$$^) -N result/takara/char/Nets -D 0 > $$@.log 2>&1
 endef
 $(eval $(call $(predict)))
 
@@ -77,7 +77,7 @@ result/takara/char/Nets/Channel%.torch_net : result/takara/char/Channel%/.Traini
 result/takara/char/Channel%/.Training_finished : result/takara/PreProcess/Pre_Channel%.h5 spe.h5
 	@mkdir -p $(dir $@)
 	@mkdir -p result/takara/char/Nets/
-	python3 -u training.py $< -n $* -B 64 --ref $(word $(words $^), $^) -o result/takara/char/Nets/Channel$*.torch_net $(dir $@) > $(dir $@)Train.log 2>&1
+	python3 -u training.py $< -n $* -B 64 --ref $(word $(words $^), $^) -o result/takara/char/Nets/Channel$*.torch_net result/takara/char/Nets/alpha_Channel$*.torch_net $(dir $@) > $(dir $@)Train.log 2>&1
 	@touch $@
 
 PreData : $(PreData)

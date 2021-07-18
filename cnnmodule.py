@@ -2,10 +2,10 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
-class Net_1(nn.Module):
+class Net(nn.Module):
 
     def __init__(self):
-        super(Net_1, self).__init__()
+        super(Net, self).__init__()
 
         self.conv1 = nn.Conv1d(1, 25, 21, padding=10)
         self.conv2 = nn.Conv1d(25, 20, 17, padding=8)
@@ -23,4 +23,15 @@ class Net_1(nn.Module):
         x = leaky_relu(self.conv4(x))
         x = F.relu(self.conv5(x))
         x = x.squeeze(1)
+        return x
+
+class Alpha(nn.Module):
+
+    def __init__(self):
+        super(Alpha, self).__init__()
+
+        self.alpha = nn.Parameter(-10 * torch.rand(1))
+
+    def forward(self, x):
+        x = torch.mul(x, F.softplus(self.alpha))
         return x

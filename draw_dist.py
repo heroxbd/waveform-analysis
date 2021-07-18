@@ -243,18 +243,19 @@ if 'muwave' in time.dtype.names:
     # ax1.set_xlim(-mean, dt['NPE'].max() - mean)
     ax1.set_title(fr'$\delta_{{pe}}={s:.02f},\delta_{{logpe}}={slog:.02f},\mathrm{{bias}}={m:.02f},\eta={eta:.02%}$%')
 
-    ax2 = fig.add_subplot(gs[1, 0])
-    ax2.hist(time['mucharge'] - mean, bins=100, label=r'$\mu_{cha} - \mu$')
-    ax2.set_xlabel(r'$\mu_{cha} - \mu$')
-    ax2.set_ylabel(r'$Count$')
-    ax2.set_yscale('log')
-    ax2.legend()
-    s = np.std(time['mucharge'] - mean, ddof=-1)
-    slog = np.std(np.log(time['mucharge']), ddof=-1)
-    m = np.mean(time['mucharge'] - mean)
-    eta = m / mean
-    # ax2.set_xlim(-mean, dt['NPE'].max() - mean)
-    ax2.set_title(fr'$\delta_{{cha}}={s:.02f},\delta_{{logcha}}={slog:.02f},\mathrm{{bias}}={m:.02f},\eta={eta:.02%}$%')
+    if ~np.all(np.isnan(time['mucharge'])):
+        ax2 = fig.add_subplot(gs[1, 0])
+        ax2.hist(time['mucharge'] - mean, bins=100, label=r'$\mu_{cha} - \mu$')
+        ax2.set_xlabel(r'$\mu_{cha} - \mu$')
+        ax2.set_ylabel(r'$Count$')
+        ax2.set_yscale('log')
+        ax2.legend()
+        s = np.std(time['mucharge'] - mean, ddof=-1)
+        slog = np.std(np.log(time['mucharge']), ddof=-1)
+        m = np.mean(time['mucharge'] - mean)
+        eta = m / mean
+        # ax2.set_xlim(-mean, dt['NPE'].max() - mean)
+        ax2.set_title(fr'$\delta_{{cha}}={s:.02f},\delta_{{logcha}}={slog:.02f},\mathrm{{bias}}={m:.02f},\eta={eta:.02%}$%')
 
     ax3 = fig.add_subplot(gs[1, 1])
     ax3.hist(time['muwave'] - mean, bins=100, label=r'$\mu_{wave} - \mu$')
