@@ -40,6 +40,9 @@ plt.rcParams['axes.unicode_minus'] = False
 plt.rcParams['pgf.preamble'] = r'\usepackage[detect-all,locale=DE]{siunitx}'
 
 nshannon = 1
+window = 1029
+gmu = 160.
+gsigma = 40.
 
 def xiaopeip(wave, spe_pre, eta=0):
     l = len(wave)
@@ -169,7 +172,7 @@ def findpeak(wave, spe_pre):
         cha = np.array([1])
     return pet, cha
 
-def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None, left=None, right=None, tlist=None, gmu=None, para=None, prior=True, plot=False, elbo=False):
+def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None, left=None, right=None, tlist=None, gmu=None, para=None, prior=True, space=True, plot=False, elbo=False):
     '''
     p1: prior probability for each bin.
     sig2w: variance of white noise.
@@ -179,16 +182,6 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None
     # Only for multi-gaussian with arithmetic sequence of mu and sigma
     M, N = A.shape
 
-    p = 1 - poisson.pmf(0, p1).mean()
-    # Eq. (25)
-    if prior:
-        nu_true_mean = -M / 2 - M / 2 * np.log(sig2w) - p * N / 2 * np.log(sig2s / sig2w + 1) - M / 2 * np.log(2 * np.pi) + N * np.log(1 - p) + p * N * np.log(p / (1 - p))
-        nu_true_stdv = np.sqrt(M / 2 + N * p * (1 - p) * (np.log(p / (1 - p)) - np.log(sig2s / sig2w + 1) / 2) ** 2)
-    else:
-        nu_true_mean = -M / 2 - M / 2 * np.log(sig2w) - p * N / 2 * np.log(sig2s / sig2w + 1) - M / 2 * np.log(2 * np.pi)
-        nu_true_stdv = np.sqrt(M / 2 + N * p * (1 - p) * (np.log(sig2s / sig2w + 1) / 2) ** 2)
-    nu_stop = (nu_true_mean + stop * nu_true_stdv).max()
-
     psy_thresh = 1e-4
     # upper limit of number of PEs.
     P = max(math.ceil(min(M, p1.sum() + 3 * np.sqrt(p1.sum()))), 1)
@@ -197,22 +190,23 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None
     nu = np.full((P, D), -np.inf)
     xmmse = np.zeros((P, D, N))
     cc = np.zeros((P, D, N))
-    d_tot = D
 
     # nu_root: nu for all s_n=0.
+    nu_root = -0.5 * np.linalg.norm(y) ** 2 / sig2w - 0.5 * M * np.log(2 * np.pi)
+    if space:
+        nu_root = nu_root - 0.5 * M * np.log(sig2w)
     if prior:
-        nu_root = -0.5 * np.linalg.norm(y) ** 2 / sig2w - 0.5 * M * np.log(2 * np.pi) - 0.5 * M * np.log(sig2w) + np.log(poisson.pmf(0, p1)).sum()
-    else:
-        nu_root = -0.5 * np.linalg.norm(y) ** 2 / sig2w - 0.5 * M * np.log(2 * np.pi) - 0.5 * M * np.log(sig2w)
+        nu_root = nu_root + np.log(poisson.pmf(0, p1)).sum()
     # Eq. (29)
     cx_root = A / sig2w
     # Eq. (30) sig2s = 1 sigma^2 - 0 sigma^2
     betaxt_root = sig2s / (1 + sig2s * np.einsum('ij,ij->j', A, cx_root, optimize=True))
     # Eq. (31)
+    nuxt_root = nu_root + 0.5 * (betaxt_root * (y @ cx_root + mus / sig2s) ** 2  - mus ** 2 / sig2s)
+    if space:
+        nuxt_root = nuxt_root + 0.5 * np.log(betaxt_root / sig2s)
     if prior:
-        nuxt_root = nu_root + 0.5 * (betaxt_root * (y @ cx_root + mus / sig2s) ** 2  - mus ** 2 / sig2s + np.log(betaxt_root / sig2s)) + np.log(poisson.pmf(1, p1) / poisson.pmf(0, p1))
-    else:
-        nuxt_root = nu_root + 0.5 * (betaxt_root * (y @ cx_root + mus / sig2s) ** 2  - mus ** 2 / sig2s + np.log(betaxt_root / sig2s))
+        nuxt_root = nuxt_root + np.log(poisson.pmf(1, p1) / poisson.pmf(0, p1))
     pan_root = np.zeros(N)
 
     # Repeated Greedy Search
@@ -245,66 +239,26 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None
             # Eq. (30)
             betaxt = sig2s / (1 + sig2s * np.sum(A * cx, axis=0))
             # Eq. (31)
+            nuxt = nustar + 0.5 * (betaxt * (z @ cx + mus / sig2s) ** 2 - mus ** 2 / sig2s)
+            if space:
+                nuxt = nuxt + 0.5 * np.log(betaxt / sig2s)
             if prior:
-                nuxt = nustar + 0.5 * (betaxt * (z @ cx + mus / sig2s) ** 2 - mus ** 2 / sig2s + np.log(betaxt / sig2s)) + np.log(poisson.pmf(pan + 1, mu=p1) / poisson.pmf(pan, mu=p1))
-            else:
-                nuxt = nustar + 0.5 * (betaxt * (z @ cx + mus / sig2s) ** 2 - mus ** 2 / sig2s + np.log(betaxt / sig2s))
+                nuxt = nuxt + np.log(poisson.pmf(pan + 1, mu=p1) / poisson.pmf(pan, mu=p1))
+            nuxt[np.isnan(nuxt)] = -np.inf
             # nuxt[t] = -np.inf
-
-        if max(nu[:, d]) > nu_stop:
-            d_tot = d + 1
-            break
-    nu_bk = nu[:, :d_tot].copy()
-    nu = nu[:, :d_tot].T.flatten()
+    nu_bk = nu.copy()
+    nu = nu.T.flatten()
 
     indx = np.argsort(nu)[::-1]
     d_max = math.floor(indx[0] // P) + 1
-    num = min(math.ceil(np.sum(nu > nu.max() + np.log(psy_thresh))), d_tot * P)
+    num = min(math.ceil(np.sum(nu > nu.max() + np.log(psy_thresh))), D * P)
     nu_star = nu[indx[:num]]
     nu_star_bk = nu_bk.T.flatten()[indx[:num]]
-    # psy_star = np.exp(nu_star - nu.max()) / np.sum(np.exp(nu_star - nu.max()))
+    psy_star = np.exp(nu_star - nu.max()) / np.sum(np.exp(nu_star - nu.max()))
     T_star = [np.sort(T[:(indx[k] % P) + 1, indx[k] // P]) for k in range(num)]
     xmmse_star = np.empty((num, N))
     for k in range(num):
         xmmse_star[k] = xmmse[indx[k] % P, indx[k] // P]
-    theta = 0
-    nz = np.where(xmmse_star != 0, 1, 0).sum(axis=1)
-    def ftheta(theta):
-        return np.where(poisson.pmf(nz, mu=p1.sum()) >= theta, np.exp(nu_star - nu.max()), 0)
-    def qtheta(theta):
-        return ftheta(theta) / np.sum(ftheta(theta))
-    
-    if elbo:
-        def minuselbo(theta):
-            e = -np.sum(nu_star * qtheta(theta)) + np.sum(np.log(qtheta(theta) ** qtheta(theta)))
-            return e
-        thetalist = np.linspace(poisson.pmf(nz, mu=p1.sum()).min(), poisson.pmf(nz, mu=p1.sum()).max(), 100) - 1e-6
-        theta = thetalist[np.vectorize(minuselbo)(thetalist).argmin()]
-        # thetamin = (-np.exp(nu_star - nu.max()) / poisson.pmf(nz, mu=p1.sum())).min()
-        # thetamin = 0
-        # theta = opti.fmin_l_bfgs_b(minuselbo, x0=[1], approx_grad=True, bounds=[[thetamin, np.inf]], epsilon=1e-3, maxfun=50000)[0]
-    # print(theta)
-    # pa = qtheta(theta)
-    # pa = pa / pa.sum()
-    # pb = qtheta(0)
-    # pb = pb / pb.sum()
-    # pc = poisson.pmf(nz, mu=p1.sum())
-    # pc = pc / pc.sum()
-    # fig = plt.figure(figsize=(8, 6))
-    # fig.tight_layout()
-    # gs = gridspec.GridSpec(1, 1, figure=fig, left=0.1, right=0.9, top=0.95, bottom=0.1, wspace=0.2, hspace=0.2)
-    # ax = fig.add_subplot(gs[0, :])
-    # nzlist = np.arange(len(nz))
-    # ax.bar(nzlist, pa, alpha=0.5, color='r', label='ELBO')
-    # ax.bar(nzlist, pb, alpha=0.5, color='b', label='RGS')
-    # ax.bar(nzlist, pc, alpha=0.5, color='g', label='Poisson')
-    # ax.scatter(nzlist[nz == len(p1)], np.zeros_like(nzlist[nz == len(p1)]), color='r', marker='o', s=100)
-    # ax.legend()
-    # ax.set_xlabel('N')
-    # ax.set_ylabel('P')
-    # ax.grid()
-    # fig.savefig('t/' + str(i) + '.png')
-    psy_star = qtheta(theta)
 
     if plot:
         cnorm = colors.Normalize(vmin=0, vmax=psy_star[0])
@@ -318,15 +272,15 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None
         # cp = ax.imshow(nu_bk - nu_bk.min() + 1, aspect='auto', norm=colors.LogNorm())
         cp = ax.imshow(nu_bk, aspect='auto')
         fig.colorbar(cp, ax=ax)
-        ax.set_xticks(np.arange(d_tot))
-        ax.set_xticklabels(np.arange(1, d_tot + 1).astype(str))
+        ax.set_xticks(np.arange(D))
+        ax.set_xticklabels(np.arange(1, D + 1).astype(str))
         ax.set_yticks(np.arange(P))
         ax.set_yticklabels(np.arange(1, P + 1).astype(str))
         ax.set_xlabel('D')
         ax.set_ylabel('P')
         ax.scatter([ind // P for ind in indx[:num]], [ind % P for ind in indx[:num]], c=psy_star)
         ax.scatter(indx[0] // P, indx[0] % P, s=36.0, marker='o', facecolors='none', edgecolors='r')
-        ax.hlines(len(truth) - 1, -0.5, d_tot - 0.5, color='g')
+        ax.hlines(len(truth) - 1, -0.5, D - 0.5, color='g')
 
         ax = fig.add_subplot(gs[1, 0])
         for k in range(1, num + 1):
@@ -381,18 +335,19 @@ def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None
 
     xmmse = np.average(xmmse_star, weights=psy_star, axis=0)
 
-    return xmmse, xmmse_star, psy_star, nu_star, nu_star_bk, T_star, d_tot, d_max, num
+    return xmmse, xmmse_star, psy_star, nu_star, nu_star_bk, T_star, d_max, num
 
-def nu_direct(y, A, nx, mus, sig2s, sig2w, la, prior=True):
+def nu_direct(y, A, nx, mus, sig2s, sig2w, la, prior=True, space=True):
     M, N = A.shape
     Phi = np.matmul(np.matmul(A, np.diagflat(sig2s * nx)), A.T) + np.eye(M) * sig2w
     z = y - np.dot(A, (mus * nx))
     invPhi = np.linalg.inv(Phi)
     detPhi = np.linalg.det(Phi)
+    nu = -0.5 * np.matmul(np.matmul(z, invPhi), z) - 0.5 * M * np.log(2 * np.pi)
+    if space:
+        nu = nu - 0.5 * np.log(detPhi)
     if prior:
-        nu = -0.5 * np.matmul(np.matmul(z, invPhi), z) - 0.5 * np.log(detPhi) - 0.5 * M * np.log(2 * np.pi) + np.log(poisson.pmf(nx, mu=la)).sum()
-    else:
-        nu = -0.5 * np.matmul(np.matmul(z, invPhi), z) - 0.5 * np.log(detPhi) - 0.5 * M * np.log(2 * np.pi)
+        nu = nu + np.log(poisson.pmf(nx, mu=la)).sum()
     return nu
 
 def shannon_interpolation(w, n):
@@ -424,6 +379,8 @@ def read_model(spe_path, n=1):
             mar_l = opti.fsolve(fl, x0=np.sum(spe[i][:peak_c] < 5 * std[i]))[0]
             fr = interp1d(np.arange(0, len(spe[i]) - peak_c), 5 * std[i] - spe[i][peak_c:])
             mar_r = t - (opti.fsolve(fr, x0=np.sum(spe[i][peak_c:] > 5 * std[i]))[0] + peak_c)
+            # mar_l = 0
+            # mar_r = 0
             ax.plot(spe[i])
             spe_pre_i = {'spe':interp1d(np.arange(len(spe[i])), spe[i])(np.arange(0, len(spe[i]) - 1, 1 / n)), 'epulse':epulse, 'peak_c':peak_c * n, 'mar_l':mar_l * n, 'mar_r':mar_r * n, 'std':std[i], 'parameters':p[i]}
             spe_pre.update({cid[i]:spe_pre_i})
@@ -469,12 +426,10 @@ def convolve_exp_norm(x, tau, sigma):
         y = co * (1. - special.erf(x_erf)) * np.exp(-alpha*x)
     return y
 
-def spe(t, tau, sigma, A):
-    s = np.zeros_like(t).astype(np.float64)
-    t0 = t[t > np.finfo(np.float64).tiny]
-    s[t > np.finfo(np.float64).tiny] = A * np.exp(-1 / 2 * (np.log(t0 / tau) * np.log(t0 / tau) / sigma / sigma))
-    return s
-#     return np.where(t == 0, 1, 0)
+def spe(t, tau, sigma, A, gmu=gmu, window=window):
+    return A * np.exp(-1 / 2 * (np.log(t / tau) / sigma) ** 2)
+    # return np.where(t == 0, gmu, 0)
+    # return np.ones_like(t) / window * gmu
 
 def charge(n, gmu, gsigma, thres=0):
     chargesam = norm.ppf(1 - uniform.rvs(scale=1-norm.cdf(thres, loc=gmu, scale=gsigma), size=n), loc=gmu, scale=gsigma)
@@ -506,7 +461,7 @@ def likelihoodt0(hitt, char, gmu, Tau, Sigma, mode='charge', is_delta=False):
     return t0, t0delta
 
 def initial_params(wave, spe_pre, Tau, Sigma, gmu, Thres, p, nsp, nstd, is_t0=False, is_delta=False, n=1, nshannon=1):
-    hitt, char = lucyddm(savgol_filter(wave[::nshannon], 11, 4), spe_pre['spe'][::nshannon])
+    hitt, char = lucyddm(wave[::nshannon], spe_pre['spe'][::nshannon])
     hitt, char = clip(hitt, char, Thres)
     char = char / char.sum() * np.clip(np.abs(wave[::nshannon].sum()), 1e-6, np.inf)
     tlist = np.unique(np.clip(np.hstack(hitt[:, None] + np.arange(-nsp, nsp+1)), 0, len(wave[::nshannon]) - 1))
@@ -519,10 +474,11 @@ def initial_params(wave, spe_pre, Tau, Sigma, gmu, Thres, p, nsp, nstd, is_t0=Fa
     npe_init = np.zeros(len(tlist))
     npe_init[np.isin(tlist, hitt)] = char / gmu
     npe_init = np.repeat(npe_init, n) / n
-    tlist = np.unique(np.sort(np.hstack(tlist[:, None] + np.linspace(0, 1, n, endpoint=False))))
-    assert abs(np.diff(tlist).min() - 1 / n) < 1e-3, 'tlist anomalous'
+    tlist = np.unique(np.sort(np.hstack(tlist[:, None] + np.linspace(0, 1, n, endpoint=False)) - (n // 2) / n))
+    if len(tlist) != 1:
+        assert abs(np.diff(tlist).min() - 1 / n) < 1e-3, 'tlist anomalous'
     t_auto = (np.arange(left_wave, right_wave) / nshannon)[:, None] - tlist
-    A = p[2] * np.exp(-1 / 2 * (np.log((t_auto + np.abs(t_auto)) / p[0] / 2) / p[1]) ** 2)
+    A = spe((t_auto + np.abs(t_auto)) / 2, p[0], p[1], p[2])
 
     t0_init = None
     t0_init_delta = None

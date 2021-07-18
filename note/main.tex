@@ -15,6 +15,7 @@
 \usepackage{subcaption}
 \usepackage{amssymb}
 \usepackage{hyperref}
+\usepackage{iitem}
 
 \title{Poisson-FBMP Note}
 \date{}
@@ -27,6 +28,191 @@
 \maketitle
 \tableofcontents
 
+\section{Origin of Bias}
+
+\subsection{Model}
+
+\begin{equation}
+\begin{aligned}
+    \left.
+    \begin{bmatrix}
+        \bm{w} \\
+        \bm{q}'
+    \end{bmatrix}
+    \right\vert\bm{z}
+    &\sim \mathrm{Normal}\left(
+    \begin{bmatrix}
+        \bm{V}_\mathrm{PE}\bm{z} \\
+        \bm{z}
+    \end{bmatrix}, 
+    \begin{bmatrix}
+        \bm{\Sigma} & \bm{V}_\mathrm{PE}\bm{Z} \\
+        \bm{Z}\bm{V}_\mathrm{PE}^\intercal & \bm{Z}
+    \end{bmatrix}
+    \right) \\
+    \bm{\Sigma} &= \bm{V}_\mathrm{PE}\bm{Z}\bm{V}_\mathrm{PE}^\intercal+\sigma_\epsilon^2\bm{I}_M 
+\end{aligned}
+\end{equation}
+
+\begin{equation}
+\begin{aligned}
+    \nu =& \log[p(\bm{w},\bm{z})] = \log[p(\bm{w}|\bm{z})p(\bm{z})] \\
+    =& -\frac{1}{2}(\bm{w}-\bm{V}_\mathrm{PE}\bm{z})^\intercal\bm{\Sigma}^{-1}(\bm{w}-\bm{V}_\mathrm{PE}\bm{z})-\frac{1}{2}\log\det\bm{\Sigma}-\frac{N}{2}\log2\pi \\
+    &+ \sum_{i}\log{\mathrm{Poisson}(z_i,p_i)}
+\end{aligned}
+\end{equation}
+
+\subsection{Approximation}
+
+\begin{itemize}
+    \item Poisson $\rightarrow$ Bernoulli, $z_i=0,\bm{Z}_{ii}=0$ or $z_i=1,\bm{Z}_{ii}=\sigma^2$
+    \item SPE approximation
+    \iitem For delta approximation, SPE $\rightarrow$ delta SPE, $\bm{V}_{PE}=\begin{bmatrix}\bm{I} \\\bm{O}\end{bmatrix}$, $w_i\sim \mathrm{Normal}(1,\sigma^2+\sigma_\epsilon^2)$
+    \iitem For flat approximation, SPE $\rightarrow$ flat SPE, $\bm{V}_{PE}=\frac{1}{\sqrt{M}}\bm{J}_{M,N}$, $w_i\sim \mathrm{Normal}(\frac{N}{\sqrt{M}},\frac{N}{\sqrt{M}}\sigma^2+\sigma_\epsilon^2)$, $\sum_i^M w_i\sim \mathrm{Normal}(N\sqrt{M},M^{\frac{3}{2}}N\sigma^2+M\sigma_\epsilon^2)$
+    \item flat prior, $\begin{cases}
+        \lambda & \text{ if } z_i=1 \\ 
+        1-\lambda & \text{ if } z_i=0 
+    \end{cases}$
+\end{itemize}
+
+\subsection{Evaluation}
+
+for a certain $(\bm{w}, \bm{z})$, let $K=\{i|z_i=1\}$, $|K|=n$
+
+\subsubsection{Delta Approximation}
+
+\begin{align}
+    \bm{\Sigma} &= \begin{bmatrix}
+        \bm{Z} & \bm{O} \\
+        \bm{O} & \bm{O}
+    \end{bmatrix} + \sigma_\epsilon^2\bm{I}_M \\
+    \det\bm{\Sigma} &= \Pi_i (z_i\sigma^2+\sigma_\epsilon^2) \\
+    \bm{\Sigma}_{ij}^{-1} &= \begin{cases}
+        \frac{1}{z_i\sigma^2+\sigma_\epsilon^2} & \text{ if }  i=j \\ 
+        0 & \text{ if }  i\neq j 
+    \end{cases}
+\end{align}
+
+Thus, 
+
+\begin{align}
+    -2\nu =& \sum_{i\in K}\frac{(w_i - 1)^2}{\sigma^2+\sigma_\epsilon^2} + \sum_{i\in \bar{K}}\frac{w_i^2}{\sigma_\epsilon^2} \\ 
+    &+ n\log(\sigma^2+\sigma_\epsilon^2) + (N-n)\log\sigma_\epsilon^2 \\
+    &- 2n\log\lambda - 2(N-n)\log(1-\lambda) + \mathrm{const}
+\end{align}
+
+Additionally, 
+
+\begin{align}
+    \sum_{i\in K}\frac{(w_i - 1)^2}{\sigma^2+\sigma_\epsilon^2} &\sim \chi^2(n) \\
+    \frac{w_i^2}{\sigma_\epsilon^2} &= \frac{1}{\sigma_\epsilon^2}((\sigma^2+\sigma_\epsilon^2)\frac{(w_i - 1)^2}{\sigma^2+\sigma_\epsilon^2} + 2(w_i - 1) + 1)
+\end{align}
+
+Calculate expectation on distribution of $\bm{w}$ and $\bm{z}$ with $|K|=|\bm{z}|=n$, 
+
+\begin{align}
+    -2E(\nu)_n =& n + (N - n)\frac{\sigma^2+\sigma_\epsilon^2}{\sigma_\epsilon^2} + (N - n)\frac{1}{\sigma_\epsilon^2} \\ 
+    &+ n\log(\sigma^2+\sigma_\epsilon^2) + (N-n)\log\sigma_\epsilon^2 \\
+    &- 2n\log\lambda - 2(N-n)\log(1-\lambda) + \mathrm{const}
+\end{align}
+
+Thus, 
+
+\begin{align}
+    -2D(\nu)_n =& -2E(\nu)_n - (-2E(\nu)_{n-1}) \\ 
+    =& 1 - \frac{\sigma^2+\sigma_\epsilon^2}{\sigma_\epsilon^2} - \frac{1}{\sigma_\epsilon^2} \\
+    &+ \log(\sigma^2+\sigma_\epsilon^2) - \log\sigma_\epsilon^2 \\
+    &- 2\log\lambda + 2\log(1-\lambda)
+\end{align}
+
+Remember that $\sigma^2 \gg \sigma_\epsilon^2$ and $\lambda \ll 1$, set $x=\sigma^2/\sigma_\epsilon^2$, then,
+
+\begin{align}
+    D(\nu)_n &\approx \frac{1}{2}x - \frac{1}{2}\log x + \log\lambda
+\end{align}
+
+while $x \gg 1$, $\frac{1}{2}x - \frac{1}{2}\log x \gg 1$, the sign of $D(\nu)_n$ is defined by the relative magnitude of $\frac{1}{2}x - \frac{1}{2}\log x$ and $\log\lambda$. 
+
+\subsubsection{Flat Approximation}
+
+\begin{align}
+    \bm{\Sigma} &= \frac{1}{M}\sigma^2\sum_i^N z_i\bm{J}_M + \sigma_\epsilon^2\bm{I}_M \\
+    &= \frac{\sigma^2n}{M}\bm{J}_M+\sigma_\epsilon^2\bm{I}_M \\
+    \det\bm{\Sigma} &= M^{-M}(\sigma_\epsilon^2 + M\sigma^2\sum_i^N z_i)\sigma_\epsilon^{2(M-1)} \\
+    &= M^{-M}(\sigma_\epsilon^2+M\sigma^2n)\sigma_\epsilon^{2(M-1)} \\
+    \bm{\Sigma}^{-1} &= \frac{M}{\sigma_\epsilon^2}(\bm{I}_M - \frac{\sigma^2\sum_i^N z_i}{M\sigma^2\sum_i^N z_i+\sigma_\epsilon^2}\bm{J}_M) \\
+    &= \frac{M}{\sigma_\epsilon^2}(\bm{I}_M - \frac{1}{M+\frac{\sigma_\epsilon^2}{\sigma^2n}}\bm{J}_M)
+\end{align}
+
+set $M^\ast = M+\frac{\sigma_\epsilon^2}{\sigma^2n}$, regarding $\sigma\gg\sigma_\epsilon$, thus $M^\ast\approx M$, and
+
+\begin{align}
+    \bm{\Sigma}^{-1} &= \frac{M}{\sigma_\epsilon^2}(\bm{I}_M - \frac{1}{M^\ast}\bm{J}_M)
+\end{align}
+
+Thus, 
+
+\begin{align}
+    -2\nu =& \frac{M}{\sigma_\epsilon^2}[\sum_i^M(w_i-\frac{n}{\sqrt{M}})^2-\frac{1}{M^\ast}(\sum_i^M w_i-n\sqrt{M})^2] \\
+    &+ \log(M\sigma^2n+\sigma_\epsilon^2) \\
+    &- 2n\log\lambda - 2(N-n)\log(1-\lambda) + \mathrm{const}
+\end{align}
+
+Additionally, 
+
+\begin{align}
+    (w_i-\frac{n}{\sqrt{M}})^2 =& (w_i - \frac{N}{\sqrt{M}})^2 \\ 
+    &+ 2(w_i - \frac{N}{\sqrt{M}})\frac{N-n}{\sqrt{M}} + \frac{(N-n)^2}{M} \\
+    (\sum_i^M w_i-n\sqrt{M})^2 =& (\sum_i^M w_i-N\sqrt{M})^2 \\
+    &+ 2(\sum_i^M w_i-N\sqrt{M})(N-n)\sqrt{M} + (N-n)^2M \\
+    \sum_i^M\frac{(w_i - \frac{N}{\sqrt{M}})^2}{\frac{N}{\sqrt{M}}\sigma^2+\sigma_\epsilon^2} &\sim \chi^2(M) \\
+    \frac{(\sum_i^M w_i-N\sqrt{M})^2}{M^{\frac{3}{2}}N\sigma^2+M\sigma_\epsilon^2} &\sim \chi^2(1)
+\end{align}
+
+Calculate expectation on distribution of $\bm{w}$ and $\bm{z}$ with $|n|=|\bm{z}|=n$, 
+
+\begin{align}
+    -2E(\nu)_n =& \frac{M}{\sigma_\epsilon^2}[(\frac{N}{\sqrt{M}}\sigma^2+\sigma_\epsilon^2)M+(N-n)^2 \\
+    &-\frac{1}{M^\ast}(M^{\frac{3}{2}}N\sigma^2+M\sigma_\epsilon^2+(N-n)^2 M)] \\
+    &+ \log(M\sigma^2n+\sigma_\epsilon^2) \\
+    &- 2n\log\lambda - 2(N-n)\log(1-\lambda) + \mathrm{const} \\
+    =& \frac{M}{\sigma_\epsilon^2}[(N\sqrt{M}\sigma^2+(N-n)^2)(1-\frac{M}{M^\ast})+(M-\frac{M}{M^\ast})\sigma_\epsilon^2] \\
+    &+ \log(\frac{\sigma^2}{\sigma_\epsilon^2}Mn+1) \\
+    &- 2n\log\lambda - 2(N-n)\log(1-\lambda) + \mathrm{const}
+\end{align}
+
+Thus, 
+
+\begin{align}
+    E(\nu)_n' =& -\frac{1}{2}\{\frac{M}{\sigma_\epsilon^2}[2(n-N)(1-\frac{M}{M^\ast}) \\
+    &+(N\sqrt{M}\sigma^2+(N-n)^2+\sigma_\epsilon^2)\frac{M}{M^{\ast2}}M^{\ast'}] \\
+    &+\frac{M}{Mn+\frac{\sigma_\epsilon^2}{\sigma^2}}\} + \log\lambda - \log(1-\lambda) \\
+    M^{\ast'} =& -\frac{\sigma_\epsilon^2}{\sigma^2n^2}
+\end{align}
+
+when $n=N$,
+
+\begin{align}
+    E(\nu)_n'|_N =& -\frac{1}{2}[\frac{M}{\sigma_\epsilon^2}(N\sqrt{M}\sigma^2+\sigma_\epsilon^2)\frac{M}{M^{\ast2}}M^{\ast'} \\
+    &+\frac{M\frac{\sigma^2}{\sigma_\epsilon^2}}{MN\frac{\sigma^2}{\sigma_\epsilon^2}+1}] + \log\lambda - \log(1-\lambda) \\
+    =& \frac{1}{2}\frac{M\frac{\sigma^2}{\sigma_\epsilon^2}}{(MN\frac{\sigma^2}{\sigma_\epsilon^2}+1)^2}(\sqrt{M}-1)(NM\frac{\sigma^2}{\sigma_\epsilon^2}+\sqrt{M}+1) \\
+    &+ \log\lambda - \log(1-\lambda)
+\end{align}
+
+Remember that $M \gg 1$, then,
+
+\begin{align}
+    C = \frac{1}{2}\frac{M\frac{\sigma^2}{\sigma_\epsilon^2}}{(MN\frac{\sigma^2}{\sigma_\epsilon^2}+1)^2}(\sqrt{M}-1)(NM\frac{\sigma^2}{\sigma_\epsilon^2}+\sqrt{M}+1) > 0
+\end{align}
+
+the sign of $E(\nu)_n'|_N$ is defined by the relative magnitude of $C$ and $\log\lambda$. 
+
+\subsection{Discussion}
+
+When the time bin is very thin, $\log\lambda \ll 0$, $D(\nu)_n < 0$. When Bernoulli approximation fails, $D(\nu)_n > 0$. 
+
+While we may reasonably assume $E(\nu)_n$ will be its maximum when $n=N_{PE}$, considering the fact that RGS in FBMP has imperfect ergodicity, the bias will be positive given $D(\nu)_n > 0$ (or $E(\nu)_n'|_N > 0$) as RGS will \textbf{not} stop immediately when $n=N_{PE}$. Given $D(\nu)_n < 0$ (or $E(\nu)_n'|_N < 0$), the bias will be negative. 
+
 \section{Phenomenon}
 
 \subsection{P-FBMP with magic time bin}
@@ -37,7 +223,7 @@ if Tau > 10:
     n = min(math.ceil(20 / mu_t), 5)
 else:
     n = min(math.ceil(4 / mu_t), 3)
-A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Mu, Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
+A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Mu, Tau, Sigma, gmu, Thres['lucyddM^\ast], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
 mu_t = abs(wave_r.sum() / gmu)
 def optit0mu(t0, mu, n, xmmse_star, psy_star, c_star, la):
     ys = np.log(psy_star) - np.log(poisson.pmf(c_star, la)).sum(axis=1)
@@ -194,7 +380,7 @@ Result: prior used in FBMP is not the origin of $\mu$ bias.
 
 \begin{lstlisting}
 mu_t = abs(wave.sum() / gmu)
-A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
+A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, Thres['lucyddM^\ast], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
 mu_t = abs(wave_r.sum() / gmu)
 def optit0mu(t0, mu, n, xmmse_star, psy_star, c_star, la):
     ys = np.log(psy_star) - np.log(poisson.pmf(c_star, la)).sum(axis=1)
@@ -299,7 +485,7 @@ else:
     std = 1e-4
 window = 200
 np.random.seed(0)
-wdtp = np.dtype([('No', np.uint32), ('Waveform', np.float, window)])
+wdtp = np.dtype([('No', np.uint32), ('WaveforM^\ast, np.float, window)])
 waves = np.empty(n).astype(wdtp)
 tlist = np.repeat(np.array([0, 1, 1]), npe / 3)
 sams = [np.vstack((tlist, wff.charge(npe, gmu=gmu, gsigma=gsigma, thres=0))).T for i in range(n)]
@@ -309,7 +495,7 @@ for i in tqdm(range(n)):
     wave = np.sum([np.where(pan > sams[i][j, 0], wff.spe(pan - sams[i][j, 0], tau=p[0], sigma=p[1], A=p[2]) * sams[i][j, 1] / gmu, 0) for j in range(len(sams[i]))], axis=0)
     if noi:
         wave = wave + np.random.normal(0, std, size=window)
-    waves[i]['Waveform'] = wave
+    waves[i]['WaveforM^\ast] = wave
 waves['No'] = np.arange(n).astype(np.uint32)
 sdtp = np.dtype([('No', np.uint32), ('HitPosInWindow', np.float64), ('Charge', np.float64)])
 pelist = np.empty(sum([len(sams[i]) for i in range(n)])).astype(sdtp)
@@ -318,7 +504,7 @@ pelist['HitPosInWindow'] = np.hstack([sams[i][:, 0] for i in range(n)])
 pelist['Charge'] = np.hstack([sams[i][:, 1] for i in range(n)])
 mu = np.empty(n)
 for i in tqdm(range(n)):
-    wave = waves[i]['Waveform'].astype(np.float64) * spe_pre[0]['epulse']
+    wave = waves[i]['WaveforM^\ast].astype(np.float64) * spe_pre[0]['epulse']
     truth = pelist[pelist['No'] == waves[i]['No']]
     tlist = np.unique(truth['HitPosInWindow'])
 
@@ -354,7 +540,7 @@ Result: there is \textbf{no} bias on this configuration
 
 \begin{lstlisting}
 n = 2
-A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
+A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, Thres['lucyddM^\ast], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
 
 truth = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
 
@@ -380,7 +566,7 @@ Result: there is \textbf{no} bias from lucyddm \texttt{tlist} initialization
 \begin{lstlisting}
 mu_t = abs(wave.sum() / gmu)
 n = 2
-A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
+A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, Thres['lucyddM^\ast], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
 mu_t = abs(wave_r.sum() / gmu)
 mu = mu_t
 t0 = t0_t
@@ -405,7 +591,7 @@ if Tau > 10:
     n = min(math.ceil(20 / mu_t), 5)
 else:
     n = min(math.ceil(4 / mu_t), 3)
-A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
+A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, Thres['lucyddM^\ast], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
 mu_t = abs(wave_r.sum() / gmu)
 def optit0mu(t0, mu, n, xmmse_star, psy_star, c_star, la):
     ys = np.log(psy_star) - np.log(poisson.pmf(c_star, la)).sum(axis=1)
@@ -477,14 +663,14 @@ np.random.seed(a0 + round(Tau + Sigma))
 npe = poisson.ppf(1 - uniform.rvs(scale=1-poisson.cdf(0, mu), size=a1 - a0), mu).astype(int)
 t0 = np.random.uniform(100., 500., size=a1 - a0)
 sams = [np.vstack((np.arange(npe[i]) + t0[i], wff.charge(npe[i], gmu=gmu, gsigma=gsigma, thres=0))).T for i in range(a1 - a0)]
-wdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('Waveform', np.float, window * wff.nshannon)])
+wdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('WaveforM^\ast, np.float, window * wff.nshannon)])
 waves = np.empty(a1 - a0).astype(wdtp)
 pan = np.arange(0, window, 1 / wff.nshannon)
 for i in range(a1 - a0):
     wave = np.sum([np.where(pan > sams[i][j, 0], wff.spe(pan - sams[i][j, 0], tau=p[0], sigma=p[1], A=p[2]) * sams[i][j, 1] / gmu, 0) for j in range(len(sams[i]))], axis=0)
     if args.noi:
         wave = wave + np.random.normal(0, std, size=window * wff.nshannon)
-    waves[i]['Waveform'] = wave
+    waves[i]['WaveforM^\ast] = wave
 tdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('T0', np.float64)])
 t = np.empty(a1 - a0).astype(tdtp)
 t['TriggerNo'] = np.arange(a0, a1).astype(np.uint32)
@@ -508,7 +694,7 @@ if Tau > 10:
     n = min(math.ceil(20 / mu_t), 5)
 else:
     n = min(math.ceil(4 / mu_t), 3)
-A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
+A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, Thres['lucyddM^\ast], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
 
 truth = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
 
@@ -703,121 +889,11 @@ Result: all biases \textbf{are larger} than 0
     \includegraphics[width=\textwidth]{vs-biasmu-fixtlistnoprior.png}
 \end{figure}
 
-\section{Theory}
-
-\subsection{Why bias}
-
-\subsubsection{Model}
-
-\begin{equation}
-\begin{aligned}
-    \left.
-    \begin{bmatrix}
-        \bm{w} \\
-        \bm{q}'
-    \end{bmatrix}
-    \right\vert\bm{z}
-    &\sim \mathrm{Normal}\left(
-    \begin{bmatrix}
-        \bm{V}_\mathrm{PE}\bm{z} \\
-        \bm{z}
-    \end{bmatrix}, 
-    \begin{bmatrix}
-        \bm{\Sigma} & \bm{V}_\mathrm{PE}\bm{Z} \\
-        \bm{Z}\bm{V}_\mathrm{PE}^\intercal & \bm{Z}
-    \end{bmatrix}
-    \right) \\
-    \bm{\Sigma} &= \bm{V}_\mathrm{PE}\bm{Z}\bm{V}_\mathrm{PE}^\intercal+\sigma_\epsilon^2\bm{I}_M 
-\end{aligned}
-\end{equation}
-
-\begin{equation}
-\begin{aligned}
-    \nu =& \log[p(\bm{w},\bm{z})] = \log[p(\bm{w}|\bm{z})p(\bm{z})] \\
-    =& -\frac{1}{2}(\bm{w}-\bm{V}_\mathrm{PE}\bm{z})^\intercal\bm{\Sigma}^{-1}(\bm{w}-\bm{V}_\mathrm{PE}\bm{z})-\frac{1}{2}\log\det\bm{\Sigma}-\frac{N}{2}\log2\pi \\
-    &+ \sum_{i}\log{\mathrm{Poisson}(z_i,p_i)}
-\end{aligned}
-\end{equation}
-
-\subsubsection{Simplification}
-
-\begin{itemize}
-    \item Poisson $\rightarrow$ Bernoulli, $z_i=0,\bm{Z}_{ii}=0$ or $z_i=1,\bm{Z}_{ii}=\sigma^2$
-    \item SPE $\rightarrow$ delta SPE, $\bm{V}_{PE}=\begin{bmatrix}
-        \bm{I} \\
-        \bm{O}
-    \end{bmatrix}$, $w_i\sim \mathrm{Normal}(1,\sigma^2+\sigma_\epsilon^2)$
-    \item flat prior, $\begin{cases}
-        \lambda & \text{ if } z_i=1 \\ 
-        1-\lambda & \text{ if } z_i=0 
-    \end{cases}$
-\end{itemize}
-
-\subsubsection{Evaluation}
-
-for a certain $(\bm{w}, \bm{z})$, let $K=\{i|z_i=1\}$, $|K|=n$
-
-\begin{align}
-    \bm{\Sigma} &= \begin{bmatrix}
-        \bm{Z} & \bm{O} \\
-        \bm{O} & \bm{O}
-    \end{bmatrix} + \sigma_\epsilon^2\bm{I}_M \\
-    \det\bm{\Sigma} &= \Pi_i (z_i\sigma^2+\sigma_\epsilon^2) \\
-    \bm{\Sigma}_{ij}^{-1} &= \begin{cases}
-        \frac{1}{z_i\sigma^2+\sigma_\epsilon^2} & \text{ if }  i=j \\ 
-        0 & \text{ if }  i\neq j 
-    \end{cases}
-\end{align}
-
-Thus, 
-
-\begin{align}
-    -2\nu =& \sum_{i\in K}\frac{(w_i - 1)^2}{\sigma^2+\sigma_\epsilon^2} + \sum_{i\in \bar{K}}\frac{w_i^2}{\sigma_\epsilon^2} \\ 
-    &+ n\log(\sigma^2+\sigma_\epsilon^2) + (N-n)\log\sigma_\epsilon^2 \\
-    &- 2n\log\lambda - 2(N-n)\log(1-\lambda)
-\end{align}
-
-Additionally, 
-
-\begin{align}
-    \sum_{i\in K}\frac{(w_i - 1)^2}{\sigma^2+\sigma_\epsilon^2} &\sim \chi^2(n) \\
-    \frac{w_i^2}{\sigma_\epsilon^2} &= \frac{1}{\sigma_\epsilon^2}((\sigma^2+\sigma_\epsilon^2)\frac{(w_i - 1)^2}{\sigma^2+\sigma_\epsilon^2} + 2(w_i - 1) + 1)
-\end{align}
-
-Calculate expectation on distribution of $\bm{w}$ and $\bm{z}$ with $|K|=|\bm{z}|=n$, 
-
-\begin{align}
-    -2E(\nu)_n =& n + (N - n)\frac{\sigma^2+\sigma_\epsilon^2}{\sigma_\epsilon^2} + (N - n)\frac{1}{\sigma_\epsilon^2} \\ 
-    &+ n\log(\sigma^2+\sigma_\epsilon^2) + (N-n)\log\sigma_\epsilon^2 \\
-    &- 2n\log\lambda - 2(N-n)\log(1-\lambda)
-\end{align}
-
-Thus, 
-
-\begin{align}
-    -2D(\nu)_n =& -2E(\nu)_n - (-2E(\nu)_{n-1}) \\ 
-    =& 1 - \frac{\sigma^2+\sigma_\epsilon^2}{\sigma_\epsilon^2} - \frac{1}{\sigma_\epsilon^2} \\
-    &+ \log(\sigma^2+\sigma_\epsilon^2) - \log\sigma_\epsilon^2 \\
-    &- 2\log\lambda + 2\log(1-\lambda)
-\end{align}
-
-Remember that $\sigma^2 \gg \sigma_\epsilon^2$ and $\lambda \ll 1$, set $x=\sigma^2/\sigma_\epsilon^2$, then,
-
-\begin{align}
-    D(\nu)_n &\approx \frac{1}{2}x - \frac{1}{2}\log x + \log\lambda
-\end{align}
-
-while $x \gg 1$, $\frac{1}{2}x - \frac{1}{2}\log x \gg 1$, the sign of $D(\nu)_n$ is defined by the relative magnitude of $\frac{1}{2}x - \frac{1}{2}\log x$ and $\log\lambda$. 
-
-When the time bin is very thin, $\log\lambda \ll 0$, $D(\nu)_n < 0$. When Bernoulli approximation fails, $D(\nu)_n > 0$. 
-
-\subsubsection{Discussion}
-
-While we may reasonably assume $E(\nu)_n$ will be its maximum when $n=N_{PE}$, considering the fact that RGS in FBMP has imperfect ergodicity, the bias will be positive given $D(\nu)_n > 0$ as RGS will \textbf{not} stop immediately when $n=N_{PE}$. Given $D(\nu)_n > 0$, the bias will be negative. 
-
 \section{Ratification}
 
-Induce \textbf{ELBO}. 
+\subsection{ELBO}
+
+Induce \textbf{ELBO}(Evidence lower bound). 
 
 \begin{align}
     \mathrm{ELBO} &= E_q(\log(p(\bm{w}|\bm{z}))) - \mathrm{KL}(q|p(\bm{z})) \\
@@ -852,5 +928,7 @@ Noted, $f(\bm{\theta},\bm{z})=\exp{(\nu+g(\bm{\theta},|\bm{z}|))}$ are bad.
 \end{align}
 
 when $\forall \bm{z}, g(\bm{\theta},|\bm{z}|)=0$, $\mathrm{ELBO}_{\bm{\theta}}'=0$. 
+
+% \subsection{Simple Cut}
 
 \end{document}

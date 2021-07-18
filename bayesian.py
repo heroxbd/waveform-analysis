@@ -71,6 +71,7 @@ if Tau != 0:
     Co = (Alpha / 2. * np.exp(Alpha ** 2 * Sigma ** 2 / 2.)).item()
 std = 1.
 Thres = {'mcmc':std / gsigma, 'lucyddm':0.1, 'fbmp':1e-6}
+# Thres = {'mcmc':std / gsigma, 'lucyddm':0.01, 'fbmp':1e-6}
 mix0sigma = 1e-3
 mu0 = np.arange(1, int(Mu + 5 * np.sqrt(Mu)))
 n_t = np.arange(1, 20)
@@ -182,6 +183,7 @@ def time_numpyro(a0, a1):
 
 def fbmp_inference(a0, a1):
     prior = True
+    space = True
     elbo = True
     nsp = 4
     nstd = 3
@@ -205,14 +207,12 @@ def fbmp_inference(a0, a1):
 
         # initialization
         mu_t = abs(wave.sum() / gmu)
-        if Tau > 10:
-            n = min(math.ceil(20 / mu_t), 5)
-        else:
-            n = min(math.ceil(4 / mu_t), 3)
+        n = min(max(round(20 / mu_t), 1), 10)
         A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
         mu_t = abs(wave_r.sum() / gmu)
         def optit0mu(t0, mu, n, xmmse_star, psy_star, c_star, la):
-            ys = np.log(psy_star) - np.log(poisson.pmf(c_star, la)).sum(axis=1)
+            if prior:
+                ys = np.log(psy_star) - np.log(poisson.pmf(c_star, la)).sum(axis=1)
             ys = np.exp(ys - ys.max()) / np.sum(np.exp(ys - ys.max()))
             t0list = np.arange(t0 - 3 * Sigma, t0 + 3 * Sigma + 1e-6, 0.2)
             mulist = np.arange(max(1e-8, mu - 3 * np.sqrt(mu)), mu + 3 * np.sqrt(mu), 0.1)
@@ -233,12 +233,8 @@ def fbmp_inference(a0, a1):
         truth = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
 
         # tlist = truth['HitPosInWindow'][truth['HitPosInWindow'] < right_wave - 1]
-        # if len(tlist) == 1:
-        #     tlist_edge = np.array([tlist[0] - 0.5, tlist[0] + 0.5])
-        # else:
-        #     tlist_edge = np.concatenate([[tlist[0] - np.diff(tlist)[0] / 2], (tlist[1:] + tlist[:-1]) / 2, [tlist[-1] + np.diff(tlist)[-1] / 2]])
         # t_auto = (np.arange(left_wave, right_wave) / wff.nshannon)[:, None] - tlist
-        # A = p[2] * np.exp(-1 / 2 * (np.log((t_auto + np.abs(t_auto)) / p[0] / 2) / p[1]) ** 2)
+        # A = wff.spe((t_auto + np.abs(t_auto)) / 2, p[0], p[1], p[2])
 
         # t0_t = t0_truth[i]['T0']
         # mu_t = len(truth)
@@ -247,10 +243,13 @@ def fbmp_inference(a0, a1):
         # Eq. (9) where the columns of A are taken to be unit-norm.
         factor = np.sqrt(np.diag(np.matmul(A.T, A)))
         A = A / factor
-        la = mu_t * wff.convolve_exp_norm(tlist - t0_t, Tau, Sigma) / n + 1e-8
-        # la = mu_t * np.array([integrate.quad(lambda t : wff.convolve_exp_norm(t - t0_t, Tau, Sigma), tlist_edge[i], tlist_edge[i+1])[0] for i in range(len(tlist))]) + 1e-8
+        # la = mu_t * wff.convolve_exp_norm(tlist - t0_t, Tau, Sigma) / n + 1e-8
         # la = mu_t * np.ones(len(tlist)) / len(tlist)
-        xmmse, xmmse_star, psy_star, nu_star, nu_star_bk, T_star, d_tot_i, d_max_i, num_i = wff.fbmpr_fxn_reduced(wave_r, A, la, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, len(la), stop=5, truth=truth, i=i, left=left_wave, right=right_wave, tlist=tlist, gmu=gmu, para=p, prior=prior, elbo=elbo)
+        la = np.ones(len(tlist))
+        # la = mu_t * np.ones(len(tlist))
+        # la = cha / cha.sum() * mu_t + 1e-8
+        # la = la / la.sum() * mu_t
+        xmmse, xmmse_star, psy_star, nu_star, nu_star_bk, T_star, d_max_i, num_i = wff.fbmpr_fxn_reduced(wave_r, A, la, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, len(la), stop=5, truth=truth, i=i, left=left_wave, right=right_wave, tlist=tlist, gmu=gmu, para=p, prior=prior, space=space, elbo=elbo)
         time_fbmp = time_fbmp + time.time() - time_fbmp_start
         c_star = np.zeros_like(xmmse_star).astype(int)
         for k in range(len(T_star)):
@@ -265,9 +264,9 @@ def fbmp_inference(a0, a1):
             c_star_truth[0] = 1
         pp = np.arange(left_wave, right_wave)
         wav_ans = np.sum([np.where(pp > truth['HitPosInWindow'][j], wff.spe(pp - truth['HitPosInWindow'][j], tau=p[0], sigma=p[1], A=p[2]) * truth['Charge'][j] / gmu, 0) for j in range(len(truth))], axis=0)
-        nu_truth[i - a0] = wff.nu_direct(wave_r, A, nx, factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la, prior=prior)
+        nu_truth[i - a0] = wff.nu_direct(wave_r, A, nx, factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la, prior=prior, space=space)
         rss_truth = np.power(wav_ans - np.matmul(A, cc / gmu * factor), 2).sum()
-        nu = np.array([wff.nu_direct(wave_r, A, c_star[j], factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la, prior=prior) for j in range(len(psy_star))])
+        nu = np.array([wff.nu_direct(wave_r, A, c_star[j], factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la, prior=prior, space=space) for j in range(len(psy_star))])
         nu_max[i - a0] = nu[0]
         rss = np.array([np.power(wav_ans - np.matmul(A, xmmse_star[j]), 2).sum() for j in range(len(psy_star))])
 
@@ -275,17 +274,17 @@ def fbmp_inference(a0, a1):
         pet = np.repeat(tlist[xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
         cha = np.repeat(xmmse_most[xmmse_most > 0] / factor[xmmse_most > 0] / c_star[maxindex][xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
 
-        # mu = np.average(c_star.sum(axis=1), weights=psy_star)
-        # t0 = t0_t
-        # mu_i = len(cha)
-        # t0_i = t0_t
+        mu = np.average(c_star.sum(axis=1), weights=psy_star)
+        t0 = t0_t
+        mu_i = len(cha)
+        t0_i = t0_t
 
         # mu, t0 = optit0mu(t0_t, mu_t, n, np.empty(len(la))[None, :], np.array([1]), c_star_truth[None, :], la)
 
-        mu, t0 = optit0mu(t0_t, mu_t, n, xmmse_star, psy_star, c_star, la)
-        mu_i, t0_i = optit0mu(t0_t, mu_t, n, xmmse_most[None, :], np.array([1]), c_star[maxindex][None, :], la)
+        # mu, t0 = optit0mu(t0_t, mu_t, n, xmmse_star, psy_star, c_star, la)
+        # mu_i, t0_i = optit0mu(t0_t, mu_t, n, xmmse_most[None, :], np.array([1]), c_star[maxindex][None, :], la)
 
-        d_tot[i - a0] = d_tot_i
+        d_tot[i - a0] = len(la)
         d_max[i - a0] = d_max_i
         pet, cha = wff.clip(pet, cha, Thres[method])
         cha = cha * gmu

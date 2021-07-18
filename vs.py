@@ -246,7 +246,7 @@ ax = fig.add_subplot(gs[0, 0])
 std1sttruth = np.empty(len(stdlist['mu']))
 stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == Tau[0]) & (mts['lucyddm']['sigma'] == Sigma[0])]
 sigma = 0
-tau = Tau[1]
+tau = max(Tau)
 np.random.seed(0)
 for mu, i in zip(stdlist['mu'], list(range(len(stdlist['mu'])))):
     N = stdlist['N'][i]
@@ -271,7 +271,7 @@ ax.grid()
 # ax.legend(loc='upper right')
 ax = fig.add_subplot(gs[0, 1])
 sigma = 0
-tau = Tau[1]
+tau = max(Tau)
 stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == Tau[0]) & (mts['lucyddm']['sigma'] == Sigma[0])]
 yerr = std1sttruth / std1sttruth / np.sqrt(stdlist['N'])
 ax.errorbar(stdlist['mu'], std1sttruth / std1sttruth, yerr=yerr, label=fr'$(20,0)$', marker='o', color='g')

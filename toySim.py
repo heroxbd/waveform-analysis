@@ -27,14 +27,14 @@ psr.add_argument('--mts', dest='mts', type=str, help='mu & tau & sigma')
 psr.add_argument('--noi', dest='noi', action='store_true', help='noise bool', default=False)
 args = psr.parse_args()
 
-window = 1029
+window = wff.window
+gmu = wff.gmu
+gsigma = wff.gsigma
 mtslist = args.mts.split('-')
 Mu = float(mtslist[0])
 Tau = float(mtslist[1])
 Sigma = float(mtslist[2])
 
-gmu = 160.
-gsigma = 40.
 p = [8., 0.5, 24.]
 p[2] = p[2] * gmu / integrate.quad(lambda t : wff.spe(np.array([t]), tau=p[0], sigma=p[1], A=p[2]), 0, 100)[0]
 std = 1.
@@ -44,11 +44,12 @@ def sampling(a0, a1, mu, tau, sigma):
     npe = poisson.ppf(1 - uniform.rvs(scale=1-poisson.cdf(0, mu), size=a1 - a0), mu).astype(int)
     t0 = np.random.uniform(100., 500., size=a1 - a0)
     sams = [np.vstack((wff.time(npe[i], tau, sigma) + t0[i], wff.charge(npe[i], gmu=gmu, gsigma=gsigma, thres=0))).T for i in range(a1 - a0)]
+    # sams = [np.vstack((np.arange(npe[i]) + t0[i], wff.charge(npe[i], gmu=gmu, gsigma=gsigma, thres=0))).T for i in range(a1 - a0)]
     wdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('Waveform', np.float, window * wff.nshannon)])
     waves = np.empty(a1 - a0).astype(wdtp)
     pan = np.arange(0, window, 1 / wff.nshannon)
     for i in range(a1 - a0):
-        wave = np.sum([np.where(pan > sams[i][j, 0], wff.spe(pan - sams[i][j, 0], tau=p[0], sigma=p[1], A=p[2]) * sams[i][j, 1] / gmu, 0) for j in range(len(sams[i]))], axis=0)
+        wave = np.sum([wff.spe((pan - sams[i][j, 0] + np.abs(pan - sams[i][j, 0])) / 2, tau=p[0], sigma=p[1], A=p[2]) * sams[i][j, 1] / gmu for j in range(len(sams[i]))], axis=0)
         if args.noi:
             wave = wave + np.random.normal(0, std, size=window * wff.nshannon)
         waves[i]['Waveform'] = wave
