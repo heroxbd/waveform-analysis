@@ -29,7 +29,7 @@ from torch.autograd import Variable
 import time
 import tables
 import wf_func as wff
-import pytorch_stats_loss as stats_loss
+import loss as stats_loss
 
 # detecting cuda device and wait in line
 device = torch.device(ChannelID % 2)
@@ -110,7 +110,7 @@ def testing(test_loader, met='wdist') :
     return batch_result / (BATCHSIZE * batch_count)
 
 # Neural Networks
-from CNN_Module import Net_1
+from cnnmodule import Net_1
 
 trial_data = Data.TensorDataset(torch.from_numpy(Wave_test[0:1000]).float().to(device=device),
                                 torch.from_numpy(PET_test[0:1000]).float().to(device=device))
