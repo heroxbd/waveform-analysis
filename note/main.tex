@@ -16,7 +16,7 @@
 \usepackage{hyperref}
 \usepackage{iitem}
 
-\title{Poisson-FBMP Note}
+\title{$\mu$ Bias Note}
 \date{}
 
 \input{format.tex}
@@ -27,7 +27,7 @@
 \maketitle
 \tableofcontents
 
-\section{Origin of Bias}
+\section{Origin of FBMP's Bias}
 
 \subsection{Model}
 
@@ -365,7 +365,7 @@ mu = np.average(c_star.sum(axis=1), weights=psy_star)
 t0 = t0_t
 \end{lstlisting}
 
-Motivation: to prove prior used in FBMP is not the origin of $\mu$ bias. 
+Motivation: to prove difference between artificial prior and truth prior (derived from simulation) used in FBMP is not the origin of $\mu$ bias. 
 
 Progress: Use true \texttt{HitPosInWindow} as \texttt{tlist}, true \texttt{T0} as \texttt{t0\_t}, length of \texttt{HitPosInWindow} as \texttt{mu\_t}. \texttt{la} is vector of integral in each time bins. 
 
@@ -737,7 +737,7 @@ Result: there is still bias with fixed \textit{HitPosInWindow}
     \includegraphics[width=\textwidth]{vs-biasmu-fixtlist.png}
 \end{figure}
 
-\subsection{Waveform simulation with fixed \textit{HitPosInWindow} \textbf{without} truth prior}
+\subsection{Waveform simulation with fixed \textit{HitPosInWindow} \textbf{without} prior}
 
 Waveform simulation:
 
@@ -748,7 +748,7 @@ sams = [np.vstack((np.arange(npe[i]) + t0[i], wff.charge(npe[i], gmu=gmu, gsigma
 P-FBMP:
 
 \begin{lstlisting}
-    def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None, left=None, right=None, tlist=None, gmu=None, para=None, prior=True):
+def fbmpr_fxn_reduced(y, A, p1, sig2w, sig2s, mus, D, stop=0, truth=None, i=None, left=None, right=None, tlist=None, gmu=None, para=None, prior=True):
     '''
     p1: prior probability for each bin.
     sig2w: variance of white noise.
@@ -886,6 +886,233 @@ Result: all biases \textbf{are larger} than 0
 \begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{vs-biasmu-fixtlistnoprior.png}
+\end{figure}
+
+\subsection{Waveform simulation \textbf{without} prior}
+
+Waveform simulation:
+
+\begin{lstlisting}
+sams = [np.vstack((wff.time(npe[i], tau, sigma) + t0[i], wff.charge(npe[i], gmu=gmu, gsigma=gsigma, thres=0))).T for i in range(a1 - a0)]
+\end{lstlisting}
+
+\begin{lstlisting}
+prior = False
+mu_t = abs(wave.sum() / gmu)
+n = 5
+A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
+mu_t = abs(wave_r.sum() / gmu)
+
+truth = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
+# 1st FBMP
+time_fbmp_start = time.time()
+# Eq. (9) where the columns of A are taken to be unit-norm.
+factor = np.sqrt(np.diag(np.matmul(A.T, A)))
+A = A / factor
+la = mu_t * np.ones(len(tlist)) / len(tlist)
+xmmse, xmmse_star, psy_star, nu_star, nu_star_bk, T_star, d_max_i, num_i = wff.fbmpr_fxn_reduced(wave_r, A, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, len(la), p1=la / la.sum() * mu_t, stop=5, truth=truth, i=i, left=left_wave, right=right_wave, tlist=tlist, gmu=gmu, para=p, prior=prior, space=space)
+\end{lstlisting}
+
+Motivation: to reduce the influence of prior
+
+Progress: \textit{HitPosInWindow} is sampled from time profile, P-FBMP process \textbf{without} truth prior. 
+
+Result: all biases \textbf{are larger} than 0
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{vs-biasmu-noprior.png}
+\end{figure}
+
+\subsection{P-FBMP with lucyddm prior}
+
+\begin{lstlisting}
+mu_t = abs(wave.sum() / gmu)
+if Tau > 10:
+    n = min(math.ceil(20 / mu_t), 5)
+else:
+    n = min(math.ceil(4 / mu_t), 3)
+A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
+mu_t = abs(wave_r.sum() / gmu)
+
+truth = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
+
+# 1st FBMP
+time_fbmp_start = time.time()
+# Eq. (9) where the columns of A are taken to be unit-norm.
+factor = np.sqrt(np.diag(np.matmul(A.T, A)))
+A = A / factor
+# la = mu_t * wff.convolve_exp_norm(tlist - t0_t, Tau, Sigma) / n + 1e-8
+# la = mu_t * np.ones(len(tlist)) / len(tlist)
+# la = mu_t * np.ones(len(tlist))
+la = cha / cha.sum() * mu_t + 1e-8
+la = la / la.sum() * mu_t
+xmmse, xmmse_star, psy_star, nu_star, nu_star_bk, T_star, d_tot_i, d_max_i, num_i = wff.fbmpr_fxn_reduced(wave_r, A, la, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, len(la), stop=5, truth=truth, i=i, left=left_wave, right=right_wave, tlist=tlist, gmu=gmu, para=p, prior=prior, space=space, elbo=elbo)
+time_fbmp = time_fbmp + time.time() - time_fbmp_start
+\end{lstlisting}
+
+Motivation: to show the relation between lucy $\mu$ bias. 
+
+Progress: Use true \texttt{cha} (derived from lucyddm) as \texttt{la}
+
+Result: implementing lucyddm prior can not remove $\mu$ bias. 
+
+\begin{figure}[H]
+    \includegraphics[width=\textwidth]{vs-biasmu-lucyprior.png}
+\end{figure}
+
+\subsection{P-FBMP with lucyddm prior and fixed bin width}
+
+\begin{lstlisting}
+n = 5
+A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
+mu_t = abs(wave_r.sum() / gmu)
+# 1st FBMP
+time_fbmp_start = time.time()
+# Eq. (9) where the columns of A are taken to be unit-norm.
+factor = np.sqrt(np.diag(np.matmul(A.T, A)))
+A = A / factor
+la = cha / cha.sum() * mu_t + 1e-8
+la = la / la.sum() * mu_t
+xmmse, xmmse_star, psy_star, nu_star, nu_star_bk, T_star, d_max_i, num_i = wff.fbmpr_fxn_reduced(wave_r, A, la, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, len(la), stop=5, truth=truth, i=i, left=left_wave, right=right_wave, tlist=tlist, gmu=gmu, para=p, prior=prior, space=space, elbo=elbo)
+\end{lstlisting}
+
+Motivation: to show the relation between lucy $\mu$ bias when the bin width is fixed. 
+
+Progress: Use true \texttt{cha} (derived from lucyddm) as \texttt{la} and the bin width is fixed to $1/5$. 
+
+Result: thiner bin width will reduce the absolute quantity $\mu$ bias. 
+
+\begin{figure}[H]
+    \includegraphics[width=\textwidth]{vs-biasmu-lucyprior5.png}
+\end{figure}
+
+\subsection{P-FBMP \textbf{without} prior and Gaussian normalization term}
+
+P-FBMP:
+
+\begin{lstlisting}
+def fbmpr_fxn_reduced(y, A, sig2w, sig2s, mus, D, p1, stop=0, truth=None, i=None, left=None, right=None, tlist=None, gmu=None, para=None, prior=True, space=True, plot=False):
+    '''
+    p1: prior probability for each bin.
+    sig2w: variance of white noise.
+    sig2s: variance of signal x_i.
+    mus: mean of signal x_i.
+    '''
+    # Only for multi-gaussian with arithmetic sequence of mu and sigma
+    M, N = A.shape
+
+    psy_thresh = 1e-4
+    # upper limit of number of PEs.
+    P = max(math.ceil(min(M, p1.sum() + 3 * np.sqrt(p1.sum()))), 1)
+
+    T = np.full((P, D), 0)
+    nu = np.full((P, D), -np.inf)
+    xmmse = np.zeros((P, D, N))
+    cc = np.zeros((P, D, N))
+
+    # nu_root: nu for all s_n=0.
+    nu_root = -0.5 * np.linalg.norm(y) ** 2 / sig2w - 0.5 * M * np.log(2 * np.pi)
+    if space:
+        nu_root = nu_root - 0.5 * M * np.log(sig2w)
+    if prior:
+        nu_root = nu_root + np.log(poisson.pmf(0, p1)).sum()
+    # Eq. (29)
+    cx_root = A / sig2w
+    # Eq. (30) sig2s = 1 sigma^2 - 0 sigma^2
+    betaxt_root = sig2s / (1 + sig2s * np.einsum('ij,ij->j', A, cx_root, optimize=True))
+    # Eq. (31)
+    nuxt_root = nu_root + 0.5 * (betaxt_root * (y @ cx_root + mus / sig2s) ** 2  - mus ** 2 / sig2s)
+    if space:
+        nuxt_root = nuxt_root + 0.5 * np.log(betaxt_root / sig2s)
+    if prior:
+        nuxt_root = nuxt_root + np.log(poisson.pmf(1, p1) / poisson.pmf(0, p1))
+    pan_root = np.zeros(N)
+
+    # Repeated Greedy Search
+    for d in range(D):
+        nuxt = nuxt_root.copy()
+        z = y.copy()
+        cx = cx_root.copy()
+        betaxt = betaxt_root.copy()
+        pan = pan_root.copy()
+        for p in range(P):
+            # look for duplicates of nu and nuxt, set to -inf.
+            # only inspect the same number of PEs in Row p.
+            nuxtshadow = np.where(np.sum(np.abs(nuxt - nu[p:(p+1), :d].T) < 1e-4, axis=0), -np.inf, nuxt)
+            nustar = max(nuxtshadow)
+            istar = np.argmax(nuxtshadow)
+            nu[p, d] = nustar
+            T[p, d] = istar
+            pan[istar] += 1
+            # Eq. (33)
+            cx -= np.einsum('n,m,mp->np', betaxt[istar] * cx[:, istar], cx[:, istar], A, optimize=True)
+
+            # Eq. (34)
+            z -= A[:, istar] * mus[istar]
+            assist = np.zeros(N)
+            t, c = np.unique(T[:p+1, d], return_counts=True)
+            assist[t] = mus[t] * c + sig2s[t] * c * np.dot(z, cx[:, t])
+            cc[p, d][t] = c
+            xmmse[p, d] = assist
+
+            # Eq. (30)
+            betaxt = sig2s / (1 + sig2s * np.sum(A * cx, axis=0))
+            # Eq. (31)
+            nuxt = nustar + 0.5 * (betaxt * (z @ cx + mus / sig2s) ** 2 - mus ** 2 / sig2s)
+            if space:
+                nuxt = nuxt + 0.5 * np.log(betaxt / sig2s)
+            if prior:
+                nuxt = nuxt + np.log(poisson.pmf(pan + 1, mu=p1) / poisson.pmf(pan, mu=p1))
+            nuxt[np.isnan(nuxt)] = -np.inf
+            # nuxt[t] = -np.inf
+    nu_bk = nu.copy()
+    nu = nu.T.flatten()
+
+    indx = np.argsort(nu)[::-1]
+    d_max = math.floor(indx[0] // P) + 1
+    num = min(math.ceil(np.sum(nu > nu.max() + np.log(psy_thresh))), D * P)
+    nu_star = nu[indx[:num]]
+    nu_star_bk = nu_bk.T.flatten()[indx[:num]]
+    psy_star = np.exp(nu_star - nu.max()) / np.sum(np.exp(nu_star - nu.max()))
+    T_star = [np.sort(T[:(indx[k] % P) + 1, indx[k] // P]) for k in range(num)]
+    xmmse_star = np.empty((num, N))
+    for k in range(num):
+        xmmse_star[k] = xmmse[indx[k] % P, indx[k] // P]
+
+    xmmse = np.average(xmmse_star, weights=psy_star, axis=0)
+
+    return xmmse, xmmse_star, psy_star, nu_star, nu_star_bk, T_star, d_max, num
+\end{lstlisting}
+
+\begin{lstlisting}
+prior = False
+space = False
+mu_t = abs(wave.sum() / gmu)
+n = 5
+A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
+mu_t = abs(wave_r.sum() / gmu)
+
+# 1st FBMP
+time_fbmp_start = time.time()
+# Eq. (9) where the columns of A are taken to be unit-norm.
+factor = np.sqrt(np.diag(np.matmul(A.T, A)))
+A = A / factor
+# la = mu_t * wff.convolve_exp_norm(tlist - t0_t, Tau, Sigma) / n + 1e-8
+la = mu_t * np.ones(len(tlist)) / len(tlist)
+# la = mu_t * np.ones(len(tlist))
+# la = cha / cha.sum() * mu_t + 1e-8
+xmmse, xmmse_star, psy_star, nu_star, nu_star_bk, T_star, d_max_i, num_i = wff.fbmpr_fxn_reduced(wave_r, A, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, len(la), p1=la / la.sum() * mu_t, stop=5, truth=truth, i=i, left=left_wave, right=right_wave, tlist=tlist, gmu=gmu, para=p, prior=prior, space=space)
+\end{lstlisting}
+
+Motivation: to show the $\mu$ bias when Gaussian normalization term $-\frac{1}{2}\log\det\bm{\Sigma}$ in model selecting metric $\nu$ is removed, additionally, without prior. 
+
+Progress: \texttt{space} is \texttt{False}, not calculate $-\frac{1}{2}\log\det\bm{\Sigma}$ in $\nu$ when RGS. 
+
+Result: $\mu$ bias persists. 
+
+\begin{figure}[H]
+    \includegraphics[width=\textwidth]{vs-biasmu-nospaceprior.png}
 \end{figure}
 
 \section{Ratification}

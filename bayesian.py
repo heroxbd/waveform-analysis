@@ -271,15 +271,15 @@ def fbmp_inference(a0, a1):
         pet = np.repeat(tlist[xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
         cha = np.repeat(xmmse_most[xmmse_most > 0] / factor[xmmse_most > 0] / c_star[maxindex][xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
 
-        mu = np.average(c_star.sum(axis=1), weights=psy_star)
-        t0 = t0_t
-        mu_i = len(cha)
-        t0_i = t0_t
+        # mu = np.average(c_star.sum(axis=1), weights=psy_star)
+        # t0 = t0_t
+        # mu_i = len(cha)
+        # t0_i = t0_t
 
-        # mu, t0 = optit0mu(t0_t, mu_t, n, np.empty(len(la))[None, :], np.array([1]), c_star_truth[None, :], la)
+        mu, t0 = optit0mu(t0_t, mu_t, n, np.empty(len(la))[None, :], np.array([1]), c_star_truth[None, :], la)
 
-        # mu, t0 = optit0mu(t0_t, mu_t, n, xmmse_star, psy_star, c_star, la)
-        # mu_i, t0_i = optit0mu(t0_t, mu_t, n, xmmse_most[None, :], np.array([1]), c_star[maxindex][None, :], la)
+        mu, t0 = optit0mu(t0_t, mu_t, n, xmmse_star, psy_star, c_star, la)
+        mu_i, t0_i = optit0mu(t0_t, mu_t, n, xmmse_most[None, :], np.array([1]), c_star[maxindex][None, :], la)
 
         d_tot[i - a0] = len(la)
         d_max[i - a0] = d_max_i
