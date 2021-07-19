@@ -1115,14 +1115,15 @@ Result: $\mu$ bias persists.
     \includegraphics[width=\textwidth]{vs-biasmu-nospaceprior.png}
 \end{figure}
 
-\section{Ratification}
+\section{Correction}
 
 \subsection{ELBO}
 
-Induce \textbf{ELBO}(Evidence lower bound). 
+Induce \textbf{ELBO}(Evidence lower bound). We want to minimize $\mathrm{KL}(q(\bm{z})|p(\bm{z}|\bm{x}))$, 
 
 \begin{align}
-    \mathrm{ELBO} &= E_q(\log(p(\bm{w}|\bm{z}))) - \mathrm{KL}(q|p(\bm{z})) \\
+    \mathrm{ELBO} &= \log p(\bm{x}) - \mathrm{KL}(q(\bm{z})|p(\bm{z}|\bm{x})) \\
+    &= E_q(\log(p(\bm{w}|\bm{z}))) - \mathrm{KL}(q(\bm{z})|p(\bm{z})) \\
     &= E_q(\log(p(\bm{w}|\bm{z}))) - E_q(\log\frac{q(\bm{z})}{p(\bm{z})}) \\
     &= E_q(\log(p(\bm{w}|\bm{z})p(\bm{z}))) - E_q(\log q(\bm{z})) \\
     &= E_q(\nu) + S_q
@@ -1155,7 +1156,7 @@ Noted, $f(\bm{\theta},\bm{z})=\exp{(\nu+g(\bm{\theta},|\bm{z}|))}$ are bad.
 
 when $\forall \bm{z}, g(\bm{\theta},|\bm{z}|)=0$, $\mathrm{ELBO}_{\bm{\theta}}'=0$. 
 
-Additionally, when $g=0$, 
+It is hard to use \textbf{ELBO} to correct the bias of $\mu$. Additionally, when $g=0$, 
 
 \begin{align}
     \mathrm{ELBO} =& \log\sum_{\bm{z}\in\mathcal{Z}'}\exp\nu
