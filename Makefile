@@ -77,7 +77,7 @@ result/takara/char/Nets/Channel%.torch_net : result/takara/char/Channel%/.Traini
 result/takara/char/Channel%/.Training_finished : result/takara/PreProcess/Pre_Channel%.h5 spe.h5
 	@mkdir -p $(dir $@)
 	@mkdir -p result/takara/char/Nets/
-	python3 -u training.py $< -n $* -B 64 --ref $(word $(words $^), $^) -o result/takara/char/Nets/Channel$*.torch_net result/takara/char/Nets/alpha_Channel$*.torch_net $(dir $@) > $(dir $@)Train.log 2>&1
+	python3 -u training.py $< -n $* -B 64 --ref $(word $(words $^), $^) -o result/takara/char/Nets/Channel$*.torch_net $(dir $@) > $(dir $@)Train.log 2>&1
 	@touch $@
 
 PreData : $(PreData)

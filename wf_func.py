@@ -354,6 +354,10 @@ def elbo(nu_star_prior):
     assert abs(e_star - e) < 1e-6
     return e
 
+def rss_alpha(alpha, outputs, inputs, mnecpu):
+    r = np.power(alpha * np.matmul(mnecpu, outputs) - inputs, 2).sum()
+    return r
+
 def shannon_interpolation(w, n):
     t = np.arange(0, len(w), 1 / n)
     l = np.arange(len(w))

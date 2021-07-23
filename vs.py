@@ -118,7 +118,6 @@ alpha = 0.05
 lim = {'deltadiv':np.array([[0.3, 0.5]]), 'wdist':np.array([[1.5, 3.0]]), 'rss':np.array([[0.55e3, 2.2e3]])}
 keylist = list(mts.keys())
 badkey = ['findpeak', 'threshold', 'fftrans', 'mcmc']
-# badkey = ['findpeak', 'threshold', 'fftrans', 'mcmc', 'takara']
 for sigma, i in zip(Sigma, list(range(len(Sigma)))):
     for tau, j in zip(Tau, list(range(len(Tau)))):
         ax = figd.add_subplot(gsd[i, j])
@@ -338,12 +337,11 @@ mtsi['biasmumax'] = np.nan
 mtsi['biasmu'] = np.nan
 mtsi = np.sort(mtsi, kind='stable', order=['mu', 'tau', 'sigma'])
 
-mts = {'fbmp':mtsi.copy()}
-# mts = {'fbmp':mtsi.copy(), 'takara':mtsi.copy()}
+mts = {'fbmp':mtsi.copy(), 'takara':mtsi.copy()}
 
-marker = {'int':'o', 'tru':'h', 'pe':'p', 'fbmp':'s', 'max':'^', 'takara':'>'}
-color = {'int':'g', 'tru':'k', 'pe':'y', 'fbmp':'r', 'max':'b', 'takara':'m'}
-label = {'fbmp':'\mathrm{FBMP}', 'takara':'\mathrm{CNN}'}
+marker = {'int':'o', 'tru':'h', 'pe':'p', 'fbmp':'s', 'max':'^', 'takara':'>', 'lucyddm':'+'}
+color = {'int':'g', 'tru':'k', 'pe':'y', 'fbmp':'r', 'max':'b', 'takara':'m', 'lucyddm':'C0'}
+label = {'fbmp':'\mathrm{FBMP}', 'takara':'\mathrm{CNN}', 'lucyddm':'\mathrm{LucyDDM}'}
 
 for key in mts.keys():
     for i in range(len(mts[key])):

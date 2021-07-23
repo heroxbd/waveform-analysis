@@ -20,6 +20,7 @@ import time
 global_start = time.time()
 cpu_global_start = time.process_time()
 import numpy as np
+from scipy import optimize as opti
 import tables
 import pandas as pd
 from tqdm import tqdm
@@ -78,14 +79,16 @@ tic = time.time()
 Device = int(Device)
 device = torch.device(Device)
 nets = dict([])
-alphas = dict([])
 for channelid in tqdm(channelid_set, desc='Loading Nets of each channel') :
     nets[channelid] = torch.load(NetDir + '/Channel{:02d}.torch_net'.format(channelid), map_location=device)
-    alphas[channelid] = torch.load(NetDir + '/alpha_Channel{:02d}.torch_net'.format(channelid), map_location=device)
 print('Net Loaded, consuming {0:.02f}s'.format(time.time() - tic))
 
 filter_limit = 0.05
 Timeline = np.arange(WindowSize).reshape(1, WindowSize)
+
+p = spe_pre[0]['parameters']
+t_auto = np.arange(WindowSize).reshape(WindowSize, 1) - np.arange(WindowSize).reshape(1, WindowSize)
+mnecpu = wff.spe((t_auto + np.abs(t_auto)) / 2, p[0], p[1], p[2])
 
 def Forward(channelid):
     Data_of_this_channel = Channel_Grouped_Waveform.get_group(channelid)
@@ -97,13 +100,16 @@ def Forward(channelid):
     slices = np.append(np.arange(0, len(Shifted_Wave), BATCHSIZE), len(Shifted_Wave))
     for i in range(len(slices) - 1):
         inputs = Shifted_Wave[slices[i]:slices[i + 1]]
-        Total = np.abs(np.sum(inputs, axis=1))
-        Total = np.clip(Total, 1e-4, np.inf)
-        Prediction = nets[channelid].forward(torch.from_numpy(inputs).to(device=device)).data
-        Prediction = alphas[channelid].forward(Prediction).data.cpu().numpy()
-        sumPrediction = np.sum(Prediction, axis=1)
-        sumPrediction = np.clip(sumPrediction, 1e-4, np.inf)
-        # After alpha implementation, this line will be commented
+        Prediction = nets[channelid].forward(torch.from_numpy(inputs).to(device=device)).data.cpu().numpy()
+        # Total = np.clip(np.abs(inputs.sum(axis=1)) / wff.gmu, 1e-6 / wff.gmu, np.inf)
+        Total = Prediction.sum(axis=1)
+
+        Alpha = np.empty(slices[i + 1] - slices[i])
+        for j in range(slices[i + 1] - slices[i]):
+            Alpha[j] = opti.fmin_l_bfgs_b(lambda alpha: wff.rss_alpha(alpha, Prediction[j], inputs[j], mnecpu), x0=[0.01], approx_grad=True, bounds=[[1e-20, np.inf]], maxfun=50000)[0]
+        Total = Total * Alpha
+
+        sumPrediction = np.clip(Prediction.sum(axis=1), 1e-10, np.inf)
         Prediction = Prediction / sumPrediction[:, None] * Total[:, None]
         HitPosInWindow = Prediction > filter_limit
         pe_numbers = HitPosInWindow.sum(axis=1)
@@ -114,9 +120,8 @@ def Forward(channelid):
             HitPosInWindow[no_pe_found, guessed_risetime] = True
             Prediction[no_pe_found, guessed_risetime] = 1
             pe_numbers[no_pe_found] = 1
-        Prediction = np.where(Prediction > filter_limit, Prediction, 0)
-        # After alpha implementation, this line will be commented
-        Prediction = Prediction / np.sum(Prediction, axis=1)[:, None] * Total[:, None]
+        sumPrediction = Prediction.sum(axis=1)
+        Prediction = Prediction / sumPrediction[:, None] * Total[:, None]
         Prediction = Prediction[HitPosInWindow] * wff.gmu
         PEmeasure = np.append(PEmeasure, Prediction)
         TimeMatrix = np.repeat(Timeline, len(HitPosInWindow), axis=0)[HitPosInWindow]
@@ -129,7 +134,7 @@ def Forward(channelid):
 tic = time.time()
 cpu_tic = time.process_time()
 Result = []
-for ch in tqdm(channelid_set, desc='Predict for each channel') :
+for ch in tqdm(channelid_set, desc='Predict for each channel'):
     Result.append(Forward(ch))
 Result = pd.concat(Result)
 Result = Result.sort_values(by=['TriggerNo', 'ChannelID'])

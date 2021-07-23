@@ -24,14 +24,3 @@ class Net(nn.Module):
         x = F.relu(self.conv5(x))
         x = x.squeeze(1)
         return x
-
-class Alpha(nn.Module):
-
-    def __init__(self):
-        super(Alpha, self).__init__()
-
-        self.alpha = nn.Parameter(-10 * torch.rand(1))
-
-    def forward(self, x):
-        x = torch.mul(x, F.softplus(self.alpha))
-        return x
