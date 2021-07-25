@@ -51,7 +51,7 @@ RawDataFile = tables.open_file(filename, 'r')
 origin_dtype = RawDataFile.root.Readout.Waveform.dtype
 Total_entries = len(RawDataFile.root.Readout.Waveform)
 RawDataFile.close()
-WindowSize = origin_dtype['Waveform'].shape[0]
+WindowSize = wff.window
 gpufloat_dtype = np.dtype([(name, np.dtype('float32') if name == 'Waveform' else origin_dtype[name].base, origin_dtype[name].shape) for name in origin_dtype.names])
 print('Initialization finished, real time {0:.02f}s, cpu time {1:.02f}s'.format(time.time() - global_start, time.process_time() - cpu_global_start))
 print('Processing {} entries'.format(Total_entries))

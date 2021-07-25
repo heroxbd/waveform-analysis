@@ -245,7 +245,6 @@ def fbmp_inference(a0, a1):
         factor = np.sqrt(np.diag(np.matmul(A.T, A)))
         A = A / factor
         # la = mu_t * wff.convolve_exp_norm(tlist - t0_t, Tau, Sigma) / n + 1e-8
-        # la = mu_t * np.ones(len(tlist)) / len(tlist)
         la = cha / cha.sum() * mu_t + 1e-8
         la = la / la.sum() * mu_t
         xmmse, xmmse_star, psy_star, nu_star, nu_star_bk, T_star, d_max_i, num_i = wff.fbmpr_fxn_reduced(wave_r, A, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, len(la), p1=la, stop=5, truth=truth, i=i, left=left_wave, right=right_wave, tlist=tlist, gmu=gmu, para=p, prior=prior)
@@ -254,11 +253,10 @@ def fbmp_inference(a0, a1):
         for k in range(len(T_star)):
             t, c = np.unique(T_star[k], return_counts=True)
             c_star[k, t] = c
+        la_truth = len(truth) * wff.convolve_exp_norm(tlist - t0_truth[i]['T0'], Tau, Sigma) / n + 1e-8
         if prior:
-            nu_star_prior = nu_star
-        else:
-            la_truth = len(truth) * wff.convolve_exp_norm(tlist - t0_truth[i]['T0'], Tau, Sigma) / n + 1e-8
-            nu_star_prior = nu_star + poisson.logpmf(c_star, mu=la_truth).sum(axis=1)
+            nu_star_prior = nu_star - poisson.logpmf(c_star, mu=la).sum(axis=1)
+        nu_star_prior = nu_star + poisson.logpmf(c_star, mu=la_truth).sum(axis=1)
         maxindex = psy_star.argmax()
 
         nx = np.sum([(tlist - 0.5 / n <= truth['HitPosInWindow'][j]) * (tlist + 0.5 / n > truth['HitPosInWindow'][j]) for j in range(len(truth))], axis=0)

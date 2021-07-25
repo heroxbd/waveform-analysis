@@ -10,6 +10,7 @@ from multiprocessing import Pool, cpu_count
 import numpy as np
 np.seterr(divide='ignore')
 # np.seterr(all='raise')
+from scipy import optimize as opti
 import h5py
 
 import wf_func as wff
@@ -59,7 +60,13 @@ def fitting(a, b):
             elif method == 'threshold':
                 pet, cha = wff.threshold(wave, spe_pre[ent[i]['ChannelID']])
             pet, cha = wff.clip(pet, cha, Thres[method])
-            cha = cha / cha.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
+            if method in ['xiaopeip', 'lucyddm']:
+                output = np.zeros(WindowSize)
+                output[pet] = cha
+                alpha = opti.fmin_l_bfgs_b(lambda alpha: wff.rss_alpha(alpha, output, wave, mnecpu), x0=[0.01], approx_grad=True, bounds=[[1e-20, np.inf]], maxfun=50000)[0]
+                cha = cha * alpha * wff.gmu
+            else:
+                cha = cha / cha.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
             time_method = time_method + time.time() - time_method_start
 
             # truth = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
@@ -76,6 +83,10 @@ def fitting(a, b):
     return dt, time_method
 
 spe_pre = wff.read_model(reference[0], 1)
+p = spe_pre[0]['parameters']
+WindowSize = wff.window
+t_auto = np.arange(WindowSize).reshape(WindowSize, 1) - np.arange(WindowSize).reshape(1, WindowSize)
+mnecpu = wff.spe((t_auto + np.abs(t_auto)) / 2, p[0], p[1], p[2])
 opdt = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('HitPosInWindow', np.float64), ('Charge', np.float64)])
 with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
     l = len(ipt['Readout/Waveform'])
