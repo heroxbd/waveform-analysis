@@ -137,23 +137,23 @@ while $x \gg 1$, $\frac{1}{2}x - \frac{1}{2}\log x \gg 1$, the sign of $D(\nu)_n
 \begin{align}
     \bm{\Sigma} &= \frac{1}{M}\sigma^2\sum_i^N z_i\bm{J}_M + \sigma_\epsilon^2\bm{I}_M \\
     &= \frac{\sigma^2n}{M}\bm{J}_M+\sigma_\epsilon^2\bm{I}_M \\
-    \det\bm{\Sigma} &= M^{-M}(\sigma_\epsilon^2 + M\sigma^2\sum_i^N z_i)\sigma_\epsilon^{2(M-1)} \\
-    &= M^{-M}(\sigma_\epsilon^2+M\sigma^2n)\sigma_\epsilon^{2(M-1)} \\
-    \bm{\Sigma}^{-1} &= \frac{M}{\sigma_\epsilon^2}(\bm{I}_M - \frac{\sigma^2\sum_i^N z_i}{M\sigma^2\sum_i^N z_i+\sigma_\epsilon^2}\bm{J}_M) \\
-    &= \frac{M}{\sigma_\epsilon^2}(\bm{I}_M - \frac{1}{M+\frac{\sigma_\epsilon^2}{\sigma^2n}}\bm{J}_M)
+    \det\bm{\Sigma} &= (\sigma_\epsilon^2 + \sigma^2\sum_i^N z_i)\sigma_\epsilon^{2(M-1)} \\
+    &= (\sigma_\epsilon^2 + \sigma^2n)\sigma_\epsilon^{2(M-1)} \\
+    \bm{\Sigma}^{-1} &= \frac{1}{\sigma_\epsilon^2}(\bm{I}_M - \frac{1}{M}\frac{\sigma^2\sum_i^N z_i}{\sigma^2\sum_i^N z_i+\sigma_\epsilon^2}\bm{J}_M) \\
+    &= \frac{1}{\sigma_\epsilon^2}(\bm{I}_M - \frac{1}{M}\frac{1}{1+\frac{\sigma_\epsilon^2}{\sigma^2n}}\bm{J}_M)
 \end{align}
 
-set $M^\ast = M+\frac{\sigma_\epsilon^2}{\sigma^2n}$, regarding $\sigma\gg\sigma_\epsilon$, thus $M^\ast\approx M$, and
+set $M^\ast = M(1+\frac{\sigma_\epsilon^2}{\sigma^2n})$, regarding $\sigma\gg\sigma_\epsilon$, thus $M^\ast\approx M$, and
 
 \begin{align}
-    \bm{\Sigma}^{-1} &= \frac{M}{\sigma_\epsilon^2}(\bm{I}_M - \frac{1}{M^\ast}\bm{J}_M)
+    \bm{\Sigma}^{-1} &= \frac{1}{\sigma_\epsilon^2}(\bm{I}_M - \frac{1}{M^\ast}\bm{J}_M)
 \end{align}
 
 Thus, 
 
 \begin{align}
-    -2\nu =& \frac{M}{\sigma_\epsilon^2}[\sum_i^M(w_i-\frac{n}{\sqrt{M}})^2-\frac{1}{M^\ast}(\sum_i^M w_i-n\sqrt{M})^2] \\
-    &+ \log(M\sigma^2n+\sigma_\epsilon^2) \\
+    -2\nu =& \frac{1}{\sigma_\epsilon^2}[\sum_i^M(w_i-\frac{n}{\sqrt{M}})^2-\frac{1}{M^\ast}(\sum_i^M w_i-n\sqrt{M})^2] \\
+    &+ \log(\sigma^2n+\sigma_\epsilon^2) \\
     &- 2n\log\lambda - 2(N-n)\log(1-\lambda) + \mathrm{const}
 \end{align}
 
@@ -171,37 +171,37 @@ Additionally,
 Calculate expectation on distribution of $\bm{w}$ and $\bm{z}$ with $|n|=|\bm{z}|=n$, 
 
 \begin{align}
-    -2E(\nu)_n =& \frac{M}{\sigma_\epsilon^2}[(\frac{N}{\sqrt{M}}\sigma^2+\sigma_\epsilon^2)M+(N-n)^2 \\
+    -2E(\nu)_n =& \frac{1}{\sigma_\epsilon^2}[(\frac{N}{\sqrt{M}}\sigma^2+\sigma_\epsilon^2)M+(N-n)^2 \\
     &-\frac{1}{M^\ast}(M^{\frac{3}{2}}N\sigma^2+M\sigma_\epsilon^2+(N-n)^2 M)] \\
-    &+ \log(M\sigma^2n+\sigma_\epsilon^2) \\
+    &+ \log(\sigma^2n+\sigma_\epsilon^2) \\
     &- 2n\log\lambda - 2(N-n)\log(1-\lambda) + \mathrm{const} \\
-    =& \frac{M}{\sigma_\epsilon^2}[(N\sqrt{M}\sigma^2+(N-n)^2)(1-\frac{M}{M^\ast})+(M-\frac{M}{M^\ast})\sigma_\epsilon^2] \\
-    &+ \log(\frac{\sigma^2}{\sigma_\epsilon^2}Mn+1) \\
+    =& \frac{1}{\sigma_\epsilon^2}[(N\sqrt{M}\sigma^2+(N-n)^2)(1-\frac{M}{M^\ast})+(M-\frac{M}{M^\ast})\sigma_\epsilon^2] \\
+    &+ \log(\frac{\sigma^2}{\sigma_\epsilon^2}n+1) \\
     &- 2n\log\lambda - 2(N-n)\log(1-\lambda) + \mathrm{const}
 \end{align}
 
 Thus, 
 
 \begin{align}
-    E(\nu)_n' =& -\frac{1}{2}\{\frac{M}{\sigma_\epsilon^2}[2(n-N)(1-\frac{M}{M^\ast}) \\
+    E(\nu)_n' =& -\frac{1}{2}\{\frac{1}{\sigma_\epsilon^2}[2(n-N)(1-\frac{M}{M^\ast}) \\
     &+(N\sqrt{M}\sigma^2+(N-n)^2+\sigma_\epsilon^2)\frac{M}{M^{\ast2}}M^{\ast'}] \\
-    &+\frac{M}{Mn+\frac{\sigma_\epsilon^2}{\sigma^2}}\} + \log\lambda - \log(1-\lambda) \\
-    M^{\ast'} =& -\frac{\sigma_\epsilon^2}{\sigma^2n^2}
+    &+\frac{1}{n+\frac{\sigma_\epsilon^2}{\sigma^2}}\} + \log\lambda - \log(1-\lambda) \\
+    M^{\ast'} =& -\frac{M\sigma_\epsilon^2}{\sigma^2n^2}
 \end{align}
 
 when $n=N$,
 
 \begin{align}
-    E(\nu)_n'|_N =& -\frac{1}{2}[\frac{M}{\sigma_\epsilon^2}(N\sqrt{M}\sigma^2+\sigma_\epsilon^2)\frac{M}{M^{\ast2}}M^{\ast'} \\
-    &+\frac{M\frac{\sigma^2}{\sigma_\epsilon^2}}{MN\frac{\sigma^2}{\sigma_\epsilon^2}+1}] + \log\lambda - \log(1-\lambda) \\
-    =& \frac{1}{2}\frac{M\frac{\sigma^2}{\sigma_\epsilon^2}}{(MN\frac{\sigma^2}{\sigma_\epsilon^2}+1)^2}(\sqrt{M}-1)(NM\frac{\sigma^2}{\sigma_\epsilon^2}+\sqrt{M}+1) \\
+    E(\nu)_n'|_N =& -\frac{1}{2}[\frac{1}{\sigma_\epsilon^2}(N\sqrt{M}\sigma^2+\sigma_\epsilon^2)\frac{M}{M^{\ast2}}M^{\ast'} \\
+    &+\frac{1}{N+\frac{\sigma_\epsilon^2}{\sigma^2}}] + \log\lambda - \log(1-\lambda) \\
+    =& \frac{1}{2}\frac{N}{(N+\frac{\sigma_\epsilon^2}{\sigma^2})^2}(\sqrt{M}-1) \\
     &+ \log\lambda - \log(1-\lambda)
 \end{align}
 
 Remember that $M \gg 1$, then,
 
 \begin{align}
-    C = \frac{1}{2}\frac{M\frac{\sigma^2}{\sigma_\epsilon^2}}{(MN\frac{\sigma^2}{\sigma_\epsilon^2}+1)^2}(\sqrt{M}-1)(NM\frac{\sigma^2}{\sigma_\epsilon^2}+\sqrt{M}+1) > 0
+    C = \frac{1}{2}\frac{N}{(N+\frac{\sigma_\epsilon^2}{\sigma^2})^2}(\sqrt{M}-1) > 0
 \end{align}
 
 the sign of $E(\nu)_n'|_N$ is defined by the relative magnitude of $C$ and $\log\lambda$. 
