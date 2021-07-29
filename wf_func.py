@@ -193,6 +193,7 @@ def fbmpr_fxn_reduced(y, A, sig2w, sig2s, mus, D, p1, stop=0, truth=None, i=None
 
     # nu_root: nu for all s_n=0.
     nu_root = -0.5 * np.linalg.norm(y) ** 2 / sig2w - 0.5 * M * np.log(2 * np.pi) - 0.5 * M * np.log(sig2w)
+    # nu_root = -0.5 * np.linalg.norm(y) ** 2 / sig2w - 0.5 * M * np.log(2 * np.pi)  # no Gaussian space factor
     if prior:
         nu_root = nu_root + poisson.logpmf(0, p1).sum()
     # Eq. (29)
@@ -201,6 +202,7 @@ def fbmpr_fxn_reduced(y, A, sig2w, sig2s, mus, D, p1, stop=0, truth=None, i=None
     betaxt_root = sig2s / (1 + sig2s * np.einsum('ij,ij->j', A, cx_root, optimize=True))
     # Eq. (31)
     nuxt_root = nu_root + 0.5 * (betaxt_root * (y @ cx_root + mus / sig2s) ** 2  - mus ** 2 / sig2s) + 0.5 * np.log(betaxt_root / sig2s)
+    # nuxt_root = nu_root + 0.5 * (betaxt_root * (y @ cx_root + mus / sig2s) ** 2  - mus ** 2 / sig2s)  # no Gaussian space factor
     if prior:
         nuxt_root = nuxt_root + poisson.logpmf(1, p1) - poisson.logpmf(0, p1)
     pan_root = np.zeros(N)
@@ -236,6 +238,7 @@ def fbmpr_fxn_reduced(y, A, sig2w, sig2s, mus, D, p1, stop=0, truth=None, i=None
             betaxt = sig2s / (1 + sig2s * np.sum(A * cx, axis=0))
             # Eq. (31)
             nuxt = nustar + 0.5 * (betaxt * (z @ cx + mus / sig2s) ** 2 - mus ** 2 / sig2s) + 0.5 * np.log(betaxt / sig2s)
+            # nuxt = nustar + 0.5 * (betaxt * (z @ cx + mus / sig2s) ** 2 - mus ** 2 / sig2s)  # no Gaussian space factor
             if prior:
                 nuxt = nuxt + poisson.logpmf(pan + 1, mu=p1) - poisson.logpmf(pan, mu=p1)
             nuxt[np.isnan(nuxt)] = -np.inf
@@ -245,7 +248,8 @@ def fbmpr_fxn_reduced(y, A, sig2w, sig2s, mus, D, p1, stop=0, truth=None, i=None
 
     indx = np.argsort(nu)[::-1]
     d_max = math.floor(indx[0] // P) + 1
-    num = min(math.ceil(np.sum(nu > nu.max() + np.log(psy_thresh))), D * P)
+    # num = min(math.ceil(np.sum(nu > nu.max() + np.log(psy_thresh))), D * P)
+    num = min(30, D * P)
     nu_star = nu[indx[:num]]
     nu_star_bk = nu_bk.T.flatten()[indx[:num]]
     psy_star = np.exp(nu_star - nu.max()) / np.sum(np.exp(nu_star - nu.max()))
@@ -343,6 +347,7 @@ def nu_direct(y, A, nx, mus, sig2s, sig2w, la, prior=True):
     invPhi = np.linalg.inv(Phi)
     detPhi = np.linalg.det(Phi)
     nu = -0.5 * np.matmul(np.matmul(z, invPhi), z) - 0.5 * M * np.log(2 * np.pi) - 0.5 * np.log(detPhi)
+    # nu = -0.5 * np.matmul(np.matmul(z, invPhi), z) - 0.5 * M * np.log(2 * np.pi)  # no Gaussian space factor
     if prior:
         nu = nu + poisson.logpmf(nx, mu=la).sum()
     return nu

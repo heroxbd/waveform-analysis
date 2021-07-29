@@ -182,7 +182,7 @@ def time_numpyro(a0, a1):
     return stime_t0, stime_cha, dt, count, time_mcmc, accep, mix0ratio
 
 def fbmp_inference(a0, a1):
-    prior = True
+    prior = False
     nsp = 4
     nstd = 3
     t0_wav = np.empty(a1 - a0)
@@ -269,6 +269,7 @@ def fbmp_inference(a0, a1):
         nu_truth[i - a0] = wff.nu_direct(wave_r, A, nx, factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la, prior=prior)
         rss_truth = np.power(wav_ans - np.matmul(A, cc / gmu * factor), 2).sum()
         nu = np.array([wff.nu_direct(wave_r, A, c_star[j], factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la, prior=prior) for j in range(len(psy_star))])
+        # nu_star_prior = np.array([wff.nu_direct(wave_r, A, c_star[j], factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la_truth, prior=True) for j in range(len(psy_star))])
         assert abs(nu - nu_star).max() < 1e-6
         nu_max[i - a0] = nu[0]
         rss = np.array([np.power(wav_ans - np.matmul(A, xmmse_star[j]), 2).sum() for j in range(len(psy_star))])
