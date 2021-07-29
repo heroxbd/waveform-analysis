@@ -737,7 +737,7 @@ Result: there is still bias with fixed \textit{HitPosInWindow}
     \includegraphics[width=\textwidth]{vs-biasmu-fixtlist.png}
 \end{figure}
 
-\subsection{Waveform simulation with fixed \textit{HitPosInWindow} \textbf{without} prior}
+\subsection{Waveform simulation with fixed \textit{HitPosInWindow}, \textbf{without} prior}
 
 Waveform simulation:
 
@@ -927,72 +927,155 @@ Result: all biases \textbf{are larger} than 0
 \subsection{P-FBMP with lucyddm prior}
 
 \begin{lstlisting}
+prior = True
+nsp = 4
+nstd = 3
+cid = ent[i]['ChannelID']
+wave = ent[i]['Waveform'].astype(np.float64) * spe_pre[cid]['epulse']
+
+# initialization
 mu_t = abs(wave.sum() / gmu)
-if Tau > 10:
-    n = min(math.ceil(20 / mu_t), 5)
-else:
-    n = min(math.ceil(4 / mu_t), 3)
+n = 5
 A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
 mu_t = abs(wave_r.sum() / gmu)
+def optit0mu(t0, mu, n, psy_star, c_star, la):
+    ys = np.log(psy_star)
+    if prior:
+        ys = ys - poisson.logpmf(c_star, la).sum(axis=1)
+    ys = np.exp(ys - ys.max()) / np.sum(np.exp(ys - ys.max()))
+    t0list = np.arange(t0 - 3 * Sigma, t0 + 3 * Sigma + 1e-6, 0.2)
+    mulist = np.arange(max(1e-8, mu - 3 * np.sqrt(mu)), mu + 3 * np.sqrt(mu), 0.1)
+    b_mu = [max(1e-8, mu - 5 * np.sqrt(mu)), mu + 5 * np.sqrt(mu)]
+    tlist_pan = np.sort(np.unique(np.hstack(np.arange(0, window)[:, None] + np.linspace(0, 1, n, endpoint=False) - (n // 2) / n)))
+    As = np.zeros((len(psy_star), len(tlist_pan)))
+    As[:, np.isin(tlist_pan, tlist)] = c_star
+    assert sum(np.sum(As, axis=0) > 0) > 0
+    def likelihood(x):
+        a = wff.convolve_exp_norm(tlist_pan - x[1], Tau, Sigma) / n + 1e-8 # use tlist_pan not tlist
+        a = a / a.sum() * x[0]
+        li = -special.logsumexp(np.log(poisson.pmf(As, a)).sum(axis=1), b=ys)
+        return li
+    likemu = np.array([likelihood([mulist[j], t0]) for j in range(len(mulist))])
+    liket0 = np.array([likelihood([mu, t0list[j]]) for j in range(len(t0list))])
+    mu, t0 = opti.fmin_l_bfgs_b(likelihood, x0=[mulist[likemu.argmin()], t0list[liket0.argmin()]], approx_grad=True, bounds=[b_mu, b_t0], maxfun=50000)[0]
+    return mu, t0
 
-truth = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
-
-# 1st FBMP
 time_fbmp_start = time.time()
 # Eq. (9) where the columns of A are taken to be unit-norm.
 factor = np.sqrt(np.diag(np.matmul(A.T, A)))
 A = A / factor
 # la = mu_t * wff.convolve_exp_norm(tlist - t0_t, Tau, Sigma) / n + 1e-8
-# la = mu_t * np.ones(len(tlist)) / len(tlist)
-# la = mu_t * np.ones(len(tlist))
 la = cha / cha.sum() * mu_t + 1e-8
 la = la / la.sum() * mu_t
-xmmse, xmmse_star, psy_star, nu_star, nu_star_bk, T_star, d_tot_i, d_max_i, num_i = wff.fbmpr_fxn_reduced(wave_r, A, la, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, len(la), stop=5, truth=truth, i=i, left=left_wave, right=right_wave, tlist=tlist, gmu=gmu, para=p, prior=prior, space=space, elbo=elbo)
+xmmse, xmmse_star, psy_star, nu_star, nu_star_bk, T_star, d_max_i, num_i = wff.fbmpr_fxn_reduced(wave_r, A, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, len(la), p1=la, stop=5, truth=truth, i=i, left=left_wave, right=right_wave, tlist=tlist, gmu=gmu, para=p, prior=prior)
 time_fbmp = time_fbmp + time.time() - time_fbmp_start
+c_star = np.zeros_like(xmmse_star).astype(int)
+for k in range(len(T_star)):
+    t, c = np.unique(T_star[k], return_counts=True)
+    c_star[k, t] = c
+la_truth = len(truth) * wff.convolve_exp_norm(tlist - t0_truth[i]['T0'], Tau, Sigma) / n + 1e-8
+if prior:
+    nu_star_prior = nu_star - poisson.logpmf(c_star, mu=la).sum(axis=1)
+nu_star_prior = nu_star + poisson.logpmf(c_star, mu=la_truth).sum(axis=1)
+maxindex = psy_star.argmax()
+
+xmmse_most = xmmse_star[maxindex]
+pet = np.repeat(tlist[xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
+cha = np.repeat(xmmse_most[xmmse_most > 0] / factor[xmmse_most > 0] / c_star[maxindex][xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
+
+mu, t0 = optit0mu(t0_t, mu_t, n, psy_star, c_star, la)
+mu_i, t0_i = optit0mu(t0_t, mu_t, n, np.array([1]), c_star[maxindex][None, :], la)
 \end{lstlisting}
 
-Motivation: to show the relation between lucy $\mu$ bias. 
+Motivation: to show the relation between lucy prior and $\mu$ bias. 
 
-Progress: Use true \texttt{cha} (derived from lucyddm) as \texttt{la}
+Progress: Use \texttt{cha} (derived from lucyddm) as \texttt{la} and the bin width is fixed to $1/5$. 
 
-Result: implementing lucyddm prior can not remove $\mu$ bias. 
+Result: bias still exists when using lucy prior. 
 
 \begin{figure}[H]
     \includegraphics[width=\textwidth]{vs-biasmu-lucyprior.png}
 \end{figure}
 
-\subsection{P-FBMP with lucyddm prior and fixed bin width}
+\subsection{P-FBMP with profile prior}
 
 \begin{lstlisting}
+prior = True
+nsp = 4
+nstd = 3
+cid = ent[i]['ChannelID']
+wave = ent[i]['Waveform'].astype(np.float64) * spe_pre[cid]['epulse']
+
+# initialization
+mu_t = abs(wave.sum() / gmu)
 n = 5
 A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
 mu_t = abs(wave_r.sum() / gmu)
-# 1st FBMP
+def optit0mu(t0, mu, n, psy_star, c_star, la):
+    ys = np.log(psy_star)
+    if prior:
+        ys = ys - poisson.logpmf(c_star, la).sum(axis=1)
+    ys = np.exp(ys - ys.max()) / np.sum(np.exp(ys - ys.max()))
+    t0list = np.arange(t0 - 3 * Sigma, t0 + 3 * Sigma + 1e-6, 0.2)
+    mulist = np.arange(max(1e-8, mu - 3 * np.sqrt(mu)), mu + 3 * np.sqrt(mu), 0.1)
+    b_mu = [max(1e-8, mu - 5 * np.sqrt(mu)), mu + 5 * np.sqrt(mu)]
+    tlist_pan = np.sort(np.unique(np.hstack(np.arange(0, window)[:, None] + np.linspace(0, 1, n, endpoint=False) - (n // 2) / n)))
+    As = np.zeros((len(psy_star), len(tlist_pan)))
+    As[:, np.isin(tlist_pan, tlist)] = c_star
+    assert sum(np.sum(As, axis=0) > 0) > 0
+    def likelihood(x):
+        a = wff.convolve_exp_norm(tlist_pan - x[1], Tau, Sigma) / n + 1e-8 # use tlist_pan not tlist
+        a = a / a.sum() * x[0]
+        li = -special.logsumexp(np.log(poisson.pmf(As, a)).sum(axis=1), b=ys)
+        return li
+    likemu = np.array([likelihood([mulist[j], t0]) for j in range(len(mulist))])
+    liket0 = np.array([likelihood([mu, t0list[j]]) for j in range(len(t0list))])
+    mu, t0 = opti.fmin_l_bfgs_b(likelihood, x0=[mulist[likemu.argmin()], t0list[liket0.argmin()]], approx_grad=True, bounds=[b_mu, b_t0], maxfun=50000)[0]
+    return mu, t0
+
 time_fbmp_start = time.time()
 # Eq. (9) where the columns of A are taken to be unit-norm.
 factor = np.sqrt(np.diag(np.matmul(A.T, A)))
 A = A / factor
-la = cha / cha.sum() * mu_t + 1e-8
+la = mu_t * wff.convolve_exp_norm(tlist - t0_t, Tau, Sigma) / n + 1e-8
+# la = cha / cha.sum() * mu_t + 1e-8
 la = la / la.sum() * mu_t
-xmmse, xmmse_star, psy_star, nu_star, nu_star_bk, T_star, d_max_i, num_i = wff.fbmpr_fxn_reduced(wave_r, A, la, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, len(la), stop=5, truth=truth, i=i, left=left_wave, right=right_wave, tlist=tlist, gmu=gmu, para=p, prior=prior, space=space, elbo=elbo)
+xmmse, xmmse_star, psy_star, nu_star, nu_star_bk, T_star, d_max_i, num_i = wff.fbmpr_fxn_reduced(wave_r, A, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, len(la), p1=la, stop=5, truth=truth, i=i, left=left_wave, right=right_wave, tlist=tlist, gmu=gmu, para=p, prior=prior)
+time_fbmp = time_fbmp + time.time() - time_fbmp_start
+c_star = np.zeros_like(xmmse_star).astype(int)
+for k in range(len(T_star)):
+    t, c = np.unique(T_star[k], return_counts=True)
+    c_star[k, t] = c
+la_truth = len(truth) * wff.convolve_exp_norm(tlist - t0_truth[i]['T0'], Tau, Sigma) / n + 1e-8
+if prior:
+    nu_star_prior = nu_star - poisson.logpmf(c_star, mu=la).sum(axis=1)
+nu_star_prior = nu_star + poisson.logpmf(c_star, mu=la_truth).sum(axis=1)
+maxindex = psy_star.argmax()
+
+xmmse_most = xmmse_star[maxindex]
+pet = np.repeat(tlist[xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
+cha = np.repeat(xmmse_most[xmmse_most > 0] / factor[xmmse_most > 0] / c_star[maxindex][xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
+
+mu, t0 = optit0mu(t0_t, mu_t, n, psy_star, c_star, la)
+mu_i, t0_i = optit0mu(t0_t, mu_t, n, np.array([1]), c_star[maxindex][None, :], la)
 \end{lstlisting}
 
-Motivation: to show the relation between lucy $\mu$ bias when the bin width is fixed. 
+Motivation: to show the relation between profile prior $\mu$ bias. 
 
-Progress: Use true \texttt{cha} (derived from lucyddm) as \texttt{la} and the bin width is fixed to $1/5$. 
+Progress: Use time profile as \texttt{la} and the bin width is fixed to $1/5$. 
 
-Result: thiner bin width will reduce the absolute quantity $\mu$ bias. 
+Result: bias still exists when using profile prior. 
 
 \begin{figure}[H]
-    \includegraphics[width=\textwidth]{vs-biasmu-lucyprior5.png}
+    \includegraphics[width=\textwidth]{vs-biasmu-profileprior.png}
 \end{figure}
 
-\subsection{P-FBMP \textbf{without} prior and Gaussian normalization term}
+\subsection{P-FBMP \textbf{without} prior and \textbf{without} Gaussian normalization term}
 
 P-FBMP:
 
 \begin{lstlisting}
-def fbmpr_fxn_reduced(y, A, sig2w, sig2s, mus, D, p1, stop=0, truth=None, i=None, left=None, right=None, tlist=None, gmu=None, para=None, prior=True, space=True, plot=False):
+def fbmpr_fxn_reduced(y, A, sig2w, sig2s, mus, D, p1, stop=0, truth=None, i=None, left=None, right=None, tlist=None, gmu=None, para=None, prior=True, plot=False):
     '''
     p1: prior probability for each bin.
     sig2w: variance of white noise.
@@ -1002,7 +1085,7 @@ def fbmpr_fxn_reduced(y, A, sig2w, sig2s, mus, D, p1, stop=0, truth=None, i=None
     # Only for multi-gaussian with arithmetic sequence of mu and sigma
     M, N = A.shape
 
-    psy_thresh = 1e-4
+    psy_thresh = 0.1
     # upper limit of number of PEs.
     P = max(math.ceil(min(M, p1.sum() + 3 * np.sqrt(p1.sum()))), 1)
 
@@ -1012,21 +1095,19 @@ def fbmpr_fxn_reduced(y, A, sig2w, sig2s, mus, D, p1, stop=0, truth=None, i=None
     cc = np.zeros((P, D, N))
 
     # nu_root: nu for all s_n=0.
-    nu_root = -0.5 * np.linalg.norm(y) ** 2 / sig2w - 0.5 * M * np.log(2 * np.pi)
-    if space:
-        nu_root = nu_root - 0.5 * M * np.log(sig2w)
+    # nu_root = -0.5 * np.linalg.norm(y) ** 2 / sig2w - 0.5 * M * np.log(2 * np.pi) - 0.5 * M * np.log(sig2w)
+    nu_root = -0.5 * np.linalg.norm(y) ** 2 / sig2w - 0.5 * M * np.log(2 * np.pi)  # no Gaussian space factor
     if prior:
-        nu_root = nu_root + np.log(poisson.pmf(0, p1)).sum()
+        nu_root = nu_root + poisson.logpmf(0, p1).sum()
     # Eq. (29)
     cx_root = A / sig2w
     # Eq. (30) sig2s = 1 sigma^2 - 0 sigma^2
     betaxt_root = sig2s / (1 + sig2s * np.einsum('ij,ij->j', A, cx_root, optimize=True))
     # Eq. (31)
-    nuxt_root = nu_root + 0.5 * (betaxt_root * (y @ cx_root + mus / sig2s) ** 2  - mus ** 2 / sig2s)
-    if space:
-        nuxt_root = nuxt_root + 0.5 * np.log(betaxt_root / sig2s)
+    # nuxt_root = nu_root + 0.5 * (betaxt_root * (y @ cx_root + mus / sig2s) ** 2  - mus ** 2 / sig2s) + 0.5 * np.log(betaxt_root / sig2s)
+    nuxt_root = nu_root + 0.5 * (betaxt_root * (y @ cx_root + mus / sig2s) ** 2  - mus ** 2 / sig2s)  # no Gaussian space factor
     if prior:
-        nuxt_root = nuxt_root + np.log(poisson.pmf(1, p1) / poisson.pmf(0, p1))
+        nuxt_root = nuxt_root + poisson.logpmf(1, p1) - poisson.logpmf(0, p1)
     pan_root = np.zeros(N)
 
     # Repeated Greedy Search
@@ -1059,11 +1140,10 @@ def fbmpr_fxn_reduced(y, A, sig2w, sig2s, mus, D, p1, stop=0, truth=None, i=None
             # Eq. (30)
             betaxt = sig2s / (1 + sig2s * np.sum(A * cx, axis=0))
             # Eq. (31)
-            nuxt = nustar + 0.5 * (betaxt * (z @ cx + mus / sig2s) ** 2 - mus ** 2 / sig2s)
-            if space:
-                nuxt = nuxt + 0.5 * np.log(betaxt / sig2s)
+            # nuxt = nustar + 0.5 * (betaxt * (z @ cx + mus / sig2s) ** 2 - mus ** 2 / sig2s) + 0.5 * np.log(betaxt / sig2s)
+            nuxt = nustar + 0.5 * (betaxt * (z @ cx + mus / sig2s) ** 2 - mus ** 2 / sig2s)  # no Gaussian space factor
             if prior:
-                nuxt = nuxt + np.log(poisson.pmf(pan + 1, mu=p1) / poisson.pmf(pan, mu=p1))
+                nuxt = nuxt + poisson.logpmf(pan + 1, mu=p1) - poisson.logpmf(pan, mu=p1)
             nuxt[np.isnan(nuxt)] = -np.inf
             # nuxt[t] = -np.inf
     nu_bk = nu.copy()
@@ -1071,7 +1151,8 @@ def fbmpr_fxn_reduced(y, A, sig2w, sig2s, mus, D, p1, stop=0, truth=None, i=None
 
     indx = np.argsort(nu)[::-1]
     d_max = math.floor(indx[0] // P) + 1
-    num = min(math.ceil(np.sum(nu > nu.max() + np.log(psy_thresh))), D * P)
+    # num = min(math.ceil(np.sum(nu > nu.max() + np.log(psy_thresh))), D * P)
+    num = min(30, D * P)
     nu_star = nu[indx[:num]]
     nu_star_bk = nu_bk.T.flatten()[indx[:num]]
     psy_star = np.exp(nu_star - nu.max()) / np.sum(np.exp(nu_star - nu.max()))
@@ -1079,6 +1160,11 @@ def fbmpr_fxn_reduced(y, A, sig2w, sig2s, mus, D, p1, stop=0, truth=None, i=None
     xmmse_star = np.empty((num, N))
     for k in range(num):
         xmmse_star[k] = xmmse[indx[k] % P, indx[k] // P]
+    
+    c_star = np.zeros_like(xmmse_star).astype(int)
+    for k in range(num):
+        t, c = np.unique(T_star[k][xmmse_star[k][T_star[k]] != 0], return_counts=True)
+        c_star[k, t] = c
 
     xmmse = np.average(xmmse_star, weights=psy_star, axis=0)
 
@@ -1087,11 +1173,38 @@ def fbmpr_fxn_reduced(y, A, sig2w, sig2s, mus, D, p1, stop=0, truth=None, i=None
 
 \begin{lstlisting}
 prior = False
-space = False
+nsp = 4
+nstd = 3
+
+cid = ent[i]['ChannelID']
+wave = ent[i]['Waveform'].astype(np.float64) * spe_pre[cid]['epulse']
+
+# initialization
 mu_t = abs(wave.sum() / gmu)
 n = 5
 A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
 mu_t = abs(wave_r.sum() / gmu)
+def optit0mu(t0, mu, n, psy_star, c_star, la):
+    ys = np.log(psy_star)
+    if prior:
+        ys = ys - poisson.logpmf(c_star, la).sum(axis=1)
+    ys = np.exp(ys - ys.max()) / np.sum(np.exp(ys - ys.max()))
+    t0list = np.arange(t0 - 3 * Sigma, t0 + 3 * Sigma + 1e-6, 0.2)
+    mulist = np.arange(max(1e-8, mu - 3 * np.sqrt(mu)), mu + 3 * np.sqrt(mu), 0.1)
+    b_mu = [max(1e-8, mu - 5 * np.sqrt(mu)), mu + 5 * np.sqrt(mu)]
+    tlist_pan = np.sort(np.unique(np.hstack(np.arange(0, window)[:, None] + np.linspace(0, 1, n, endpoint=False) - (n // 2) / n)))
+    As = np.zeros((len(psy_star), len(tlist_pan)))
+    As[:, np.isin(tlist_pan, tlist)] = c_star
+    assert sum(np.sum(As, axis=0) > 0) > 0
+    def likelihood(x):
+        a = wff.convolve_exp_norm(tlist_pan - x[1], Tau, Sigma) / n + 1e-8 # use tlist_pan not tlist
+        a = a / a.sum() * x[0]
+        li = -special.logsumexp(np.log(poisson.pmf(As, a)).sum(axis=1), b=ys)
+        return li
+    likemu = np.array([likelihood([mulist[j], t0]) for j in range(len(mulist))])
+    liket0 = np.array([likelihood([mu, t0list[j]]) for j in range(len(t0list))])
+    mu, t0 = opti.fmin_l_bfgs_b(likelihood, x0=[mulist[likemu.argmin()], t0list[liket0.argmin()]], approx_grad=True, bounds=[b_mu, b_t0], maxfun=50000)[0]
+    return mu, t0
 
 # 1st FBMP
 time_fbmp_start = time.time()
@@ -1099,15 +1212,108 @@ time_fbmp_start = time.time()
 factor = np.sqrt(np.diag(np.matmul(A.T, A)))
 A = A / factor
 # la = mu_t * wff.convolve_exp_norm(tlist - t0_t, Tau, Sigma) / n + 1e-8
-la = mu_t * np.ones(len(tlist)) / len(tlist)
-# la = mu_t * np.ones(len(tlist))
-# la = cha / cha.sum() * mu_t + 1e-8
-xmmse, xmmse_star, psy_star, nu_star, nu_star_bk, T_star, d_max_i, num_i = wff.fbmpr_fxn_reduced(wave_r, A, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, len(la), p1=la / la.sum() * mu_t, stop=5, truth=truth, i=i, left=left_wave, right=right_wave, tlist=tlist, gmu=gmu, para=p, prior=prior, space=space)
+la = cha / cha.sum() * mu_t + 1e-8
+la = la / la.sum() * mu_t
+xmmse, xmmse_star, psy_star, nu_star, nu_star_bk, T_star, d_max_i, num_i = wff.fbmpr_fxn_reduced(wave_r, A, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, len(la), p1=la, stop=5, truth=truth, i=i, left=left_wave, right=right_wave, tlist=tlist, gmu=gmu, para=p, prior=prior)
+time_fbmp = time_fbmp + time.time() - time_fbmp_start
+c_star = np.zeros_like(xmmse_star).astype(int)
+for k in range(len(T_star)):
+    t, c = np.unique(T_star[k], return_counts=True)
+    c_star[k, t] = c
+la_truth = len(truth) * wff.convolve_exp_norm(tlist - t0_truth[i]['T0'], Tau, Sigma) / n + 1e-8
+if prior:
+    nu_star_prior = nu_star - poisson.logpmf(c_star, mu=la).sum(axis=1)
+nu_star_prior = nu_star + poisson.logpmf(c_star, mu=la_truth).sum(axis=1)
+maxindex = psy_star.argmax()
+
+xmmse_most = xmmse_star[maxindex]
+pet = np.repeat(tlist[xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
+cha = np.repeat(xmmse_most[xmmse_most > 0] / factor[xmmse_most > 0] / c_star[maxindex][xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
+
+mu, t0 = optit0mu(t0_t, mu_t, n, psy_star, c_star, la)
+mu_i, t0_i = optit0mu(t0_t, mu_t, n, np.array([1]), c_star[maxindex][None, :], la)
 \end{lstlisting}
 
 Motivation: to show the $\mu$ bias when Gaussian normalization term $-\frac{1}{2}\log\det\bm{\Sigma}$ in model selecting metric $\nu$ is removed, additionally, without prior. 
 
-Progress: \texttt{space} is \texttt{False}, not calculate $-\frac{1}{2}\log\det\bm{\Sigma}$ in $\nu$ when RGS. 
+Progress: not calculate $-\frac{1}{2}\log\det\bm{\Sigma}$ in $\nu$ when RGS. 
+
+Result: $\mu$ bias persists. 
+
+\begin{figure}[H]
+    \includegraphics[width=\textwidth]{vs-biasmu-nospacenoprior.png}
+\end{figure}
+
+\subsection{P-FBMP \textbf{without} prior and \textbf{with} Gaussian normalization term}
+
+P-FBMP:
+
+\begin{lstlisting}
+prior = True
+nsp = 4
+nstd = 3
+
+cid = ent[i]['ChannelID']
+wave = ent[i]['Waveform'].astype(np.float64) * spe_pre[cid]['epulse']
+
+# initialization
+mu_t = abs(wave.sum() / gmu)
+n = 5
+A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
+mu_t = abs(wave_r.sum() / gmu)
+def optit0mu(t0, mu, n, psy_star, c_star, la):
+    ys = np.log(psy_star)
+    if prior:
+        ys = ys - poisson.logpmf(c_star, la).sum(axis=1)
+    ys = np.exp(ys - ys.max()) / np.sum(np.exp(ys - ys.max()))
+    t0list = np.arange(t0 - 3 * Sigma, t0 + 3 * Sigma + 1e-6, 0.2)
+    mulist = np.arange(max(1e-8, mu - 3 * np.sqrt(mu)), mu + 3 * np.sqrt(mu), 0.1)
+    b_mu = [max(1e-8, mu - 5 * np.sqrt(mu)), mu + 5 * np.sqrt(mu)]
+    tlist_pan = np.sort(np.unique(np.hstack(np.arange(0, window)[:, None] + np.linspace(0, 1, n, endpoint=False) - (n // 2) / n)))
+    As = np.zeros((len(psy_star), len(tlist_pan)))
+    As[:, np.isin(tlist_pan, tlist)] = c_star
+    assert sum(np.sum(As, axis=0) > 0) > 0
+    def likelihood(x):
+        a = wff.convolve_exp_norm(tlist_pan - x[1], Tau, Sigma) / n + 1e-8 # use tlist_pan not tlist
+        a = a / a.sum() * x[0]
+        li = -special.logsumexp(np.log(poisson.pmf(As, a)).sum(axis=1), b=ys)
+        return li
+    likemu = np.array([likelihood([mulist[j], t0]) for j in range(len(mulist))])
+    liket0 = np.array([likelihood([mu, t0list[j]]) for j in range(len(t0list))])
+    mu, t0 = opti.fmin_l_bfgs_b(likelihood, x0=[mulist[likemu.argmin()], t0list[liket0.argmin()]], approx_grad=True, bounds=[b_mu, b_t0], maxfun=50000)[0]
+    return mu, t0
+
+# 1st FBMP
+time_fbmp_start = time.time()
+# Eq. (9) where the columns of A are taken to be unit-norm.
+factor = np.sqrt(np.diag(np.matmul(A.T, A)))
+A = A / factor
+# la = mu_t * wff.convolve_exp_norm(tlist - t0_t, Tau, Sigma) / n + 1e-8
+la = cha / cha.sum() * mu_t + 1e-8
+la = la / la.sum() * mu_t
+xmmse, xmmse_star, psy_star, nu_star, nu_star_bk, T_star, d_max_i, num_i = wff.fbmpr_fxn_reduced(wave_r, A, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, len(la), p1=la, stop=5, truth=truth, i=i, left=left_wave, right=right_wave, tlist=tlist, gmu=gmu, para=p, prior=prior)
+time_fbmp = time_fbmp + time.time() - time_fbmp_start
+c_star = np.zeros_like(xmmse_star).astype(int)
+for k in range(len(T_star)):
+    t, c = np.unique(T_star[k], return_counts=True)
+    c_star[k, t] = c
+la_truth = len(truth) * wff.convolve_exp_norm(tlist - t0_truth[i]['T0'], Tau, Sigma) / n + 1e-8
+if prior:
+    nu_star_prior = nu_star - poisson.logpmf(c_star, mu=la).sum(axis=1)
+nu_star_prior = nu_star + poisson.logpmf(c_star, mu=la_truth).sum(axis=1)
+maxindex = psy_star.argmax()
+
+xmmse_most = xmmse_star[maxindex]
+pet = np.repeat(tlist[xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
+cha = np.repeat(xmmse_most[xmmse_most > 0] / factor[xmmse_most > 0] / c_star[maxindex][xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
+
+mu, t0 = optit0mu(t0_t, mu_t, n, psy_star, c_star, la)
+mu_i, t0_i = optit0mu(t0_t, mu_t, n, np.array([1]), c_star[maxindex][None, :], la)
+\end{lstlisting}
+
+Motivation: to show the $\mu$ bias withour Gaussian normalization term and with prior. 
+
+Progress: not calculate $-\frac{1}{2}\log\det\bm{\Sigma}$ in $\nu$ when RGS. 
 
 Result: $\mu$ bias persists. 
 
