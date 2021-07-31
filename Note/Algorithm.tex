@@ -123,17 +123,17 @@ Take Fourier transform $\mathcal{F}$ of \eqref{eq:1},
   \implies \mathcal{F}[\tilde{\phi}] & = \frac{\mathcal{F}[w]}{\mathcal{F}[V_\mathrm{PE}]} - \frac{\mathcal{F}[\epsilon]}{\mathcal{F}[V_\mathrm{PE}]}.
   \end{aligned}
 \end{equation}
-The noise term $\epsilon$ is unknown, but can be suppressed by a threshold $V_\mathrm{th}$ and a low pass filter if $V_\mathrm{PE}(t)$ is smooth.  The filter can be realized by a multiplier $R$ in the frequency domain. The estimator $\hat{\phi}(t)$ takes the over-threshold part of inverse Fourier transformationed function of $t$ and is defined in 3 steps,
+The noise term $\epsilon$ is unknown, but can be suppressed by a threshold $V_\mathrm{th}$ and a low pass filter if $V_\mathrm{PE}(t)$ is smooth.  The filter can be realized by a low pass filter multiplier $R$ in the frequency domain. The estimator $\hat{\phi}(t)$ takes the over-threshold part of inverse Fourier transformationed function of $t$ and is defined in 3 steps,
 \begin{equation}
   \label{eq:fdconv2}
   \begin{aligned}
     \hat{\phi}''(t) & = \mathcal{F}^{-1}\left[\frac{R \mathcal{F}[w]}{\mathcal{F}[V_\mathrm{PE}]}\right](t) \\
     \hat{\phi}'(t) & = \hat{\phi}''(t) I(\hat{\phi}''(t) - V_\mathrm{th}) \\
-    \hat{\phi}(t) & = \hat{Q}\hat{\phi}_*'(t) \\
+    \hat{\phi}(t) & = \hat{\alpha}\hat{\phi}'(t) \\
   \end{aligned}
 \end{equation}
-where $\hat{\phi}_*'(t)$ is the normalized $\hat{\phi}'(t)$, $I(x)$ is the indicator function and $\hat{Q}$ is the total relative charge,
-\begin{equation*}
+where $I(x)$ is the indicator function. Instead of using the total relative charge, $\hat{\alpha}$ is derived with a minimization procedure, 
+\begin{equation}
   \begin{aligned}
   \label{eq:id}
   I(x) = \left\{
@@ -143,9 +143,10 @@ where $\hat{\phi}_*'(t)$ is the normalized $\hat{\phi}'(t)$, $I(x)$ is the indic
     \end{array}
     \right.
     & \hspace{1cm} &
-    \hat{Q} = \frac{\int w(t) \mathrm{d}t}{\int V_\mathrm{PE}(t) \mathrm{d}t}\\
+    \hat{\alpha} = \arg \underset{\hat{\alpha}'}{\min}\mathrm{RSS}\left[\hat{\alpha}'\hat{\phi}'(t)\otimes V_\mathrm{PE}(t),w(t)\right] \\
   \end{aligned}
-\end{equation*}
+\end{equation}
+This $\hat{\alpha}$ scaling process provides the capability to eliminate the influence of noise. 
 
 Figure~\ref{fig:fd} illustrates the algorithm with an example having $D_w = \SI{2.03}{ns}$. 
 
@@ -210,7 +211,7 @@ The workflow of data processing consists of training and predicting. Training is
   \caption{\label{fig:CNN} Training of a CNN}
 \end{figure}
 
-The product of network training is a function that creates PE outputs $\hat{\phi}(t)$ from waveform inputs $w(t)$.  Since $D_w$ disregards normalization, $\hat{\phi}$ is scaled to $\hat{Q}\hat{\phi}_*$ following~\eqref{eq:fdconv2}. A demonstration shown in Fig.~\ref{fig:cnn} has $D_w = \SI{0.75}{ns}$. 
+The product of network training is a function that creates PE outputs $\hat{\phi}(t)$ from waveform inputs $w(t)$.  Since $D_w$ disregards normalization, $\hat{\phi}$ is scaled to $\hat{\alpha}\hat{\phi}$ following~\eqref{eq:fdconv2}. A demonstration shown in Fig.~\ref{fig:cnn} has $D_w = \SI{0.75}{ns}$. 
 
 The result of $\hat{\phi}(t)$ when $\mu=4, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$ is shown in Fig.~\ref{fig:cnn-npe}. The left panel is the boxplot which shows the $D_d$ percentile vs $N_{pe}$, and the right panel is the overall histogram of $D_d$. 
 
@@ -255,7 +256,7 @@ Construct estimators $\hat{q}_i$ by minimizing RSS of $w'(t)$ and $w(t)$,
   \bm{\hat{q}} = \arg \underset{\bm{q'}}{\min} \mathrm{RSS}\left[w'(t),w(t)\right].
 \end{equation}
 
-The optimizer is realized with limited-memory Broyden-Fletcher-Goldfarb-Shanno algorithm with bound constraint~\cite{byrd_limited_1995}.  It can impose constraints of $q'_i > 0$. The demonstration~\ref{fig:fitting} here shows a result with $D_w = \SI{0.75}{ns}$.
+The optimizer is realized with limited-memory Broyden-Fletcher-Goldfarb-Shanno algorithm with bound constraint~\cite{byrd_limited_1995}.  It can impose constraints of $q'_i > 0$. Also like Fourier deconvolution in \eqref{eq:fdconv2}, this method thresholds and scales the converged $\bm{\hat{q}}$. The demonstration~\ref{fig:fitting} here shows a result with $D_w = \SI{0.75}{ns}$.
 
 \begin{figure}[H]
   \begin{subfigure}{.5\textwidth}
