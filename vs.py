@@ -66,6 +66,7 @@ color = {'1st':'g', 'tru':'k', 'findpeak':'C1', 'threshold':'C2', 'fftrans':'m',
 jit = 0.05
 jitter = {'mcmcone':-5 * jit, 'mcmc':-4 * jit, 'tru':-3 * jit, 'fbmp':-2 * jit, 'fbmpone':-1 * jit, 'lucyddm':0 * jit, 'xiaopeip':1 * jit, 'takara':2 * jit, '1st':3 * jit, 'fftrans':4 * jit, 'findpeak':5 * jit, 'threshold':6 * jit}
 
+alpha = 0.05
 for key in mts.keys():
     for i in range(len(mts[key])):
         f = filelist[mts[key][i]['n']]
@@ -86,8 +87,8 @@ for key in mts.keys():
             mts[key][i]['bias1sttruth'] = np.mean(start['ts1sttruth'] - start['T0'])
             mts[key][i]['biastruth'] = np.mean(start['tstruth'] - start['T0'])
             mts[key][i]['bias'] = np.mean(time['tscharge'][vali] - start['T0'][vali])
-            mts[key][i]['wdist'] = np.insert(np.percentile(record['wdist'][vali], [5, 95]), 1, record['wdist'][vali].mean())
-            mts[key][i]['RSS'] = np.insert(np.percentile(record['RSS'][vali], [5, 95]), 1, record['RSS'][vali].mean())
+            mts[key][i]['wdist'] = np.insert(np.percentile(record['wdist'][vali], [alpha * 100, 100 - alpha * 100]), 1, record['wdist'][vali].mean())
+            mts[key][i]['RSS'] = np.insert(np.percentile(record['RSS'][vali], [alpha * 100, 100 - alpha * 100]), 1, record['RSS'][vali].mean())
             if not np.any(np.isnan(time['tswave'][vali])):
                 mts[key][i]['stdone'], mts[key][i]['stdonesuccess'] = wff.stdrmoutlier(time['tscharge'] - start['T0'], r)
                 mts[key][i]['biasone'] = np.mean(time['tscharge'][vali] - start['T0'][vali])
@@ -114,12 +115,11 @@ figw = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
 gsw = gridspec.GridSpec(len(Sigma), len(Tau), figure=figw, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
 figr = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
 gsr = gridspec.GridSpec(len(Sigma), len(Tau), figure=figr, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
-alpha = 0.05
 lim = {'deltadiv':np.array([[0.3, 0.5]]), 'wdist':np.array([[1.5, 3.0]]), 'rss':np.array([[0.55e3, 2.2e3]])}
 keylist = list(mts.keys())
 badkey = ['findpeak', 'threshold', 'fftrans', 'mcmc']
-for sigma, i in zip(Sigma, list(range(len(Sigma)))):
-    for tau, j in zip(Tau, list(range(len(Tau)))):
+for i, sigma in enumerate(Sigma):
+    for j, tau in enumerate(Tau):
         ax = figd.add_subplot(gsd[i, j])
         stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == tau) & (mts['lucyddm']['sigma'] == sigma)]
         yerr1st = np.vstack([stdlist['std1sttruth']-np.sqrt(np.power(stdlist['std1sttruth'],2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(stdlist['std1sttruth'],2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-stdlist['std1sttruth']])
@@ -167,9 +167,12 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
         for key in keylist:
             if key in badkey:
                 continue
-            stdlistkey = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
-            yerr = stdlistkey['std'] / stdlist['stdtruth'] / np.sqrt(stdlistkey['N'])
-            ax.errorbar(stdlist['mu'] + jitter[key], stdlistkey['std'] / stdlist['stdtruth'], yerr=yerr, label='$\sigma_'+deltalabel[key]+'/\sigma_'+deltalabel['tru']+'$', c=color[key], marker=marker[key])
+            stdlist = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
+            # if key == 'fbmp':
+            #     yerr = stdlist['stdone'] / stdlist['stdtruth'] / np.sqrt(stdlist['N'])
+            #     ax.errorbar(stdlist['mu'], stdlist['stdone'] / stdlist['stdtruth'], yerr=yerr, label='$\sigma_'+deltalabel['fbmpone']+'/\sigma_'+deltalabel['tru']+'$', c=color['fbmpone'], marker=marker['fbmpone'])
+            yerr = stdlist['std'] / stdlist['stdtruth'] / np.sqrt(stdlist['N'])
+            ax.errorbar(stdlist['mu'] + jitter[key], stdlist['std'] / stdlist['stdtruth'], yerr=yerr, label='$\sigma_'+deltalabel[key]+'/\sigma_'+deltalabel['tru']+'$', c=color[key], marker=marker[key])
         ax.set_xlabel(r'$N_{\mathrm{PE}}\ \mathrm{expectation}\ \mu$')
         ax.set_ylabel(r'$\mathrm{ratio}$')
         ax.set_title(fr'$\tau={tau}\si{{ns}},\,\sigma={sigma}\si{{ns}}$')
@@ -237,7 +240,6 @@ figr.savefig('Note/figures/vs-rss.pdf')
 figr.savefig('Note/figures/vs-rss.png')
 plt.close(figr)
 
-alpha = 0.05
 marker2 = [['s', '^']]
 colors2 = [['r', 'b']]
 fig = plt.figure(figsize=(8, 4))
@@ -248,7 +250,7 @@ stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == Tau[0]) & (mts['lucyddm']['si
 sigma = 0
 tau = max(Tau)
 np.random.seed(0)
-for mu, i in zip(stdlist['mu'], list(range(len(stdlist['mu'])))):
+for i, mu in enumerate(stdlist['mu']):
     N = stdlist['N'][i]
     npe = poisson.ppf(1 - uniform.rvs(scale=1-poisson.cdf(0, mu), size=N), mu).astype(int)
     t0 = np.random.uniform(100., 500., size=N)
@@ -258,8 +260,8 @@ for mu, i in zip(stdlist['mu'], list(range(len(stdlist['mu'])))):
 yerr = np.vstack([std1sttruth-np.sqrt(np.power(std1sttruth,2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(std1sttruth,2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-std1sttruth])
 ax.errorbar(stdlist['mu'], std1sttruth, yerr=yerr, label='$\sigma_'+deltalabel['tru']+fr',\,\tau={tau}\si{{ns}},\,\sigma={sigma}\si{{ns}}$', marker='o', color='g')
 ax.errorbar(stdlist['mu'], std1sttruth, yerr=yerr, label='$\sigma_'+deltalabel['1st']+fr',\,\tau={tau}\si{{ns}},\,\sigma={sigma}\si{{ns}}$', marker='o', color='g', linestyle='dashed')
-for sigma, i in zip(Sigma, list(range(len(Sigma)))):
-    for tau, j in zip(Tau, list(range(len(Tau)))):
+for i, sigma in enumerate(Sigma):
+    for j, tau in enumerate(Tau):
         stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == tau) & (mts['lucyddm']['sigma'] == sigma)]
         yerrall = np.vstack([stdlist['stdtruth']-np.sqrt(np.power(stdlist['stdtruth'],2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(stdlist['stdtruth'],2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-stdlist['stdtruth']])
         yerr1st = np.vstack([stdlist['std1sttruth']-np.sqrt(np.power(stdlist['std1sttruth'],2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(stdlist['std1sttruth'],2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-stdlist['std1sttruth']])
@@ -275,8 +277,8 @@ tau = max(Tau)
 stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == Tau[0]) & (mts['lucyddm']['sigma'] == Sigma[0])]
 yerr = std1sttruth / std1sttruth / np.sqrt(stdlist['N'])
 ax.errorbar(stdlist['mu'], std1sttruth / std1sttruth, yerr=yerr, label=fr'$(20,0)$', marker='o', color='g')
-for sigma, i in zip(Sigma, list(range(len(Sigma)))):
-    for tau, j in zip(Tau, list(range(len(Tau)))):
+for i, sigma in enumerate(Sigma):
+    for j, tau in enumerate(Tau):
         stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == tau) & (mts['lucyddm']['sigma'] == sigma)]
         sigma = int(sigma)
         tau = int(tau)
@@ -401,20 +403,21 @@ figbr = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
 gs = gridspec.GridSpec(1, 2, figure=figbr, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
 figb = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
 gs = gridspec.GridSpec(1, 2, figure=figb, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
-for sigma, i in zip(Sigma, list(range(len(Sigma)))):
-    for tau, j in zip(Tau, list(range(len(Tau)))):
+for i, sigma in enumerate(Sigma):
+    for j, tau in enumerate(Tau):
         # charge std
-        stdlistkey = mts['fbmp'][(mts['fbmp']['tau'] == tau) & (mts['fbmp']['sigma'] == sigma)]
+        stdlist = mts['fbmp'][(mts['fbmp']['tau'] == tau) & (mts['fbmp']['sigma'] == sigma)]
         ax = figdd.add_subplot(gs[i, j])
-        yerr = stdlistkey['stdmuint'] / stdlistkey['stdmutru'] / np.sqrt(2 * stdlistkey['N'])
-        ax.errorbar(stdlistkey['mu'], stdlistkey['stdmuint'] / stdlistkey['stdmutru'], yerr=yerr, label='$\sigma_\mathrm{int}/\sigma_{\log{\mu}}$', c=color['1st'], marker=marker['1st'])
+        # yerr = stdlist['stdmuint'] / stdlist['stdmutru'] / np.sqrt(2 * stdlist['N'])
+        yerr = np.vstack([stdlist['stdmuint']-np.sqrt(np.power(stdlist['stdmuint'],2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(stdlist['stdmuint'],2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-stdlist['stdmuint']]) / stdlist['stdmutru']
+        ax.errorbar(stdlist['mu'] + jitter['tru'], stdlist['stdmuint'] / stdlist['stdmutru'], yerr=yerr, label='$\sigma_\mathrm{int}/\sigma_{\log{\mu}}$', c=color['1st'], marker=marker['1st'])
         for key in keylist:
-            stdlistkey = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
-            if key == 'fbmp':
-                yerr = stdlistkey['stdmumax'] / stdlistkey['stdmutru'] / np.sqrt(2 * stdlistkey['N'])
-                ax.errorbar(stdlistkey['mu'], stdlistkey['stdmumax'] / stdlistkey['stdmutru'], yerr=yerr, label='$\sigma_' + label['fbmpone'] + '/\sigma_{\log{\mu}}$', c=color['fbmpone'], marker=marker['fbmpone'])
-            yerr = stdlistkey['stdmu'] / stdlistkey['stdmutru'] / np.sqrt(2 * stdlistkey['N'])
-            ax.errorbar(stdlistkey['mu'], stdlistkey['stdmu'] / stdlistkey['stdmutru'], yerr=yerr, label='$\sigma_' + label[key] + '/\sigma_{\log{\mu}}$', c=color[key], marker=marker[key])
+            stdlist = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
+            # if key == 'fbmp':
+            #     yerr = stdlist['stdmumax'] / stdlist['stdmutru'] / np.sqrt(2 * stdlist['N'])
+            #     ax.errorbar(stdlist['mu'], stdlist['stdmumax'] / stdlist['stdmutru'], yerr=yerr, label='$\sigma_' + label['fbmpone'] + '/\sigma_{\log{\mu}}$', c=color['fbmpone'], marker=marker['fbmpone'])
+            yerr = np.vstack([stdlist['stdmu']-np.sqrt(np.power(stdlist['stdmu'],2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(stdlist['stdmu'],2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-stdlist['stdmu']]) / stdlist['stdmutru']
+            ax.errorbar(stdlist['mu'] + jitter[key], stdlist['stdmu'] / stdlist['stdmutru'], yerr=yerr, label='$\sigma_' + label[key] + '/\sigma_{\log{\mu}}$', c=color[key], marker=marker[key])
         ax.set_xlabel(r'$N_{\mathrm{PE}}\ \mathrm{expectation}\ \mu$')
         ax.set_ylabel(r'$\mathrm{ratio}$')
         ax.set_title(fr'$\tau={tau}\si{{ns}},\,\sigma={sigma}\si{{ns}}$')
@@ -425,19 +428,20 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
             ax.legend(loc='upper left', bbox_to_anchor=(1., 0.9))
         
         # charge bias ratio
-        stdlistkey = mts['fbmp'][(mts['fbmp']['tau'] == tau) & (mts['fbmp']['sigma'] == sigma)]
+        stdlist = mts['fbmp'][(mts['fbmp']['tau'] == tau) & (mts['fbmp']['sigma'] == sigma)]
         ax = figbr.add_subplot(gs[i, j])
         n = np.arange(1, 1000)
-        mean = np.array([np.average(n, weights=poisson.pmf(n, mu=mu)) for mu in stdlistkey['mu']])
-        yerr = stdlistkey['biasmuint'] / np.sqrt(stdlistkey['N']) / mean
-        ax.errorbar(stdlistkey['mu'], stdlistkey['biasmuint'] / mean, yerr=yerr, label='$\mathrm{bias}_\mathrm{int}$', c=color['1st'], marker=marker['1st'])
+        mean = np.array([np.average(n, weights=poisson.pmf(n, mu=mu)) for mu in stdlist['mu']])
+        # yerr = stdlist['biasmuint'] / np.sqrt(stdlist['N']) / mean
+        yerr = np.vstack([stdlist['biasmuint']-t.ppf(1-alpha/2, stdlist['N'])*stdlist['stdmuint']/np.sqrt(stdlist['N']), t.ppf(1-alpha/2, stdlist['N'])*stdlist['stdmuint']/np.sqrt(stdlist['N'])-stdlist['biasmuint']]) / mean
+        ax.errorbar(stdlist['mu'] + jitter['tru'], stdlist['biasmuint'] / mean, yerr=yerr, label='$\mathrm{bias}_\mathrm{int}$', c=color['1st'], marker=marker['1st'])
         for key in keylist:
-            stdlistkey = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
-            if key == 'fbmp':
-                yerr = stdlistkey['biasmumax'] / np.sqrt(stdlistkey['N']) / mean
-                ax.errorbar(stdlistkey['mu'], stdlistkey['biasmumax'] / mean, yerr=yerr, label='$\mathrm{bias}_' + label['fbmpone'] + '$', c=color['fbmpone'], marker=marker['fbmpone'])
-            yerr = stdlistkey['biasmu'] / np.sqrt(stdlistkey['N']) / mean
-            ax.errorbar(stdlistkey['mu'], stdlistkey['biasmu'] / mean, yerr=yerr, label='$\mathrm{bias}_' + label[key] + '$', c=color[key], marker=marker[key])
+            stdlist = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
+            # if key == 'fbmp':
+            #     yerr = stdlist['biasmumax'] / np.sqrt(stdlist['N']) / mean
+            #     ax.errorbar(stdlist['mu'], stdlist['biasmumax'] / mean, yerr=yerr, label='$\mathrm{bias}_' + label['fbmpone'] + '$', c=color['fbmpone'], marker=marker['fbmpone'])
+            yerr = np.vstack([stdlist['biasmu']-t.ppf(1-alpha/2, stdlist['N'])*stdlist['stdmu']/np.sqrt(stdlist['N']), t.ppf(1-alpha/2, stdlist['N'])*stdlist['stdmu']/np.sqrt(stdlist['N'])-stdlist['biasmu']]) / mean
+            ax.errorbar(stdlist['mu'] + jitter[key], stdlist['biasmu'] / mean, yerr=yerr, label='$\mathrm{bias}_' + label[key] + '$', c=color[key], marker=marker[key])
         ax.set_xlabel(r'$N_{\mathrm{PE}}\ \mathrm{expectation}\ \mu$')
         # ax.set_ylabel(r'$\mathrm{bias}$')
         ax.set_ylabel(r'$\frac{\Delta \mu}{\mu}$')
@@ -449,20 +453,20 @@ for sigma, i in zip(Sigma, list(range(len(Sigma)))):
             ax.legend(loc='upper left', bbox_to_anchor=(1., 0.9))
 
         # charge bias
-        stdlistkey = mts['fbmp'][(mts['fbmp']['tau'] == tau) & (mts['fbmp']['sigma'] == sigma)]
+        stdlist = mts['fbmp'][(mts['fbmp']['tau'] == tau) & (mts['fbmp']['sigma'] == sigma)]
         ax = figb.add_subplot(gs[i, j])
         n = np.arange(1, 1000)
-        yerr = stdlistkey['biasmuint'] / np.sqrt(stdlistkey['N'])
-        ax.errorbar(stdlistkey['mu'], stdlistkey['biasmuint'], yerr=yerr, label='$\mathrm{bias}_\mathrm{int}$', c=color['1st'], marker=marker['1st'])
+        # yerr = stdlist['biasmuint'] / np.sqrt(stdlist['N'])
+        yerr = np.vstack([stdlist['biasmuint']-t.ppf(1-alpha/2, stdlist['N'])*stdlist['stdmuint']/np.sqrt(stdlist['N']), t.ppf(1-alpha/2, stdlist['N'])*stdlist['stdmuint']/np.sqrt(stdlist['N'])-stdlist['biasmuint']])
+        ax.errorbar(stdlist['mu'] + jitter['tru'], stdlist['biasmuint'], yerr=yerr, label='$\mathrm{bias}_\mathrm{int}$', c=color['1st'], marker=marker['1st'])
         for key in keylist:
-            stdlistkey = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
-            if key == 'fbmp':
-                yerr = stdlistkey['biasmumax'] / np.sqrt(stdlistkey['N'])
-                ax.errorbar(stdlistkey['mu'], stdlistkey['biasmumax'], yerr=yerr, label='$\mathrm{bias}_' + label['fbmpone'] + '$', c=color['fbmpone'], marker=marker['fbmpone'])
-            yerr = stdlistkey['biasmu'] / np.sqrt(stdlistkey['N'])
-            ax.errorbar(stdlistkey['mu'], stdlistkey['biasmu'], yerr=yerr, label='$\mathrm{bias}_' + label[key] + '$', c=color[key], marker=marker[key])
+            stdlist = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
+            # if key == 'fbmp':
+            #     yerr = stdlist['biasmumax'] / np.sqrt(stdlist['N'])
+            #     ax.errorbar(stdlist['mu'], stdlist['biasmumax'], yerr=yerr, label='$\mathrm{bias}_' + label['fbmpone'] + '$', c=color['fbmpone'], marker=marker['fbmpone'])
+            yerr = np.vstack([stdlist['biasmu']-t.ppf(1-alpha/2, stdlist['N'])*stdlist['stdmu']/np.sqrt(stdlist['N']), t.ppf(1-alpha/2, stdlist['N'])*stdlist['stdmu']/np.sqrt(stdlist['N'])-stdlist['biasmu']])
+            ax.errorbar(stdlist['mu'] + jitter[key], stdlist['biasmu'], yerr=yerr, label='$\mathrm{bias}_' + label[key] + '$', c=color[key], marker=marker[key])
         ax.set_xlabel(r'$N_{\mathrm{PE}}\ \mathrm{expectation}\ \mu$')
-        # ax.set_ylabel(r'$\mathrm{bias}$')
         ax.set_ylabel(r'$\Delta \mu$')
         ax.set_title(fr'$\tau={tau}\si{{ns}},\,\sigma={sigma}\si{{ns}}$')
         ax.yaxis.get_major_formatter().set_powerlimits((0, 0))
