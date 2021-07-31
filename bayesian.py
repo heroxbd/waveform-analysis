@@ -206,7 +206,7 @@ def fbmp_inference(a0, a1):
 
         # initialization
         mu_t = abs(wave.sum() / gmu)
-        n = 5
+        n = 2
         A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
         mu_t = abs(wave_r.sum() / gmu)
         def optit0mu(t0, mu, n, psy_star, c_star, la):
@@ -257,7 +257,6 @@ def fbmp_inference(a0, a1):
         if prior:
             nu_star_prior = nu_star - poisson.logpmf(c_star, mu=la).sum(axis=1)
         nu_star_prior = nu_star + poisson.logpmf(c_star, mu=la_truth).sum(axis=1)
-        maxindex = psy_star.argmax()
 
         nx = np.sum([(tlist - 0.5 / n <= truth['HitPosInWindow'][j]) * (tlist + 0.5 / n > truth['HitPosInWindow'][j]) for j in range(len(truth))], axis=0)
         cc = np.sum([np.where(tlist - 0.5 / n < truth['HitPosInWindow'][j], np.sqrt(truth['Charge'][j]), 0) * np.where(tlist + 0.5 / n > truth['HitPosInWindow'][j], np.sqrt(truth['Charge'][j]), 0) for j in range(len(truth))], axis=0)
@@ -274,6 +273,8 @@ def fbmp_inference(a0, a1):
         nu_max[i - a0] = nu[0]
         rss = np.array([np.power(wav_ans - np.matmul(A, xmmse_star[j]), 2).sum() for j in range(len(psy_star))])
 
+        nu_re = np.array([wff.nu_direct(wave_r, A, c_star[j], factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la, prior=True) for j in range(len(psy_star))])
+        maxindex = nu_re.argmax()
         xmmse_most = np.clip(xmmse_star[maxindex], 0, np.inf)
         pet = np.repeat(tlist[xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
         cha = np.repeat(xmmse_most[xmmse_most > 0] / factor[xmmse_most > 0] / c_star[maxindex][xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
