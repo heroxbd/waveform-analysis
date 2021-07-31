@@ -274,7 +274,7 @@ def fbmp_inference(a0, a1):
         nu_max[i - a0] = nu[0]
         rss = np.array([np.power(wav_ans - np.matmul(A, xmmse_star[j]), 2).sum() for j in range(len(psy_star))])
 
-        xmmse_most = xmmse_star[maxindex]
+        xmmse_most = np.clip(xmmse_star[maxindex], 0, np.inf)
         pet = np.repeat(tlist[xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
         cha = np.repeat(xmmse_most[xmmse_most > 0] / factor[xmmse_most > 0] / c_star[maxindex][xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
 
@@ -282,8 +282,6 @@ def fbmp_inference(a0, a1):
         # t0 = t0_t
         # mu_i = len(cha)
         # t0_i = t0_t
-
-        # mu, t0 = optit0mu(t0_t, mu_t, n, np.array([1]), c_star_truth[None, :], la)
 
         mu, t0 = optit0mu(t0_t, mu_t, n, psy_star, c_star, la)
         mu_i, t0_i = optit0mu(t0_t, mu_t, n, np.array([1]), c_star[maxindex][None, :], la)
