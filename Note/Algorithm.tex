@@ -355,7 +355,7 @@ where $\bm{Z}$ is the diagonal matrix of vector $\bm{z}$ controlling $q'_i$. $\b
   \label{eq:poissonfbmp}
 \end{equation}
 
-Denote a set $\mathcal{Z}$ to contain infinite combinations of $\bm{z}$. Only few $\bm{z}$'s gives finite probabilities of $\bm{w}$, leading to Fast Bayesian Matching Pursuit~(FBMP), a parameter estimation method for sparse linear models~\cite{schniter_fast_nodate}.  FBMP defines a subset $\mathcal{Z}'$ of $\mathcal{Z}$ with only the $\bm{z}$ giving non-negligible $p(\bm{w}|\bm{z})$.  The posterior of $\bm{z}$ is approximated as
+Denote a set $\mathcal{Z}$ to contain infinite combinations of $\bm{z}$. Only few $\bm{z}$'s gives finite probabilities of $\bm{w}$, leading to Fast Bayesian Matching Pursuit~(FBMP), a parameter estimation method for sparse linear models~\cite{schniter_fast_nodate}.  FBMP defines a targeted subset $\mathcal{Z}'$ of $\mathcal{Z}$ with only the $\bm{z}$ giving non-negligible $p(\bm{w}|\bm{z})$.  The posterior of $\bm{z}$ is approximated as
 \begin{equation}
     \label{eq:z}
     \begin{aligned}
@@ -380,7 +380,7 @@ The nominator logarithm of \eqref{eq:z},
         & +\sum_{i}\log{\mathrm{Poisson}(z_i,p_i)}
     \end{aligned}
 \end{equation}
-is treated as a \textit{model selection metric}.  A repeated greedy search is performed to construct the target set $\mathcal{Z}'$ guided by \eqref{eq:metric}. Additionally, a linear algebraic iteration reduces the complexity of $p(\bm{z}|\bm{w})$ calculation~\cite{schniter_fast_nodate}. 
+is treated as a \textit{model selection metric}.  A repeated greedy search (RGS) is performed to construct the target set $\mathcal{Z}'$ guided by \eqref{eq:metric}. Additionally, a linear algebraic iteration reduces the complexity of $p(\bm{z}|\bm{w})$ calculation~\cite{schniter_fast_nodate}. 
 
 For each $\bm{z} \in \mathcal{Z}'$, by \eqref{eq:mgauss} the expectation estimation of $\bm{q}'$ is, 
 \begin{align}
@@ -418,7 +418,7 @@ The denominator of \eqref{eq:z} is actually the evidence $p(\bm{w}|t_0, \mu)$, w
 \begin{equation}
 \begin{aligned}
     \label{eq:bayesianinter}
-    \left(\hat{t}_0, \hat{\mu}\right) &= \arg\underset{t_0,\mu}{\max} p(\bm{w} | t_0, \mu) \\
+    \nu &= \left(\hat{t}_0, \hat{\mu}\right) = \arg\underset{t_0,\mu}{\max} p(\bm{w} | t_0, \mu) \\
     p(\bm{w}|t_0, \mu) &= \sum_{\bm{z}'\in\mathcal{Z}'}p(\bm{w}|\bm{z}',t_0,\mu)p(\bm{z}'|t_0,\mu) \\
     &= \sum_{\bm{z}'\in\mathcal{Z}'}p(\bm{w}|\bm{z}')p(\bm{z}'|t_0,\mu).
 \end{aligned}
@@ -437,7 +437,7 @@ The $D_w$ summary of all methods is plotted in Fig.~\ref{fig:chargesummary}, wit
     \caption{\label{fig:chargesummary} $W_{d}$ of methods with light curve $\mu=4, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$}
 \end{figure}
 
-It is apparent that FindPeak, Shift, and FFT are second-rate among all 8 methods, and on time resolution and charge reconstruction which we will discuss in \ref{subsec:timeresolution} and \ref{subsec:chargereconstruction}, MCMC dose not perform good. So we will only discuss the other 4 methods below. 
+It is apparent that FindPeak, Shift, and FFT are second-rate among all 8 methods, and on time resolution and charge reconstruction which we will discuss in \ref{subsec:timeresolution} and \ref{subsec:chargereconstruction}, MCMC dose not perform good, and additionally MCMC is very time-consuming. So we will only discuss the other 4 methods below. 
 
 % Figure of Merits
 
