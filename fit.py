@@ -60,7 +60,7 @@ def fitting(a, b):
             elif method == 'threshold':
                 pet, cha = wff.threshold(wave, spe_pre[ent[i]['ChannelID']])
             pet, cha = wff.clip(pet, cha, Thres[method])
-            if method in ['xiaopeip', 'lucyddm']:
+            if method in ['xiaopeip', 'lucyddm', 'fftrans']:
                 output = np.zeros(WindowSize)
                 output[pet] = cha
                 alpha = opti.fmin_l_bfgs_b(lambda alpha: wff.rss_alpha(alpha, output, wave, mnecpu), x0=[0.01], approx_grad=True, bounds=[[1e-20, np.inf]], maxfun=50000)[0]

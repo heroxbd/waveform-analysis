@@ -115,7 +115,7 @@ figw = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
 gsw = gridspec.GridSpec(len(Sigma), len(Tau), figure=figw, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
 figr = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
 gsr = gridspec.GridSpec(len(Sigma), len(Tau), figure=figr, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
-lim = {'deltadiv':np.array([[0.3, 0.5]]), 'wdist':np.array([[1.5, 3.0]]), 'rss':np.array([[0.55e3, 2.2e3]])}
+lim = {'deltadiv':np.array([[0.3, 0.5]]), 'wdist':np.array([[1.5, 3.0]]), 'rss':np.array([[0.37e3, 1.7e3]])}
 keylist = list(mts.keys())
 badkey = ['findpeak', 'threshold', 'fftrans', 'mcmc']
 for i, sigma in enumerate(Sigma):

@@ -59,7 +59,7 @@ with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as ipt, h5py.File(args
     # if False:
         ts = ipt['starttime'][:]
     else:
-        if method in ['takara', 'xiaopeip', 'lucyddm']:
+        if method in ['takara', 'xiaopeip', 'lucyddm', 'fftrans']:
             sdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('tscharge', np.float64), ('tswave', np.float64), ('mucharge', np.float64), ('muwave', np.float64)])
         else:
             sdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('tscharge', np.float64), ('tswave', np.float64)])
@@ -67,7 +67,7 @@ with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as ipt, h5py.File(args
         ts['TriggerNo'] = tc['TriggerNo']
         ts['ChannelID'] = tc['ChannelID']
         ts['tswave'] = np.full(N, np.nan)
-        if method in ['takara', 'xiaopeip', 'lucyddm']:
+        if method in ['takara', 'xiaopeip', 'lucyddm', 'fftrans']:
             ts['mucharge'] = np.full(N, np.nan)
             e_ans, i_ans = np.unique(charge['TriggerNo'] * Chnum + charge['ChannelID'], return_index=True)
             i_ans = np.append(i_ans, len(charge))
