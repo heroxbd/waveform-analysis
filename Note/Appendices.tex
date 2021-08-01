@@ -39,11 +39,11 @@ $\bm{V}_\mathrm{PE}$ is a $M\times N$ matrix, where $N=N_\mathrm{PE}$ is the sim
 \subsection{Approximation}
 
 \begin{itemize}
-    \item Poisson $\rightarrow$ Bernoulli, $z_i=0,\bm{Z}_{ii}=0$ or $z_i=1,\bm{Z}_{ii}=\sigma^2$
+    \item Poisson $\rightarrow$ Bernoulli, $z_i=0,\bm{Z}_{ii}=0$ or $z_i=1,\bm{Z}_{ii}=\sigma_q^2$
     \item SPE approximation
     \begin{itemize}
-    \item For \textbf{delta} approximation, $\bm{V}_{PE}=\begin{bmatrix}\bm{I} \\\bm{O}\end{bmatrix}$, $w_i\sim \mathrm{Normal}(1,\sigma^2+\sigma_\epsilon^2)$
-    \item For \textbf{flat} approximation, $\bm{V}_{PE}=\frac{1}{\sqrt{M}}\bm{J}_{M,N}$, $w_i\sim \mathrm{Normal}(\frac{N}{\sqrt{M}},\frac{N}{\sqrt{M}}\sigma^2+\sigma_\epsilon^2)$, $\sum_i^M w_i\sim \mathrm{Normal}(N\sqrt{M},M^{\frac{3}{2}}N\sigma^2+M\sigma_\epsilon^2)$
+    \item For \textbf{delta} approximation, $\bm{V}_{PE}=\begin{bmatrix}\bm{I} \\\bm{O}\end{bmatrix}$, $w_i\sim \mathrm{Normal}(1,\sigma_q^2+\sigma_\epsilon^2)$
+    \item For \textbf{flat} approximation, $\bm{V}_{PE}=\frac{1}{\sqrt{M}}\bm{J}_{M,N}$, $w_i\sim \mathrm{Normal}(\frac{N}{\sqrt{M}},\frac{N}{\sqrt{M}}\sigma_q^2+\sigma_\epsilon^2)$, $\sum_i^M w_i\sim \mathrm{Normal}(N\sqrt{M},M^{\frac{3}{2}}N\sigma_q^2+M\sigma_\epsilon^2)$
     \end{itemize}
     \item flat prior, $\begin{cases}
         \lambda & \text{ if } z_i=1 \\ 
@@ -65,9 +65,9 @@ For a certain $(\bm{w}, \bm{z})$, let $K=\{i|z_i=1\}$, $|K|=n$, we evaluate the 
         \bm{Z} & \bm{O} \\
         \bm{O} & \bm{O}
     \end{bmatrix} + \sigma_\epsilon^2\bm{I}_M \\
-    \det\bm{\Sigma}_z &= \Pi_i (z_i\sigma^2+\sigma_\epsilon^2) \\
+    \det\bm{\Sigma}_z &= \Pi_i (z_i\sigma_q^2+\sigma_\epsilon^2) \\
     \bm{\Sigma}_{zij}^{-1} &= \begin{cases}
-        \frac{1}{z_i\sigma^2+\sigma_\epsilon^2} & \text{ if }  i=j \\ 
+        \frac{1}{z_i\sigma_q^2+\sigma_\epsilon^2} & \text{ if }  i=j \\ 
         0 & \text{ if }  i\neq j 
     \end{cases}
 \end{aligned}
@@ -77,29 +77,29 @@ Thus,
 
 \begin{equation}
 \begin{aligned}
-    -2\nu =& \sum_{i\in K}\frac{(w_i - 1)^2}{\sigma^2+\sigma_\epsilon^2} + \sum_{i\in \bar{K}}\frac{w_i^2}{\sigma_\epsilon^2} \\ 
-    &+ n\log(\sigma^2+\sigma_\epsilon^2) + (N-n)\log\sigma_\epsilon^2 - 2n\log\lambda - 2(N-n)\log(1-\lambda) + \mathrm{const}
+    -2\nu =& \sum_{i\in K}\frac{(w_i - 1)^2}{\sigma_q^2+\sigma_\epsilon^2} + \sum_{i\in \bar{K}}\frac{w_i^2}{\sigma_\epsilon^2} \\ 
+    &+ n\log(\sigma_q^2+\sigma_\epsilon^2) + (N-n)\log\sigma_\epsilon^2 - 2n\log\lambda - 2(N-n)\log(1-\lambda) + \mathrm{const}
 \end{aligned}
 \end{equation}
 
 Additionally, 
 
 \begin{equation}
-    \frac{w_i^2}{\sigma_\epsilon^2} = \frac{1}{\sigma_\epsilon^2}((\sigma^2+\sigma_\epsilon^2)\frac{(w_i - 1)^2}{\sigma^2+\sigma_\epsilon^2} + 2(w_i - 1) + 1)
+    \frac{w_i^2}{\sigma_\epsilon^2} = \frac{1}{\sigma_\epsilon^2}((\sigma_q^2+\sigma_\epsilon^2)\frac{(w_i - 1)^2}{\sigma_q^2+\sigma_\epsilon^2} + 2(w_i - 1) + 1)
 \end{equation}
 
 Some statistics we will use below,
 
 \begin{equation}
-    \sum_{i\in K}\frac{(w_i - 1)^2}{\sigma^2+\sigma_\epsilon^2} \sim \chi^2(n)
+    \sum_{i\in K}\frac{(w_i - 1)^2}{\sigma_q^2+\sigma_\epsilon^2} \sim \chi^2(n)
 \end{equation}
 
 Calculate expectation on distribution of $\bm{w}$ and $\bm{z}$ with $|K|=n$, 
 
 \begin{equation}
 \begin{aligned}
-    -2E(\nu)_n =& n + (N - n)\frac{\sigma^2+\sigma_\epsilon^2}{\sigma_\epsilon^2} + (N - n)\frac{1}{\sigma_\epsilon^2} \\ 
-    &+ n\log(\sigma^2+\sigma_\epsilon^2) + (N-n)\log\sigma_\epsilon^2 - 2n\log\lambda - 2(N-n)\log(1-\lambda) + \mathrm{const}
+    -2E(\nu)_n =& n + (N - n)\frac{\sigma_q^2+\sigma_\epsilon^2}{\sigma_\epsilon^2} + (N - n)\frac{1}{\sigma_\epsilon^2} \\ 
+    &+ n\log(\sigma_q^2+\sigma_\epsilon^2) + (N-n)\log\sigma_\epsilon^2 - 2n\log\lambda - 2(N-n)\log(1-\lambda) + \mathrm{const}
 \end{aligned}
 \end{equation}
 
@@ -108,11 +108,11 @@ Thus,
 \begin{equation}
 \begin{aligned}
     -2D(\nu)_n =& -2E(\nu)_n - (-2E(\nu)_{n-1}) \\ 
-    =& 1 - \frac{\sigma^2+\sigma_\epsilon^2}{\sigma_\epsilon^2} - \frac{1}{\sigma_\epsilon^2} + \log(\sigma^2+\sigma_\epsilon^2) - \log\sigma_\epsilon^2 - 2\log\lambda + 2\log(1-\lambda)
+    =& 1 - \frac{\sigma_q^2+\sigma_\epsilon^2}{\sigma_\epsilon^2} - \frac{1}{\sigma_\epsilon^2} + \log(\sigma_q^2+\sigma_\epsilon^2) - \log\sigma_\epsilon^2 - 2\log\lambda + 2\log(1-\lambda)
 \end{aligned}
 \end{equation}
 
-Remember that $\sigma^2 \gg \sigma_\epsilon^2$ and $\lambda \ll 1$, set $x=\sigma^2/\sigma_\epsilon^2$, then,
+Remember that $\sigma_q^2 \gg \sigma_\epsilon^2$ and $\lambda \ll 1$, set $x=\sigma_q^2/\sigma_\epsilon^2$, then,
 
 \begin{equation}
     D(\nu)_n \approx \frac{1}{2}x - \frac{1}{2}\log x + \log\lambda
@@ -124,13 +124,13 @@ while $x \gg 1$, $\frac{1}{2}x - \frac{1}{2}\log x \gg 1$, the sign of $D(\nu)_n
 
 \begin{equation}
 \begin{aligned}
-    \bm{\Sigma}_z &= \frac{1}{M}\sigma^2\sum_i^N z_i\bm{J}_M + \sigma_\epsilon^2\bm{I}_M = \frac{\sigma^2n}{M}\bm{J}_M+\sigma_\epsilon^2\bm{I}_M \\
-    \det\bm{\Sigma}_z &= (\sigma_\epsilon^2 + \sigma^2\sum_i^N z_i)\sigma_\epsilon^{2(M-1)} = (\sigma_\epsilon^2 + \sigma^2n)\sigma_\epsilon^{2(M-1)} \\
-    \bm{\Sigma}_z^{-1} &= \frac{1}{\sigma_\epsilon^2}(\bm{I}_M - \frac{1}{M}\frac{\sigma^2\sum_i^N z_i}{\sigma^2\sum_i^N z_i+\sigma_\epsilon^2}\bm{J}_M) = \frac{1}{\sigma_\epsilon^2}(\bm{I}_M - \frac{1}{M}\frac{1}{1+\frac{\sigma_\epsilon^2}{\sigma^2n}}\bm{J}_M)
+    \bm{\Sigma}_z &= \frac{1}{M}\sigma_q^2\sum_i^N z_i\bm{J}_M + \sigma_\epsilon^2\bm{I}_M = \frac{\sigma_q^2n}{M}\bm{J}_M+\sigma_\epsilon^2\bm{I}_M \\
+    \det\bm{\Sigma}_z &= (\sigma_\epsilon^2 + \sigma_q^2\sum_i^N z_i)\sigma_\epsilon^{2(M-1)} = (\sigma_\epsilon^2 + \sigma_q^2n)\sigma_\epsilon^{2(M-1)} \\
+    \bm{\Sigma}_z^{-1} &= \frac{1}{\sigma_\epsilon^2}(\bm{I}_M - \frac{1}{M}\frac{\sigma_q^2\sum_i^N z_i}{\sigma_q^2\sum_i^N z_i+\sigma_\epsilon^2}\bm{J}_M) = \frac{1}{\sigma_\epsilon^2}(\bm{I}_M - \frac{1}{M}\frac{1}{1+\frac{\sigma_\epsilon^2}{\sigma_q^2n}}\bm{J}_M)
 \end{aligned}
 \end{equation}
 
-set $M^\ast = M(1+\frac{\sigma_\epsilon^2}{\sigma^2n})$, regarding $\sigma\gg\sigma_\epsilon$, thus $M^\ast\approx M$, and
+set $M^\ast = M(1+\frac{\sigma_\epsilon^2}{\sigma_q^2n})$, regarding $\sigma_q\gg\sigma_\epsilon$, thus $M^\ast\approx M$, and
 
 \begin{equation}
     \bm{\Sigma}_z^{-1} = \frac{1}{\sigma_\epsilon^2}(\bm{I}_M - \frac{1}{M^\ast}\bm{J}_M)
@@ -141,7 +141,7 @@ Thus,
 \begin{equation}
 \begin{aligned}
     -2\nu =& \frac{1}{\sigma_\epsilon^2}[\sum_i^M(w_i-\frac{n}{\sqrt{M}})^2-\frac{1}{M^\ast}(\sum_i^M w_i-n\sqrt{M})^2] \\
-    &+ \log(\sigma^2n+\sigma_\epsilon^2) - 2n\log\lambda - 2(N-n)\log(1-\lambda) + \mathrm{const}
+    &+ \log(\sigma_q^2n+\sigma_\epsilon^2) - 2n\log\lambda - 2(N-n)\log(1-\lambda) + \mathrm{const}
 \end{aligned}
 \end{equation}
 
@@ -158,8 +158,8 @@ Some statistics we will use below,
 
 \begin{equation}
 \begin{aligned}
-    \sum_i^M\frac{(w_i - \frac{N}{\sqrt{M}})^2}{\frac{N}{\sqrt{M}}\sigma^2+\sigma_\epsilon^2} &\sim \chi^2(M) \\
-    \frac{(\sum_i^M w_i-N\sqrt{M})^2}{M^{\frac{3}{2}}N\sigma^2+M\sigma_\epsilon^2} &\sim \chi^2(1)
+    \sum_i^M\frac{(w_i - \frac{N}{\sqrt{M}})^2}{\frac{N}{\sqrt{M}}\sigma_q^2+\sigma_\epsilon^2} &\sim \chi^2(M) \\
+    \frac{(\sum_i^M w_i-N\sqrt{M})^2}{M^{\frac{3}{2}}N\sigma_q^2+M\sigma_\epsilon^2} &\sim \chi^2(1)
 \end{aligned}
 \end{equation}
 
@@ -167,8 +167,8 @@ Calculate expectation on distribution of $\bm{w}$ and $\bm{z}$ with $|K|=n$,
 
 \begin{equation}
 \begin{aligned}
-    -2E(\nu)_n =& \frac{1}{\sigma_\epsilon^2}[(N\sqrt{M}\sigma^2+(N-n)^2)(1-\frac{M}{M^\ast})+(M-\frac{M}{M^\ast})\sigma_\epsilon^2] \\
-    &+ \log(\frac{\sigma^2}{\sigma_\epsilon^2}n+1) - 2n\log\lambda - 2(N-n)\log(1-\lambda) + \mathrm{const}
+    -2E(\nu)_n =& \frac{1}{\sigma_\epsilon^2}[(N\sqrt{M}\sigma_q^2+(N-n)^2)(1-\frac{M}{M^\ast})+(M-\frac{M}{M^\ast})\sigma_\epsilon^2] \\
+    &+ \log(\frac{\sigma_q^2}{\sigma_\epsilon^2}n+1) - 2n\log\lambda - 2(N-n)\log(1-\lambda) + \mathrm{const}
 \end{aligned}
 \end{equation}
 
@@ -177,23 +177,23 @@ Thus,
 \begin{equation}
 \begin{aligned}
     E(\nu)_n' =& -\frac{1}{2}\{\frac{1}{\sigma_\epsilon^2}[2(n-N)(1-\frac{M}{M^\ast}) \\
-    &+(N\sqrt{M}\sigma^2+(N-n)^2+\sigma_\epsilon^2)\frac{M}{M^{\ast2}}M^{\ast'}] +\frac{1}{n+\frac{\sigma_\epsilon^2}{\sigma^2}}\} + \log\lambda - \log(1-\lambda)
+    &+(N\sqrt{M}\sigma_q^2+(N-n)^2+\sigma_\epsilon^2)\frac{M}{M^{\ast2}}M^{\ast'}] +\frac{1}{n+\frac{\sigma_\epsilon^2}{\sigma_q^2}}\} + \log\lambda - \log(1-\lambda)
 \end{aligned}
 \end{equation}
-where $M^{\ast'}=-\frac{M\sigma_\epsilon^2}{\sigma^2n^2}$. 
+where $M^{\ast'}=-\frac{M\sigma_\epsilon^2}{\sigma_q^2n^2}$. 
 
 When $n=N$,
 
 \begin{equation}
 \begin{aligned}
-    E(\nu)_n'|_N =& \frac{1}{2}\frac{N}{(N+\frac{\sigma_\epsilon^2}{\sigma^2})^2}(\sqrt{M}-1) + \log\lambda - \log(1-\lambda)
+    E(\nu)_n'|_N =& \frac{1}{2}\frac{N}{(N+\frac{\sigma_\epsilon^2}{\sigma_q^2})^2}(\sqrt{M}-1) + \log\lambda - \log(1-\lambda)
 \end{aligned}
 \end{equation}
 
 Remember that $M \gg 1$, then,
 
 \begin{equation}
-    C = \frac{1}{2}\frac{N}{(N+\frac{\sigma_\epsilon^2}{\sigma^2})^2}(\sqrt{M}-1) > 0
+    C = \frac{1}{2}\frac{N}{(N+\frac{\sigma_\epsilon^2}{\sigma_q^2})^2}(\sqrt{M}-1) > 0
 \end{equation}
 
 the sign of $E(\nu)_n'|_N$ is defined by the relative magnitude of $C$ and $\log\lambda$. 
@@ -202,4 +202,4 @@ the sign of $E(\nu)_n'|_N$ is defined by the relative magnitude of $C$ and $\log
 
 When the time bin is very thin, $\log\lambda \ll 0$, $D(\nu)_n < 0$. When Bernoulli approximation fails, $D(\nu)_n > 0$. 
 
-While we may reasonably assume $E(\nu)_n$ will near its maximum when $n=N_{PE}$, considering the fact that RGS in FBMP has imperfect ergodicity, the bias will be positive given $D(\nu)_n > 0$ (or $E(\nu)_n'|_N > 0$) as RGS will \textbf{not} stop immediately when $n=N_{PE}$. Given $D(\nu)_n < 0$ (or $E(\nu)_n'|_N < 0$), the bias will be negative. 
+While we may reasonably assume $E(\nu)_n$ will near its maximum when $n=N_\mathrm{PE}$, considering the fact that RGS in FBMP has imperfect ergodicity, the bias will be positive given $D(\nu)_n > 0$ (or $E(\nu)_n'|_N > 0$) as RGS will \textbf{not} stop immediately when $n=N_\mathrm{PE}$. Given $D(\nu)_n < 0$ (or $E(\nu)_n'|_N < 0$), the bias will be negative. 
