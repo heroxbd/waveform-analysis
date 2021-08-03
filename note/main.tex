@@ -535,6 +535,92 @@ Result: there is \textbf{no} bias on this configuration
     \includegraphics[width=0.5\textwidth]{toybias.png}
 \end{figure}
 
+\subsection{$N_{PE}$ ergodic estimation based on toy simulation}
+
+\begin{lstlisting}
+spemode = 'spe'
+# spemode = 'delta'
+# spemode = 'flat'
+prior = False
+plot = False
+
+n = 500
+gmu = 160.
+gsigma = gmu / 4
+window = 200
+npe = 3
+assert window > npe
+
+def spe(t, mode='spe'):
+    if mode == 'spe':
+        return wff.spe((t + np.abs(t)) / 2, p[0], p[1], p[2])
+    elif mode == 'delta':
+        return np.where(t == 0, gmu, 0)
+    elif mode == 'flat':
+        return np.ones_like(t) / window * gmu
+
+noi = True
+if noi:
+    std = 1
+else:
+    std = 1e-4
+np.random.seed(0)
+wdtp = np.dtype([('No', np.uint32), ('Waveform', np.float, window)])
+waves = np.empty(n).astype(wdtp)
+
+tlist = np.arange(npe)
+
+p = spe_pre[0]['parameters']
+sams = [np.vstack((tlist, wff.charge(npe, gmu=gmu, gsigma=gsigma, thres=0))).T for i in range(n)]
+pan = np.arange(window)
+for i in tqdm(range(n)):
+#     wave = np.sum([np.where(pan >= sams[i][j, 0], spe(pan - sams[i][j, 0], mode=spemode) * sams[i][j, 1] / gmu, 0) for j in range(len(sams[i]))], axis=0)
+    wave = np.sum([spe(pan - sams[i][j, 0], mode=spemode) * sams[i][j, 1] / gmu for j in range(len(sams[i]))], axis=0)
+    if noi:
+        wave = wave + np.random.normal(0, std, size=window)
+    waves[i]['Waveform'] = wave
+waves['No'] = np.arange(n).astype(np.uint32)
+sdtp = np.dtype([('No', np.uint32), ('HitPosInWindow', np.float64), ('Charge', np.float64)])
+pelist = np.empty(sum([len(sams[i]) for i in range(n)])).astype(sdtp)
+pelist['No'] = np.repeat(np.arange(n), [len(sams[i]) for i in range(n)]).astype(np.uint32)
+pelist['HitPosInWindow'] = np.hstack([sams[i][:, 0] for i in range(n)])
+pelist['Charge'] = np.hstack([sams[i][:, 1] for i in range(n)])
+
+# npe = 3
+aver_npe = np.empty(n)
+for i in tqdm(range(n)):
+    wave = waves[i]['Waveform'].astype(np.float64)[:window] * spe_pre[0]['epulse']
+    truth = pelist[pelist['No'] == waves[i]['No']]
+    tlist = np.unique(truth['HitPosInWindow'])
+
+    t_auto = np.arange(window)[:, None] - tlist
+    A = spe(t_auto, spemode)
+    mu_t = npe
+    factor = np.sqrt(np.diag(np.matmul(A.T, A)))
+    A = A / factor
+    la = mu_t * np.ones_like(tlist) / len(tlist)
+    
+    samnum = int(10 ** 3)
+    ind = np.array([[i // 100, i // 10 % 10, i % 10] for i in range(samnum)])
+    nu = np.empty(samnum)
+    for j in range(samnum):
+        nu[j] = wff.nu_direct(wave, A, ind[j], factor, (gsigma * factor / gmu) ** 2, std ** 2, la, prior=prior)
+        nu[j] = nu[j] + poisson.logpmf(ind[j], mu=la).sum()
+    prob = np.exp(nu - nu.max()) / np.sum(np.exp(nu - nu.max()))
+    aver_npe[i] = np.average(ind.sum(axis=1), weights=prob)
+\end{lstlisting}
+
+Motivation: see the estimation of $N_{PE}$ when ergodic in model space
+
+Progress: there is no $\mu$, set $N_{PE}$ as 3, set \textit{tlist} to $[0, 1, 2]$. Use ergodic process to generate posterior distribution of $N_{PE}$. 
+
+Result: there is \textbf{still} bias on this configuration
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{ergodic.png}
+\end{figure}
+
 \subsection{Influence of lucyddm \texttt{tlist} initialization on $\mu$ bias}
 
 \begin{lstlisting}
@@ -1213,11 +1299,8 @@ def fbmpr_fxn_reduced(y, A, sig2w, sig2s, mus, D, p1, stop=0, truth=None, i=None
 prior = False
 nsp = 4
 nstd = 3
-
 cid = ent[i]['ChannelID']
 wave = ent[i]['Waveform'].astype(np.float64) * spe_pre[cid]['epulse']
-
-# initialization
 mu_t = abs(wave.sum() / gmu)
 n = 5
 A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
@@ -1244,6 +1327,7 @@ def optit0mu(t0, mu, n, psy_star, c_star, la):
     mu, t0 = opti.fmin_l_bfgs_b(likelihood, x0=[mulist[likemu.argmin()], t0list[liket0.argmin()]], approx_grad=True, bounds=[b_mu, b_t0], maxfun=50000)[0]
     return mu, t0
 
+truth = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
 # 1st FBMP
 time_fbmp_start = time.time()
 # Eq. (9) where the columns of A are taken to be unit-norm.
@@ -1262,9 +1346,26 @@ la_truth = len(truth) * wff.convolve_exp_norm(tlist - t0_truth[i]['T0'], Tau, Si
 if prior:
     nu_star_prior = nu_star - poisson.logpmf(c_star, mu=la).sum(axis=1)
 nu_star_prior = nu_star + poisson.logpmf(c_star, mu=la_truth).sum(axis=1)
-maxindex = psy_star.argmax()
 
-xmmse_most = xmmse_star[maxindex]
+nx = np.sum([(tlist - 0.5 / n <= truth['HitPosInWindow'][j]) * (tlist + 0.5 / n > truth['HitPosInWindow'][j]) for j in range(len(truth))], axis=0)
+cc = np.sum([np.where(tlist - 0.5 / n < truth['HitPosInWindow'][j], np.sqrt(truth['Charge'][j]), 0) * np.where(tlist + 0.5 / n > truth['HitPosInWindow'][j], np.sqrt(truth['Charge'][j]), 0) for j in range(len(truth))], axis=0)
+c_star_truth = np.sum([np.where(tlist - 0.5 / n < truth['HitPosInWindow'][j], 1, 0) * np.where(tlist + 0.5 / n > truth['HitPosInWindow'][j], 1, 0) for j in range(len(truth))], axis=0)
+if c_star_truth.sum() == 0:
+    c_star_truth[0] = 1
+pp = np.arange(left_wave, right_wave)
+wav_ans = np.sum([np.where(pp > truth['HitPosInWindow'][j], wff.spe(pp - truth['HitPosInWindow'][j], tau=p[0], sigma=p[1], A=p[2]) * truth['Charge'][j] / gmu, 0) for j in range(len(truth))], axis=0)
+nu_truth[i - a0] = wff.nu_direct(wave_r, A, nx, factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la, prior=prior)
+rss_truth = np.power(wav_ans - np.matmul(A, cc / gmu * factor), 2).sum()
+nu = np.array([wff.nu_direct(wave_r, A, c_star[j], factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la, prior=prior) for j in range(len(psy_star))])
+nu_star_prior = np.array([wff.nu_direct(wave_r, A, c_star[j], factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la_truth, prior=True) for j in range(len(psy_star))])
+psy_star = np.exp(nu - nu.max()) / np.sum(np.exp(nu - nu.max()))
+# assert abs(nu - nu_star).max() < 1e-6
+nu_max[i - a0] = nu[0]
+rss = np.array([np.power(wav_ans - np.matmul(A, xmmse_star[j]), 2).sum() for j in range(len(psy_star))])
+
+nu_re = np.array([wff.nu_direct(wave_r, A, c_star[j], factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la, prior=True) for j in range(len(psy_star))])
+maxindex = nu_re.argmax()
+xmmse_most = np.clip(xmmse_star[maxindex], 0, np.inf)
 pet = np.repeat(tlist[xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
 cha = np.repeat(xmmse_most[xmmse_most > 0] / factor[xmmse_most > 0] / c_star[maxindex][xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
 
@@ -1282,7 +1383,7 @@ Result: $\mu$ bias persists.
     \includegraphics[width=\textwidth]{vs-biasmu-nospacenoprior.png}
 \end{figure}
 
-\subsection{P-FBMP \textbf{without} prior and \textbf{with} Gaussian normalization term}
+\subsection{P-FBMP \textbf{with} prior and \textbf{without} Gaussian normalization term}
 
 P-FBMP:
 
@@ -1290,11 +1391,9 @@ P-FBMP:
 prior = True
 nsp = 4
 nstd = 3
-
 cid = ent[i]['ChannelID']
 wave = ent[i]['Waveform'].astype(np.float64) * spe_pre[cid]['epulse']
 
-# initialization
 mu_t = abs(wave.sum() / gmu)
 n = 5
 A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
@@ -1321,6 +1420,7 @@ def optit0mu(t0, mu, n, psy_star, c_star, la):
     mu, t0 = opti.fmin_l_bfgs_b(likelihood, x0=[mulist[likemu.argmin()], t0list[liket0.argmin()]], approx_grad=True, bounds=[b_mu, b_t0], maxfun=50000)[0]
     return mu, t0
 
+truth = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
 # 1st FBMP
 time_fbmp_start = time.time()
 # Eq. (9) where the columns of A are taken to be unit-norm.
@@ -1339,9 +1439,26 @@ la_truth = len(truth) * wff.convolve_exp_norm(tlist - t0_truth[i]['T0'], Tau, Si
 if prior:
     nu_star_prior = nu_star - poisson.logpmf(c_star, mu=la).sum(axis=1)
 nu_star_prior = nu_star + poisson.logpmf(c_star, mu=la_truth).sum(axis=1)
-maxindex = psy_star.argmax()
 
-xmmse_most = xmmse_star[maxindex]
+nx = np.sum([(tlist - 0.5 / n <= truth['HitPosInWindow'][j]) * (tlist + 0.5 / n > truth['HitPosInWindow'][j]) for j in range(len(truth))], axis=0)
+cc = np.sum([np.where(tlist - 0.5 / n < truth['HitPosInWindow'][j], np.sqrt(truth['Charge'][j]), 0) * np.where(tlist + 0.5 / n > truth['HitPosInWindow'][j], np.sqrt(truth['Charge'][j]), 0) for j in range(len(truth))], axis=0)
+c_star_truth = np.sum([np.where(tlist - 0.5 / n < truth['HitPosInWindow'][j], 1, 0) * np.where(tlist + 0.5 / n > truth['HitPosInWindow'][j], 1, 0) for j in range(len(truth))], axis=0)
+if c_star_truth.sum() == 0:
+    c_star_truth[0] = 1
+pp = np.arange(left_wave, right_wave)
+wav_ans = np.sum([np.where(pp > truth['HitPosInWindow'][j], wff.spe(pp - truth['HitPosInWindow'][j], tau=p[0], sigma=p[1], A=p[2]) * truth['Charge'][j] / gmu, 0) for j in range(len(truth))], axis=0)
+nu_truth[i - a0] = wff.nu_direct(wave_r, A, nx, factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la, prior=prior)
+rss_truth = np.power(wav_ans - np.matmul(A, cc / gmu * factor), 2).sum()
+nu = np.array([wff.nu_direct(wave_r, A, c_star[j], factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la, prior=prior) for j in range(len(psy_star))])
+nu_star_prior = np.array([wff.nu_direct(wave_r, A, c_star[j], factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la_truth, prior=True) for j in range(len(psy_star))])
+psy_star = np.exp(nu - nu.max()) / np.sum(np.exp(nu - nu.max()))
+# assert abs(nu - nu_star).max() < 1e-6
+nu_max[i - a0] = nu[0]
+rss = np.array([np.power(wav_ans - np.matmul(A, xmmse_star[j]), 2).sum() for j in range(len(psy_star))])
+
+nu_re = np.array([wff.nu_direct(wave_r, A, c_star[j], factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la, prior=True) for j in range(len(psy_star))])
+maxindex = nu_re.argmax()
+xmmse_most = np.clip(xmmse_star[maxindex], 0, np.inf)
 pet = np.repeat(tlist[xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
 cha = np.repeat(xmmse_most[xmmse_most > 0] / factor[xmmse_most > 0] / c_star[maxindex][xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
 
