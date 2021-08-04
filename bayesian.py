@@ -269,6 +269,7 @@ def fbmp_inference(a0, a1):
         rss_truth = np.power(wav_ans - np.matmul(A, cc / gmu * factor), 2).sum()
         nu = np.array([wff.nu_direct(wave_r, A, c_star[j], factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la, prior=prior) for j in range(len(psy_star))])
         # nu_star_prior = np.array([wff.nu_direct(wave_r, A, c_star[j], factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la_truth, prior=True) for j in range(len(psy_star))])
+        # psy_star = np.exp(nu - nu.max()) / np.sum(np.exp(nu - nu.max()))
         assert abs(nu - nu_star).max() < 1e-6
         nu_max[i - a0] = nu[0]
         rss = np.array([np.power(wav_ans - np.matmul(A, xmmse_star[j]), 2).sum() for j in range(len(psy_star))])
@@ -283,6 +284,7 @@ def fbmp_inference(a0, a1):
         # t0 = t0_t
         # mu_i = len(cha)
         # t0_i = t0_t
+        # mu, t0 = optit0mu(t0_truth[i]['T0'], len(truth), n, np.array([1]), c_star_truth[None, :], la)
 
         mu, t0 = optit0mu(t0_t, mu_t, n, psy_star, c_star, la)
         mu_i, t0_i = optit0mu(t0_t, mu_t, n, np.array([1]), c_star[maxindex][None, :], la)
