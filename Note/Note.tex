@@ -1,10 +1,10 @@
-% !TEX program = pdflatex
 \documentclass[11pt,a4paper]{article}
 \usepackage{jinstpub}
 
 \usepackage{float}
 \usepackage{listings}
 \usepackage{caption}
+\usepackage{url}
 \usepackage{hyperref}
 \usepackage{tikz}
 \usetikzlibrary{shapes,arrows}
@@ -21,23 +21,25 @@
     label style = {font = {\fontsize{8 pt}{12 pt}\selectfont}},
     legend style = {font = {\fontsize{8 pt}{12 pt}\selectfont}},  
 }
+\usepackage{lineno}
+\linenumbers
 \newcommand{\ud}{\mathrm{d}}
 
-\title{Accurate and Robust PMT Waveform Analysis}
+\title{Accurate and robust PMT waveform analysis}
 
-\author[a]{D.~C.~Xu,}
+\author[a]{D.~Xu,}
 \author[b]{E.~Bao,}
 \author[c]{J.~Pei,}
 \author[c]{Y.~Wu,}
-\author[a,1]{B.~D.~Xu\note{Corresponding author.},}
+\author[a,1]{B.~Xu\note{Corresponding author.},}
 \author[d]{Y.~Xu,}
-\author[e]{and~G.~Zhang}
+\author[e]{and G.~Zhang}
 
-\affiliation[a]{Department of Engineering Physics, Tsinghua University}
-\affiliation[b]{National Institute of Informatics}
-\affiliation[c]{Department of Physics, Tsinghua University}
-\affiliation[d]{IKP-2, Forschungszentrum Jülich}
-\affiliation[e]{School of Securities and Futures, Southwestern University of Finance and Economics}
+\affiliation[a]{Department of Engineering Physics, Tsinghua University, Beijing, China}
+\affiliation[b]{National Institute of Informatics, Tokyo, Japan}
+\affiliation[c]{Department of Physics, Tsinghua University, Beijing, China}
+\affiliation[d]{IKP-2, Forschungszentrum Jülich, Jülich, Germany}
+\affiliation[e]{School of Securities and Futures, Southwestern University of Finance and Economics, Chengdu, China}
 
 \emailAdd{orv@tsinghua.edu.cn}
 
@@ -59,7 +61,7 @@
 \input{Conclusion}
 \input{Acknowledgement}
 
-\bibliographystyle{unsrt}
+\bibliographystyle{JHEP}
 \bibliography{ref}
 
 \input{Appendices}
