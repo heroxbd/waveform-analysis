@@ -3,7 +3,7 @@
 
 \subsection{Program Efficiency}
 
-The efficiency of 4 performant methods on our simulation dataset show in Table~\ref{fig:efficiency}. The CNN on GPU is faster than LucyDDM and FBMP, and much faster than gradient descent.  Number of iteration for LucyDDM and gradient descent and $t'_i$ sampling frequency of FBMP can be decreased to trade for speed.  The time consumed by FBMP contains the initialization time of LucyDDM pre-conditioner.
+The efficiency of 4 performant methods on our simulation dataset show in Table~\ref{fig:efficiency}. The CNN on GPU is faster than LucyDDM and FBMP, and much faster than gradient descent. Number of iteration for LucyDDM and gradient descent and $t'_i$ sampling frequency of FBMP can be decreased to trade for speed. The time consumed by FBMP contains the initialization time of LucyDDM pre-conditioner.
 
 \begin{table}[H]
     \centering
@@ -25,37 +25,35 @@ The efficiency of 4 performant methods on our simulation dataset show in Table~\
 \begin{figure}[H]
     \centering
     \resizebox{0.6\textwidth}{!}{\input{figures/recchargehist.pgf}}
-    \caption{\label{fig:recchargehist}  $\hat{q}$ distribution, $\mu=4, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$}
+    \caption{\label{fig:recchargehist}  $\hat{q}_i$ distribution, $\mu=4, \tau=\SI{20}{ns}, \sigma=\SI{5}{ns}$}
 \end{figure}
 
-The charge of reconstruction, $\hat{q}$, result distribution when $\mu=4, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$ shows in figure (see figure~\ref{fig:recchargehist}). 
+The charge of reconstruction, $\hat{q}_i$, result distribution when $\mu=4, \tau=20\mathrm{ns}, \sigma=10\mathrm{ns}$ shows in figure (see figure~\ref{fig:recchargehist}). 
 
-The steep edge near 0 in these distributions results from the cut of the original $\hat{q}$, which is intended to remove fragment values of $\hat{q}$. But as we can see in figure~\ref{fig:recchargehist}, the charge distribution of LucyDDM, Fitting, and CNN are severely distorted, while the charge distribution of FBMP partly retains the shape of the original (or prior) distribution of charge and only some skewing persists. 
+The steep edge near 0 in these distributions results from the cut of the original $\hat{q}_i$, which is intended to remove fragment values. But as we can see in figure~\ref{fig:recchargehist}, the charge distribution of LucyDDM, Fitting, and CNN are severely distorted, while the charge distribution of FBMP partly retains the shape of the original (or prior) distribution of charge and only some skewing persists. 
 
-During optimization of Wasserstein distance between $\hat{q}(t)$ and $q(t)$ (e.g. CNN) or RSS between the origin wave $w(t)$ and reconstructed wave $\hat{w}(t)$ (e.g. Fitting and LucyDDM), the total number of hittime which is the degree of freedom (DOF) of parameters is a constant, and the analysis process is not treated as a sparse regression problem. So a lot of parameters in $\bm{q}$ turn out to be fragment values, which distorts the $\hat{q}$ distribution. So the reduction of DOF before estimation of parameters in FBMP gives relatively good results in sparsity, though it is still noticeable that the slight skewness of charge distribution of FBMP persists. 
+During optimization of Wasserstein distance between $\hat{\phi}(t)$ and $\tilde{\phi}(t)$ (e.g. CNN) or RSS between the origin wave $w(t)$ and reconstructed wave $\hat{w}(t)$ (e.g. Fitting and LucyDDM), the total number of hittime which is the degree of freedom (DOF) of parameters is a constant, and the analysis process is not treated as a sparse regression problem. So a lot of parameters in $\bm{\hat{q}}$ turn out to be fragment values. So the reduction of DOF before estimation of parameters in FBMP gives relatively good results in sparsity, though it is still noticeable that the slight skewness of charge distribution of FBMP persists. 
 
 % Bayesian
 
-As the origin waveform $w(t)$ is contaminated by Gaussian noise, the optimization a of single loss might be disturbed by the degeneracy of reconstruction results, which means for different $\hat{q}(t)$, the W-dist or RSS can result in the identity or very close. So it is adequate if we can obtain several samples from parameter space of $q$, and even superior if we can give the posterior probability of these samples. Additionally, the expansibility of the Bayesian method will allow us to retain sufficient information in subsequent steps such as event reconstruction. 
+As the origin waveform $w(t)$ is contaminated by Gaussian noise, the optimization a of single loss might be disturbed by the degeneracy of reconstruction results, which means for different $\bm{\hat{q}}$, the W-dist or RSS can result in the identity or very close. So it is adequate if we can obtain several samples from parameter space of $q$, and even superior if we can give the posterior probability of these samples. Additionally, the expansibility of the Bayesian method will allow us to retain sufficient information in subsequent steps such as event reconstruction. 
 
 \subsection{Timing Resolution}
 \label{subsec:timeresolution}
 
 % Likelihood
 
-Formula \eqref{eq:pseudo} is the likelihood to estimate $t_{0}$ in formula \eqref{eq:time-pro} for methods except FBMP. $q_{i}$ is the charge in each time bin $t_{i}$ rather the number of PE. For FBMP, formula \eqref{eq:bayesianinter} is the likelihood to estimate both $t_{0}$ and $\mu$. 
-
-The timing resolution $\delta$ using waveform analysis results (charge $\hat{q}$) of these methods are computed and collected. The $t_{0}$ reconstruction process is also MLE by \eqref{eq:pseudo}. Additionally, FBMP provides dozens of samples of $q$, which allows us to derive MLE estimation of $t_{0}$, while instead of full uncertainty propagation, the maximum posterior PE model could be used, but with less accuracy. The comparison between timing resolution using the all PE, and the 4 methods is shown in figure~\ref{fig:deltamethods}. 
+The timing resolution using waveform analysis results (time $\bm{\hat{t}}$ and charge $\bm{\hat{q}}$) of these methods are computed and collected. The $t_{0}$ reconstruction process is also MLE by \eqref{eq:pseudo} except FBMP, where $q_{i}$ is the charge in each time bin $t_{i}$ rather the number of PE. For FBMP, formula \eqref{eq:bayesianinter} is the likelihood to estimate both $t_{0}$ and $\mu$, while instead of full uncertainty propagation, the maximum posterior PE model could be used, but with less accuracy. The comparison between timing resolution using the all PE, and the 4 methods is shown in figure~\ref{fig:deltamethods}. 
 
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/vs-deltamethodsdiv.pgf}}
-    \caption{\label{fig:deltamethods} Timing reconstruction ratio of resolution $\delta/\delta_{\mathrm{all}}$ of methods}
+    \caption{\label{fig:deltamethods} Timing reconstruction ratio of resolution $\sigma/\sigma_{\mathrm{ALL}}$ of methods}
 \end{figure}
 
 In the figure, $\mathrm{FBMP}$ corresponds to the estimation of $t_{0}$ with all samples provided by FBMP. 
 
-All 4 methods (LucyDDM, Fitting, CNN, FBMP) provide better timing resolution $\delta$ than only using the first PE during construction, comparing to figure~\ref{fig:reso-diff}. 
+All 4 methods (LucyDDM, Fitting, CNN, FBMP) provide better timing resolution $\sigma$ than only using the first PE during construction, comparing to figure~\ref{fig:reso-diff}. 
 
 \begin{figure}[H]
     \centering
@@ -67,24 +65,24 @@ We can also see that in figure~\ref{fig:deltamethods}, the $t_0$ estimation bias
 
 % Time bin
 
-The reconstruction results of hittime, $\hat{t}$, are discrete values (time bin edges in a DAQ window). To obtain continuous values of $\hat{t}$ may result in better analysis results. The results in the study show that when using refined time bins, the time resolution, the sparsity of reconstructed PEs, and all figures of merits (Wasserstein distance and RSS) are better, however, a lost efficiency. 
+The reconstruction results of hittime, $\bm{\hat{t}}$, are discrete values (time bin edges in a DAQ window). To obtain continuous values of $\bm{\hat{t}}$ may result in better analysis results. The results in the study show that when using refined time bins, the time resolution, the sparsity of reconstructed PEs, and all figures of merits (Wasserstein distance and RSS) are better, however, a lost efficiency. 
 
-\subsection{Charge Reconstruction}
+\subsection{Charge Resolution}
 \label{subsec:chargereconstruction}
 
-While 4 first-rated methods except FBMP all include charge scaling following \eqref{eq:fdconv2} where $\hat{q}$ are scaled by a factor $\alpha$, FBMP use \eqref{eq:fbmpcharge} to estimate charge directly. The scaling process will give the estimation of $\hat{\mu}$ similar to $\int w(t)\mathrm{d}t$ which will be deteriorated by the randomization process such as charge distribution and Gaussian white noise in \ref{subsec:spe}. 
+Integration estimation (footnoted as $\mathrm{int}$) where $\hat{\mu}=\int w(t)\mathrm{d}t$ will be deteriorated by the randomization process such as charge distribution and Gaussian white noise in Section~\ref{subsec:spe}. 
 
-Figure~\ref{fig:biasmu} shows the bias of $\mu$ reconstruction of all 4 methods, where $\mathrm{FBMP}$ corresponds to $\mu$ estimation defined in \eqref{eq:bayesianinter}, and for the other 3 methods (LucyDDM, Fitting, CNN), $\mu$ is the sum of $\hat{\bm{q}}$. The bias of $\mu$ is smaller than $4.0\%$ for $\mathrm{FBMP}$. The explanation of the origin of the bias is in Appendix \ref{sec:mubias}. The bias comes from the degeneracy of reconstruction results and the non-ergodic approximation of FBMP. 
+While 4 first-rated methods except FBMP all include charge scaling following \eqref{eq:fdconv2} where $\bm{\hat{q}}$ are scaled by a factor $\alpha$, FBMP use \eqref{eq:fbmpcharge} to estimate charge directly. The scaling process will give the estimation of $\hat{\mu}$ similar to $\int w(t)\mathrm{d}t$ but partly escapes from the white noise contamination. Considering that the energy response is a multiplier in the detector and the existing $\hat{\mu}$ bias of some methods which we will discuss below, the charge resolution is defined on $\log{\hat{\mu}}$. A perfect $\mu$ estimation of a waveform is $\hat{\mu}_\mathrm{ALL}=N_\mathrm{PE}$. The corresponding resolution $\sigma_{\log\mu}$ is the lower limit of charge reconstruction. 
+
+Figure~\ref{fig:biasmu} shows the bias of $\log\mu$ reconstruction of all 4 methods, where $\mathrm{FBMP}$ corresponds to $\hat{\mu}$ defined in \eqref{eq:bayesianinter}, and for the other 3 methods (LucyDDM, Fitting, CNN), $\hat{\mu}$ is the sum of $\hat{\bm{q}}$. The $\log\hat{\mu}$ bias of integration if $\mu$ is small originates from the fact that $\log\hat{\mu}$ is unfavorably low when $\hat{\mu}$ is pushed to 0 by the charge distribution. A detailed explanation of the origin of the bias of FBMP is in Appendix~\ref{sec:mubias}, it is comes from the degeneracy of reconstruction results and the non-ergodic approximation of FBMP. 
 
 \begin{figure}[H]
     \centering
-    \resizebox{\textwidth}{!}{\input{figures/vs-biasmu.pgf}}
-    \caption{\label{fig:biasmu} Charge reconstruction ratio of bias $\Delta\mu/\mu$ of methods}
+    \resizebox{\textwidth}{!}{\input{figures/vs-biasmut.pgf}}
+    \caption{\label{fig:biasmu} Charge reconstruction bias of methods}
 \end{figure}
 
-Considering the existing bias of $\mu$, the charge resolution is defined as the standard deviation of $\log{\hat{\mu}}$. Figure~\ref{fig:deltamu} shows the charge resolution of both integration and FBMP. While estimating the PE number $\hat{\bm{z}}$ in each time bin $\hat{\bm{t}}$ with model selection, the $\mu$ estimation of FBMP is not affected by the charge distribution critically, which will give a better charge resolution especially when $\mu$ is small. 
-
-the PE number $\hat{\bm{z}}$ in each time bin $\hat{\bm{t}}$
+Figure~\ref{fig:deltamu} shows the charge resolution of both integration and the 4 methods. While estimating the PE number $\hat{\bm{z}}$ in each time bin $\hat{\bm{t}}$ with model selection, the $\mu$ estimation of FBMP is not affected by the charge distribution critically, which will give a better charge resolution especially when $\mu$ is small. 
 
 \begin{figure}[H]
     \centering
@@ -92,7 +90,7 @@ the PE number $\hat{\bm{z}}$ in each time bin $\hat{\bm{t}}$
     \caption{\label{fig:deltamu} Charge reconstruction ratio of resolution $\sigma/\sigma_{\log\mu}$ of methods}
 \end{figure}
 
-When $\mu$ is small, FBMP shows convincing resolution as expected. The other 3 methods (LucyDDM, Fitting, CNN) shows similar charge resolution. 
+When $\mu$ is small, FBMP shows convincing resolution as expected. The other 3 methods (LucyDDM, Fitting, CNN) shows charge resolution between integration and FBMP. 
 
 % Pedestal & Hardware
 

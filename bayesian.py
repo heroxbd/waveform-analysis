@@ -274,7 +274,10 @@ def fbmp_inference(a0, a1):
         nu_max[i - a0] = nu[0]
         rss = np.array([np.power(wav_ans - np.matmul(A, xmmse_star[j]), 2).sum() for j in range(len(psy_star))])
 
-        nu_re = np.array([wff.nu_direct(wave_r, A, c_star[j], factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la, prior=True) for j in range(len(psy_star))])
+        if prior:
+            nu_re = nu_star
+        else:
+            nu_re = nu_star + poisson.logpmf(c_star, mu=la).sum(axis=1)
         maxindex = nu_re.argmax()
         xmmse_most = np.clip(xmmse_star[maxindex], 0, np.inf)
         pet = np.repeat(tlist[xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
