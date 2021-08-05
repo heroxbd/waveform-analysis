@@ -4,13 +4,12 @@
 In this section, we discuss why waveform analysis is crucial for timing measurements in PMT-based experiments. 
 
 \subsection{Light curve}
-In the PMT-based experiments, a particle interacts with and deposit energy into the detector along its trajectory. Part of the deposited energy becomes visible as Cherenkov or scintillation photons.  The timing distribution of the emitted photons is called the \textit{light curve}.  A scintillation light curve is modeled as a mixture of several exponential components with different decay rates~\cite{rebber_particle_2021}.  Cherenkov light curve is 
-almost instantaneous, modeled by a Dirac delta function. 
+In the PMT-based experiments, a particle interacts with and deposit energy into the detector along its trajectory. Part of the deposited energy becomes visible as Cherenkov or scintillation photons.  The timing distribution of the emitted photons is called the \textit{light curve}.  A scintillation light curve is modeled as a mixture of several exponential components with different decay rates~\cite{rebber_particle_2021}.  Cherenkov light curve is almost instantaneous, modeled by a Dirac delta function. 
 
 \begin{figure}[!htb]
   \centering
   \resizebox{0.5\textwidth}{!}{\input{figures/profile.pgf}}
-  \caption{\label{fig:time-pro} Light curves, the timing distribution of the emitted photons.}
+  \caption{\label{fig:time-pro} Light curves, the timing distribution of the emitted photons. For a scintillatior paired with ultra-fast PMTs, $\tau_l \gg \sigma_l$.  $\tau_l \ll \sigma_l$ is the Cherenkov case. The $\tau_l=20, \sigma_l=5$ case represents a scintillator experiment. }
 \end{figure}
 
 Photons captured by a PMT are affected by transit time spread (TTS).  In our Monte Carlo setup, the effective light curve $\phi(t)$ at PMT is modeled as an exponential distribution convoluted with a Gaussian~\cite{li_separation_2016}, known as \textit{ex-Gaussian} or \textit{exponentially modified Gaussian}, 
