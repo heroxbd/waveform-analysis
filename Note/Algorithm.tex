@@ -34,7 +34,7 @@ $\hat{t}_\mathrm{KL}$ is not a valid, but a pseudo-likelihood estimator. However
 $\bm{\hat{t}}$ and $\bm{\hat{q}}$ give a light curve estimator $\hat{\phi}(t)$,
 \begin{equation}
   \label{eq:lc}
-  \hat{\phi}(t) = \sum_{i=1}^{\hat{N}} \hat{q}_i\delta(t-\hat{t_i})
+  \hat{\phi}(t) = \sum_{i=1}^{\hat{N}} \hat{q}_i\delta(t-\hat{t}_i)
 \end{equation}
 up to a normalization factor, where $\delta(t)$ is the Dirac delta function to model discrete values.  Consider the non-normalized KL divergence~\cite{mihoko_robust_2002} from $\hat{\phi}(t)$ to $\phi(t-t_{0})$,
 \begin{equation}
@@ -70,7 +70,7 @@ Sum of squares of the residual $\hat{w}(t) - w(t)$ is a natural $\ell_2$-metric 
 RSS cannot compare a discrete function with a continuous one.  Even with two similar functions, RSS is not sensitive to timing.  In figure~\ref{fig:l2}, RSS of  $a-b_{1}$ and $a-b_{2}$ are both 0.25.  Intuitively $b_1$ is closer to $a$ than $b_2$ and RSS fails to capture such a difference.
 \begin{figure}[H]
   \centering
-  \scalebox{0.4}{\input{figures/tab.pgf}}
+  \resizebox{\textwidth}{!}{\input{figures/tab.pgf}}
   \caption{\label{fig:l2} $b_1$ and $b_2$ have the same $\mathrm{RSS}=0.25$ to $a$, but $b_1$ is closer in timing to $a$.}
 \end{figure}
 
@@ -91,17 +91,17 @@ By directly extracting waveform features, heuristic methods are straightforward 
 A threshold $V_\mathrm{th}$ is selected with respect to electronics noise in the waveforms. Waveform entries $w(t_i)$ exceeding $V_\mathrm{th}$ are selected and shifted by $\Delta t$ according to the shape of SPE response $V_\mathrm{PE}(t)$ in \eqref{eq:dayaspe}. $\hat{q}_i$ are normalized to total charge by integration of the waveform $w(t_i)$.  Waveform shifting does minimal analysis and serves as a baseline method.  The demonstration in figure~\ref{fig:shifting} gives $D_w = \SI{8.72}{ns}$.
 
 \begin{figure}[H]
-  \begin{subfigure}{0.5\textwidth}
+  \begin{subfigure}{.5\textwidth}
     \centering
-    \scalebox{0.36}{\input{figures/threshold.pgf}}
+    \resizebox{\textwidth}{!}{\input{figures/threshold.pgf}}
     \caption{\label{fig:shifting}Waveform shifting: $\mathrm{RSS}=\SI{4850.4}{mV^2},D_w=\SI{8.72}{ns},\Delta t_0=\SI{10.74}{ns}$}
   \end{subfigure}
-  \begin{subfigure}{0.5\textwidth}
+  \begin{subfigure}{.5\textwidth}
     \centering
-    \scalebox{0.36}{\input{figures/findpeak.pgf}}
+    \resizebox{\textwidth}{!}{\input{figures/findpeak.pgf}}
     \caption{\label{fig:peak}Peak finding: $\mathrm{RSS}=\SI{317.3}{mV^2},D_w=\SI{2.40}{ns},\Delta t_0=\SI{-1.93}{ns}$}
   \end{subfigure}
-  \caption{Heuristic methods demonstrations.}
+  \caption{A heuristic methods demonstration when $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{ns}$}
 \end{figure}
 
 \subsubsection{Peak finding}
@@ -153,15 +153,15 @@ Figure~\ref{fig:fd} illustrates the algorithm with an example having $D_w = \SI{
 \begin{figure}[H]
   \begin{subfigure}{0.5\textwidth}
     \centering
-    \scalebox{0.36}{\input{figures/fftrans.pgf}}
+    \resizebox{\textwidth}{!}{\input{figures/fftrans.pgf}}
     \caption{\label{fig:fd}Fourier deconvolution: $\mathrm{RSS}=\SI{189.8}{mV^2},D_w=\SI{2.03}{ns},\Delta t_0=\SI{-1.16}{ns}$}
   \end{subfigure}
   \begin{subfigure}{0.5\textwidth}
     \centering
-    \scalebox{0.36}{\input{figures/lucyddm.pgf}}
+    \resizebox{\textwidth}{!}{\input{figures/lucyddm.pgf}}
     \caption{\label{fig:lucy}Lucy direct demodulation: $\mathrm{RSS}=\SI{101.6}{mV^2},D_w=\SI{1.10}{ns},\Delta t_0=\SI{-0.75}{ns}$}
   \end{subfigure}
-  \caption{Deconvolution demonstrations.}
+  \caption{A deconvolution demonstration when $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{ns}$}
 \end{figure}
 
 \subsubsection{Lucy direct demodulation}
@@ -208,7 +208,7 @@ The workflow of data processing consists of training and predicting. Training is
     \resizebox{\textwidth}{!}{\input{figures/epoch.pgf}}
     \caption{\label{fig:loss} Evolution of loss}
   \end{subfigure}
-  \caption{\label{fig:CNN} Training of a CNN}
+  \caption{\label{fig:CNN} Training process of a CNN. A shadow network structure of 5 layers is in~\subref{fig:struct} and the evolution of Wasserstein distance during training is in~\subref{fig:loss}.}
 \end{figure}
 
 The product of network training is a function that creates PE outputs $\hat{\phi}(t)$ from waveform inputs $w(t)$.  Since $D_w$ disregards normalization, $\hat{\phi}$ is scaled to $\hat{\alpha}\hat{\phi}$ following~\eqref{eq:fdconv2}. A demonstration shown in figure~\ref{fig:cnn} has $D_w = \SI{0.75}{ns}$. 
@@ -226,7 +226,7 @@ The result of $\hat{\phi}(t)$ when $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{n
     \resizebox{\textwidth}{!}{\input{figures/takarachargestats.pgf}}
     \caption{\label{fig:cnn-npe} $D_d$ vs $N_{pe}$ Histogram \& Boxplot}
   \end{subfigure}
-  \caption{CNN when $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{ns}$}
+  \caption{CNN results when $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{ns}$}
 \end{figure}
 
 \subsection{Regression analysis}
@@ -269,7 +269,7 @@ The optimizer is realized with limited-memory Broyden-Fletcher-Goldfarb-Shanno a
     \resizebox{\textwidth}{!}{\input{figures/xiaopeipchargestats.pgf}}
     \caption{\label{fig:fitting-npe} $D_d$ vs $N_{pe}$ Boxplot \& Histogram}
   \end{subfigure}
-  \caption{Gradient descent when $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{ns}$}
+  \caption{Gradient descent results when $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{ns}$}
 \end{figure}
 
 The result of $\hat{q}$ when $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{ns}$ is shown in figure~\ref{fig:fitting-npe}. The left panel is the boxplot which shows the $D_d$ percentile vs $N_{pe}$, and the right panel is the overall histogram of $D_d$. 
@@ -314,7 +314,7 @@ $D_w$ when $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{ns}$ is shown in figure~\
     \resizebox{\textwidth}{!}{\input{figures/mcmcchargestats.pgf}}
     \caption{\label{fig:mcmc-npe} $D_d$ vs $N_{pe}$ Boxplot \& Histogram}
   \end{subfigure}
-  \caption{MCMC results when $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{ns}$}
+  \caption{MCMC results results when $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{ns}$}
 \end{figure}
 
 \subsubsection{Fast Bayesian matching pursuit}
@@ -403,7 +403,7 @@ Figure~\ref{fig:fbmp} shows one of the FBMP results. We can see the original wav
 
 \begin{figure}[H]
     \centering
-    \scalebox{0.4}{\input{figures/demoe2c0.pgf}}
+    \resizebox{0.6\textwidth}{!}{\input{figures/demoe2c0.pgf}}
     \caption{\label{fig:fbmp} FBMP Demo, $\mathrm{RSS}=\SI{11.9}{mV^2},D_w=\SI{0.67}{ns},\Delta{t_0}=\SI{-3.94}{ns}$}
 \end{figure}
 
@@ -434,7 +434,7 @@ The $D_w$ summary of all methods is plotted in figure~\ref{fig:chargesummary}, w
 
 \begin{figure}[H]
     \centering
-    \scalebox{0.6}{\input{figures/summarycharge.pgf}}
+    \resizebox{\textwidth}{!}{\input{figures/summarycharge.pgf}}
     \caption{\label{fig:chargesummary} $W_{d}$ of methods with light curve $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{ns}$}
 \end{figure}
 

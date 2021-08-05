@@ -10,7 +10,7 @@ almost instantaneous, modeled by a Dirac delta function.
 \begin{figure}[!htb]
   \centering
   \resizebox{0.5\textwidth}{!}{\input{figures/profile.pgf}}
-  \caption{\label{fig:time-pro} Light curves.}
+  \caption{\label{fig:time-pro} Light curves, the timing distribution of the emitted photons.}
 \end{figure}
 
 Photons captured by a PMT are affected by transit time spread (TTS).  In our Monte Carlo setup, the effective light curve $\phi(t)$ at PMT is modeled as an exponential distribution convoluted with a Gaussian~\cite{li_separation_2016}, known as \textit{ex-Gaussian} or \textit{exponentially modified Gaussian}, 
@@ -74,7 +74,7 @@ Combinations of $\tau_l$ and $\sigma_l$ in the light curve~\eqref{eq:time-pro} a
 Figure~\ref{fig:reso-diff} shows that $\sigma_{\mathrm{1st}}=\sigma_{\mathrm{ALL}}$ when $\mu \to 0$ or $\tau_l \gg \sigma_l$, which explains the widespread utilization of the $T_1$-$Q$ reduction.  When $\mu \to 0$ there is at most one PE in a waveform.  When $\tau_l \gg \sigma_l$, $\hat{t}_\mathrm{ALL}$ of the exponential light curve $\phi(t)$ in \eqref{eq:2} is reduced to $T_1 = \min_i t_i$ and equivalent to $\hat{t}_\mathrm{1st}$. Nevertheless, even when $\mu = 1$, $\sigma_{\mathrm{1st}} - \sigma_{\mathrm{ALL}}$ is noticeable for $\sigma_l > 0$ cases which are standard Cherenkov and scintillation experiments with non-negligible PMT TTS. 
 \begin{figure}[H]
   \centering
-  \scalebox{0.63}{\input{figures/vs-deltadiv.pgf}}
+  \resizebox{0.8\textwidth}{!}{\input{figures/vs-deltadiv.pgf}}
   \caption{\label{fig:reso-diff} Timing resolution comparison between $\hat{t}_{\mathrm{ALL}}$~(solid lines) when using full PE information and $\hat{t}_\mathrm{1st}$~(dashed lines) when only the first PE is used.  The difference is manifested especially when $\sigma_l$ and $\mu$ is large.  3 cases of $(\tau_l, \sigma_l)/\si{ns}$ represent scintillation with ultra-fast PMTs~$(20,0)$, Cherenkov~$(0, 5)$ and scintilation~$(20, 5)$ coupled with PMT TTS. Performance of waveform analysis lies between $\sigma_{\mathrm{1st}}$ and $\sigma_{\mathrm{ALL}}$. }
 \end{figure}
 
