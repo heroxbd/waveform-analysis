@@ -15,11 +15,10 @@
 \usepackage{pdfpages}
 \usepackage{makecell}
 \usepackage[EULERGREEK]{sansmath}
-\usepackage{tikz}
 \usepackage{float}
 \usepackage{hyperref}
 \usepackage{tikz}
-\usetikzlibrary{shapes,arrows}
+\usetikzlibrary{shapes,arrows,positioning}
 \usepackage[subrefformat=parens]{subcaption}
 \usepackage[none]{hyphenat}
 \usepackage[binary-units=true,per-mode=symbol]{siunitx}
@@ -53,6 +52,15 @@
 
 \begin{document}
 \captionsetup[figure]{labelfont={bf},name={Fig}}
+\setbeamertemplate{frametitle}
+{\begin{beamercolorbox}[wd=\paperwidth]{frametitle}
+    \strut\hspace{0.5em}\insertframetitle\strut
+    \hfill
+    \raisebox{-2mm}{\includegraphics[width=1cm]{img/180px-Junologo.jpg}}
+\end{beamercolorbox}
+}
+\tikzstyle{every picture}+=[remember picture]
+
 \begin{CJK*}{UTF8}{gbsn}
 \author[Dacheng Xu]{Dacheng~Xu~(徐大成) \and Erjin~Bao~(宝尔金) \and Yiyang~Wu~(武益阳) \and Benda~Xu~(续本达) \and Yu~Xu~(徐宇) \and Geliang~Zhang~(张戈亮) et.al \\ [4mm] \includegraphics[height=2cm]{img/Tsinghua_University_Logo.png}}
 
@@ -72,8 +80,8 @@
 \column{0.425\textwidth}
 \begin{figure}
     \centering
-    \includegraphics[width=1.0\linewidth]{img/event.png}
-    \caption{An Event in Detector}
+    \includegraphics[width=1.0\linewidth]{img/10-Figure7-1.png}
+    \caption{An Event in JUNO Detector\cite{zhu_method_2019}}
 \end{figure}
 \column{0.575\textwidth}
 \begin{figure}
@@ -150,37 +158,10 @@ Several evaluation criteria are needed.
     \hat{\phi}(t) \leftrightarrow \tilde{\phi}(t)
 \end{equation*}
 \end{block}
-\end{frame}
-
-\begin{frame}
-\frametitle{Residual sum square}
-\begin{align*}
-  \mathrm{RSS} &\coloneqq \int\left[\hat{w}(t) - w(t)\right]^2\mathrm{d}t
-\end{align*}
-\begin{figure}
-    \centering
-    \resizebox{1.0\textwidth}{!}{\input{img/tab.pgf}}
-    \caption{$b_1$ and $b_2$ have the same $\mathrm{RSS}=0.25$ to $a$, but $b_1$ is closer in timing to $a$}
-\end{figure}
-\end{frame}
-
-\begin{frame}
-\frametitle{Wasserstein distance}
-\begin{figure}
-    \centering
-    \includegraphics[width=1.0\linewidth]{img/WD.png}
-    \caption{Wasserstein Distance when $p=1$: Earth Mover Distance}  
-\end{figure}
-\begin{align*}
-  D_w\left[\hat{\phi}_*, \tilde{\phi}_*\right] &= \inf_{\gamma \in \Gamma} \left[\int \left\vert t_1 - t_2 \right\vert^p \gamma(t_1, t_2)\mathrm{d}t_1\mathrm{d}t_2\right]^{\frac{1}{p}}
-\end{align*}
-\begin{align*}
-  \Gamma &= \left\{\gamma(t_1, t_2) ~\middle\vert~ \int\gamma(t_1,t_2)\mathrm{d}t_1 = \tilde{\phi}_*(t_2) , \int\gamma(t_1,t_2)\mathrm{d}t_2 = \hat{\phi}_*(t_1) \right\}
-\end{align*}
-when $p=1$, CDF of $\phi(t)$ is $\Phi(t)$, $D_w$ is a $\ell_1$-distance:
-\begin{align*}
-  D_w\left[\hat{\phi}_*, \tilde{\phi}_*\right] &= \int\left|\hat{\Phi}(t) - \tilde{\Phi}(t)\right| \mathrm{d}t
-\end{align*}
+\begin{itemize}
+    \item Residual sum square between $\hat{w}(t)$ and $w(t)$
+    \item Wasserstein distance between $\hat{\phi}(t)$ and $\tilde{\phi}(t)$
+\end{itemize}
 \end{frame}
 
 \section{Fourier deconvolution}
@@ -228,7 +209,33 @@ when $p=1$, CDF of $\phi(t)$ is $\Phi(t)$, $D_w$ is a $\ell_1$-distance:
         \end{align*}
     where $\bm{Z}$ is the diagonal matrix of vector $\vec{z}$ controlling $q_i$ 
     \item $\mathcal{Z}=\{\vec{z}_j\}$ contains \textcolor{red}{$2^{N}$} model vectors
+    \item A \textcolor{red}{repeated greedy search}(RGS) is performed to construct the target set $\mathcal{Z}'$, which contains only the $\vec{z}$ giving large $p(\vec{w}|\vec{z})$. 
 \end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Model definition}
+\tikzstyle{na} = [baseline=-.5ex]
+\begin{columns}
+\column{0.5\textwidth}
+\begin{figure}
+    \centering
+    \resizebox{0.8\textwidth}{!}{\input{img/model0.pgf}}
+\end{figure}
+\begin{figure}
+    \centering
+    \resizebox{0.8\textwidth}{!}{\input{img/model3.pgf}}
+\end{figure}
+\column{0.5\textwidth}
+\begin{figure}
+    \centering
+    \resizebox{0.8\textwidth}{!}{\input{img/model1.pgf}}
+\end{figure}
+\begin{figure}
+    \centering
+    \resizebox{0.8\textwidth}{!}{\input{img/model2.pgf}}
+\end{figure}
+\end{columns}
 \end{frame}
 
 \begin{frame}
@@ -260,20 +267,9 @@ when $p=1$, CDF of $\phi(t)$ is $\Phi(t)$, $D_w$ is a $\ell_1$-distance:
     \end{figure}
 \end{minipage}
 \begin{align*}
+    \mathcal{Z}' &\subseteq \mathcal{Z} \\
     p(\vec{z}|\vec{w}) &= \frac{p(\vec{w}|\vec{z})p(\vec{z})}{\sum_{\vec{z}'\in\mathcal{Z}}p(\vec{w}|\vec{z'})p(\vec{z'})} \approx \frac{p(\vec{w}|\vec{z})p(\vec{z})}{\sum_{\vec{z}'\in\mathcal{Z}'}p(\vec{w}|\vec{z'})p(\vec{z'})}
 \end{align*}
-\end{frame}
-
-\begin{frame}
-\frametitle{Fast Bayesian matching pursuit}
-\begin{itemize}
-    \item \begin{align*}
-        \log[\textcolor{red}{p(\vec{w},\vec{z})}] =& \log[p(\vec{w}|\vec{z})p(\vec{z})] \\
-        =& -\frac{1}{2}(\vec{w}-\bm{V}_\mathrm{PE}\vec{z})^\intercal\bm{\Sigma}_z^{-1}(\vec{w}-\bm{V}_\mathrm{PE}\vec{z})-\frac{1}{2}\log\det\bm{\Sigma}_z \\ 
-        &-\frac{N}{2}\log2\pi -\mu + \sum_{i|z_i=1}\log \frac{\mu \phi(t'_i - t_0) \Delta t'}{1-\mu \phi(t'_i - t_0) \Delta t'}
-        \end{align*}
-    \item A \textcolor{red}{repeated greedy search}(RGS) is performed to construct the target set $\mathcal{Z}'$, which contains only the $\vec{z}$ giving large $p(\vec{w}|\vec{z})$. 
-\end{itemize}
 \end{frame}
 
 \begin{frame}
@@ -361,15 +357,67 @@ FBMP will have better timing \& charge resolution.
 \end{block}
 \end{frame}
 
-\section{Summary}
+\section{Summary \& outlook}
 
 \begin{frame}
 \frametitle{Summary}
 \begin{itemize}
-    \item Waveform analysis is necessary for elaborate analysis. 
+    \item Waveform analysis is the first step for any data analysis on JUNO. 
     \item FBMP restore information of PE most completely, with a Bayesian interface. 
     \item FBMP will provide better timing and charge resolution. 
 \end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Outlook}
+FBMP @ JUNO
+\begin{itemize}
+    \item Test Hamamatsu PMTs based on their SPE. 
+    \item Test NNVT MCP PMTs based on their SPE. 
+    \item Integrate FBMP with event reconstruction methods. 
+\end{itemize}
+\end{frame}
+
+\section{Backup}
+
+\begin{frame}
+\frametitle{Residual sum square}
+\begin{align*}
+  \mathrm{RSS} &\coloneqq \int\left[\hat{w}(t) - w(t)\right]^2\mathrm{d}t
+\end{align*}
+\begin{figure}
+    \centering
+    \resizebox{1.0\textwidth}{!}{\input{img/tab.pgf}}
+    \caption{$b_1$ and $b_2$ have the same $\mathrm{RSS}=0.25$ to $a$, but $b_1$ is closer in timing to $a$}
+\end{figure}
+\end{frame}
+
+\begin{frame}
+\frametitle{Wasserstein distance}
+\begin{figure}
+    \centering
+    \includegraphics[width=1.0\linewidth]{img/WD.png}
+    \caption{Wasserstein Distance when $p=1$: Earth Mover Distance}  
+\end{figure}
+\begin{align*}
+  D_w\left[\hat{\phi}_*, \tilde{\phi}_*\right] &= \inf_{\gamma \in \Gamma} \left[\int \left\vert t_1 - t_2 \right\vert^p \gamma(t_1, t_2)\mathrm{d}t_1\mathrm{d}t_2\right]^{\frac{1}{p}}
+\end{align*}
+\begin{align*}
+  \Gamma &= \left\{\gamma(t_1, t_2) ~\middle\vert~ \int\gamma(t_1,t_2)\mathrm{d}t_1 = \tilde{\phi}_*(t_2) , \int\gamma(t_1,t_2)\mathrm{d}t_2 = \hat{\phi}_*(t_1) \right\}
+\end{align*}
+when $p=1$, CDF of $\phi(t)$ is $\Phi(t)$, $D_w$ is a $\ell_1$-distance:
+\begin{align*}
+  D_w\left[\hat{\phi}_*, \tilde{\phi}_*\right] &= \int\left|\hat{\Phi}(t) - \tilde{\Phi}(t)\right| \mathrm{d}t
+\end{align*}
+\end{frame}
+
+\begin{frame}
+\frametitle{Repeated greedy search}
+\begin{align*}
+    \log[\textcolor{red}{p(\vec{w},\vec{z})}] =& \log[p(\vec{w}|\vec{z})p(\vec{z})] \\
+    =& -\frac{1}{2}(\vec{w}-\bm{V}_\mathrm{PE}\vec{z})^\intercal\bm{\Sigma}_z^{-1}(\vec{w}-\bm{V}_\mathrm{PE}\vec{z})-\frac{1}{2}\log\det\bm{\Sigma}_z \\ 
+    &-\frac{N}{2}\log2\pi -\mu + \sum_{i|z_i=1}\log \frac{\mu \phi(t'_i - t_0) \Delta t'}{1-\mu \phi(t'_i - t_0) \Delta t'}
+\end{align*}
 \end{frame}
 
 \begin{frame}
