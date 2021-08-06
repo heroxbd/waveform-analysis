@@ -1,6 +1,3 @@
-% !TEX program = xelatex
-% !TEX options = --shell-escape -synctex=1 -interaction=nonstopmode -file-line-error "%DOC%"
-% !BIB program = bibtex
 \documentclass{beamer}
 
 \usetheme{Madrid}
@@ -26,7 +23,7 @@
 \usepackage[subrefformat=parens]{subcaption}
 \usepackage[none]{hyphenat}
 \usepackage[binary-units=true,per-mode=symbol]{siunitx}
-\usepackage{ctex}
+\usepackage{CJK}
 \usepackage{textcomp}
 \usepackage{adjustbox}
 \usepackage{pgfplots}
@@ -43,7 +40,6 @@
 \setbeamersize{text margin left=10mm,text margin right=10mm}
 % \setlength{\belowcaptionskip}{-2mm}
 \title[Waveform Analysis]{Optimized PMT Waveform Analysis}
-\author[Dacheng Xu]{Dacheng Xu~(徐大成) \and Erjin Bao~(宝尔金) \and Yiyang Wu~(武益阳) \and Benda Xu~(续本达) \and Yu Xu~(徐宇) \and Geliang Zhang~(张戈亮) et.al \\ [4mm] \includegraphics[height=2cm]{img/Tsinghua_University_Logo.png}}
 \date[JUNO]{April 16, 2021}
 
 \AtBeginSection[]
@@ -57,6 +53,9 @@
 
 \begin{document}
 \captionsetup[figure]{labelfont={bf},name={Fig}}
+\begin{CJK*}{UTF8}{gbsn}
+\author[Dacheng Xu]{Dacheng~Xu~(徐大成) \and Erjin~Bao~(宝尔金) \and Yiyang~Wu~(武益阳) \and Benda~Xu~(续本达) \and Yu~Xu~(徐宇) \and Geliang~Zhang~(张戈亮) et.al \\ [4mm] \includegraphics[height=2cm]{img/Tsinghua_University_Logo.png}}
+
 \frame{\titlepage}
 
 \begin{frame}[noframenumbering]
@@ -496,5 +495,5 @@ FBMP retains charge distribution of PE.
 \bibliographystyle{unsrt}
 \bibliography{ref.bib}
 \end{frame}
-
+\end{CJK*}
 \end{document}

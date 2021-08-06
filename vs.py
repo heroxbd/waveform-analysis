@@ -300,7 +300,7 @@ tau = 20
 sigma = 5
 wdist = np.vstack([mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]['wdist'].mean(axis=0) for key in keylist])
 dy = np.vstack([wdist[:, 1] - wdist[:, 0], wdist[:, 2] - wdist[:, 1]])
-fig = plt.figure(figsize=(10, 4))
+fig = plt.figure(figsize=(10, 3))
 fig.tight_layout()
 ax = fig.add_subplot(111)
 ax.bar(x, wdist[:, 1], color='b')
@@ -365,7 +365,6 @@ for key in mts.keys():
                 r = wavef['SimTruth/T'].attrs['r']
             mts[key][i]['N'] = len(start)
             vali = np.abs(time['tscharge'] - start['T0'] - np.mean(time['tscharge'] - start['T0'])) <= r * np.std(time['tscharge'] - start['T0'], ddof=-1)
-            mts[key][i]['N'] = len(start)
             Chnum = len(np.unique(pelist['PMTId']))
             e_ans, i_ans = np.unique(pelist['TriggerNo'] * Chnum + pelist['PMTId'], return_index=True)
             i_ans = np.append(i_ans, len(pelist))

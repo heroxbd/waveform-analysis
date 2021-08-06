@@ -1,0 +1,380 @@
+\documentclass{beamer}
+
+\usetheme{Madrid}
+\usecolortheme{default}
+
+\definecolor{THUpurple}{RGB}{102,8,116}
+
+\usepackage{amsmath}
+\usepackage{mathtools}
+\usepackage{caption}
+\usepackage{listings}
+\usepackage{lmodern}
+\usepackage{xcolor}
+\lstset{language=Python,keywordstyle={\bfseries \color{blue}}}
+\usepackage{pdfpages}
+\usepackage{makecell}
+\usepackage[EULERGREEK]{sansmath}
+\usepackage{tikz}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows}
+\usepackage[subrefformat=parens]{subcaption}
+\usepackage[none]{hyphenat}
+\usepackage[binary-units=true,per-mode=symbol]{siunitx}
+\usepackage{CJK}
+\usepackage{textcomp}
+\usepackage{adjustbox}
+\usepackage{pgfplots}
+\usepackage{bm}
+\usepackage{tablefootnote}
+\DeclareMathOperator{\erf}{erf}
+\usefonttheme[onlymath]{serif}
+
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\mev}{\mathrm{MeV}}
+\newcommand{\gev}{\mathrm{GeV}}
+
+\setbeamercolor{structure}{fg=THUpurple}
+\setbeamersize{text margin left=10mm,text margin right=10mm}
+% \setlength{\belowcaptionskip}{-2mm}
+\title[Waveform Analysis]{Accurate and robust PMT waveform analysis with fast Bayesian matching pursuit}
+\date[JUNO]{August 6, 2021}
+
+\AtBeginSection[]
+{
+    \begin{frame}[noframenumbering]
+        \frametitle{Outline}
+        \thispagestyle{empty}
+        \tableofcontents[currentsection]
+    \end{frame}
+}
+
+\begin{document}
+\captionsetup[figure]{labelfont={bf},name={Fig}}
+\begin{CJK*}{UTF8}{gbsn}
+\author[Dacheng Xu]{Dacheng~Xu~(徐大成) \and Erjin~Bao~(宝尔金) \and Yiyang~Wu~(武益阳) \and Benda~Xu~(续本达) \and Yu~Xu~(徐宇) \and Geliang~Zhang~(张戈亮) et.al \\ [4mm] \includegraphics[height=2cm]{img/Tsinghua_University_Logo.png}}
+
+\frame{\titlepage}
+
+\begin{frame}[noframenumbering]
+\frametitle{Outline}
+\thispagestyle{empty}
+\tableofcontents
+\end{frame}
+
+\section{Motivation}
+
+\begin{frame}
+\frametitle{Motivation}
+\begin{columns}
+\column{0.425\textwidth}
+\begin{figure}
+    \centering
+    \includegraphics[width=1.0\linewidth]{img/event.png}
+    \caption{An Event in Detector}
+\end{figure}
+\column{0.575\textwidth}
+\begin{figure}
+    \centering
+    \resizebox{\textwidth}{!}{\input{img/junowave.pgf}}
+    \caption{A PMT Waveform}
+\end{figure}
+\end{columns}
+\begin{block}{}
+Waveform analysis, which means extracting time and charge information from PMT waveforms, is the bedrock of subsequent analysis such as event reconstruction. 
+\end{block}
+\end{frame}
+
+\section{Dataset}
+
+\begin{frame}
+\frametitle{Simulation setup: Time profile}
+\begin{figure}
+    \centering
+    \resizebox{0.6\textwidth}{!}{\input{img/profile.pgf}}
+    \caption{Time Profile of Events}
+\end{figure}
+\begin{align*}
+    \phi(t) &= \mathcal{N}(t|\sigma_l^2)\otimes \mathrm{Exp}(t|\tau_l) \\
+    &= \frac{1}{2\tau_l} \exp\left(\frac{\sigma_l^2}{2\tau_l^2}-\frac{t}{\tau_l}\right) \left[1 - \erf\left( \frac{\sigma_l}{\sqrt{2}\tau_l} - \frac{t}{\sqrt{2}\sigma_l} \right)\right]
+\end{align*}
+\end{frame}
+
+\begin{frame}
+\frametitle{Simulation setup: Single PE response}
+\begin{figure}
+    \centering
+    \resizebox{0.6\textwidth}{!}{\input{img/spe.pgf}}
+    \caption{Single PE response\cite{jetter_pmt_2012}}
+\end{figure}
+\begin{align*}
+  V_\mathrm{PE}(t) &= V_{0}\exp\left[-\frac{1}{2}\left(\frac{\log(t/\tau_\mathrm{PE})}{\sigma_\mathrm{PE}}\right)^{2}\right]
+\end{align*}
+\end{frame}
+
+\begin{frame}
+\frametitle{Data input \& output}
+\begin{columns}
+\column{0.5\textwidth}
+\begin{figure}
+    \centering
+    \resizebox{1.0\textwidth}{!}{\input{img/wave.pgf}}
+    \caption{Input Waveform (Pedestal free)}
+\end{figure}
+\column{0.5\textwidth}
+\begin{figure}
+    \centering
+    \resizebox{1.0\textwidth}{!}{\input{img/charge.pgf}}
+    \caption{Output Time and Charge $\hat\phi(t)$}
+\end{figure}
+\end{columns}
+\begin{align*}
+  \tilde{\phi}(t) &= \sum_{i=1}^{N_{\mathrm{PE}}} q_i \delta(t-t_i), \ N_{\mathrm{PE}}\sim \mathrm{Poisson}(\mu) \\
+  w(t) &= \tilde{\phi}(t) \otimes V_\mathrm{PE}(t) + \epsilon(t) = \sum_{i=1}^{N_\mathrm{PE}} q_i V_\mathrm{PE}(t-t_i) + \epsilon(t)
+\end{align*}
+\end{frame}
+
+\section{Evaluation criteria}
+
+\begin{frame}
+\frametitle{Evaluation criteria}
+$\tilde{\phi}(t)$ (simulation result) is an approximation of $\phi(t)$ (time profile). 
+
+$\hat{\phi}(t)$ (reconstruction result) should be consistent with $\tilde{\phi}(t)$. 
+
+Several evaluation criteria are needed. 
+\begin{block}{}
+\begin{equation*}
+    \hat{\phi}(t) \leftrightarrow \tilde{\phi}(t)
+\end{equation*}
+\end{block}
+\end{frame}
+
+\begin{frame}
+\frametitle{Residual sum square}
+\begin{align*}
+  \mathrm{RSS} &\coloneqq \int\left[\hat{w}(t) - w(t)\right]^2\mathrm{d}t
+\end{align*}
+\begin{figure}
+    \centering
+    \resizebox{1.0\textwidth}{!}{\input{img/tab.pgf}}
+    \caption{$b_1$ and $b_2$ have the same $\mathrm{RSS}=0.25$ to $a$, but $b_1$ is closer in timing to $a$}
+\end{figure}
+\end{frame}
+
+\begin{frame}
+\frametitle{Wasserstein distance}
+\begin{figure}
+    \centering
+    \includegraphics[width=1.0\linewidth]{img/WD.png}
+    \caption{Wasserstein Distance when $p=1$: Earth Mover Distance}  
+\end{figure}
+\begin{align*}
+  D_w\left[\hat{\phi}_*, \tilde{\phi}_*\right] &= \inf_{\gamma \in \Gamma} \left[\int \left\vert t_1 - t_2 \right\vert^p \gamma(t_1, t_2)\mathrm{d}t_1\mathrm{d}t_2\right]^{\frac{1}{p}}
+\end{align*}
+\begin{align*}
+  \Gamma &= \left\{\gamma(t_1, t_2) ~\middle\vert~ \int\gamma(t_1,t_2)\mathrm{d}t_1 = \tilde{\phi}_*(t_2) , \int\gamma(t_1,t_2)\mathrm{d}t_2 = \hat{\phi}_*(t_1) \right\}
+\end{align*}
+when $p=1$, CDF of $\phi(t)$ is $\Phi(t)$, $D_w$ is a $\ell_1$-distance:
+\begin{align*}
+  D_w\left[\hat{\phi}_*, \tilde{\phi}_*\right] &= \int\left|\hat{\Phi}(t) - \tilde{\Phi}(t)\right| \mathrm{d}t
+\end{align*}
+\end{frame}
+
+\section{Fourier deconvolution}
+
+\begin{frame}
+\frametitle{Fourier deconvolution}
+\begin{align*}
+  \mathcal{F}[w] &= \mathcal{F}[\tilde{\phi}]\mathcal{F}[V_\mathrm{PE}] + \mathcal{F}[\epsilon],\Rightarrow \hat{\phi}'(t) = \mathcal{F}^{-1}\left[\frac{R \mathcal{F}[w]}{\mathcal{F}[V_\mathrm{PE}]}\right](t) \\
+  \hat{\phi}(t) &= \hat{\alpha}\hat{\phi}'(t),\hat{\alpha} = \arg \underset{\alpha'}{\min}\mathrm{RSS}\left[\alpha'\hat{\phi}'(t)\otimes V_\mathrm{PE}(t),w(t)\right]
+\end{align*}
+\begin{figure}
+    \centering
+    \resizebox{0.55\textwidth}{!}{\input{img/fftrans.pgf}}
+    \caption{$\mathrm{RSS}=\SI{124.7}{mV^2},D_w=\SI{2.03}{ns},\Delta t_0=\SI{-1.16}{ns}$}
+\end{figure}
+\end{frame}
+
+\section{Fast Bayesian matching pursuit}
+
+\begin{frame}
+\frametitle{Model definition}
+\begin{itemize}
+    \item Time in DAQ window is divided into time bins: $\vec{t}$, whose length is $N$
+    \item Model vector: $\vec{z}$. $z_i=0\implies q_i=0$ and $\ z_i=1\implies q_i\neq0$
+    \item Linear Model: $\vec{w} = \bm{V}_\mathrm{PE}\vec{z} + \vec{\epsilon}$
+    \item 
+        \begin{align*}
+            \left.
+            \begin{bmatrix}
+                \vec{w} \\
+                \vec{q}
+            \end{bmatrix}
+            \right\vert\vec{z}
+            &\sim \mathrm{Normal}\left(
+            \begin{bmatrix}
+                \bm{V}_\mathrm{PE}\vec{z} \\
+                \vec{z}
+            \end{bmatrix}, 
+            \begin{bmatrix}
+                \bm{\Sigma}_z & \bm{V}_\mathrm{PE}\bm{Z} \\
+                \bm{Z}\bm{V}_\mathrm{PE}^\intercal & \bm{Z}
+            \end{bmatrix}
+            \right) \\
+            \bm{\Sigma}_z &= \bm{V}_\mathrm{PE}\bm{Z}\bm{V}_\mathrm{PE}^\intercal+\sigma_\epsilon^2\bm{I}
+        \end{align*}
+    where $\bm{Z}$ is the diagonal matrix of vector $\vec{z}$ controlling $q_i$ 
+    \item $\mathcal{Z}=\{\vec{z}_j\}$ contains \textcolor{red}{$2^{N}$} model vectors
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Model selection}
+\begin{itemize}
+    \item Calculation of \textcolor{red}{$2^{N}$} model vectors is impossible!
+    \item Most of $p(\vec{w}|\vec{z}) \rightarrow 0$!
+\end{itemize}
+\noindent\begin{minipage}[c]{0.33\textwidth}
+    \begin{figure}[H]
+        \centering
+            \includegraphics[width=0.95\textwidth]{img/perfect_PE.pdf}
+        \caption{perfect PE matching waveform, $p(\vec{z}|\vec{w})$ hit maximum}
+        \label{fig:perfect PE}
+    \end{figure}
+\end{minipage}\begin{minipage}[c]{0.33\textwidth}
+    \begin{figure}[H]
+        \centering
+            \includegraphics[width=0.95\textwidth]{img/not_so_perfect_PE.pdf}
+        \caption{not so perfect, $p(\vec{z}|\vec{w})$ is smaller but still $>0$}
+        \label{fig:not so perfect PE}
+    \end{figure}
+\end{minipage}\begin{minipage}[c]{0.33\textwidth}
+    \begin{figure}[H]
+        \centering
+            \includegraphics[width=0.95\textwidth]{img/nonsense_PE.pdf}
+        \caption{Completely mismatch the waveform, $p(\vec{z}|\vec{w}) \rightarrow 0$}
+        \label{fig:nonsense PE}
+    \end{figure}
+\end{minipage}
+\begin{align*}
+    p(\vec{z}|\vec{w}) &= \frac{p(\vec{w}|\vec{z})p(\vec{z})}{\sum_{\vec{z}'\in\mathcal{Z}}p(\vec{w}|\vec{z'})p(\vec{z'})} \approx \frac{p(\vec{w}|\vec{z})p(\vec{z})}{\sum_{\vec{z}'\in\mathcal{Z}'}p(\vec{w}|\vec{z'})p(\vec{z'})}
+\end{align*}
+\end{frame}
+
+\begin{frame}
+\frametitle{Fast Bayesian matching pursuit}
+\begin{itemize}
+    \item \begin{align*}
+        \log[\textcolor{red}{p(\vec{w},\vec{z})}] =& \log[p(\vec{w}|\vec{z})p(\vec{z})] \\
+        =& -\frac{1}{2}(\vec{w}-\bm{V}_\mathrm{PE}\vec{z})^\intercal\bm{\Sigma}_z^{-1}(\vec{w}-\bm{V}_\mathrm{PE}\vec{z})-\frac{1}{2}\log\det\bm{\Sigma}_z \\ 
+        &-\frac{N}{2}\log2\pi -\mu + \sum_{i|z_i=1}\log \frac{\mu \phi(t'_i - t_0) \Delta t'}{1-\mu \phi(t'_i - t_0) \Delta t'}
+        \end{align*}
+    \item A \textcolor{red}{repeated greedy search}(RGS) is performed to construct the target set $\mathcal{Z}'$, which contains only the $\vec{z}$ giving large $p(\vec{w}|\vec{z})$. 
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{FBMP's result: Bayesian interface}
+\begin{itemize}
+    \item PE Time: $\vec{t}$
+    \item Models: $\mathcal{Z}'=\{\vec{z}_j\}$
+    \item Charge: \begin{align*}
+        \hat{\vec{q}}_z = E(\vec{q}|\vec{w},\vec{z}) &= \vec{z} + \bm{Z}\bm{V}_\mathrm{PE}^\intercal\bm{\Sigma}_z^{-1}(\vec{w}-\bm{V}_\mathrm{PE}\vec{z})
+        \end{align*}
+    \item Model's posterior probability: $p(\vec{z}|\vec{w})$
+\end{itemize}
+\begin{center}
+    Provides opportunity for subsequent Bayesian analysis! 
+\end{center}
+\end{frame}
+
+\begin{frame}
+\frametitle{FBMP demonstration}
+\begin{figure}
+    \centering
+    \resizebox{0.6\textwidth}{!}{\input{img/demoe2c0.pgf}}
+    \caption{$\mathrm{RSS}=\SI{15.8}{mV^2},D_w=\SI{0.59}{ns},\Delta t_0=\SI{-3.51}{ns}$}
+\end{figure}
+\end{frame}
+
+\begin{frame}
+\frametitle{Kullback-Leibler divergence}
+\begin{align*}
+  \hat{t}_\mathrm{KL} &= \arg\underset{t_0}{\max} \prod_{i=1}^{\hat{N}} \left[\phi(\hat{t}_i-t_0)\right]^{\hat{q}_i} ,\ \Delta t = \hat{t}_\mathrm{KL} - t_0
+\end{align*}
+\begin{figure}
+    \centering
+    \resizebox{0.6\textwidth}{!}{\input{img/twoprofile.pgf}}
+    \caption{Time translation between time profiles}
+\end{figure}
+\end{frame}
+
+\begin{frame}
+\frametitle{$\mu$ estimation}
+For Fourier deconvolution, 
+\begin{align*}
+    \hat{\mu} &= \sum_i \hat{q}_i
+\end{align*}
+For FBMP,
+\begin{align*}
+    \left(\hat{t}_0, \hat{\mu}\right) &= \arg\underset{t_0,\mu}{\max} p(\vec{w} | t_0, \mu) \\
+    p(\vec{w}|t_0, \mu) &= \sum_{\vec{z}'\in\mathcal{Z}'}p(\vec{w}|\vec{z}',t_0,\mu)p(\vec{z}'|t_0,\mu) \\
+    &= \sum_{\vec{z}'\in\mathcal{Z}'}p(\vec{w}|\vec{z}')p(\vec{z}'|t_0,\mu)
+\end{align*}
+\end{frame}
+
+\begin{frame}
+\frametitle{FBMP's performance of evaluation criteria}
+For dataset: $(\mu, \tau_l, \sigma_l)/\si{ns}=(4, 20, 5)$: 
+\begin{figure}
+    \centering
+    \resizebox{\textwidth}{!}{\input{img/vs.pgf}}
+    \caption{$D_w$ and $\mathrm{RSS}$ of methods}
+\end{figure}
+\end{frame}
+
+\begin{frame}
+\frametitle{Charge posterior}
+\begin{figure}
+    \centering
+    \resizebox{0.7\textwidth}{!}{\input{img/chargehist.pgf}}
+    \caption{$\hat{q}$ histogram of methods}
+\end{figure}
+\begin{block}{}
+FBMP retains charge distribution of PE. 
+\end{block}
+\end{frame}
+
+\begin{frame}
+\frametitle{Timing \& charge resolution}
+For dataset: $(\tau_l, \sigma_l)/\si{ns}=(20, 5)$:
+\begin{figure}
+    \centering
+    \resizebox{\textwidth}{!}{\input{img/vs-reso.pgf}}
+    \caption{Timing \& charge resolution}
+\end{figure}
+\begin{block}{}
+FBMP will have better timing \& charge resolution. 
+\end{block}
+\end{frame}
+
+\section{Summary}
+
+\begin{frame}
+\frametitle{Summary}
+\begin{itemize}
+    \item Waveform analysis is necessary for elaborate analysis. 
+    \item FBMP restore information of PE most completely, with a Bayesian interface. 
+    \item FBMP will provide better timing and charge resolution. 
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\bibliographystyle{unsrt}
+\bibliography{ref.bib}
+\end{frame}
+\end{CJK*}
+\end{document}
