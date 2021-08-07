@@ -5,12 +5,12 @@ Wasserstein distance $D_w$ is a metric between two distributions, discrete or co
 where $\hat{\phi}_*$ denotes the normalized $\hat{\phi}$. $\Gamma$ is the collection of joint distributions with marginals $\hat{\phi}_*(t)$ and $\tilde{\phi}_*(t)$,
 \begin{equation*}
   \label{eq:joint}
-  \Gamma = \left\{\gamma(t_1, t_2) ~\middle\vert~ \int\gamma(t_1,t_2)\mathrm{d}t_1 = \tilde{\phi}_*(t_2) , \int\gamma(t_1,t_2)\mathrm{d}t_2 = \hat{\phi}_*(t_1)  \right\}.
+  \Gamma = \left\{\gamma(t_1, t_2) ~\middle\vert~ \int\gamma(t_1,t_2)\mathrm{d}t_1 = \tilde{\phi}_*(t_2) , \int\gamma(t_1,t_2)\mathrm{d}t_2 = \hat{\phi}_*(t_1) \right\}.
 \end{equation*}
 When $p=1$, it is also known as the \textit{earth mover's distance}~\cite{levina_earth_2001} in that it encodes the minimum cost to transport mass from one distribution to the other.
-For figure~\ref{fig:l2}, $D_w(a, b_1) = 0.5$ while $D_w(a, b_2) = 1.5$, which qualifies that $a$ is closer to $b_1$.  Therefore, Wasserstein distance complements RSS and offers a timing-sensitive metric suitable for the sparse PE space.
+For figure~\ref{fig:l2}, $D_w(a, b_1) = 0.5$ while $D_w(a, b_2) = 1.5$, which qualifies that $a$ is closer to $b_1$. Therefore, Wasserstein distance complements RSS and offers a timing-sensitive metric suitable for the sparse PE space.
 
-Although calculating Wasserstein distance is generally costly, when $p=1$ it is straightforward to implement by cumulative distribution functions (CDF).  Denote the CDF of $\hat{\phi}_*(t)$ as $\hat\Phi(t)$.  $D_w$ is equivalent to the $\ell_1$-distance between the CDFs,
+Although calculating Wasserstein distance is generally costly, when $p=1$, it is straightforward to implement by cumulative distribution functions (CDF). Denote the CDF of $\hat{\phi}_*(t)$ as $\hat\Phi(t)$. $D_w$ is equivalent to the $\ell_1$-distance between the CDFs,
 \begin{equation}
     D_w\left[\hat{\phi}_*, \tilde{\phi}_*\right] = \int\left|\hat{\Phi}(t) - \tilde{\Phi}(t)\right| \mathrm{d}t.
     \label{eq:numerical}

@@ -287,16 +287,6 @@ arXiv: 0907.0066},
     year={2019}
 }
 
-@article{schniter_fast_nodate,
-	title = {Fast {Bayesian} {Matching} {Pursuit}: {Model} {Uncertainty} and {Parameter} {Estimation} for {Sparse} {Linear} {Models}},
-	abstract = {A low-complexity recursive procedure is presented for model selection and minimum mean squared error (MMSE) estimation in linear regression. Emphasis is given to the case of a sparse parameter vector and fewer observations than unknown parameters. A Gaussian mixture is chosen as the prior on the unknown parameter vector. The algorithm returns both a set of high posterior probability models and an approximate MMSE estimate of the parameter vector. Exact ratios of posterior probabilities serve to reveal potential ambiguity among multiple candidate solutions that are ambiguous due to observation noise or correlation among columns in the regressor matrix. Algorithm complexity is O(M N K), with M observations, N coefﬁcients, and K nonzero coefﬁcients. For the case that hyperparameters are unknown, an approximate maximum likelihood estimator is proposed based on the generalized expectation-maximization algorithm. Numerical simulations demonstrate estimation performance and illustrate the distinctions between MMSE estimation and maximum a posteriori probability model selection.},
-	author = {Schniter, P. Potter, L. C. and Ziniel, J. },
-	url = {https://www2.ece.ohio-state.edu/~schniter/pdf/tsp09_fbmp.pdf},
-	language = {en},
-	journal = {IEEE TRANSACTIONS ON SIGNAL PROCESSING},
-	year = {2009}
-}
-
 @article{savitzky_smoothing_1964,
 	title = {Smoothing and {Differentiation} of {Data} by {Simplified} {Least} {Squares} {Procedures}.},
 	volume = {36},
@@ -396,4 +386,16 @@ http://adsabs.harvard.edu/abs/1974AJ.....79..745L},
 	month = jun,
 	year = {1974},
 	pages = {745}
+}
+
+@inproceedings{schniter_fast_2008,
+	title = {Fast bayesian matching pursuit},
+	doi = {10.1109/ITA.2008.4601068},
+	abstract = {A low-complexity recursive procedure is presented for minimum mean squared error (MMSE) estimation in linear regression models. A Gaussian mixture is chosen as the prior on the unknown parameter vector. The algorithm returns both an approximate MMSE estimate of the parameter vector and a set of high posterior probability mixing parameters. Emphasis is given to the case of a sparse parameter vector. Numerical simulations demonstrate estimation performance and illustrate the distinctions between MMSE estimation and MAP model selection. The set of high probability mixing parameters not only provides MAP basis selection, but also yields relative probabilities that reveal potential ambiguity in the sparse model.},
+	booktitle = {2008 {Information} {Theory} and {Applications} {Workshop}},
+	author = {Schniter, P. and Potter, L. C. and Ziniel, J.},
+	month = jan,
+	year = {2008},
+	keywords = {Bayesian methods, Vectors, Matching pursuit algorithms, Bayes methods, Estimation, fast Bayesian matching pursuit, Gaussian mixture, Gaussian processes, high posterior probability mixing parameter, iterative methods, least mean squares methods, linear regression model, low-complexity recursive procedure, MAP model selection, maximum likelihood estimation, minimum mean squared error estimation, MMSE, Numerical models, probability, recursive estimation, regression analysis, Runtime, Signal to noise ratio, sparse parameter vector},
+	pages = {326--333}
 }
