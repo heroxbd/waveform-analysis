@@ -211,9 +211,9 @@ The workflow of data processing consists of training and predicting. Training in
   \caption{\label{fig:CNN} Training process of a CNN. A shallow network structure of 5 layers is in~\subref{fig:struct} and the evolution of Wasserstein distance during training is in~\subref{fig:loss}.}
 \end{figure}
 
-The product of network training is a function that creates PE outputs $\hat{\phi}(t)$ from waveform inputs $w(t)$. Since $D_w$ disregards normalization, $\hat{\phi}$ is scaled to $\hat{\alpha}\hat{\phi}$ following~\eqref{eq:fdconv2}. Figure~\ref{fig:cnn} shows a demonstration with $D_w = \SI{0.75}{ns}$. 
+The product of network training is a function that creates PE outputs $\hat{\phi}(t)$ from waveform inputs $w(t)$. Since $D_w$ disregards normalization, $\hat{\phi}$ is scaled to $\hat{\alpha}\hat{\phi}$ following~\eqref{eq:fdconv2}. Figure~\ref{fig:cnn} shows a demonstration with $D_w = \SI{0.64}{ns}$. 
 
-The result of $\hat{\phi}(t)$ with $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{ns}$ is shown in figure~\ref{fig:cnn-npe}. The left panel is the boxplot which shows the $D_d$ percentile vs $N_{pe}$, and the right panel is the overall histogram of $D_d$. 
+The result of $\hat{\phi}(t)$ with $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{ns}$ is shown in figure~\ref{fig:cnn-npe}. The left panel is the boxplot which shows the $D_d$ percentile vs $N_{\mathrm{PE}}$, and the right panel is the overall histogram of $D_d$. 
 
 \begin{figure}[H]
   \begin{subfigure}{.5\textwidth}
@@ -224,7 +224,7 @@ The result of $\hat{\phi}(t)$ with $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{n
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/takarachargestats.pgf}}
-    \caption{\label{fig:cnn-npe} $D_d$ vs $N_{pe}$ Histogram \& Boxplot}
+    \caption{\label{fig:cnn-npe} $D_d$ vs $N_{\mathrm{PE}}$ Histogram \& Boxplot}
   \end{subfigure}
   \caption{CNN results when $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{ns}$. A demonstration shows in~\subref{fig:cnn}.}
 \end{figure}
@@ -256,23 +256,23 @@ We construct estimators $\hat{q}_i$ by minimizing RSS of $w'(t)$ and $w(t)$,
   \bm{\hat{q}} = \arg \underset{\bm{q'}}{\min} \mathrm{RSS}\left[w'(t),w(t)\right].
 \end{equation}
 
-The optimizer is realized with a limited-memory Broyden-Fletcher-Goldfarb-Shanno algorithm with a bound constraint~\cite{byrd_limited_1995}. It can impose constraints of $q'_i > 0$. Also, like Fourier deconvolution in equation~\eqref{eq:fdconv2}, this method thresholds and scales the converged $\bm{\hat{q}}$. The demonstration~\ref{fig:fitting} here shows a result with $D_w = \SI{0.75}{ns}$.
+The optimizer is realized with a limited-memory Broyden-Fletcher-Goldfarb-Shanno algorithm with a bound constraint~\cite{byrd_limited_1995}. It can impose constraints of $q'_i > 0$. However, because this method minimizes RSS, it does not scale the converged $\bm{\hat{q}}$. The demonstration~\ref{fig:fitting} here shows a result with $D_w = \SI{0.68}{ns}$.
 
 \begin{figure}[H]
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/xiaopeip.pgf}}
-    \caption{\label{fig:fitting}$\mathrm{RSS}=\SI{13.0}{mV^2},D_w=\SI{0.75}{ns},\Delta{t_0}=\SI{-2.27}{ns}$}
+    \caption{\label{fig:fitting}$\mathrm{RSS}=\SI{7.63}{mV^2},D_w=\SI{0.68}{ns},\Delta{t_0}=\SI{-3.22}{ns}$}
   \end{subfigure}
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/xiaopeipchargestats.pgf}}
-    \caption{\label{fig:fitting-npe} $D_d$ vs $N_{pe}$ Boxplot \& Histogram}
+    \caption{\label{fig:fitting-npe} $D_d$ vs $N_{\mathrm{PE}}$ Boxplot \& Histogram}
   \end{subfigure}
   \caption{Gradient descent results when $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{ns}$. A demonstration shows in~\subref{fig:fitting}.}
 \end{figure}
 
-The result of $\hat{q}$ when $\mu=4, \tau_l=\SI{20}{ns}$, and $\sigma_l=\SI{5}{ns}$ is shown in figure~\ref{fig:fitting-npe}. The left panel is the boxplot which shows the $D_d$ percentile vs $N_{pe}$, and the right panel is the overall histogram of $D_d$. 
+The result of $\hat{q}$ when $\mu=4, \tau_l=\SI{20}{ns}$, and $\sigma_l=\SI{5}{ns}$ is shown in figure~\ref{fig:fitting-npe}. The left panel is the boxplot which shows the $D_d$ percentile vs $N_{\mathrm{PE}}$, and the right panel is the overall histogram of $D_d$. 
 
 \subsubsection{Markov chain Monte Carlo}
 \label{subsec:mcmc}
@@ -302,7 +302,7 @@ $\hat{t}_0$ and $\hat{q}_i$ are constructed as the mean estimators of posterior 
   \hat{\phi}(t) = \sum_{i=1}^{N_s}\hat{q}_i\delta(t-t'_i).
 \end{equation}
 
-$D_w$ with $\mu=4, \tau_l=\SI{20}{ns}$, and $\sigma_l=\SI{5}{ns}$ is shown in figure~\ref{fig:mcmc}.
+$D_w$ with $\mu=4, \tau_l=\SI{20}{ns}$, and $\sigma_l=\SI{5}{ns}$ is shown in figure~\ref{fig:mcmc-npe}.
 \begin{figure}[H]
   \begin{subfigure}{.5\textwidth}
     \centering
@@ -312,7 +312,7 @@ $D_w$ with $\mu=4, \tau_l=\SI{20}{ns}$, and $\sigma_l=\SI{5}{ns}$ is shown in fi
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/mcmcchargestats.pgf}}
-    \caption{\label{fig:mcmc-npe} $D_d$ vs $N_{pe}$ Boxplot \& Histogram}
+    \caption{\label{fig:mcmc-npe} $D_d$ vs $N_{\mathrm{PE}}$ Boxplot \& Histogram}
   \end{subfigure}
   \caption{MCMC results results when $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{ns}$. A demonstration shows in~\subref{fig:mcmc}.}
 \end{figure}
@@ -350,8 +350,8 @@ where $\bm{Z}$ is the diagonal matrix of vector $\bm{z}$ controlling $q'_i$. $\b
 
 \begin{equation}
   \begin{aligned}
-    p_i &= \mu \int_{t'_i-\frac{\Delta t'}{2}}^{t'_i+\frac{\Delta t'}{2}} \phi(t' - t_0)\mathrm{d}t' \\
-    z_i &\sim \mathrm{Poisson}(p_i).
+    \mu_i &= \mu \int_{t'_i-\frac{\Delta t'}{2}}^{t'_i+\frac{\Delta t'}{2}} \phi(t' - t_0)\mathrm{d}t' \\
+    z_i &\sim \mathrm{Poisson}(\mu_i).
   \end{aligned}
   \label{eq:poissonfbmp}
 \end{equation}
@@ -367,10 +367,16 @@ We denote a set $\mathcal{Z}$ to contain infinite combinations of $\bm{z}$. Only
 The prior $p(\bm{z})$ is given by the Poisson distributions of binned light curve,
 \begin{equation}
 \begin{aligned}
-    p(\bm{z}|t_0, \mu) &= \prod_{i}\mathrm{Poisson}(z_i,p_i)
+    p(\bm{z}|t_0, \mu) &= \prod_{i}\mathrm{Poisson}(z_i,\mu_i)
 \end{aligned}
 \end{equation}
-where $\mu$ is the prior expected number of PEs and satisfying that $\sum_i p_i = \mu$ by the normalization condition. 
+where $\mu$ is the prior expected number of PEs and satisfies the normalization condition in equation~\eqref{eq:normal}. 
+\begin{equation}
+\label{eq:normal}
+\begin{aligned}
+  \sum_i \mu_i &= \mu
+\end{aligned}
+\end{equation}
 
 The nominator logarithm of \eqref{eq:z},
 \begin{equation}
@@ -378,7 +384,7 @@ The nominator logarithm of \eqref{eq:z},
     \begin{aligned}
         \nu =& \log[p(\bm{w},\bm{z})] = \log[p(\bm{w}|\bm{z})p(\bm{z})] \\
         =& -\frac{1}{2}(\bm{w}-\bm{V}_\mathrm{PE}\bm{z})^\intercal\bm{\Sigma}_z^{-1}(\bm{w}-\bm{V}_\mathrm{PE}\bm{z})-\frac{1}{2}\log\det\bm{\Sigma}_z-\frac{N_s}{2}\log2\pi \\
-        & +\sum_{i}\log{\mathrm{Poisson}(z_i,p_i)}
+        & +\sum_{i}\log{\mathrm{Poisson}(z_i,\mu_i)}
     \end{aligned}
 \end{equation}
 is treated as a \textit{model selection metric}. A repeated greedy search (RGS) is performed to construct the target set $\mathcal{Z}'$ guided by equation~\eqref{eq:metric}. Additionally, a linear algebraic iteration reduces the complexity of $p(\bm{z}|\bm{w})$ calculation~\cite{schniter_fast_2008}. 
@@ -407,12 +413,12 @@ Figure~\ref{fig:fbmp} shows one of the FBMP results. We can see that the origina
     \caption{\label{fig:fbmp} FBMP Demo, $\mathrm{RSS}=\SI{15.8}{mV^2},D_w=\SI{0.59}{ns},\Delta{t_0}=\SI{-3.51}{ns}$}
 \end{figure}
 
-The result of $\hat{q}$ with $\mu=4, \tau_l=\SI{20}{ns}$, and $\sigma_l=\SI{5}{ns}$ is shown in figure~\ref{fig:fbmp-npe}. The left panel is the boxplot which shows the $D_w$ percentiles vs $N_{pe}$, and the right panel is the overall histogram of $D_w$. 
+The result of $\hat{q}$ with $\mu=4, \tau_l=\SI{20}{ns}$, and $\sigma_l=\SI{5}{ns}$ is shown in figure~\ref{fig:fbmp-npe}. The left panel is the boxplot which shows the $D_w$ percentiles vs $N_{\mathrm{PE}}$, and the right panel is the overall histogram of $D_w$. 
 
 \begin{figure}[H]
     \centering
     \resizebox{0.5\textwidth}{!}{\input{figures/fbmpchargestats.pgf}}
-    \caption{\label{fig:fbmp-npe} $D_w$ vs $N_{pe}$ Boxplot \& Histogram, $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{ns}$, method is FBMP}
+    \caption{\label{fig:fbmp-npe} $D_w$ vs $N_{\mathrm{PE}}$ Boxplot \& Histogram, $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{ns}$, method is FBMP}
 \end{figure}
 
 The denominator of equation~\eqref{eq:z} is actually the evidence $p(\bm{w}|t_0, \mu)$, which provides a superior estimator of $\mu$ and $t_0$ to equation~\eqref{eq:pseudo},

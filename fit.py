@@ -31,7 +31,7 @@ fopt = args.opt
 reference = args.ref
 method = args.met
 
-Thres = {'xiaopeip':0.2, 'lucyddm':0.2, 'fftrans':0.1, 'findpeak':0.1, 'threshold':0, 'omp':0}
+Thres = {'xiaopeip':0, 'lucyddm':0.2, 'fftrans':0.1, 'findpeak':0.1, 'threshold':0, 'omp':0}
 
 def fitting(a, b):
     nsp = 4
@@ -50,7 +50,7 @@ def fitting(a, b):
             if method == 'xiaopeip':
 #                 pet, cha, ped = wff.xiaopeip(wave, spe_pre[ent[i]['ChannelID']])
 #                 wave = wave - ped
-                pet, cha = wff.xiaopeip(wave, spe_pre[ent[i]['ChannelID']])
+                pet, cha = wff.xiaopeip(wave, spe_pre[ent[i]['ChannelID']], eta=0)
             elif method == 'lucyddm':
                 pet, cha = wff.lucyddm(wave, spe_pre[ent[i]['ChannelID']]['spe'])
             elif method == 'fftrans':
@@ -61,9 +61,12 @@ def fitting(a, b):
                 pet, cha = wff.threshold(wave, spe_pre[ent[i]['ChannelID']])
             pet, cha = wff.clip(pet, cha, Thres[method])
             if method in ['xiaopeip', 'lucyddm', 'fftrans']:
-                output = np.zeros(WindowSize)
-                output[pet] = cha
-                alpha = opti.fmin_l_bfgs_b(lambda alpha: wff.rss_alpha(alpha, output, wave, mnecpu), x0=[0.01], approx_grad=True, bounds=[[1e-20, np.inf]], maxfun=50000)[0]
+                if method == 'xiaopeip':
+                    alpha = 1
+                else:
+                    output = np.zeros(WindowSize)
+                    output[pet] = cha
+                    alpha = opti.fmin_l_bfgs_b(lambda alpha: wff.rss_alpha(alpha, output, wave, mnecpu), x0=[0.01], approx_grad=True, bounds=[[1e-20, np.inf]], maxfun=50000)[0]
                 cha = cha * alpha * wff.gmu
             else:
                 cha = cha / cha.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
@@ -106,7 +109,7 @@ else:
 print('Initialization finished, real time {0:.02f}s, cpu time {1:.02f}s'.format(time.time() - global_start, time.process_time() - cpu_global_start))
 tic = time.time()
 cpu_tic = time.process_time()
-
+fitting(0, 10)
 with Pool(min(args.Ncpu, cpu_count())) as pool:
     select_result = pool.starmap(fitting, slices)
 result = np.hstack([select_result[i][0] for i in range(len(slices))])

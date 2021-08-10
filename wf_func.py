@@ -56,7 +56,6 @@ def xiaopeip(wave, spe_pre, eta=0):
         if len(pet) != 0:
 #             cha, ped = xiaopeip_core(wave, spe_pre['spe'], fitp, pet, eta=eta)
             cha = xiaopeip_core(wave, spe_pre['spe'], fitp, pet, eta=eta)
-            cha = cha / np.sum(cha) * np.sum(wave) / np.sum(spe_pre['spe'])
         else:
             flag = 0
     else:

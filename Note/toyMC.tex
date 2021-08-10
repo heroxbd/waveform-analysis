@@ -58,8 +58,7 @@ Figure~\ref{fig:pile} illustrates an example of waveform $w(t)$.
 \subsection{Timing measurement}
 Obviously, in figure~\ref{fig:pile}, pile-ups and noises hinder the resolution of PEs from a waveform. A widely used compromise is to extract the waveform rising edge $T_1$ over a voltage threshold $V_\mathrm{th}$ and a total charge $Q$ by integration, reducing $w(t)$ into a pair of numbers $(T_1, Q)$.
 
-$\phi(t-t_0)$ is the $t_0$-shifted light curve. Measurement of $t_0$ is the key to the vertex reconstruction and pulse shape discrimination. For $T_1$-$Q$ reduction, $t_0$ is estimated when assuming $\hat{t}_\mathrm{1st} = T_1$. $\hat{t}_\mathrm{1st}$ is biased and subject to corrections based on the parameter $\mu$. The resolution $\sigma_\mathrm{1st}$, defined as the standard deviation of $\Delta t_0 = \hat{t}_\mathrm{1st} - t_0$ for a 
-batch of waveforms, reflects the timing resolution of $T_1$-$Q$ reduction when the knowledge of $\mu$ is exact.
+$\phi(t-t_0)$ is the $t_0$-shifted light curve. Measurement of $t_0$ is the key to the vertex reconstruction and pulse shape discrimination. For $(T_1, Q)$ reduction, $t_0$ is estimated when assuming $\hat{t}_\mathrm{1st} = T_1$. $\hat{t}_\mathrm{1st}$ is biased and subject to corrections based on the parameter $\mu$. The resolution $\sigma_\mathrm{1st}$, defined as the standard deviation of $\Delta t_0 = \hat{t}_\mathrm{1st} - t_0$ for a batch of waveforms, reflects the timing resolution of $(T_1, Q)$ reduction when the knowledge of $\mu$ is exact. 
 
 A perfect measurement of $t_i$ gives an ideal maximum likelihood estimator $\hat{t}_\mathrm{ALL}$ using all the PEs,
 \begin{equation}
