@@ -1,7 +1,7 @@
 \section{Algorithms and performance}
 \label{sec:algorithm}
 
-The production of waveform analysis is estimators $\hat{t}_i$ and $\hat{q}_i$ from waveform $w(t)$, in which the output indices $i$ is from 1 to $\hat{N}$. Figure~\ref{fig:io} illustrates the input $w(t)$ and the outputs $\bm{\hat{t}}, \bm{\hat{q}}$, where $\bm{\hat{t}}$ denotes the vector $\hat{t}_i$. 
+The production of waveform analysis is estimators $\hat{t}_i$ and $\hat{q}_i$ from waveform $w(t)$, in which the output indices $i$ are from 1 to $\hat{N}$. Figure~\ref{fig:io} illustrates the input $w(t)$ and the outputs $\bm{\hat{t}}, \bm{\hat{q}}$, where $\bm{\hat{t}}$ denotes the vector $\hat{t}_i$. 
 \begin{figure}[H]
   \centering
   \begin{subfigure}{.45\textwidth}
@@ -12,7 +12,7 @@ The production of waveform analysis is estimators $\hat{t}_i$ and $\hat{q}_i$ fr
     \resizebox{\textwidth}{!}{\input{figures/charge.pgf}}
     \caption{\label{fig:output} Output $\bm{\hat{t}}, \bm{\hat{q}}$}
   \end{subfigure}
-  \caption{\label{fig:io} PMT waveform input~\subref{fig:input} and times $t_i$ and charges $q_i$ of the PEs~\subref{fig:output}as output in our waveform analysis. }
+  \caption{\label{fig:io} PMT waveform input~\subref{fig:input} and times $t_i$ and charges $q_i$ of the PEs~\subref{fig:output} as output in our waveform analysis. }
 \end{figure}
 
 $\sigma_q$, the standard deviation of $q_i$, is $\num{\sim 0.4}$. Such a spread of $q_i$ makes $\hat{t}_i$ ambiguous. For example, 1 or 2~PEs (or at a lower probability, even 3~PEs) at $t_i$ can generate a charge that $\hat{q}_i=1.6$. Single PE of $q_i=1$ may be inferred as $\hat{t}_i$ and $\hat{t}_{i+1}$ with $\hat{q}_i=\hat{q}_{i+1}=0.5$ and mis-interpreted as 2~PEs. Consequently, $\hat{N}$ fails to estimate $N_\mathrm{PE}$. 
@@ -24,19 +24,19 @@ Facing the ambiguity of $t_i$ and $q_i$, we develop a set of evaluation criteria
 \subsubsection{Kullback-Leibler divergence}
 \label{sec:pseudo}
 
-One idea to plug $\hat{t}_i$ into \eqref{eq:2} is to interpret $\hat{q}_i$ as weights,
+One idea to plug $\hat{t}_i$ into \eqref{eq:2} is interpreting $\hat{q}_i$ as weights,
 \begin{equation}
   \label{eq:pseudo}
   \hat{t}_\mathrm{KL} = \arg\underset{t_0}{\max} \prod_{i=1}^{\hat{N}} \left[\phi(\hat{t}_i-t_0)\right]^{\hat{q}_i}
 \end{equation}
-where $\hat{t}_\mathrm{KL}$ is not a valid, but a pseudo-likelihood estimator. However, it is Kullback-Leibler divergence~\cite{kullback_information_1951} between an inferred and the true light curves~\eqref{eq:time-pro}. 
+where $\hat{t}_\mathrm{KL}$ is a pseudo-likelihood estimator. However, this estimator is actually the Kullback-Leibler divergence~\cite{kullback_information_1951} between an inferred and the true light curves~\eqref{eq:time-pro}. 
 
 $\bm{\hat{t}}$ and $\bm{\hat{q}}$ give a light curve estimator $\hat{\phi}(t)$ up to a normalization factor,
 \begin{equation}
   \label{eq:lc}
   \hat{\phi}(t) = \sum_{i=1}^{\hat{N}} \hat{q}_i\delta(t-\hat{t}_i)
 \end{equation}
-where $\delta(t)$ is the Dirac delta function to model discrete values. Consider the non-normalized KL divergence~\cite{mihoko_robust_2002} between $\hat{\phi}(t)$ and $\phi(t-t_{0})$,
+where $\delta(t)$ is the Dirac delta function to model discrete values. Let us consider the non-normalized KL divergence~\cite{mihoko_robust_2002} between $\hat{\phi}(t)$ and $\phi(t-t_{0})$,
 \begin{equation}
   \begin{aligned}
     D_\mathrm{KL}\left[\hat{\phi}(t) \parallel \phi(t-t_0)\right] & =\int \left[\hat{\phi}(t) \log\frac{\hat{\phi}(t)}{\phi(t-t_0)} + \phi(t-t_0) - \hat{\phi}(t) \right]\mathrm{d}t \\
@@ -88,7 +88,7 @@ By directly extracting waveform features, heuristic methods are straightforward 
 
 \subsubsection{Waveform shifting}
 \label{sec:shifting}
-We set a threshold $V_\mathrm{th}$ to electronics noise in the waveforms, and select waveform entries $w(t_i)$ exceeding $V_\mathrm{th}$. Then we shift the exceeding waveform by $\Delta t$ according to the shape of SPE response $V_\mathrm{PE}(t)$ in equation~\eqref{eq:dayaspe}. We normalize $\hat{q}_i$ to a total charge by integration of the waveform $w(t_i)$. Waveform shifting does minimal analysis and serves as a baseline method. The demonstration in figure~\ref{fig:shifting} gives $D_w = \SI{8.72}{ns}$.
+We set a threshold $V_\mathrm{th}$ to electronics noise in the waveforms, and select waveform entries $w(t_i)$ exceeding $V_\mathrm{th}$. Then we shift the exceeding waveform by $\Delta t$ according to the shape of SPE response $V_\mathrm{PE}(t)$ in equation~\eqref{eq:dayaspe}. We normalize $\hat{q}_i$ to a total charge by integration of the waveform $w(t)$. Waveform shifting does minimal analysis and serves as a baseline method. The demonstration in figure~\ref{fig:shifting} gives $D_w = \SI{8.72}{ns}$.
 
 \begin{figure}[H]
   \begin{subfigure}{.5\textwidth}
@@ -146,9 +146,7 @@ where $I(x)$ is the indicator function. Instead of using the total relative char
     \hat{\alpha} = \arg \underset{\alpha'}{\min}\mathrm{RSS}\left[\alpha'\hat{\phi}'(t)\otimes V_\mathrm{PE}(t),w(t)\right]. \\
   \end{aligned}
 \end{equation}
-This $\hat{\alpha}$ scaling process enables us to eliminate noise. 
-
-Figure~\ref{fig:fd} illustrates the algorithm with an example having $D_w = \SI{2.03}{ns}$. 
+This $\hat{\alpha}$ scaling process enables us to eliminate noise. Figure~\ref{fig:fd} illustrates the algorithm with an example having $D_w = \SI{2.03}{ns}$. 
 
 \begin{figure}[H]
   \begin{subfigure}{0.5\textwidth}
@@ -189,11 +187,11 @@ Like Fourier deconvolution in \eqref{eq:fdconv2}, this method thresholds and sca
 \subsection{Convolutional neural network}
 
 % Network structure
-The advances in neural networks have brought breakthroughs in various domains like computer vision~\cite{he_deep_2015} and natural language processing~\cite{vaswani_attention_2017}. As an efficient composition of weighted additions and pointwise non-linear functions, neural networks have prevailed against many traditional algorithms. We introduce a multi-layered convolutional neural network~(CNN) to process $\hat{\phi}(t)$ from waveforms $w(t)$ in \eqref{eq:1}. 
+The advances in neural networks have brought breakthroughs in various domains like computer vision~\cite{he_deep_2015} and natural language processing~\cite{vaswani_attention_2017}. As an efficient composition of weighted additions and non-linear functions, neural networks have prevailed against many traditional algorithms. We introduce a multi-layered convolutional neural network~(CNN) to process $\hat{\phi}(t)$ from waveforms $w(t)$ in \eqref{eq:1}. 
 
 Although advanced structures like residual connection and strategies like batch-norm alleviated training settle problems for deep networks, the pulse-shape and universality of $V_\mathrm{PE}(t)$ for all the PE allow only a few layers to recognize the patterns. We choose a shallow network structure of 5 layers~(figure~\ref{fig:struct}). Because $V_\mathrm{PE}(t)$ is localized, the convolutional widths are selected accordingly. 
 
-The workflow of data processing consists of training and predicting. We find a mapping from waveform $w(t)$ to PE $\tilde{\phi}(t)$ with backpropagation methods and supervised learning. We build the loss as the Wasserstein distance $W_d$ between the truth $\tilde{\phi}$ and predicted $\hat{\phi}(t)$ and minimize the loss when training. As discussed in section~\ref{sec:W-dist}, $W_d$ is chosen to handle the PE sparsity in training iterations. Figure~\ref{fig:loss} shows the evolution of Wasserstein distance during training. 
+The workflow of data processing consists of training and predicting. We find a mapping from waveform $w(t)$ to PE $\tilde{\phi}(t)$ with backpropagation method and supervised learning. We build the loss as the Wasserstein distance $D_w$ between the truth $\tilde{\phi}$ and predicted $\hat{\phi}(t)$ and minimize the loss when training. As discussed in section~\ref{sec:W-dist}, $D_w$ is chosen to handle the PE sparsity in training iterations. Figure~\ref{fig:loss} shows the evolution of Wasserstein distance during training. 
 
 \begin{figure}[H]
   \begin{subfigure}{0.35\textwidth}
@@ -213,7 +211,7 @@ The workflow of data processing consists of training and predicting. We find a m
 
 Since $D_w$ disregards normalization, $\hat{\phi}$ is scaled to $\hat{\alpha}\hat{\phi}$ following~\eqref{eq:fdconv2}. Figure~\ref{fig:cnn} shows a demonstration with $D_w = \SI{0.64}{ns}$. 
 
-The result of $\hat{\phi}(t)$ with $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{ns}$ is shown in figure~\ref{fig:cnn-npe}. The left panel is the boxplot which shows the $D_d$ percentile vs $N_{\mathrm{PE}}$, and the right panel is the overall histogram of $D_d$. 
+The results of $\hat{\phi}(t)$ with $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{ns}$ are shown in figure~\ref{fig:cnn-npe}. The left panel is the box plot which shows the $D_w$ percentile vs $N_{\mathrm{PE}}$, and the right panel is the overall histogram of $D_w$. 
 
 \begin{figure}[H]
   \begin{subfigure}{.5\textwidth}
@@ -224,13 +222,13 @@ The result of $\hat{\phi}(t)$ with $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{n
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/takarachargestats.pgf}}
-    \caption{\label{fig:cnn-npe} $D_d$ vs $N_{\mathrm{PE}}$ Histogram \& Boxplot}
+    \caption{\label{fig:cnn-npe} $D_w$ vs $N_{\mathrm{PE}}$ Histogram \& Box plot}
   \end{subfigure}
   \caption{CNN results when $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{ns}$. A demonstration shows in~\subref{fig:cnn}.}
 \end{figure}
 
 \subsection{Regression analysis}
-With the generative waveform model in~\eqref{eq:1}, regression is the best for waveform analysis. Although computational complexity hinders the applications of regression in vast volumes of raw data, the advancement of big data infrastructure and sparsity research makes the advantage of regression more pronounced.
+With the generative waveform model in~\eqref{eq:1}, regression is the best for waveform analysis. Although computational complexity hinders the applications of regression in vast volumes of raw data, the advancement of big data infrastructure and sparsity research make the advantage of regression more pronounced.
 
 We replace $\hat{N}$ with a fixed sample size $N_s$ and $\hat{t}_i$ with a fixed vector of times $t'_i$ in equation~\ref{eq:w-hat} and obtain, 
 \begin{equation}
@@ -244,7 +242,7 @@ When $\{t'_i\}$ is dense enough, $\{\hat{q}_i\}$ determines the inferred PE dist
   \hat{\phi}(t) = \sum_{i=1}^{N_s}\hat{q}_i\delta(t-t'_i).
 \end{equation}
 
-We have attempted to replace the dense $\bm{t'}$ grid in equation~\eqref{eq:gd} with a length-varying vector of sparse PEs. However, the truth $N_\mathrm{PE}$ is unknown, which prevent formulating an explicit trans-dimensional model. 
+We have attempted to replace the dense $\bm{t'}$ grid in equation~\eqref{eq:gd} with a length-varying vector of sparse PEs. However, the truth $N_\mathrm{PE}$ is unknown, which prevents formulating an explicit trans-dimensional model. 
 
 Because the output $\hat{\phi}(t)$ from a deconvolution method~(section~\ref{sec:deconv}) covers locations of non-zero $\bm{q}'$, it can initialize the $\bm{t}'$ grid to reduce $N_s$ with discretization and consequently the time consumption. 
 
@@ -256,7 +254,7 @@ We construct estimators $\hat{q}_i$ by minimizing RSS of $w'(t)$ and $w(t)$,
   \bm{\hat{q}} = \arg \underset{\bm{q'}}{\min} \mathrm{RSS}\left[w'(t),w(t)\right].
 \end{equation}
 
-We realize a optimizer by a limited-memory Broyden-Fletcher-Goldfarb-Shanno algorithm with a bound constraint~\cite{byrd_limited_1995}. It imposes constraints of $q'_i > 0$. However, because this method minimizes RSS, we do not scale the converged $\bm{\hat{q}}$. The demonstration~\ref{fig:fitting} here shows a result with $D_w = \SI{0.68}{ns}$.
+We realize an optimizer by a limited-memory Broyden-Fletcher-Goldfarb-Shanno algorithm with a bound constraint~\cite{byrd_limited_1995}. It imposes constraints that $q'_i > 0$. However, because this method minimizes RSS, we do not scale the converged $\bm{\hat{q}}$. The demonstration~\ref{fig:fitting} here shows a result with $D_w = \SI{0.68}{ns}$.
 
 \begin{figure}[H]
   \begin{subfigure}{.5\textwidth}
@@ -267,16 +265,16 @@ We realize a optimizer by a limited-memory Broyden-Fletcher-Goldfarb-Shanno algo
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/xiaopeipchargestats.pgf}}
-    \caption{\label{fig:fitting-npe} $D_d$ vs $N_{\mathrm{PE}}$ Boxplot \& Histogram}
+    \caption{\label{fig:fitting-npe} $D_w$ vs $N_{\mathrm{PE}}$ Box plot \& Histogram}
   \end{subfigure}
   \caption{Gradient descent results when $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{ns}$. A demonstration shows in~\subref{fig:fitting}.}
 \end{figure}
 
-The result of $\hat{q}$ when $\mu=4, \tau_l=\SI{20}{ns}$, and $\sigma_l=\SI{5}{ns}$ is shown in figure~\ref{fig:fitting-npe}. The left panel is the boxplot which shows the $D_d$ percentile vs $N_{\mathrm{PE}}$, and the right panel is the overall histogram of $D_d$. 
+The result of $\hat{q}$ when $\mu=4, \tau_l=\SI{20}{ns}$, and $\sigma_l=\SI{5}{ns}$ is shown in figure~\ref{fig:fitting-npe}. The left panel is the box plot which shows the $D_w$ percentile vs $N_{\mathrm{PE}}$, and the right panel is the overall histogram of $D_w$. 
 
 \subsubsection{Markov chain Monte Carlo}
 \label{subsec:mcmc}
-The optimization problem in equation~\eqref{eq:gd-q} is generally not convex and stucks in local minima. Markov Chain Monte Carlo~(MCMC) has the potential to overcome this difficulty.
+The optimization problem in equation~\eqref{eq:gd-q} is generally not convex and sticks in local minima. Markov Chain Monte Carlo~(MCMC) has the potential to overcome this difficulty.
 
 Hamiltonian Monte Carlo~(HMC) is an efficient MCMC for high dimensional distributions~\cite{neal_mcmc_2012} such as the posterior of charge $\bm{q'}$. The posterior is combined with a $\bm{q'}$ prior conditioned on $t_0$ to form a hierarchical model, 
 \begin{equation}
@@ -312,9 +310,9 @@ $D_w$ with $\mu=4, \tau_l=\SI{20}{ns}$, and $\sigma_l=\SI{5}{ns}$ is shown in fi
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/mcmcchargestats.pgf}}
-    \caption{\label{fig:mcmc-npe} $D_d$ vs $N_{\mathrm{PE}}$ Boxplot \& Histogram}
+    \caption{\label{fig:mcmc-npe} $D_w$ vs $N_{\mathrm{PE}}$ Box plot \& Histogram}
   \end{subfigure}
-  \caption{MCMC results results when $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{ns}$. A demonstration shows in~\subref{fig:mcmc}.}
+  \caption{MCMC results when $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{ns}$. A demonstration shows in~\subref{fig:mcmc}.}
 \end{figure}
 
 \subsubsection{Fast Bayesian Matching Pursuit}
@@ -356,7 +354,7 @@ where $\bm{Z}$ is the diagonal matrix controlling the spread of $q'_i$. $\bm{I}$
   \label{eq:poissonfbmp}
 \end{equation}
 
-A set $\mathcal{Z}$ to contain infinite combinations of $\bm{z}$. Only a few $\bm{z}$'s dominate in $\mathcal{Z}$, leading to the Fast Bayesian Matching Pursuit~(FBMP), a parameter estimation method for sparse linear models~\cite{schniter_fast_2008}. FBMP defines a targeted subset $\mathcal{Z}'$ of $\mathcal{Z}$ with only the $\bm{z}$ giving non-negligible $p(\bm{w}|\bm{z})$. We approximate the posterior of $\bm{z}$ as 
+A set $\mathcal{Z}$ contains infinite combinations of $\bm{z}$. But only a few $\bm{z}$'s dominate in $\mathcal{Z}$, leading to the Fast Bayesian Matching Pursuit~(FBMP), a parameter estimation method for sparse linear models~\cite{schniter_fast_2008}. FBMP defines a targeted subset $\mathcal{Z}'$ of $\mathcal{Z}$ with only the $\bm{z}$ giving non-negligible $p(\bm{w}|\bm{z})$. We approximate the posterior of $\bm{z}$ as 
 \begin{equation}
     \label{eq:z}
     \begin{aligned}
@@ -387,7 +385,7 @@ The logarithm numerator of \eqref{eq:z}
         & +\sum_{i}\log{\mathrm{Poisson}(z_i,\mu_i)}
     \end{aligned}
 \end{equation}
-is a \textit{model selection metric}. A repeated greedy search (RGS) is performed to construct the target set $\mathcal{Z}'$ guided by equation~\eqref{eq:metric}. Additionally, a linear algebraic iteration reduces the complexity of $p(\bm{z}|\bm{w})$ calculation~\cite{schniter_fast_2008}. 
+is a \textit{model selection metric}. A repeated greedy search (RGS) guided by equation~\eqref{eq:metric} is performed to construct the target set $\mathcal{Z}'$. Additionally, a linear algebraic iteration reduces the complexity of $p(\bm{z}|\bm{w})$ calculation~\cite{schniter_fast_2008}. 
 
 For each $\bm{z} \in \mathcal{Z}'$, from \eqref{eq:mgauss} the expectation estimation of $\bm{q}'$ is, 
 \begin{align}
@@ -395,7 +393,7 @@ For each $\bm{z} \in \mathcal{Z}'$, from \eqref{eq:mgauss} the expectation estim
     \label{eq:fbmpcharge}
 \end{align}
 
-Finally, we collect all the $\bm{z} \in \mathcal{Z}'$ and their corresponding posterior probabilities $p(\bm{z}|\bm{w})$, and estimations of $\hat{\bm{q}}_z$ to be the final posterior distribution. $\hat{\bm{z}}$ is the PE number in each time bin $\hat{\bm{t}}$. $\hat{\bm{q}}$, which is the total charge in each time bin, is estimated by the maximum posterior probability, 
+Finally, we collect all the $\bm{z} \in \mathcal{Z}'$ and their corresponding posterior probabilities $p(\bm{z}|\bm{w})$, as well as estimation $\hat{\bm{q}}_z$, to be the final posterior distribution. $\hat{\bm{z}}$ is the PE number in each time bin $\hat{\bm{t}}$. $\hat{\bm{q}}$, which is the total charge in each time bin, is estimated by the maximum posterior probability, 
 \begin{equation}
     \begin{aligned}
         \label{eq:zposterior}
@@ -413,12 +411,12 @@ Figure~\ref{fig:fbmp} shows one of the FBMP results. We can see that the origina
     \caption{\label{fig:fbmp} FBMP Demo, $\mathrm{RSS}=\SI{15.8}{mV^2},D_w=\SI{0.59}{ns},\Delta{t_0}=\SI{-3.51}{ns}$}
 \end{figure}
 
-The result of $\hat{q}$ with $\mu=4, \tau_l=\SI{20}{ns}$, and $\sigma_l=\SI{5}{ns}$ is shown in figure~\ref{fig:fbmp-npe}. The left panel is the boxplot which shows the $D_w$ percentiles vs $N_{\mathrm{PE}}$, and the right panel is the overall histogram of $D_w$. 
+The result of $\hat{q}$ with $\mu=4, \tau_l=\SI{20}{ns}$, and $\sigma_l=\SI{5}{ns}$ is shown in figure~\ref{fig:fbmp-npe}. The left panel is the box plot which shows the $D_w$ percentiles vs $N_{\mathrm{PE}}$, and the right panel is the overall histogram of $D_w$. 
 
 \begin{figure}[H]
     \centering
     \resizebox{0.5\textwidth}{!}{\input{figures/fbmpchargestats.pgf}}
-    \caption{\label{fig:fbmp-npe} $D_w$ vs $N_{\mathrm{PE}}$ Boxplot \& Histogram, $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{ns}$, method is FBMP}
+    \caption{\label{fig:fbmp-npe} $D_w$ vs $N_{\mathrm{PE}}$ Box plot \& Histogram, $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{ns}$, method is FBMP}
 \end{figure}
 
 The denominator of equation~\eqref{eq:z} is actually the evidence $p(\bm{w}|t_0, \mu)$, which provides a superior estimator of $\mu$ and $t_0$ to equation~\eqref{eq:pseudo},
@@ -430,13 +428,13 @@ The denominator of equation~\eqref{eq:z} is actually the evidence $p(\bm{w}|t_0,
     &= \sum_{\bm{z}'\in\mathcal{Z}'}p(\bm{w}|\bm{z}')p(\bm{z}'|t_0,\mu).
 \end{aligned}
 \end{equation}
-where $p(\bm{w}|z', t_0, \mu) = p(\bm{w}|z')$ because $\bm{w}$ does not depend on $t_0$ or $\mu$ if $z'$ is given. If $t_0$ and $\mu$ are predicted by an event model $p(t_0, \mu | \mathcal{E})$, we can extend FBMP to the event reconstruction bypassing the need to save PE $\bm{t}'$ and $\bm{q}'$. While FBMP provides the Bayesian interface of waveform analysis and event reconstruction, it is however out of the scope of this article and will be covered elsewhere. 
+where $p(\bm{w}|z', t_0, \mu) = p(\bm{w}|z')$ because $\bm{w}$ does not depend on $t_0$ or $\mu$ if $z'$ is given. If $t_0$ and $\mu$ are predicted by an event model $p(t_0, \mu | \mathcal{E})$, we can extend FBMP to the event reconstruction, bypassing the need to save PE $\bm{t}'$ and $\bm{q}'$. While FBMP provides the Bayesian interface of waveform analysis and event reconstruction, it is however out of the scope of this work and will be covered elsewhere. 
 
 \subsection{Performance}
 
 % Methods
 
-Figure~\ref{fig:chargesummary} shows the $D_w$ summary of all methods with $\tau_l=\SI{20}{ns}$, and $\sigma_l=\SI{5}{ns}$. The errorbars show 5 to 95 percentile of Wasserstein distance distributions. 
+Figure~\ref{fig:chargesummary} shows the $D_w$ summary of all methods with $\tau_l=\SI{20}{ns}$, and $\sigma_l=\SI{5}{ns}$. The error bars show 5 to 95 percentile of Wasserstein distance distributions. 
 
 \begin{figure}[H]
     \centering
@@ -448,9 +446,9 @@ It is apparent that FindPeak, Shift, and FFT are second-rated among all eight me
 
 % Figure of Merits
 
-The $D_w$ summary of four methods (LucyDDM, Fitting, CNN, FBMP) is plotted in figure~\ref{fig:wdistsummary}, with all dataset parameters combination. The errorbar shows 5 to 95 percentile of Wasserstein distance distribution. Wasserstein distances of all 4 methods are approaching each other when $\mu$ increases. 
+The $D_w$ summary of four methods (LucyDDM, Fitting, CNN, FBMP) is plotted in figure~\ref{fig:wdistsummary}, with all dataset parameters combination. The error bar shows 5 to 95 percentile of Wasserstein distance distribution. Wasserstein distances of all 4 methods are approaching each other when $\mu$ increases. 
 
-We can see the Wasserstein distance of method CNN is the smallest, as it directly uses Wasserstein distance as loss during training. While the Fitting method treats RSS as its loss, FBMP obtains the least RSS among four methods (see figure~\ref{fig:rsssummary}). 
+We can see the Wasserstein distance of method CNN is the smallest, as it directly uses Wasserstein distance as the loss during training. While the Fitting method treats RSS as its loss, FBMP obtains the least RSS among four methods (see figure~\ref{fig:rsssummary}). 
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/vs-wdist.pgf}}
