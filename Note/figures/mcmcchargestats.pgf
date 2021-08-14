@@ -471,7 +471,7 @@
 \definecolor{textcolor}{rgb}{0.000000,0.000000,0.000000}%
 \pgfsetstrokecolor{textcolor}%
 \pgfsetfillcolor{textcolor}%
-\pgftext[x=0.504660in,y=3.030000in,,bottom,rotate=90.000000]{\color{textcolor}\sffamily\fontsize{20.000000}{24.000000}\selectfont \(\displaystyle \mathrm{W-dist}/\si{ns}\)}%
+\pgftext[x=0.504660in,y=3.030000in,,bottom,rotate=90.000000]{\color{textcolor}\sffamily\fontsize{20.000000}{24.000000}\selectfont \(\displaystyle \mathrm{Wasserstein\ Distance}/\si{ns}\)}%
 \end{pgfscope}%
 \begin{pgfscope}%
 \pgfpathrectangle{\pgfqpoint{1.000000in}{0.720000in}}{\pgfqpoint{4.800000in}{4.620000in}}%
@@ -1814,15 +1814,15 @@
 \pgfsetstrokecolor{currentstroke}%
 \pgfsetstrokeopacity{0.800000}%
 \pgfsetdash{}{0pt}%
-\pgfpathmoveto{\pgfqpoint{3.966065in}{4.722821in}}%
+\pgfpathmoveto{\pgfqpoint{4.330170in}{4.722821in}}%
 \pgfpathlineto{\pgfqpoint{5.605556in}{4.722821in}}%
 \pgfpathquadraticcurveto{\pgfqpoint{5.661111in}{4.722821in}}{\pgfqpoint{5.661111in}{4.778377in}}%
 \pgfpathlineto{\pgfqpoint{5.661111in}{5.145556in}}%
 \pgfpathquadraticcurveto{\pgfqpoint{5.661111in}{5.201111in}}{\pgfqpoint{5.605556in}{5.201111in}}%
-\pgfpathlineto{\pgfqpoint{3.966065in}{5.201111in}}%
-\pgfpathquadraticcurveto{\pgfqpoint{3.910509in}{5.201111in}}{\pgfqpoint{3.910509in}{5.145556in}}%
-\pgfpathlineto{\pgfqpoint{3.910509in}{4.778377in}}%
-\pgfpathquadraticcurveto{\pgfqpoint{3.910509in}{4.722821in}}{\pgfqpoint{3.966065in}{4.722821in}}%
+\pgfpathlineto{\pgfqpoint{4.330170in}{5.201111in}}%
+\pgfpathquadraticcurveto{\pgfqpoint{4.274615in}{5.201111in}}{\pgfqpoint{4.274615in}{5.145556in}}%
+\pgfpathlineto{\pgfqpoint{4.274615in}{4.778377in}}%
+\pgfpathquadraticcurveto{\pgfqpoint{4.274615in}{4.722821in}}{\pgfqpoint{4.330170in}{4.722821in}}%
 \pgfpathclose%
 \pgfusepath{stroke,fill}%
 \end{pgfscope}%
@@ -1833,15 +1833,15 @@
 \definecolor{currentstroke}{rgb}{0.121569,0.466667,0.705882}%
 \pgfsetstrokecolor{currentstroke}%
 \pgfsetdash{}{0pt}%
-\pgfpathmoveto{\pgfqpoint{4.021620in}{4.987184in}}%
-\pgfpathlineto{\pgfqpoint{4.577176in}{4.987184in}}%
+\pgfpathmoveto{\pgfqpoint{4.385726in}{4.987184in}}%
+\pgfpathlineto{\pgfqpoint{4.941281in}{4.987184in}}%
 \pgfusepath{stroke}%
 \end{pgfscope}%
 \begin{pgfscope}%
 \definecolor{textcolor}{rgb}{0.000000,0.000000,0.000000}%
 \pgfsetstrokecolor{textcolor}%
 \pgfsetfillcolor{textcolor}%
-\pgftext[x=4.799398in,y=4.889962in,left,base]{\color{textcolor}\sffamily\fontsize{20.000000}{24.000000}\selectfont W-dist}%
+\pgftext[x=5.163504in,y=4.889962in,left,base]{\color{textcolor}\sffamily\fontsize{20.000000}{24.000000}\selectfont \(\displaystyle D_w\)}%
 \end{pgfscope}%
 \begin{pgfscope}%
 \pgfsetbuttcap%
