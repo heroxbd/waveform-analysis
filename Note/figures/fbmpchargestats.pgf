@@ -3416,7 +3416,7 @@
 \definecolor{textcolor}{rgb}{0.000000,0.000000,0.000000}%
 \pgfsetstrokecolor{textcolor}%
 \pgfsetfillcolor{textcolor}%
-\pgftext[x=6.500000in,y=0.664444in,,top]{\color{textcolor}\sffamily\fontsize{20.000000}{24.000000}\selectfont R. U.}%
+\pgftext[x=6.500000in,y=0.664444in,,top]{\color{textcolor}\sffamily\fontsize{20.000000}{24.000000}\selectfont \(\displaystyle \mathrm{arb.\ unit}\)}%
 \end{pgfscope}%
 \begin{pgfscope}%
 \pgfsetrectcap%

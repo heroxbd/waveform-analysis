@@ -216,15 +216,15 @@ The results of $\hat{\phi}(t)$ with $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{
 \begin{figure}[H]
   \begin{subfigure}{.5\textwidth}
     \centering
-    \resizebox{\textwidth}{!}{\input{figures/takara.pgf}}
-    \caption{\label{fig:cnn}$\mathrm{RSS}=\SI{10.0}{mV^2},D_w=\SI{0.64}{ns},\Delta t_0=\SI{-3.05}{ns}$}
-  \end{subfigure}
-  \begin{subfigure}{.5\textwidth}
-    \centering
     \resizebox{\textwidth}{!}{\input{figures/takarachargestats.pgf}}
     \caption{\label{fig:cnn-npe} $D_w$ vs $N_{\mathrm{PE}}$ Histogram \& Box plot}
   \end{subfigure}
-  \caption{CNN results when $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{ns}$. A demonstration shows in~\subref{fig:cnn}.}
+  \begin{subfigure}{.5\textwidth}
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/takara.pgf}}
+    \caption{\label{fig:cnn}$\mathrm{RSS}=\SI{10.0}{mV^2},D_w=\SI{0.64}{ns},\Delta t_0=\SI{-3.05}{ns}$}
+  \end{subfigure}
+  \caption{CNN results when $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{ns}$ show in~\subref{fig:cnn-npe}. The horizontal axis of the right subplot is in arbitrary unit. A demonstration shows in~\subref{fig:cnn}.}
 \end{figure}
 
 \subsection{Regression analysis}
@@ -259,15 +259,15 @@ We realize an optimizer by a limited-memory Broyden-Fletcher-Goldfarb-Shanno alg
 \begin{figure}[H]
   \begin{subfigure}{.5\textwidth}
     \centering
-    \resizebox{\textwidth}{!}{\input{figures/xiaopeip.pgf}}
-    \caption{\label{fig:fitting}$\mathrm{RSS}=\SI{7.63}{mV^2},D_w=\SI{0.68}{ns},\Delta{t_0}=\SI{-3.22}{ns}$}
-  \end{subfigure}
-  \begin{subfigure}{.5\textwidth}
-    \centering
     \resizebox{\textwidth}{!}{\input{figures/xiaopeipchargestats.pgf}}
     \caption{\label{fig:fitting-npe} $D_w$ vs $N_{\mathrm{PE}}$ Box plot \& Histogram}
   \end{subfigure}
-  \caption{Gradient descent results when $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{ns}$. A demonstration shows in~\subref{fig:fitting}.}
+  \begin{subfigure}{.5\textwidth}
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/xiaopeip.pgf}}
+    \caption{\label{fig:fitting}$\mathrm{RSS}=\SI{7.63}{mV^2},D_w=\SI{0.68}{ns},\Delta{t_0}=\SI{-3.22}{ns}$}
+  \end{subfigure}
+  \caption{Gradient descent results when $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{ns}$ show in~\subref{fig:fitting-npe}. The horizontal axis of the right subplot is in arbitrary unit. A demonstration shows in~\subref{fig:fitting}.}
 \end{figure}
 
 The result of $\hat{q}$ when $\mu=4, \tau_l=\SI{20}{ns}$, and $\sigma_l=\SI{5}{ns}$ is shown in figure~\ref{fig:fitting-npe}. The left panel is the box plot which shows the $D_w$ percentile vs $N_{\mathrm{PE}}$, and the right panel is the overall histogram of $D_w$. 
@@ -304,15 +304,15 @@ $D_w$ with $\mu=4, \tau_l=\SI{20}{ns}$, and $\sigma_l=\SI{5}{ns}$ is shown in fi
 \begin{figure}[H]
   \begin{subfigure}{.5\textwidth}
     \centering
-    \resizebox{\textwidth}{!}{\input{figures/mcmc.pgf}}
-    \caption{\label{fig:mcmc}$\mathrm{RSS}=\SI{16.25}{mV^2},D_w=\SI{0.76}{ns},\Delta{t_0}=\SI{-2.48}{ns}$}
-  \end{subfigure}
-  \begin{subfigure}{.5\textwidth}
-    \centering
     \resizebox{\textwidth}{!}{\input{figures/mcmcchargestats.pgf}}
     \caption{\label{fig:mcmc-npe} $D_w$ vs $N_{\mathrm{PE}}$ Box plot \& Histogram}
   \end{subfigure}
-  \caption{MCMC results when $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{ns}$. A demonstration shows in~\subref{fig:mcmc}.}
+  \begin{subfigure}{.5\textwidth}
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/mcmc.pgf}}
+    \caption{\label{fig:mcmc}$\mathrm{RSS}=\SI{16.25}{mV^2},D_w=\SI{0.76}{ns},\Delta{t_0}=\SI{-2.48}{ns}$}
+  \end{subfigure}
+  \caption{MCMC results when $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{ns}$ show in~\subref{fig:mcmc-npe}. The horizontal axis of the right subplot is in arbitrary unit. A demonstration shows in~\subref{fig:mcmc}.}
 \end{figure}
 
 \subsubsection{Fast Bayesian Matching Pursuit}
@@ -416,7 +416,7 @@ The result of $\hat{q}$ with $\mu=4, \tau_l=\SI{20}{ns}$, and $\sigma_l=\SI{5}{n
 \begin{figure}[H]
     \centering
     \resizebox{0.5\textwidth}{!}{\input{figures/fbmpchargestats.pgf}}
-    \caption{\label{fig:fbmp-npe} $D_w$ vs $N_{\mathrm{PE}}$ Box plot \& Histogram, $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{ns}$, method is FBMP}
+    \caption{\label{fig:fbmp-npe} $D_w$ vs $N_{\mathrm{PE}}$ Box plot \& Histogram, $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{ns}$, method is FBMP. The horizontal axis of the right subplot is in arbitrary unit}
 \end{figure}
 
 The denominator of equation~\eqref{eq:z} is actually the evidence $p(\bm{w}|t_0, \mu)$, which provides a superior estimator of $\mu$ and $t_0$ to equation~\eqref{eq:pseudo},
@@ -439,7 +439,7 @@ Figure~\ref{fig:chargesummary} shows the $D_w$ summary of all methods with $\tau
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/summarycharge.pgf}}
-    \caption{\label{fig:chargesummary} $W_{d}$ for all the methods with light curve $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{ns}$}
+    \caption{\label{fig:chargesummary} $D_w$ for all the methods with light curve $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{ns}$}
 \end{figure}
 
 It is apparent that FindPeak, Shift, and FFT are second-rated among all eight methods. On time resolution and charge reconstruction which we discuss in sections~\ref{subsec:timeresolution} and~\ref{subsec:chargereconstruction}, MCMC does not perform well and is time-consuming. So we only discuss the other four methods below. 
