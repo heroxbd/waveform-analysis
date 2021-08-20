@@ -123,16 +123,14 @@ Take Fourier transform $\mathcal{F}$ of \eqref{eq:1}, we have
   \implies \mathcal{F}[\tilde{\phi}] & = \frac{\mathcal{F}[w]}{\mathcal{F}[V_\mathrm{PE}]} - \frac{\mathcal{F}[\epsilon]}{\mathcal{F}[V_\mathrm{PE}]}.
   \end{aligned}
 \end{equation}
-The noise term $\epsilon$ is unknown but can be suppressed by a threshold $V_\mathrm{th}$ and a low pass filter if $V_\mathrm{PE}(t)$ is smooth. We realize the filter by a low pass filter multiplier $R$ in the frequency domain. The estimator $\hat{\phi}(t)$ takes the over-threshold part of the inverse Fourier transform function of $t$, and we define it in 3 steps,
+The noise term $\epsilon$ is unknown but can be suppressed by a threshold $V_\mathrm{th}$ and a filter if $V_\mathrm{PE}(t)$ is smooth. We realize the filter by a low-pass filter multiplier $R$ in the frequency domain. 
+For simplicity, we denote the inverse Fourier transform function of $t$ as $\hat{\phi}_1(t)$, namely, $\hat{\phi}_1(t) = \mathcal{F}^{-1}\left[\frac{R \mathcal{F}[w]}{\mathcal{F}[V_\mathrm{PE}]}\right](t)$
+The estimator $\hat{\phi}(t)$ takes the over-threshold part of the inverse Fourier transform function of $t$ as follows,
 \begin{equation}
   \label{eq:fdconv2}
-  \begin{aligned}
-    \hat{\phi}''(t) & = \mathcal{F}^{-1}\left[\frac{R \mathcal{F}[w]}{\mathcal{F}[V_\mathrm{PE}]}\right](t) \\
-    \hat{\phi}'(t) & = \hat{\phi}''(t) I(\hat{\phi}''(t) - V_\mathrm{th}) \\
-    \hat{\phi}(t) & = \hat{\alpha}\hat{\phi}'(t) \\
-  \end{aligned}
+    \hat{\phi}(t) = \hat{\alpha}\underbrace{\hat{\phi}_1(t) I(\hat{\phi}_1(t) - V_\mathrm{th})}_{\text{over-threshold part of} \hat{\phi}_1(t)}  
 \end{equation}
-where $I(x)$ is the indicator function. Instead of using the total relative charge, we derive $\hat{\alpha}$ from a minimization procedure, 
+where $I(x)$ is the indicator function, and $\hat{\alpha}$ is a scale factor, derived from a minimizing procedure instead of using the total relative charge, 
 \begin{equation}
   \begin{aligned}
   \label{eq:id}
@@ -142,11 +140,11 @@ where $I(x)$ is the indicator function. Instead of using the total relative char
       0 & \mbox{, otherwise}
     \end{array}
     \right.
-    \quad
+    \quad~~~
     \hat{\alpha} = \arg \underset{\alpha'}{\min}\mathrm{RSS}\left[\alpha'\hat{\phi}'(t)\otimes V_\mathrm{PE}(t),w(t)\right]. \\
   \end{aligned}
 \end{equation}
-This $\hat{\alpha}$ scaling process enables us to eliminate noise. Figure~\ref{fig:fd} illustrates the algorithm with an example having $D_w = \SI{2.03}{ns}$. 
+Such an $\hat{\alpha}$ scaling process enables us to eliminate noise. Figure~\ref{fig:fd} illustrates an example having $D_w = \SI{2.03}{ns}$. 
 
 \begin{figure}[H]
   \begin{subfigure}{0.5\textwidth}
