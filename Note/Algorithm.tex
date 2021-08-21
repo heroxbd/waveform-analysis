@@ -1,25 +1,25 @@
 \section{Algorithms and their performance}
 \label{sec:algorithm}
 
-The production of waveform analysis is estimators $\hat{t}_i$ and $\hat{q}_i$ from waveform $w(t)$, in which the output indices $i$ are from 1 to $\hat{N}$. Figure~\ref{fig:io} illustrates the input $w(t)$ and the outputs $\bm{\hat{t}}, \bm{\hat{q}}$, where $\bm{\hat{t}}$ denotes the vector $\hat{t}_i$. 
+Waveform analysis is to obtain $t_i$ and $q_i$ estimators $\hat{t}_i$ and $\hat{q}_i$ from waveform $w(t)$, where the output indices $i$ are from 1 to $\hat{N}$ and $\hat{N}$ is an estimator of $N_\mathrm{PE}$ in eq.~\eqref{eq:lc-sample}. Figure~\ref{fig:io} illustrates the input $w(t)$ and the outputs $\bm{\hat{t}}, \hat{\bm{q}}$, where boldface $\hat{\bm{t}}$ denotes the vector $\hat{t}_i$. 
 \begin{figure}[H]
   \centering
   \begin{subfigure}{.45\textwidth}
     \resizebox{\textwidth}{!}{\input{figures/wave.pgf}}
-    \caption{\label{fig:input} Input $w(t)$}
+    \caption{\label{fig:input} Input $w(t)$ reproduced from figure~\ref{fig:pile}.}
   \end{subfigure}
   \begin{subfigure}{.45\textwidth}
     \resizebox{\textwidth}{!}{\input{figures/charge.pgf}}
-    \caption{\label{fig:output} Output $\bm{\hat{t}}, \bm{\hat{q}}$}
+    \caption{\label{fig:output} Output $\hat{\bm{t}}, \hat{\bm{q}}$ obtained from \subref{fig:input}.}
   \end{subfigure}
-  \caption{\label{fig:io} PMT waveform input~\subref{fig:input} and times $t_i$ and charges $q_i$ of the PEs~\subref{fig:output} as output in our waveform analysis. }
+  \caption{\label{fig:io} Waveform analysis takes PMT waveform input in~\subref{fig:input} and outputs times $\hat{\bm{t}}$ and charges $\hat{\bm{q}}$ of the PEs in~\subref{fig:output}. }
 \end{figure}
 
-$\sigma_q$, the standard deviation of $q_i$, is $\num{\sim 0.4}$. Such a spread of $q_i$ makes $\hat{t}_i$ ambiguous. For example, 1 or 2~PEs (or at a lower probability, even 3~PEs) at $t_i$ can generate a charge that $\hat{q}_i=1.6$. Single PE of $q_i=1$ may be inferred as $\hat{t}_i$ and $\hat{t}_{i+1}$ with $\hat{q}_i=\hat{q}_{i+1}=0.5$ and mis-interpreted as 2~PEs. Consequently, $\hat{N}$ fails to estimate $N_\mathrm{PE}$. 
+The fluctuation of $q_i$ makes $\hat{t}_i$ ambiguous and $\hat{N}$ fail to estimate $N_\mathrm{PE}$. For example, 1, 2 and even 3~PEs can generate exactly the same charge as $1.6$.  A single PE charged $1$ may be mis-interpreted as 2~PEs at consecutive $\hat{t}_i$ and $\hat{t}_{i+1}$ with $\hat{q}_i=\hat{q}_{i+1}=0.5$.
 
 \subsection{Evaluation criteria}
 \label{sec:criteria}
-Facing the ambiguity of $t_i$ and $q_i$, we develop a set of evaluation criteria to assess the algorithms' performance. 
+Facing the ambiguity of $t_i$ and $q_i$, we introduce a set of evaluation criteria to assess the algorithms' performance.
 
 \subsubsection{Kullback-Leibler divergence}
 \label{sec:pseudo}
