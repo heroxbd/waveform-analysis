@@ -1,79 +1,79 @@
 \section{Motivation}
 \label{sec:toyMC}
 
-In this section, we discuss why waveform analysis is crucial for time measurements in PMT-based experiments. 
+In this section, we discuss the crucialness of waveform analysis for time measurements in PMT-based experiments.
 
 \subsection{Light curve}
-In the PMT-based experiments, a particle interacts with matter and deposits energy into the detector along its trajectory. A part of the energy deposition becomes visible as Cherenkov or scintillation photons. The time distribution of the emitted photons is called the \textit{light curve}. Scintillation light curve can be modeled as several exponential components with different decay rates~\cite{rebber_particle_2021}. Cherenkov light curve is almost instantaneous, modeled by a Dirac delta function. 
+A particle interacts with matter and deposits energywhen passing through the detector. Part of such energy converts into visible Cherenkov or scintillation photons. The time distribution of the photons is called the \textit{light curve}.  We formulate the scintillation light curve as several exponentials with different decay rates~\cite{rebber_particle_2021} and instantaneous Cherenkov light curve by a Dirac delta function.  The effective light curve $\phi(t)$ of PEs is smeared by the PMT transit time spread~(TTS), giving an \textit{ex-Gaussian} or \textit{exponentially modified Gaussian}~\cite{li_separation_2016},
+\begin{align}
+    \phi(t) = \frac{1}{2\tau_\mathrm{l}} \exp\left(\frac{\sigma_\mathrm{l}^2}{2\tau_\mathrm{l}^2}-\frac{t}{\tau_\mathrm{l}}\right) \left[1 - \erf\left( \frac{\sigma_\mathrm{l}}{\sqrt{2}\tau_\mathrm{l}} - \frac{t}{\sqrt{2}\sigma_\mathrm{l}} \right)\right]
+    \label{eq:time-pro}
+\end{align}
+where subscript $\mathrm{l}$ stands for ``light curve''.  $\sigma_\mathrm{l}$ encodes the timing uncertainty mainly from TTS . $\phi(t)$ of Cherenkov light is a pure Gaussian by taking $\tau_\mathrm{l} \rightarrow 0$. Figure~\ref{fig:time-pro} illustrates 3 examples of $\phi(t)$. 
 
 \begin{figure}[!htb]
   \centering
   \resizebox{0.5\textwidth}{!}{\input{figures/profile.pgf}}
-  \caption{\label{fig:time-pro} Light curves, the time distribution of the emitted photons. For a scintillator paired with ultra-fast PMTs, $\tau_l \gg \sigma_l$. $\tau_l \ll \sigma_l$ is the Cherenkov light curve. The $\tau_l=20, \sigma_l=5$ combination represents a scintillator experiment. }
+  \caption{\label{fig:time-pro} Effective light curves in 3 settings.  A scintillator paired with ultra-fast photo-sensors gives the green curve with $\tau_\mathrm{l} \gg \sigma_\mathrm{l}$.  A fast Cherenkov detector by the red curve has $\tau_\mathrm{l} \ll \sigma_\mathrm{l}$.  The blue curve combining $\tau_\mathrm{l}=\SI{20}{ns}$ and $\sigma_\mathrm{l}=\SI{5}{ns}$ represents a typical scintillation detector.  We can regard a normalized light curve as a probability density function of PEs.}
 \end{figure}
 
-Transit time spread (TTS) affects the photons captured by a PMT. In our Monte Carlo setup, the effective light curve $\phi(t)$ at PMT is an exponential distribution convoluted with a Gaussian~\cite{li_separation_2016}, known as \textit{ex-Gaussian} or \textit{exponentially modified Gaussian}, 
-\begin{align}
-    \phi(t) = \frac{1}{2\tau_l} \exp\left(\frac{\sigma_l^2}{2\tau_l^2}-\frac{t}{\tau_l}\right) \left[1 - \erf\left( \frac{\sigma_l}{\sqrt{2}\tau_l} - \frac{t}{\sqrt{2}\sigma_l} \right)\right]
-    \label{eq:time-pro}
-\end{align}
-where $\sigma_l$ encodes the timing uncertainty mainly from TTS. $\phi(t)$ of Cherenkov light is a pure Gaussian, or equivalently taking the limit $\tau_l \rightarrow 0$. Figure~\ref{fig:time-pro} gives several examples of $\phi(t)$. 
 
 \subsection{Single PE response}
 \label{subsec:spe}
 
-A photon can produce a PE at the PMT photocathode. The PE is then accelerated, collected, and amplified into $\num[retain-unity-mantissa=false]{\sim 1e7}$ electrons, forming a voltage pulse $V_\mathrm{PE}(t)$ in the PMT output, which the digitizers acquire as a time series called a \textit{waveform} $w(t)$. 
-
+A PE induced by a photon at the PMT photocathode is then accelerated, collected, and amplified into $\num[retain-unity-mantissa=false]{\sim 1e7}$ electrons, forming a voltage pulse $V_\mathrm{PE}(t)$ in the PMT output.
 \begin{figure}[H]
   \begin{subfigure}{.49\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/spe.pgf}}
-    \caption{\label{fig:spe} SPE response of PMT in \eqref{eq:dayaspe}}
+    \caption{\label{fig:spe} Single PE response $V_\mathrm{PE}(t)$ in eq.~\eqref{eq:dayaspe}.}
   \end{subfigure}
   \begin{subfigure}{.49\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/wave.pgf}}
-    \caption{\label{fig:pile} Pile-up and white noise in a PMT waveform}
+    \caption{\label{fig:pile} PE pile-up and white noise in a PMT waveform.}
   \end{subfigure}
-  \caption{A single PE induces a voltage pulse as in \subref{fig:spe}. Multiple pulses pile up after arriving at one PMT, manifested in the waveform in \subref{fig:pile}.}
+  \caption{A single PE from a PMT induces a voltage pulse in \subref{fig:spe}.  Multiple PEs piling up at a PMT form a waveform in \subref{fig:pile}.  PEs are barely visually separable from each other.}
 \end{figure}
 
-We use the parameterization of Daya Bay~\cite{jetter_pmt_2012} for the single PE response pulse,
+S.~Jetter et al. parameterizes $V_\mathrm{PE}(t)$ as~\cite{jetter_pmt_2012},
 \begin{equation}
   V_\mathrm{PE}(t) = V_{0}\exp\left[-\frac{1}{2}\left(\frac{\log(t/\tau_\mathrm{PE})}{\sigma_\mathrm{PE}}\right)^{2}\right]
   \label{eq:dayaspe}
 \end{equation}
-where shape parameters $\tau_\mathrm{PE}=\SI{8}{ns}$, $\sigma_\mathrm{PE}=\SI{0.5}{ns}$ and $V_{0}=\SI{14.08}{mV}$, see figure~\ref{fig:spe}. The discrete PEs are sampled from $\phi(t)$ in \eqref{eq:time-pro} and become several delta functions, 
+where shape parameters $\tau_\mathrm{PE}=\SI{8}{ns}$, $\sigma_\mathrm{PE}=\SI{0.5}{ns}$ and $V_{0}=\SI{14.08}{mV}$, see figure~\ref{fig:spe}.  A sample of PEs from the light curve $\phi(t)$ in eq.~\eqref{eq:time-pro} can be formulated as several delta functions, 
 \begin{equation}
   \label{eq:lc-sample}
   \tilde{\phi}(t) = \sum_{i=1}^{N_{\mathrm{PE}}} q_i \delta(t-t_i)
 \end{equation}
-where $N_\mathrm{PE}$ is the number of PEs obeying zero-truncated Poisson~(ZTP) distribution with parameter $\mu$ (we only analyze waveforms with at least one PE), $t_i$ is the hit time of the $i$-th PE, $q_i$ is the relative charge of the $i$-th PE from charge distribution $\mathrm{Normal}(1,\sigma_{q}^2)$. The waveform $w(t)$ is a convolution of $\tilde{\phi}(t)$ and $V_\mathrm{PE}(t)$ with a Gaussian white noise $\epsilon(t)$.
+where $N_\mathrm{PE}$ is the number of PEs, following Poisson distribution with parameter $\mu$.  $t_i$ is the hit time of the $i$-th PE, $q_i$ is the relative charge of the $i$-th PE from charge distribution $\mathcal{N}(1,\sigma_\mathrm{q}^2)$.
+
+The PMT voltage output waveform $w(t)$ is a time series modeled by convolution of $\tilde{\phi}(t)$ and $V_\mathrm{PE}(t)$ added by a Gaussian white noise $\epsilon(t)$,
 \begin{equation}
   \label{eq:1}
-  w(t) = \tilde{\phi}(t) \otimes V_\mathrm{PE}(t) + \epsilon(t) = \sum_{i=1}^{N_\mathrm{PE}} q_i V_\mathrm{PE}(t-t_i) + \epsilon(t)
+  w(t) = \tilde{\phi}(t) \otimes V_\mathrm{PE}(t) + \epsilon(t) = \sum_{i=1}^{N_\mathrm{PE}} q_i V_\mathrm{PE}(t-t_i) + \epsilon(t).
 \end{equation}
-Figure~\ref{fig:pile} illustrates an example of waveform $w(t)$. 
+See figure~\ref{fig:pile} for an example.
+
 
 \subsection{Time measurement}
-Obviously, in figure~\ref{fig:pile}, pile-ups and noises hinder the resolution of PEs. A widely used compromise is extracting the waveform's rising edge $T_1$ over a voltage threshold $V_\mathrm{th}$ and a total charge $Q$ by integration, reducing $w(t)$ into a pair of numbers $(T_1, Q)$.
+We see in figure~\ref{fig:pile} that pile-ups and noises hinder the resolution of PEs. Ultimately, it is the light curve shift $t_0$ that is the variable for time of flight in vertex reconstruction.  In this article, $\hat{t}$ denotes an estimator of $t_0$.
 
-$\phi(t-t_0)$ is the $t_0$-shifted light curve. Measurement of $t_0$ is the key to the vertex reconstruction and pulse shape discrimination. For $(T_1, Q)$ reduction, $t_0$ is estimated when assuming $\hat{t}_\mathrm{1st} = T_1$. $\hat{t}_\mathrm{1st}$ is biased and subjects to corrections based on the parameter $\mu$. The resolution $\sigma_\mathrm{1st}$ for a batch of waveforms, defined as the standard deviation of $\Delta t_0 = \hat{t}_\mathrm{1st} - t_0$, reflects the time resolution of $(T_1, Q)$ reduction when the knowledge of $\mu$ is exact. 
+Classical TDC/QDC extracts the waveform's threshold crossing time $\hat{t}_\mathrm{1st}$ and the total charge $Q$ by integration.  $\hat{t}_\mathrm{1st}$ is a biased $t_0$ estimator affected by the light intensity $\mu$. We define the resolution $\sigma_\mathrm{1st}$ for a batch of waveforms as the standard deviation of $\Delta t_0 = \hat{t}_\mathrm{1st} - t_0$.
 
-A perfect measurement of $t_i$ gives an ideal maximum likelihood estimator $\hat{t}_\mathrm{ALL}$ using all PEs,
+From a hypothetical perfect measurement of $t_i$, we define an ideal maximum likelihood estimator $\hat{t}_\mathrm{ALL}$,
 \begin{equation}
   \label{eq:2}
   \hat{t}_\mathrm{ALL} = \arg\underset{t_0}{\max} \prod_{i=1}^{N_\mathrm{PE}} \phi(t_i-t_0).
 \end{equation}
-The corresponding $\sigma_\mathrm{ALL}$ is the lower limit of any time resolution. The relation $\sigma_\mathrm{1st} > \sigma_\mathrm{ALL}$ necessitates more sophisticated waveform analysis methods.
+The corresponding $\sigma_\mathrm{ALL}$ is the lower bound of time resolution. 
 
-We scan $\mu$ from \numrange{0}{30} for each combinations of $\tau_l$ and $\sigma_l$ in the light curve~\eqref{eq:time-pro}. For a scintillator paired with ultra-fast PMTs, $\tau_l \gg \sigma_l$. When $\tau_l \ll \sigma_l$, it is the Cherenkov case. The case with $\tau_l=20$ and $\sigma_l=5$ represents a standard scintillator experiment like JUNO~\cite{rebber_particle_2021}. For every triple of $(\tau_l, \sigma_l, \mu)$, we generate a sample of $\num[retain-unity-mantissa=false]{1e4}$ waveforms for estimating the resolution. 
+To characterize $\hat{t}_\mathrm{1st}$ and $\hat{t}_\mathrm{ALL}$, we scan $\mu$ from \numrange{0}{30} for each the light curve in figure~\ref{fig:time-pro} and generate a sample of $\num[retain-unity-mantissa=false]{1e4}$ waveforms for every triplet of $(\tau_\mathrm{l}, \sigma_\mathrm{l}, \mu)$.  Figure~\ref{fig:reso-diff} shows that $\sigma_{\mathrm{1st}}$ equals to $\sigma_{\mathrm{ALL}}$ when $\tau_\mathrm{l} \gg \sigma_\mathrm{l}$, because $\hat{t}_\mathrm{ALL}$ is reduced to $\hat{t}_\mathrm{1st}$(=$\min_i t_i$) for an exponential light curve. For $\mu \to 0$, $\sigma_{\mathrm{1st}}$ and $\sigma_{\mathrm{ALL}}$ are also equal because at most 1 PE is available.  TDC/QDC is effective in those cases.
 
-Figure~\ref{fig:reso-diff} shows that $\sigma_{\mathrm{1st}}=\sigma_{\mathrm{ALL}}$ when $\mu \to 0$ or $\tau_l \gg \sigma_l$, which is why we always use $(T_1, Q)$ reduction. When $\tau_l \gg \sigma_l$, $\hat{t}_\mathrm{ALL}$ of the exponential light curve $\phi(t)$ in \eqref{eq:2} is reduced to $T_1$ (which equals $\min_i t_i$) and equivalent to $\hat{t}_\mathrm{1st}$. Nevertheless, even when $\mu = 1$, $\sigma_{\mathrm{1st}} - \sigma_{\mathrm{ALL}}$ is noticeable for cases with $\sigma_l > 0$ which are usual Cherenkov and scintillation experiments with non-negligible PMT TTS. 
 \begin{figure}[H]
   \centering
   \resizebox{0.8\textwidth}{!}{\input{figures/vs-deltadiv.pgf}}
-  \caption{\label{fig:reso-diff} Time resolution comparisons among $\hat{t}_{\mathrm{ALL}}$~(solid lines) when using full PE information and $\hat{t}_\mathrm{1st}$~(dashed lines), where only the first PE is used. The difference is manifested especially when $\sigma_l$ and $\mu$ are large. Three cases of $(\tau_l, \sigma_l)/\si{ns}$ represent the scintillation with ultra-fast PMTs~$(20, 0)$, Cherenkov~$(0, 5)$ and scintilation~$(20, 5)$ coupled with PMT TTS. The performance of waveform analysis lies between $\sigma_{\mathrm{1st}}$ and $\sigma_{\mathrm{ALL}}$. }
+  \caption{\label{fig:reso-diff} Time resolution comparisons among $\hat{t}_{\mathrm{ALL}}$~(solid lines) when using full PE information and $\hat{t}_\mathrm{1st}$~(dashed lines), where only the first PE is used. The difference is manifested especially when $\sigma_\mathrm{l}$ and $\mu$ are large. Three cases of $(\tau_\mathrm{l}, \sigma_\mathrm{l})/\si{ns}$ represent the scintillation with ultra-fast PMTs~$(20, 0)$, Cherenkov~$(0, 5)$ and scintilation~$(20, 5)$ coupled with PMT TTS. The performance of waveform analysis lies between $\sigma_{\mathrm{1st}}$ and $\sigma_{\mathrm{ALL}}$. }
 \end{figure}
 
-In our analysis, we aim at recovering $\hat{t}_\mathrm{ALL}$ in equation~\eqref{eq:2} from waveform~\eqref{eq:1} as much as possible. 
+Nevertheless, for $\mu >0$ and $\sigma_\mathrm{l} > 0$, the $\sigma_{\mathrm{1st}}$ significantly deteriorates from $\sigma_{\mathrm{ALL}}$.  For Cherenkov and scintillation experiments with non-negligible PMT TTS and occupancy, we shall explore more sophisticated waveform analysis methods to recover the accuracy of $\hat{t}_\mathrm{ALL}$ in eq.~\eqref{eq:2} from waveform in eq.~\eqref{eq:1}.
