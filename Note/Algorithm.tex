@@ -48,8 +48,9 @@ where $C$ is a constant regarding $t_0$.  Define the KL estimator as
   &= \arg\underset{t_0}{\max} \prod_{i=1}^{\hat{N}} \left[\phi(\hat{t}_i-t_0)\right]^{\hat{q}_i},
   \end{aligned}
 \end{equation}
-which reduces to an MLE like eq.~\eqref{eq:2} if $\hat{q}_i\equiv 1$.  $\hat{t}_\mathrm{KL}$ estimates $t_0$ when $t_i, q_i, N_\mathrm{PE}$ are all uncertain.  Similar to $\sigma_\mathrm{1st}$ and $\sigma_\mathrm{ALL}$, the standard deviation $\sigma_\mathrm{KL}$ of $\hat{t}_\mathrm{KL} - t_0$ for a batch of waveforms is the resolution of an algorithm.
+which reduces to an MLE like eq.~\eqref{eq:2} if $\hat{q}_i\equiv 1$.  $\hat{t}_\mathrm{KL}$ estimates $t_0$ when $t_i, q_i, N_\mathrm{PE}$ are all uncertain.
 
+Denoting $\Delta t_0$ as $\hat{t}_\mathrm{KL} - t_0$, the standard deviation $\sigma_\mathrm{KL}$ of $\Delta t_0$ on a batch of waveforms is the resolution of an algorithm.
 
 \subsubsection{Residual sum of squares}
 \label{sec:rss}
@@ -70,7 +71,7 @@ Figure~\ref{fig:l2} demonstrates that if two functions donot overlap, the RSS of
 \begin{figure}[H]
   \centering
   \resizebox{\textwidth}{!}{\input{figures/tab.pgf}}
-  \caption{\label{fig:l2} REPLACE THIS FIGURE!  The RSS of red and blue curves is a function of the two shaded regions. It is a constant when the curves shifts horizontally provided they donot overlap.  In contract, the Wasserstein distance of the two curves is sensitive to the distance between them.}
+  \caption{\label{fig:l2} REPLACE THIS FIGURE!  The RSS of red and blue curves is a function of the two shaded regions. It is a constant when the curves shifts horizontally provided they donot overlap.  In contract, the Wasserstein distance $D_w$ of the two curves is the distance between them.  It complements RSS and offers a time-sensitive metric suitable for the sparse PE space.}
 \end{figure}
 
 \subsubsection{Wasserstein distance}
@@ -78,7 +79,7 @@ Figure~\ref{fig:l2} demonstrates that if two functions donot overlap, the RSS of
 
 \input{fom}
 
-We investigate waveform analysis algorithms in heuristics, deconvolution, neuron network, and regression by the discussed evaluation criteria.
+We shall evaluate the performance of waveform analysis algorithms ranging from heuristics, deconvolution, neuron network to regression, by the discussed criteria in this section.
 
 \subsection{Heuristic methods}
 By directly extracting waveform features, heuristic methods are straightforward and widely used. 
