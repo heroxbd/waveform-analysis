@@ -126,7 +126,7 @@ By low-pass filtering the waveform $w(t)$ to get $\tilde{w}(t)$, we suppress the
     \hat{\phi}(t) = \hat{\alpha}\underbrace{\hat{\phi}_1(t) I(\hat{\phi}_1(t) - q_\mathrm{th})}_{\text{over-threshold part of} \hat{\phi}_1(t)}  
 \end{equation}
 where $I(x)$ is the indicator function, and $\hat{\alpha}$ is a scaling factor to minimize RSS,
-\begin{equation}
+\begin{equation*}
   \begin{aligned}
   \label{eq:id}
   I(x) = \left\{
@@ -138,7 +138,7 @@ where $I(x)$ is the indicator function, and $\hat{\alpha}$ is a scaling factor t
     \quad~~~
     \hat{\alpha} = \arg \underset{\alpha}{\min}\mathrm{RSS}\left[\alpha\hat{\phi}(t)\otimes V_\mathrm{PE}(t),w(t)\right]. \\
   \end{aligned}
-\end{equation}
+\end{equation*}
 
 Figure~\ref{fig:fd} illustrates that fourier deconvolution outperforms heuristic methods.  Meanwhile, noise and precision loss in the waveform lead to smaller and even negative $\hat{q}_i$. Those can be mitigated by thresholding and scaling in eq.~\eqref{eq:fdconv2}, but calls for a more elegant solution.
 
