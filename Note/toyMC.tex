@@ -59,9 +59,9 @@ See figure~\ref{fig:pile} for an example.
 \subsection{Time measurement}
 We see in figure~\ref{fig:pile} that pile-ups and noises hinder the time $t_i$ of the PEs. Fortunately in vertex reconstruction only the global shift $t_0$ of the light curve $\phi(t-t_0)$ encodes the time of flight.  All the uncertainties of $\hat{t}_i$ contribute their impact via $\hat{t}_0$. In this article, we denote $\hat{x}$ as an estimator for the corresponding variable $x$ if not otherwise specified.
 
-Classical TDC/QDC extracts the waveform's threshold crossing time $\hat{t}_\mathrm{1st}$ and the total charge $Q$ by integration.  $\hat{t}_\mathrm{1st}$ is a biased $t_0$ estimator affected by the light intensity $\mu$. We define the resolution $\sigma_\mathrm{1st}$ for a batch of waveforms as the standard deviation of $\Delta t_0 = \hat{t}_\mathrm{1st} - t_0$.
+Classical TDC/QDC extracts the waveform's threshold crossing time $\hat{t}_\mathrm{1st}$ and the total charge $Q$ by integration.  $\hat{t}_\mathrm{1st}$ is dominated by the first PE in the PMT.  It is a biased $t_0$ estimator affected by the light intensity $\mu$. We define the resolution $\sigma_\mathrm{1st}$ for a batch of waveforms as the standard deviation of $\Delta t_0 = \hat{t}_\mathrm{1st} - t_0$.
 
-From a hypothetical perfect measurement of $t_i$, we define an ideal maximum likelihood estimator $\hat{t}_\mathrm{ALL}$,
+From a hypothetical perfect measurement of $t_i$, we define an ideal maximum likelihood estimator $\hat{t}_\mathrm{ALL}$ to capture time information of all the PEs,
 \begin{equation}
   \label{eq:2}
   \hat{t}_\mathrm{ALL} = \arg\underset{t_0}{\max} \prod_{i=1}^{N_\mathrm{PE}} \phi(t_i-t_0).
