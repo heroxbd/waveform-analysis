@@ -109,11 +109,10 @@ By \textit{waveform shifting}, we extract more time information than TDC in a si
 
 \subsection{Deconvolution}
 \label{sec:deconv}
-While heuristic methods extract only a time shift, deconvolution methods exploit the full SPE shape. Deconvolution can accommodate overshoots and is an option for the JUNO prototype to measure charges~\cite{zhang_comparison_2019}. Smoothing is necessary because deconvolution does not model the white noise. 
+Deconvolution methods do more than heuristic ones by using the full shape of $V_\mathrm{PE}(t)$, thus can accommodate overshoots and pile-ups.  Smoothing is necessary because deconvolution does not model the white noise.
 
 \subsubsection{Fourier deconvolution}
-
-Take Fourier transform $\mathcal{F}$ of \eqref{eq:1}, we have
+\textit{Fourier deconvolution} is an option considered by JUNO prototype~\cite{zhang_comparison_2019}. The deconvolution relation is evident in the Fourier transform $\mathcal{F}$ to eq.~\eqref{eq:1},
 \begin{equation}
   \label{eq:fourier}
   \begin{aligned}
@@ -121,14 +120,12 @@ Take Fourier transform $\mathcal{F}$ of \eqref{eq:1}, we have
   \implies \mathcal{F}[\tilde{\phi}] & = \frac{\mathcal{F}[w]}{\mathcal{F}[V_\mathrm{PE}]} - \frac{\mathcal{F}[\epsilon]}{\mathcal{F}[V_\mathrm{PE}]}.
   \end{aligned}
 \end{equation}
-The noise term $\epsilon$ is unknown but can be suppressed by a threshold $V_\mathrm{th}$ and a filter if $V_\mathrm{PE}(t)$ is smooth. We realize the filter by a low-pass filter multiplier $R$ in the frequency domain. 
-For simplicity, we denote the inverse Fourier transform function of $t$ as $\hat{\phi}_1(t)$, namely, $\hat{\phi}_1(t) = \mathcal{F}^{-1}\left[\frac{R \mathcal{F}[w]}{\mathcal{F}[V_\mathrm{PE}]}\right](t)$
-The estimator $\hat{\phi}(t)$ takes the over-threshold part of the inverse Fourier transform function of $t$ as follows,
+By low-pass filtering the waveform $w(t)$ to get $\tilde{w}(t)$, we suppress the noise term $\epsilon$, take the inverse Fourier transform $\hat{\phi}_1(t) = \mathcal{F}^{-1}\left[\frac{\mathcal{F}[\tilde{w}]}{\mathcal{F}[V_\mathrm{PE}]}\right](t)$, and compute $\hat{\phi}(t)$ as the over-threshold $q_\mathrm{th}$ part of $\hat{\phi}_1(t)$,
 \begin{equation}
   \label{eq:fdconv2}
-    \hat{\phi}(t) = \hat{\alpha}\underbrace{\hat{\phi}_1(t) I(\hat{\phi}_1(t) - V_\mathrm{th})}_{\text{over-threshold part of} \hat{\phi}_1(t)}  
+    \hat{\phi}(t) = \hat{\alpha}\underbrace{\hat{\phi}_1(t) I(\hat{\phi}_1(t) - q_\mathrm{th})}_{\text{over-threshold part of} \hat{\phi}_1(t)}  
 \end{equation}
-where $I(x)$ is the indicator function, and $\hat{\alpha}$ is a scale factor, derived from a minimizing procedure instead of using the total relative charge, 
+where $I(x)$ is the indicator function, and $\hat{\alpha}$ is a scaling factor to minimize RSS,
 \begin{equation}
   \begin{aligned}
   \label{eq:id}
@@ -139,46 +136,48 @@ where $I(x)$ is the indicator function, and $\hat{\alpha}$ is a scale factor, de
     \end{array}
     \right.
     \quad~~~
-    \hat{\alpha} = \arg \underset{\alpha'}{\min}\mathrm{RSS}\left[\alpha'\hat{\phi}'(t)\otimes V_\mathrm{PE}(t),w(t)\right]. \\
+    \hat{\alpha} = \arg \underset{\alpha}{\min}\mathrm{RSS}\left[\alpha\hat{\phi}(t)\otimes V_\mathrm{PE}(t),w(t)\right]. \\
   \end{aligned}
 \end{equation}
-Such an $\hat{\alpha}$ scaling process enables us to eliminate noise. Figure~\ref{fig:fd} illustrates an example having $D_w = \SI{2.03}{ns}$. 
+
+Figure~\ref{fig:fd} illustrates that fourier deconvolution outperforms heuristic methods.  Meanwhile, noise and precision loss in the waveform lead to smaller and even negative $\hat{q}_i$. Those can be mitigated by thresholding and scaling in eq.~\eqref{eq:fdconv2}, but calls for a more elegant solution.
 
 \begin{figure}[H]
   \begin{subfigure}{0.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/fftrans.pgf}}
-    \caption{\label{fig:fd} $\mathrm{RSS}=\SI{124.7}{mV^2},D_w=\SI{2.03}{ns},\Delta t_0=\SI{-1.16}{ns}$}
+    \caption{\label{fig:fd} A Fourier deconvolution example: \\ $\Delta t_0=\SI{-1.16}{ns}$, $\mathrm{RSS}=\SI{124.7}{mV^2}$, $D_w=\SI{2.03}{ns}$.}
   \end{subfigure}
   \begin{subfigure}{0.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/lucyddm.pgf}}
-    \caption{\label{fig:lucy} $\mathrm{RSS}=\SI{70.3}{mV^2},D_w=\SI{1.10}{ns},\Delta t_0=\SI{-0.75}{ns}$}
+    \caption{\label{fig:lucy} A Richardson-Lucy direct demodulation example:\\ $\Delta t_0=\SI{-0.75}{ns}$, $\mathrm{RSS}=\SI{70.3}{mV^2}$, $D_w=\SI{1.10}{ns}$.}
   \end{subfigure}
-  \caption{Deconvolution demonstrations when $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{ns}$. Fourier deconvolution is in~\subref{fig:fd}. Lucy direct demodulation is in~\subref{fig:lucy}.}
+  \caption{Demonstrations of deconvolution methods on a waveform sampled from $\mu=4$, $\tau_l=\SI{20}{ns}$, $\sigma_l=\SI{5}{ns}$ light curve conditions. Richardson-Lucy direct demodulation in~\subref{fig:lucy} imposes positive charges in iterations and obtains better results than Fourier deconvolution in~\subref{fig:fd}.}
 \end{figure}
 
-\subsubsection{Lucy direct demodulation}
+\subsubsection{Richardson-Lucy direct demodulation}
 
-Lucy-Richardson direct demodulation (LucyDDM)~\cite{lucy_iterative_1974} uses a non-linear iteration to calculate deconvolution and has a wide application in astronomy \cite{li_richardson-lucy_2019} and image processing. We view $V_{\mathrm{PE}*}(t-s)$ as a conditional probability distribution $P(t|s)$ where $t$ denotes PMT amplified electron time and $s$ denotes given PE time. By the Bayesian rule, 
+\textit{Richardson-Lucy direct demodulation}~(LucyDDM)~\cite{lucy_iterative_1974} with a non-linear iteration to calculate deconvolution has a wide application in astronomy~\cite{li_richardson-lucy_2019} and image processing. We view $V_{\mathrm{PE}*}(t-s)$ as a conditional probability distribution $p(t|s)$ where $t$ denotes PMT amplified electron time and $s$ denotes the given PE time. By the Bayesian rule,
 \begin{equation}
   \label{eq:lucy}
-  \tilde{\phi}_*(s) V_{\mathrm{PE}*}(t-s) = \tilde{\phi}_*(s)P(t|s) = P(t,s) = \tilde{w}_*(t)P(s|t)
+  \tilde{\phi}_*(s) V_{\mathrm{PE}*}(t-s) = \tilde{\phi}_*(s)p(t|s) = p(t,s) = \tilde{w}_*(t)p(s|t)
 \end{equation}
-where $P(t, s)$ is the joint distribution of amplified electron and PE time. Therefore,
+where $p(t, s)$ is the joint distribution of amplified electron $t$ and PE time $s$, and $\tilde{w}$ is the smoothed $w$.  Cancel out the normalization factors,
 \begin{equation}
   \label{eq:ptt}
-  P(s|t) = \frac{\tilde{\phi}_*(s) V_{\mathrm{PE}*}(t-s)}{\tilde{w}_*(t)} = \frac{\tilde{\phi}_*(s) V_{\mathrm{PE}*}(t-s)}{\int\tilde{\phi}_*(s') V_{\mathrm{PE}*}(t-s')\mathrm{d}s'}.
+  p(s|t) = \frac{\tilde{\phi}_*(s) V_{\mathrm{PE}*}(t-s)}{\tilde{w}_*(t)} = \frac{\tilde{\phi}(s) V_{\mathrm{PE}}(t-s)}{\int\tilde{\phi}(s') V_{\mathrm{PE}}(t-s')\mathrm{d}s'}.
 \end{equation}
-We construct $\phi_*$ recurrence relation by replacing $\tilde{w}_*$ with the observed normalized waveform $w_*$, whose negative parts are set to 0,
+We construct $\phi_*$ recurrence relation,
 \begin{equation}
   \label{eq:iter}
   \begin{aligned}
-    \tilde{\phi}_*(s) & = \int P(s|t) w_*(t)\mathrm{d}t = \int \frac{\tilde{\phi}_*(s) V_{\mathrm{PE}*}(t-s)}{\int\tilde{\phi}_*(s') V_{\mathrm{PE}*}(t-s')\mathrm{d}s'} w_*(t) \mathrm{d}t \\
-    \implies \hat{\phi}_*^{n+1}(s) & = \int \frac{\hat{\phi}_*^n(s) V_{\mathrm{PE}*}(t-s)}{\int\hat{\phi}_*^n(s') V_{\mathrm{PE}*}(t-s')\mathrm{d}s'} w_*(t) \mathrm{d}t.
+    \tilde{\phi}_*(s) & = \int p(s|t) \tilde{w}_*(t)\mathrm{d}t = \int \frac{\tilde{\phi}(s) V_{\mathrm{PE}}(t-s)}{\int\tilde{\phi}(s') V_{\mathrm{PE}}(t-s')\mathrm{d}s'} w_*(t) \mathrm{d}t \\
+    \implies \hat{\phi}^{n+1}(s) & = \int \frac{\hat{\phi}^n(s) V_{\mathrm{PE}*}(t-s)}{\int\hat{\phi}^n(s') V_{\mathrm{PE}}(t-s')\mathrm{d}s'} w(t) \mathrm{d}t,
   \end{aligned}
 \end{equation}
-Like Fourier deconvolution in \eqref{eq:fdconv2}, this method thresholds and scales the converged $\hat{\phi}_*^{n}$. LucyDDM constructs positive $\hat{\phi}$, making it more resilient to noise. Figure~\ref{fig:lucy} shows a LucyDDM example with $D_w = \SI{1.10}{ns}$. 
+where only $V_{\mathrm{PE}*}$ in the numerator is normalized and superscript $n$ denotes the iteration step.
+Like Fourier deconvolution in eq.~\eqref{eq:fdconv2}, we threshold and scale the converged $\hat{\phi}^\infty$ to get $\hat{\phi}$.  As shown in figure~\ref{fig:lucy} the positive constraint of $\hat{\phi}$ makes LucyDDM more resilient to noise.
 
 \subsection{Convolutional neural network}
 
