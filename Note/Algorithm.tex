@@ -105,7 +105,7 @@ By \textit{waveform shifting}, we extract more time information than TDC in a si
 \subsubsection{Peak finding}
 \label{sec:findpeak}
 
-\textit{Peak finding} is more effective than waveform shifting by exploiting PE pulses.  We smooth the waveforms by a low-pass Savitzky-Golay filter~\cite{savitzky_smoothing_1964} and find all the peaks at $t_i$.  The following resembles waveform shifting: apply a shift to get $\hat{t}_i$, take $\hat{q}_i \propto w(\hat{t}_i)$ and normalize to the waveform integration. As shown in Figure~\ref{fig:peak}, peak finding output charges close to 1 and works well for lower PE counts.  But when PEs pile up closely and peaks overlap, this method is unreliable.
+\textit{Peak finding} is more effective than waveform shifting by exploiting PE pulses.  We smooth the waveforms by a low-pass Savitzky-Golay filter~\cite{savitzky_smoothing_1964} and find all the peaks at $t_i$.  The following resembles waveform shifting: apply a shift to get $\hat{t}_i$, take $\hat{q}_i \propto w(\hat{t}_i)$ and normalize to the waveform integration. As shown in Figure~\ref{fig:peak}, peak finding output charges close to 1 and works well for lower PE counts.  But when PEs pile up closely, peaks overlap intensively, making this method unreliable.
 
 \subsection{Deconvolution}
 \label{sec:deconv}
