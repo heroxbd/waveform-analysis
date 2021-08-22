@@ -172,12 +172,14 @@ We construct $\phi_*$ recurrence relation,
 \begin{equation}
   \label{eq:iter}
   \begin{aligned}
-    \tilde{\phi}_*(s) & = \int p(s|t) \tilde{w}_*(t)\mathrm{d}t = \int \frac{\tilde{\phi}(s) V_{\mathrm{PE}}(t-s)}{\int\tilde{\phi}(s') V_{\mathrm{PE}}(t-s')\mathrm{d}s'} w_*(t) \mathrm{d}t \\
-    \implies \hat{\phi}^{n+1}(s) & = \int \frac{\hat{\phi}^n(s) V_{\mathrm{PE}*}(t-s)}{\int\hat{\phi}^n(s') V_{\mathrm{PE}}(t-s')\mathrm{d}s'} w(t) \mathrm{d}t,
+    \tilde{\phi}_*(s) & = \int p(s|t) \tilde{w}_*(t)\mathrm{d}t = \int \frac{\tilde{\phi}(s) V_{\mathrm{PE}}(t-s)}{\int\tilde{\phi}(s') V_{\mathrm{PE}}(t-s')\mathrm{d}s'} \tilde{w}_*(t) \mathrm{d}t \\
+    \implies \hat{\phi}^{n+1}(s) & = \int \frac{\hat{\phi}^n(s) V_{\mathrm{PE}*}(t-s)}{\int\hat{\phi}^n(s') V_{\mathrm{PE}}(t-s')\mathrm{d}s'} \tilde{w}(t) \mathrm{d}t,
   \end{aligned}
 \end{equation}
 where only $V_{\mathrm{PE}*}$ in the numerator is normalized and superscript $n$ denotes the iteration step.
 Like Fourier deconvolution in eq.~\eqref{eq:fdconv2}, we threshold and scale the converged $\hat{\phi}^\infty$ to get $\hat{\phi}$.  As shown in figure~\ref{fig:lucy} the positive constraint of $\hat{\phi}$ makes LucyDDM more resilient to noise.
+
+The remaining noise in the smoothed $\tilde{w}$ crucially influence deconvolution.  A probablistic method will correctly model the noise term $\epsilon$, as we shall see in section \ref{sec:regression}.  Before that let's try something different.
 
 \subsection{Convolutional neural network}
 
@@ -223,6 +225,7 @@ The results of $\hat{\phi}(t)$ with $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{
 \end{figure}
 
 \subsection{Regression analysis}
+\label{sec:regression}
 With the generative waveform model in~\eqref{eq:1}, regression is the best for waveform analysis. Although computational complexity hinders the applications of regression in vast volumes of raw data, the advancement of big data infrastructure and sparsity research make the advantage of regression more pronounced.
 
 We replace $\hat{N}$ with a fixed sample size $N_s$ and $\hat{t}_i$ with a fixed vector of times $t'_i$ in equation~\ref{eq:w-hat} and obtain, 
