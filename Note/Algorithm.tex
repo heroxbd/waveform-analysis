@@ -86,26 +86,26 @@ By directly extracting waveform features, heuristic methods are straightforward 
 
 \subsubsection{Waveform shifting}
 \label{sec:shifting}
-We set a threshold $V_\mathrm{th}$ to electronics noise in the waveforms, and select waveform entries $w(t_i)$ exceeding $V_\mathrm{th}$. Then we shift the exceeding waveform by $\Delta t$ according to the shape of SPE response $V_\mathrm{PE}(t)$ in equation~\eqref{eq:dayaspe}. We normalize $\hat{q}_i$ to a total charge by integration of the waveform $w(t)$. Waveform shifting does minimal analysis and serves as a baseline method. The demonstration in figure~\ref{fig:shifting} gives $D_w = \SI{8.72}{ns}$.
+By \textit{waveform shifting}, we extract more time information than TDC in a similar manner: select all the $t_i$ where the waveform $w(t_i)$ exceeds a threshold to suppress noise, shift them by $\Delta t$ according to the shape of single PE response $V_\mathrm{PE}(t)$ in eq.~\eqref{eq:dayaspe} to get $\hat{t}_i$, then take $\hat{q}_i \propto w(\hat{t}_i)$ so that the total charge $\sum \hat{q}_i$ aligns with the integration of the waveform $w(t)$.  Though the $\hat{q}_i$'s obtained are smaller than PE charges as in figure~\ref{fig:shifting}, waveform shifting does minimal analysis and serves as a baseline method.
 
 \begin{figure}[H]
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/threshold.pgf}}
-    \caption{\label{fig:shifting} $\mathrm{RSS}=\SI{4805.4}{mV^2},D_w=\SI{8.72}{ns},\Delta t_0=\SI{10.74}{ns}$}
+    \caption{\label{fig:shifting} A waveform shifting example gives \\ $\Delta t_0=\SI{10.74}{ns}$, $\mathrm{RSS}=\SI{4805.4}{mV^2}$, $D_w=\SI{8.72}{ns}$.}
   \end{subfigure}
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/findpeak.pgf}}
-    \caption{\label{fig:peak} $\mathrm{RSS}=\SI{317.3}{mV^2},D_w=\SI{2.40}{ns},\Delta t_0=\SI{-1.93}{ns}$}
+    \caption{\label{fig:peak} A peak finding example gives \\ $\Delta t_0=\SI{-1.93}{ns}$, $\mathrm{RSS}=\SI{317.3}{mV^2}$, $D_w=\SI{2.40}{ns}$.}
   \end{subfigure}
-  \caption{Heuristic methods demonstrations when $\mu=4, \tau_l=\SI{20}{ns}, \sigma_l=\SI{5}{ns}$. Waveform shifting is in~\subref{fig:shifting}. Peak finding is in~\subref{fig:peak}.}
+  \caption{Demonstrations of heuristic methods on a waveform sampled from $\mu=4$, $\tau_l=\SI{20}{ns}$, $\sigma_l=\SI{5}{ns}$ light curve conditions.  Peak finding in~\subref{fig:peak} handles charges more realistically than waveform shifting in~\subref{fig:shifting}, giving better numbers in the three criteria.}
 \end{figure}
 
 \subsubsection{Peak finding}
 \label{sec:findpeak}
 
-In the peak finding method, we smooth the waveforms and bypass local maxima by a Savitzky-Golay filter~\cite{savitzky_smoothing_1964}, and apply a minus shift $\Delta t$ to peak positions $\hat{t}_i$ considering SPE response $V_\mathrm{PE}(t)$ in equation~\eqref{eq:dayaspe}. The reconstructed charges $\hat{q}_i$ are proportional to the peak voltages, which are normalized to the total charge by integration of the waveform. This treatment works well for lower PE counts. When PEs pile up closely, peaks overlap and this method is unreliable. Figure~\ref{fig:peak} shows a demonstration with $D_w = \SI{2.40}{ns}$. 
+\textit{Peak finding} is more effective than waveform shifting by exploiting PE pulses.  We smooth the waveforms by a low-pass Savitzky-Golay filter~\cite{savitzky_smoothing_1964} and find all the peaks at $t_i$.  The following resembles waveform shifting: apply a shift to get $\hat{t}_i$, take $\hat{q}_i \propto w(\hat{t}_i)$ and normalize to the waveform integration. As shown in Figure~\ref{fig:peak}, peak finding output charges close to 1 and works well for lower PE counts.  But when PEs pile up closely and peaks overlap, this method is unreliable.
 
 \subsection{Deconvolution}
 \label{sec:deconv}
