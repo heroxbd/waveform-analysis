@@ -48,32 +48,30 @@ where $C$ is a constant regarding $t_0$.  Define the KL estimator as
   &= \arg\underset{t_0}{\max} \prod_{i=1}^{\hat{N}} \left[\phi(\hat{t}_i-t_0)\right]^{\hat{q}_i},
   \end{aligned}
 \end{equation}
-which reduces to an maximum likelihood estimator~(MLE) if $\hat{q}_i\equiv 1$.
-
-Like $\sigma_\mathrm{1st}$ and $\sigma_\mathrm{ALL}$, the standard deviation $\sigma_\mathrm{KL}$ of $\hat{t}_\mathrm{KL} - t_0$ for a batch of waveforms is the resolution of an algorithm.
+which reduces to an MLE like eq.~\eqref{eq:2} if $\hat{q}_i\equiv 1$.  $\hat{t}_\mathrm{KL}$ estimates $t_0$ when $t_i, q_i, N_\mathrm{PE}$ are all uncertain.  Similar to $\sigma_\mathrm{1st}$ and $\sigma_\mathrm{ALL}$, the standard deviation $\sigma_\mathrm{KL}$ of $\hat{t}_\mathrm{KL} - t_0$ for a batch of waveforms is the resolution of an algorithm.
 
 
 \subsubsection{Residual sum of squares}
 \label{sec:rss}
 
-Following~\eqref{eq:1} and~\eqref{eq:lc}, we construct an estimator of waveform,
+Following eqs.~\eqref{eq:1} and~\eqref{eq:lc}, we construct an estimator of a waveform,
 \begin{equation}
   \label{eq:w-hat}
   \hat{w}(t) = \sum_{i=1}^{\hat{N}}\hat{q}_i V_\mathrm{PE}(t-\hat{t}_i) = \hat{\phi}(t) \otimes V_\mathrm{PE}(t).
 \end{equation}
-Sum of squares of the residual $\hat{w}(t) - w(t)$ is a natural $\ell_2$-metric inspired by the Gaussian noise term in \eqref{eq:1},
+Residual sum of squares~(RSS) of $\hat{w}(t)$ from $w(t)$ is a $\ell_2$-metric inspired by the Gaussian noise term in \eqref{eq:1},
 \begin{equation}
   \label{eq:rss}
-  \mathrm{RSS}_w\coloneqq\int\left[\hat{w}(t) - w(t)\right]^2\mathrm{d}t.
+  \mathrm{RSS} \coloneqq\int\left[\hat{w}(t) - w(t)\right]^2\mathrm{d}t.
 \end{equation}
-RSS cannot compare a discrete function with a continuous one. In figure~\ref{fig:l2}, the RSS of $a-b_{1}$ and $a-b_{2}$ are both 0.25. Intuitively $b_1$ is closer to $a$ than $b_2$, and RSS fails to capture such a difference, so RSS is not fully sensitive to time. 
+
+Figure~\ref{fig:l2} demonstrates that if two functions donot overlap, the RSS of them remains constant no matter what their relative positions are.  The sampled light curves $\hat{\phi}(t)$ and $\tilde{\phi}(t)$ consist with delta functions and hardly overlap, therefore the RSS of them is useless.  Futhermore, RSS cannot compare a discrete function with a continuous one.  We shall only consider the RSS of waveforms.
+
 \begin{figure}[H]
   \centering
   \resizebox{\textwidth}{!}{\input{figures/tab.pgf}}
-  \caption{\label{fig:l2} $b_1$ and $b_2$ have the same $\mathrm{RSS}$ ($=0.25$) to $a$, but $b_1$ is closer in time to $a$.}
+  \caption{\label{fig:l2} REPLACE THIS FIGURE!  The RSS of red and blue curves is a function of the two shaded regions. It is a constant when the curves shifts horizontally provided they donot overlap.  In contract, the Wasserstein distance of the two curves is sensitive to the distance between them.}
 \end{figure}
-
-The RSS metric of $\tilde{\phi}(t)$ and $\hat{\phi}(t)$ suffers from the ambiguity in figure~\ref{fig:l2}: functions with different time properties are indistinguishable by $\tilde{\phi}(t)$-$\hat{\phi}(t)$ RSS. Unless specified otherwise, $\mathrm{RSS}$ refers to $\mathrm{RSS}_w$ in~\eqref{eq:rss}. 
 
 \subsubsection{Wasserstein distance}
 \label{sec:W-dist}
