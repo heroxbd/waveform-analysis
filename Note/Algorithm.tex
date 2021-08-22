@@ -19,24 +19,18 @@ The fluctuation of $q_i$ makes $\hat{t}_i$ ambiguous and $\hat{N}$ fail to estim
 
 \subsection{Evaluation criteria}
 \label{sec:criteria}
-Facing the ambiguity of $t_i$ and $q_i$, we introduce a set of evaluation criteria to assess the algorithms' performance.
+In the darkness of the $t_i/q_i$ ambiguity, we introduce a set of evaluation criteria to assess the algorithms' performance.
 
 \subsubsection{Kullback-Leibler divergence}
 \label{sec:pseudo}
 
-One idea to plug $\hat{t}_i$ into \eqref{eq:2} is interpreting $\hat{q}_i$ as weights,
-\begin{equation}
-  \label{eq:pseudo}
-  \hat{t}_\mathrm{KL} = \arg\underset{t_0}{\max} \prod_{i=1}^{\hat{N}} \left[\phi(\hat{t}_i-t_0)\right]^{\hat{q}_i}
-\end{equation}
-where $\hat{t}_\mathrm{KL}$ is a pseudo-likelihood estimator. However, this estimator is actually the Kullback-Leibler divergence~\cite{kullback_information_1951} between an inferred and the true light curves~\eqref{eq:time-pro}. 
-
-$\bm{\hat{t}}$ and $\bm{\hat{q}}$ give a light curve estimator $\hat{\phi}(t)$ up to a normalization factor,
+We construct a light curve estimator $\hat{\phi}(t)$ from $\bm{\hat{t}}$, $\bm{\hat{q}}$ and $\hat{N}$,
 \begin{equation}
   \label{eq:lc}
-  \hat{\phi}(t) = \sum_{i=1}^{\hat{N}} \hat{q}_i\delta(t-\hat{t}_i)
+  \hat{\phi}(t) = \sum_{i=1}^{\hat{N}} \hat{q}_i\delta(t-\hat{t}_i),
 \end{equation}
-where $\delta(t)$ is the Dirac delta function to model discrete values. Let us consider the non-normalized KL divergence~\cite{mihoko_robust_2002} between $\hat{\phi}(t)$ and $\phi(t-t_{0})$,
+which resembles eq.~\eqref{eq:lc-sample}.
+Consider the non-normalized Kullback-Leibler~(KL) divergence~\cite{mihoko_robust_2002} between $\hat{\phi}(t)$ and $\phi(t-t_{0})$,
 \begin{equation}
   \begin{aligned}
     D_\mathrm{KL}\left[\hat{\phi}(t) \parallel \phi(t-t_0)\right] & =\int \left[\hat{\phi}(t) \log\frac{\hat{\phi}(t)}{\phi(t-t_0)} + \phi(t-t_0) - \hat{\phi}(t) \right]\mathrm{d}t \\
@@ -46,13 +40,18 @@ where $\delta(t)$ is the Dirac delta function to model discrete values. Let us c
   \label{eq:kl}
   \end{aligned}
 \end{equation}
-where $C$ is a constant regarding $t_0$. Comparing with \eqref{eq:pseudo}, it is evident that
+where $C$ is a constant regarding $t_0$.  Define the KL estimator as
 \begin{equation}
-  \label{eq:kl2}
-  \hat{t}_\mathrm{KL} = \arg\underset{t_0}{\min}~D_\mathrm{KL}\left[\hat{\phi}(t) \parallel \phi(t-t_0)\right].
+  \begin{aligned}
+  \label{eq:pseudo}
+  \hat{t}_\mathrm{KL} &= \arg\underset{t_0}{\min}~D_\mathrm{KL}\left[\hat{\phi}(t) \parallel \phi(t-t_0)\right] \\
+  &= \arg\underset{t_0}{\max} \prod_{i=1}^{\hat{N}} \left[\phi(\hat{t}_i-t_0)\right]^{\hat{q}_i},
+  \end{aligned}
 \end{equation}
-Like $\sigma_\mathrm{ALL}$, we use the standard deviation of $\hat{t}_\mathrm{KL} - t_0$ for a 
-batch of waveforms, denoted as $\sigma_\mathrm{KL}$, to measure the resolutions of waveform analysis methods.
+which reduces to an maximum likelihood estimator~(MLE) if $\hat{q}_i\equiv 1$.
+
+Like $\sigma_\mathrm{1st}$ and $\sigma_\mathrm{ALL}$, the standard deviation $\sigma_\mathrm{KL}$ of $\hat{t}_\mathrm{KL} - t_0$ for a batch of waveforms is the resolution of an algorithm.
+
 
 \subsubsection{Residual sum of squares}
 \label{sec:rss}
