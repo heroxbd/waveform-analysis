@@ -6,7 +6,7 @@ In this section, we discuss the crucialness of waveform analysis for time measur
 \subsection{Light curve}
 A particle interacts with matter and deposits energy when passing through the detector. Part of such energy converts into visible Cherenkov or scintillation photons. The time distribution of the photons is called the \textit{light curve}.  We formulate the scintillation light curve as several exponentials with different decay rates~\cite{rebber_particle_2021} and instantaneous Cherenkov light curve by a Dirac delta function.  The effective light curve $\phi(t)$ of PEs is smeared by the PMT transit time spread~(TTS), giving an \textit{ex-Gaussian} or \textit{exponentially modified Gaussian}~\cite{li_separation_2016},
 \begin{align}
-    \phi(t) = \frac{1}{2\tau_\mathrm{l}} \exp\left(\frac{\sigma_\mathrm{l}^2}{2\tau_\mathrm{l}^2}-\frac{t}{\tau_\mathrm{l}}\right) \left[1 - \erf\left( \frac{\sigma_\mathrm{l}}{\sqrt{2}\tau_\mathrm{l}} - \frac{t}{\sqrt{2}\sigma_\mathrm{l}} \right)\right]
+    \phi(t) = \frac{1}{2\tau_\mathrm{l}} \exp\left(\frac{\sigma_\mathrm{l}^2}{2\tau_\mathrm{l}^2}-\frac{t}{\tau_\mathrm{l}}\right) \left[1 - \erf\left( \frac{\sigma_\mathrm{l}}{\sqrt{2}\tau_\mathrm{l}} - \frac{t}{\sqrt{2}\sigma_\mathrm{l}} \right)\right],
     \label{eq:time-pro}
 \end{align}
 where subscript $\mathrm{l}$ stands for ``light curve'' and $\sigma_\mathrm{l}$ encodes the timing uncertainty mainly from TTS. $\phi(t)$ of Cherenkov light is a pure Gaussian by taking $\tau_\mathrm{l} \rightarrow 0$. Figure~\ref{fig:time-pro} illustrates 3 examples of $\phi(t)$. 
@@ -38,13 +38,13 @@ A PE induced by a photon at the PMT photocathode is then accelerated, collected,
 
 S.~Jetter et al.~\cite{jetter_pmt_2012} parameterizes $V_\mathrm{PE}(t)$ as,
 \begin{equation}
-  V_\mathrm{PE}(t) = V_{0}\exp\left[-\frac{1}{2}\left(\frac{\log(t/\tau_\mathrm{PE})}{\sigma_\mathrm{PE}}\right)^{2}\right]
+  V_\mathrm{PE}(t) = V_{0}\exp\left[-\frac{1}{2}\left(\frac{\log(t/\tau_\mathrm{PE})}{\sigma_\mathrm{PE}}\right)^{2}\right],
   \label{eq:dayaspe}
 \end{equation}
 where shape parameters $\tau_\mathrm{PE}=\SI{8}{ns}$, $\sigma_\mathrm{PE}=\SI{0.5}{ns}$ and $V_{0}=\SI{14.08}{mV}$, see figure~\ref{fig:spe}.  A sample of PEs from the light curve $\phi(t)$ in eq.~\eqref{eq:time-pro} can be formulated as several delta functions, 
 \begin{equation}
   \label{eq:lc-sample}
-  \tilde{\phi}(t) = \sum_{i=1}^{N_{\mathrm{PE}}} q_i \delta(t-t_i)
+  \tilde{\phi}(t) = \sum_{i=1}^{N_{\mathrm{PE}}} q_i \delta(t-t_i),
 \end{equation}
 where $N_\mathrm{PE}$ is the number of PEs, following Poisson distribution with parameter $\mu$.  $t_i$ is the hit time of the $i$-th PE, $q_i$ is the relative charge of the $i$-th PE from charge distribution $\mathcal{N}(1,\sigma_\mathrm{q}^2)$.  $\sigma_\mathrm{q}$ is set to $0.4$ in our simulation.
 
@@ -73,7 +73,7 @@ To characterize $\hat{t}_\mathrm{1st}$ and $\hat{t}_\mathrm{ALL}$, we scan $\mu$
 \begin{figure}[H]
   \centering
   \resizebox{0.8\textwidth}{!}{\input{figures/vs-deltadiv.pgf}}
-  \caption{\label{fig:reso-diff} Time resolution comparisons between $\hat{t}_{\mathrm{ALL}}$~(solid lines, when using full PE information) and $\hat{t}_\mathrm{1st}$~(dashed lines, only using the first PE). The difference is manifested especially when $\sigma_\mathrm{l}$ and $\mu$ are large. The three cases of $(\tau_\mathrm{l}, \sigma_\mathrm{l})/\si{ns}$ represent the scintillation with ultra-fast PMTs~$(20, 0)$, Cherenkov~$(0, 5)$ and scintilation coupled with PMT TTS~$(20, 5)$. The performance of waveform analysis lies between $\sigma_{\mathrm{1st}}$ and $\sigma_{\mathrm{ALL}}$. }
+  \caption{\label{fig:reso-diff} Time resolution comparisons between $\hat{t}_{\mathrm{ALL}}$~(solid lines, when using information of all PEs) and $\hat{t}_\mathrm{1st}$~(dashed lines, only using the first PE). The difference is manifested especially when $\sigma_\mathrm{l}$ and $\mu$ are large. The three cases of $(\tau_\mathrm{l}, \sigma_\mathrm{l})/\si{ns}$ represent the scintillation with ultra-fast PMTs~$(20, 0)$, Cherenkov~$(0, 5)$ and scintilation coupled with PMT TTS~$(20, 5)$. The performance of waveform analysis lies between $\sigma_{\mathrm{1st}}$ and $\sigma_{\mathrm{ALL}}$. }
 \end{figure}
 
 Nevertheless, for $\sigma_\mathrm{l} > 0$ and $\mu >0$, the $\sigma_{\mathrm{1st}}$ significantly deteriorates from $\sigma_{\mathrm{ALL}}$.  For Cherenkov and scintillation experiments with non-negligible PMT TTS and occupancy, we shall explore more sophisticated waveform analysis algorithms to go beyond $\hat{t}_{\mathrm{1st}}$ and recover the accuracy of $\hat{t}_\mathrm{ALL}$ in eq.~\eqref{eq:2} from waveform in eq.~\eqref{eq:1}.
