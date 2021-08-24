@@ -1,4 +1,4 @@
-\section{Algorithms and their performance}
+  \section{Algorithms and their performance}
 \label{sec:algorithm}
 
 Waveform analysis is to obtain $t_i$ and $q_i$ estimators $\hat{t}_i$ and $\hat{q}_i$ from waveform $w(t)$, where the output indices $i$ are from 1 to $\hat{N}$ and $\hat{N}$ is an estimator of $N_\mathrm{PE}$ in eq.~\eqref{eq:lc-sample}. Figure~\ref{fig:io} illustrates the input $w(t)$ and the outputs $\bm{\hat{t}}, \hat{\bm{q}}$, where boldface $\hat{\bm{t}}$ denotes the vector $\hat{t}_i$. 
@@ -12,14 +12,14 @@ Waveform analysis is to obtain $t_i$ and $q_i$ estimators $\hat{t}_i$ and $\hat{
     \resizebox{\textwidth}{!}{\input{figures/charge.pgf}}
     \caption{\label{fig:output} Output $\hat{\bm{t}}, \hat{\bm{q}}$ obtained from \subref{fig:input}.}
   \end{subfigure}
-  \caption{\label{fig:io} Waveform analysis takes PMT waveform input in~\subref{fig:input} and outputs times $\hat{\bm{t}}$ and charges $\hat{\bm{q}}$ of the PEs in~\subref{fig:output}. }
+  \caption{\label{fig:io} Waveform analysis takes PMT waveform as input in~\subref{fig:input} and outputs times $\hat{\bm{t}}$ and charges $\hat{\bm{q}}$ of the PEs in~\subref{fig:output}. }
 \end{figure}
 
 The fluctuation of $q_i$ makes $\hat{t}_i$ ambiguous and $\hat{N}$ fail to estimate $N_\mathrm{PE}$. For example, 1, 2 and even 3~PEs can generate exactly the same charge as $1.6$.  A single PE charged $1$ may be mis-interpreted as 2~PEs at consecutive $\hat{t}_i$ and $\hat{t}_{i+1}$ with $\hat{q}_i=\hat{q}_{i+1}=0.5$.
 
 \subsection{Evaluation criteria}
 \label{sec:criteria}
-In the darkness of the $t_i/q_i$ ambiguity, we introduce a set of evaluation criteria to assess the algorithms' performance.
+Subject to such ambiguity of $t_i/q_i$, we introduce a set of evaluation criteria to assess the algorithms' performance.
 
 \subsubsection{Kullback-Leibler divergence}
 \label{sec:pseudo}
