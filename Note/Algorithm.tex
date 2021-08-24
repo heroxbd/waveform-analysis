@@ -70,7 +70,7 @@ Figure~\ref{fig:l2} demonstrates that if two functions donot overlap, the RSS of
 
 \begin{figure}[H]
   \centering
-  \resizebox{\textwidth}{!}{\input{figures/tab.pgf}}
+  \resizebox{0.6\textwidth}{!}{\input{figures/tab.pgf}}
   \caption{\label{fig:l2} REPLACE THIS FIGURE!  The RSS of red and blue curves is a function of the two shaded regions. It is a constant when the curves shifts horizontally provided they donot overlap.  In contract, the Wasserstein distance $D_w$ of the two curves is the distance between them.  It complements RSS and offers a time-sensitive metric suitable for the sparse PE space.}
 \end{figure}
 
@@ -92,12 +92,12 @@ By \textit{waveform shifting}, we extract more time information than TDC in a si
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/threshold.pgf}}
-    \caption{\label{fig:shifting} A waveform shifting example gives \\ $\Delta t_0=\SI{10.74}{ns}$, $\mathrm{RSS}=\SI{4805.4}{mV^2}$, $D_w=\SI{8.72}{ns}$.}
+    \caption{\label{fig:shifting} A waveform shifting example gives \\ $\Delta t_0=\SI{10.74}{ns}$, $\mathrm{RSS}=\SI{1950.9}{mV^2}$, $D_w=\SI{8.72}{ns}$.}
   \end{subfigure}
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/findpeak.pgf}}
-    \caption{\label{fig:peak} A peak finding example gives \\ $\Delta t_0=\SI{-1.93}{ns}$, $\mathrm{RSS}=\SI{317.3}{mV^2}$, $D_w=\SI{2.40}{ns}$.}
+    \caption{\label{fig:peak} A peak finding example gives \\ $\Delta t_0=\SI{-1.93}{ns}$, $\mathrm{RSS}=\SI{266.9}{mV^2}$, $D_w=\SI{2.40}{ns}$.}
   \end{subfigure}
   \caption{\label{fig:method}Demonstrations of heuristic methods on a waveform sampled from $\mu=4$, $\tau_\mathrm{l}=\SI{20}{ns}$, $\sigma_\mathrm{l}=\SI{5}{ns}$ light curve conditions.  Peak finding in~\subref{fig:peak} handles charges more realistically than waveform shifting in~\subref{fig:shifting}, giving better numbers in the three criteria.}
 \end{figure}

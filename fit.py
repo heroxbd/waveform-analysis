@@ -60,7 +60,7 @@ def fitting(a, b):
             elif method == 'threshold':
                 pet, cha = wff.threshold(wave, spe_pre[ent[i]['ChannelID']])
             pet, cha = wff.clip(pet, cha, Thres[method])
-            if method in ['xiaopeip', 'lucyddm', 'fftrans']:
+            if method in ['xiaopeip', 'lucyddm', 'fftrans', 'findpeak', 'threshold']:
                 if method == 'xiaopeip':
                     alpha = 1
                 else:
