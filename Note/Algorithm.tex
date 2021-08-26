@@ -66,12 +66,12 @@ Residual sum of squares~(RSS) of $\hat{w}(t)$ from $w(t)$ is a $\ell_2$-metric i
   \mathrm{RSS} \coloneqq\int\left[\hat{w}(t) - w(t)\right]^2\mathrm{d}t.
 \end{equation}
 
-Figure~\ref{fig:l2} demonstrates that if two functions donot overlap, the RSS of them remains constant no matter what their relative positions are.  The sampled light curves $\hat{\phi}(t)$ and $\tilde{\phi}(t)$ consist with delta functions and hardly overlap, therefore the RSS of them is useless.  Futhermore, RSS cannot compare a discrete function with a continuous one.  We shall only consider the RSS of waveforms.
+Figure~\ref{fig:l2} demonstrates that if two functions do not overlap, the RSS of them remains constant no matter what their relative positions are.  The sampled light curves $\hat{\phi}(t)$ and $\tilde{\phi}(t)$ consist with delta functions and hardly overlap, therefore the RSS of them is useless.  Futhermore, RSS cannot compare a discrete function with a continuous one.  We shall only consider the RSS of waveforms.
 
 \begin{figure}[H]
   \centering
   \resizebox{0.6\textwidth}{!}{\input{figures/tab.pgf}}
-  \caption{\label{fig:l2} REPLACE THIS FIGURE!  The RSS of red and blue curves is a function of the two shaded regions. It is a constant when the curves shifts horizontally provided they donot overlap.  In contract, the Wasserstein distance $D_w$ of the two curves is the distance between them.  It complements RSS and offers a time-sensitive metric suitable for the sparse PE space.}
+  \caption{\label{fig:l2} The RSS of red and blue curves is a function of the two shaded regions. It is a constant when the curves shift horizontally provided they do not overlap.  In contrast, the Wasserstein distance $D_w$ of the two curves is associated with the distance between them.  It complements RSS and offers a time-sensitive metric suitable for the sparse PE space.}
 \end{figure}
 
 \subsubsection{Wasserstein distance}
@@ -79,7 +79,7 @@ Figure~\ref{fig:l2} demonstrates that if two functions donot overlap, the RSS of
 
 \input{fom}
 
-We shall evaluate the performance of waveform analysis algorithms ranging from heuristics, deconvolution, neuron network to regression, by the discussed criteria in this section.
+In the following, we shall evaluate the performance of waveform analysis algorithms ranging from heuristics, deconvolution, neuron network to regression, by the discussed criteria in this section.
 
 \subsection{Heuristic methods}
 By directly extracting waveform features, heuristic methods are straightforward and widely used. 
@@ -99,7 +99,7 @@ By \textit{waveform shifting}, we extract more time information than TDC in a si
     \resizebox{\textwidth}{!}{\input{figures/findpeak.pgf}}
     \caption{\label{fig:peak} A peak finding example gives \\ $\Delta t_0=\SI{-1.93}{ns}$, $\mathrm{RSS}=\SI{266.9}{mV^2}$, $D_w=\SI{2.40}{ns}$.}
   \end{subfigure}
-  \caption{\label{fig:method}Demonstrations of heuristic methods on a waveform sampled from $\mu=4$, $\tau_\mathrm{l}=\SI{20}{ns}$, $\sigma_\mathrm{l}=\SI{5}{ns}$ light curve conditions.  Peak finding in~\subref{fig:peak} handles charges more realistically than waveform shifting in~\subref{fig:shifting}, giving better numbers in the three criteria.}
+  \caption{\label{fig:method}Demonstrations of heuristic methods on a waveform sampled from $\mu=4$, $\tau_\mathrm{l}=\SI{20}{ns}$, $\sigma_\mathrm{l}=\SI{5}{ns}$ light curve conditions.  Peak finding in~\subref{fig:peak} handles charges more realistically than waveform shifting in~\subref{fig:shifting}, giving better numbers by the three criteria in section \ref{sec:criteria}.}
 \end{figure}
 
 \subsubsection{Peak finding}
@@ -123,7 +123,7 @@ Deconvolution methods do more than heuristic ones by using the full shape of $V_
 By low-pass filtering the waveform $w(t)$ to get $\tilde{w}(t)$, we suppress the noise term $\epsilon$, take the inverse Fourier transform $\hat{\phi}_1(t) = \mathcal{F}^{-1}\left[\frac{\mathcal{F}[\tilde{w}]}{\mathcal{F}[V_\mathrm{PE}]}\right](t)$, and compute $\hat{\phi}(t)$ as the over-threshold $q_\mathrm{th}$ part of $\hat{\phi}_1(t)$,
 \begin{equation}
   \label{eq:fdconv2}
-    \hat{\phi}(t) = \hat{\alpha}\underbrace{\hat{\phi}_1(t) I(\hat{\phi}_1(t) - q_\mathrm{th})}_{\text{over-threshold part of} \hat{\phi}_1(t)}  
+    \hat{\phi}(t) = \hat{\alpha}\underbrace{\hat{\phi}_1(t) I\left(\hat{\phi}_1(t) - q_\mathrm{th}\right)}_{\text{over-threshold part of} \hat{\phi}_1(t)}  
 \end{equation}
 where $I(x)$ is the indicator function, and $\hat{\alpha}$ is a scaling factor to minimize RSS,
 \begin{equation*}
@@ -168,7 +168,7 @@ where $p(t, s)$ is the joint distribution of amplified electron $t$ and PE time 
   \label{eq:ptt}
   p(s|t) = \frac{\tilde{\phi}_*(s) V_{\mathrm{PE}*}(t-s)}{\tilde{w}_*(t)} = \frac{\tilde{\phi}(s) V_{\mathrm{PE}}(t-s)}{\int\tilde{\phi}(s') V_{\mathrm{PE}}(t-s')\mathrm{d}s'}.
 \end{equation}
-We construct $\phi_*$ recurrence relation,
+Then a recurrence relation $\phi_*$ is,
 \begin{equation}
   \label{eq:iter}
   \begin{aligned}
@@ -188,7 +188,7 @@ Convolutional neural networks~(CNN) made breakthroughs in various fields like co
 
 We choose a shallow network structure of 5 layers to recognize patterns as shown in figure~\ref{fig:struct} motivated by the pulse shape and universality of $V_\mathrm{PE}(t)$ for all the PE.  The convolutional widths are selected considering the localized nature of $V_\mathrm{PE}(t)$.
 
-The workflow of data processing consists of training and predicting. We find a mapping from waveform $w(t)$ to PE $\tilde{\phi}(t)$ with backpropagation method and supervised learning. We formulate the loss as the Wasserstein distance $D_w$ between the truth $\tilde{\phi}$ and predicted $\hat{\phi}(t)$ to minimize it when training. As discussed in section~\ref{sec:W-dist}, $D_w$ is chosen to handle the PE sparsity in training iterations. Figure~\ref{fig:loss} shows the convergence of Wasserstein distance during training.
+The workflow of data processing consists of training and predicting. We find a mapping from waveform $w(t)$ to PE $\tilde{\phi}(t)$ with backpropagation method and supervised learning. We formulate the training loss to optimize $D_w\left[\hat{\phi}, \tilde{\phi}\right] $, the Wasserstein distance between the truth $\tilde{\phi}$ and predicted $\hat{\phi}(t)$. As discussed in section~\ref{sec:W-dist}, $D_w$ can handle the PE sparsity in training iterations. Figure~\ref{fig:loss} shows the convergence of Wasserstein distance during training.
 
 \begin{figure}[H]
   \begin{subfigure}{0.35\textwidth}
@@ -203,7 +203,7 @@ The workflow of data processing consists of training and predicting. We find a m
     \resizebox{\textwidth}{!}{\input{figures/epoch.pgf}}
     \caption{\label{fig:loss} Evolution of loss.}
   \end{subfigure}
-  \caption{\label{fig:CNN} Training process of a CNN. A shallow network structure of 5 layers in~\subref{fig:struct} is trained to convergence in Wasserstein distance as shown in~\subref{fig:loss}.}
+  \caption{\label{fig:CNN} Training process of a CNN. A shallow network structure of 5 layers in~\subref{fig:struct} is trained to converge in Wasserstein distance as shown in~\subref{fig:loss}.}
 \end{figure}
 The output of CNN is scaled by $\hat{\alpha}$ following eq.~\eqref{eq:fdconv2} to get $\hat{\phi}$.
 
@@ -220,12 +220,12 @@ In figure~\ref{fig:cnn-npe} it is reasonable that $D_w$ is the smallest for one 
     \resizebox{\textwidth}{!}{\input{figures/takara.pgf}}
     \caption{\label{fig:cnn}An example giving \\ $\Delta t_0=\SI{-3.05}{ns}$, $\mathrm{RSS}=\SI{10.0}{mV^2}$, $D_w=\SI{0.64}{ns}$.}
   \end{subfigure}
-  \caption{Demonstration of CNN on $\num[retain-unity-mantissa=false]{1e4}$ waveforms in~\subref{fig:cnn-npe} and one waveform in~\subref{fig:cnn} sampled from the same setup as fig.~\ref{fig:method}.}
+  \caption{Demonstration of CNN on $\num[retain-unity-mantissa=false]{1e4}$ waveforms in~\subref{fig:cnn-npe} and one waveform in~\subref{fig:cnn} sampled from the same setup as figure~\ref{fig:method}.}
 \end{figure}
 
 \subsection{Regression analysis}
 \label{sec:regression}
-With the generative waveform model in~\eqref{eq:1}, regression is the best for waveform analysis. Although computational complexity hinders the applications of regression in vast volumes of raw data, the advancement of big data infrastructure and sparsity research make the advantage of regression more pronounced.
+With the generative waveform model in eq.~\eqref{eq:1}, regression is the best for waveform analysis. Although computational complexity hinders the applications of regression in vast volumes of raw data, the advancement of big data infrastructure and sparsity research make the advantage of regression more pronounced.
 
 We replace $\hat{N}$ with a fixed sample size $N_s$ and $\hat{t}_i$ with a fixed vector of times $t'_i$ in equation~\ref{eq:w-hat} and obtain, 
 \begin{equation}
