@@ -228,15 +228,15 @@ In figure~\ref{fig:cnn-npe} it is reasonable that $D_w$ is the smallest for one 
 \label{sec:regression}
 With the generative waveform model in eq.~\eqref{eq:1}, regression is the best for analysis. Although computational complexity hinders the applications of regression due to the vast volumes of raw data, the advancement of big data infrastructure and sparsity strengthens the advantage of regression.
 
-We replace $\hat{N}$ with a fixed sample size $N_s$ and $\hat{t}_i$ with a fixed vector of times $t'_i$ in eq.~\eqref{eq:w-hat}, 
+We replace $\hat{N}$ with a fixed sample size $N_\mathrm{s}$ and $\hat{t}_i$ with a fixed vector of times $t'_i$ in eq.~\eqref{eq:w-hat}, 
 \begin{equation}
   \label{eq:gd}
-  w'(t) = \sum_{i=1}^{N_s}q'_iV_\mathrm{PE}(t-t'_i).
+  w'(t) = \sum_{i=1}^{N_\mathrm{s}}q'_iV_\mathrm{PE}(t-t'_i).
 \end{equation}
 When $\{t'_i\}$ is dense enough, $\{\hat{q}_i\}$ determines the inferred PE distribution $\hat{\phi}(t)$,
 \begin{equation}
   \label{eq:gd-phi}
-  \hat{\phi}(t) = \sum_{i=1}^{N_s}\hat{q}_i\delta(t-t'_i).
+  \hat{\phi}(t) = \sum_{i=1}^{N_\mathrm{s}}\hat{q}_i\delta(t-t'_i).
 \end{equation}
 From the output $\hat{\phi}_\mathrm{dec}(t)$ of a deconvolution method in section~\ref{sec:lucyddm}, we confidently leave out all the $t'_i$ that $\hat{\phi}_\mathrm{dec}(t_i')=0$ in eq.~\eqref{eq:gd-phi} to reduce the number of parameters and the complexity.
 
@@ -244,6 +244,7 @@ From the output $\hat{\phi}_\mathrm{dec}(t)$ of a deconvolution method in sectio
 We have attempted to replace the dense $\bm{t'}$ grid in equation~\eqref{eq:gd} with a length-varying vector of sparse PEs. However, the truth $N_\mathrm{PE}$ is unknown and formulating an explicit trans-dimensional model is expansive. 
 
 \subsubsection{Direct charge fitting}
+\label{sec:dcf}
 
 Fitting the charges $q'_i$ in eq.~\eqref{eq:gd} directly by minimizing RSS of $w'(t)$ and $w(t)$, we get
 \begin{equation}
@@ -261,60 +262,57 @@ Slawski and Hein~\cite{slawski_non-negative_2013} prove that in deconvolution pr
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/xiaopeip.pgf}}
-    \caption{\label{fig:fitting}An example giving $\Delta{t_0}=\SI{-3.22}{ns}$, $\mathrm{RSS}=\SI{7.63}{mV^2}$,$D_w=\SI{0.68}{ns}$}
+    \caption{\label{fig:fitting}An example giving \\ $\Delta{t_0}=\SI{-3.22}{ns}$, $\mathrm{RSS}=\SI{7.63}{mV^2}$,$D_w=\SI{0.68}{ns}$.}
   \end{subfigure}
-  \caption{Demonstration of direct charge fitting with $\num[retain-unity-mantissa=false]{1e4}$ waveforms in~\subref{fig:fitting-npe} and one waveform in~subref{fig:fitting} sampled from the same setup as figure~\ref{fig:method}.  Direct charge fitting shows a better performance than LucyDDM in figure~\ref{fig:lucy} and a comparable $D_w$ to CNN in figure~\ref{fig:cnn}.}
+  \caption{\label{fig:dcf}Demonstration of direct charge fitting with $\num[retain-unity-mantissa=false]{1e4}$ waveforms in~\subref{fig:fitting-npe} and one waveform in~subref{fig:fitting} sampled from the same setup as figure~\ref{fig:method}.  Direct charge fitting shows a better performance than LucyDDM in figure~\ref{fig:lucy} and a comparable $D_w$ to CNN in figure~\ref{fig:cnn}.}
 \end{figure}
 
-In figure~\ref{fig:fitting}, sparsity of $q'_i$ is evident as speculated.  However, the majority of the results $\hat{q}_i$ is less than 1.  That motivates us to incorporate prior knowledge of $q'_i$ towards a more sparse and performant model.
+In figure~\ref{fig:fitting}, sparsity of $q'_i$ is evident as speculated.  However, the majority of the results $\hat{q}_i$ is less than 1.  That motivates us to incorporate prior knowledge of $q'_i$ towards a more sparse and performant model than directly fitting charges.
 
 
 \subsubsection{Markov chain Monte Carlo}
 \label{subsec:mcmc}
-The optimization problem in equation~\eqref{eq:gd-q} is generally not convex and sticks in local minima. Markov Chain Monte Carlo~(MCMC) has the potential to overcome this difficulty.
-
-Hamiltonian Monte Carlo~(HMC) is an efficient MCMC for high dimensional distributions~\cite{neal_mcmc_2012} such as the posterior of charge $\bm{q'}$. The posterior is combined with a $\bm{q'}$ prior conditioned on $t_0$ to form a hierarchical model, 
+Chaining the $q'_i$ distribution~(section~\ref{subsec:spe}), the charge fitting eq.~\eqref{eq:gd-q} and the light curve eq.~\eqref{eq:time-pro}, we arrive at a hierarchical Bayesian model in eq.~\eqref{eq:mixnormal}.
 \begin{equation}
   \begin{aligned}
-    t_{0} &\sim \mathrm{Uniform}(0, \overline{t_0}) \\
+    t_{0} &\sim \mathcal{U}(0, \overline{t_0}) \\
     p_i &= \mu \int_{t'_i-\frac{\Delta t'}{2}}^{t'_i+\frac{\Delta t'}{2}} \phi(t' - t_0)\mathrm{d}t' \approx \mu\phi(t'_i - t_0)\Delta{t'} \\
-    z_i &\sim \mathrm{Binomial}(p_i) \\
+    z_i &\sim \mathcal{B}(p_i) \\
     q'_{i,0}&=0\\
-    q'_{i,1}& \sim \mathrm{Normal}(1, \sigma_q)\\
+    q'_{i,1}& \sim \mathcal{N}(1, \sigma_q)\\
     q'_i &= q'_{i,z_i}\\
-    w'(t) & = \sum_{i=1}^{N_s}q'_iV_\mathrm{PE}(t-t'_i)\\
-    w(t) &\sim \mathrm{Normal}(w'(t), \sigma_\epsilon)
+    w'(t) & = \sum_{i=1}^{N_\mathrm{s}}q'_iV_\mathrm{PE}(t-t'_i)\\
+    w(t) &\sim \mathcal{N}(w'(t), \sigma_\epsilon)
   \end{aligned}
   \label{eq:mixnormal}
 \end{equation}
-where $t_{0}$ is sampled from a uniform prior with an upper bound $\overline{t_{0}}$, and $p_i$ the expection of a PE hitting $(t_{i} - \frac{\Delta t'}{2}, t_{i} + \frac{\Delta t'}{2})$ when $\Delta t'$ is small enough. $q'_i$ is a mixture of 0 (no PE) and normally distributed $q'_{i,1}$ (1 PE). The inferred waveform $w'(t)$ differs from observable $w(t)$ by a white noise $\epsilon(t) \sim \mathrm{Normal}(0, \sigma_\epsilon)$. When $\Delta{t'} \to 0$, equation~\eqref{eq:mixnormal} is equivalent to equation~\eqref{eq:1} up to a shift by $t_0$. Instead of using $N_\mathrm{PE}$ to govern the number of pairs $(t_i, q_i)$, we encode the trans-dimensionality implicitly by $z_i$ to turn on or off $q'_i$. 
+where $\mathcal{U}$ and $\mathcal{B}$ stands for uniform and Bernoulli distributions, $\overline{t_0}$ is an upper bound of $t_0$, and $q'_i$ is a mixture of 0 (no PE) and normally distributed $q'_{i,1}$ (1 PE). When expection $p_i$ of a PE hitting $(t'_{i} - \frac{\Delta t'}{2}, t'_{i} + \frac{\Delta t'}{2})$ is small enough, that 0-1 approximation is valid.  The inferred waveform $w'(t)$ differs from observable $w(t)$ by a white noise $\epsilon(t) \sim \mathcal{N}(0, \sigma_\epsilon)$ motivated by eq.~\eqref{eq:1}.  When a indicator $z_i=0$, it turns off $q'_i$, reducing the number of parameters by one.  That is how eq.~\eqref{eq:mixnormal} achieves sparsity.
 
-We generate posterior samples of $t_0$ and $\bm{q'}$ by HMC. Ergodicity of HMC prevents a local maxima from trapping the sampler. We use NumPyro~\cite{phan2019composable}, a graceful probabilistic programming library, to drive the HMC. 
-
-We construct $\hat{t}_0$ and $\hat{q}_i$ as the mean estimators of posterior samples. Unlike the pseudo-likelihood $\hat{t}_\mathrm{KL}$ discussed in section~\ref{sec:pseudo}, $\hat{t}_0$ is a genuine Bayesian estimator. We construct $\hat{\phi}(t)$ as, 
+We generate posterior samples of $t_0$ and $\bm{q'}$ by Hamiltonian Monte Carlo~(HMC)~\cite{neal_mcmc_2012}, a variant of Markov chain Monte Carlo that is suitable to high-dimensional problems. Construct $\hat{t}$ and $\hat{q}_i$ as the mean estimators of posterior samples $t_0$ and $q'_i$ at $z_i=1$.  Unlike the $\hat{t}_\mathrm{KL}$ discussed in section~\ref{sec:pseudo}, $\hat{t}$ is a direct Bayesian estimator from eq.~\eqref{eq:mixnormal}.  We construct $\hat{\phi}(t)$ by eq.~\eqref{eq:gd-phi} and $\hat{w}(t)$ by
 \begin{equation}
-  \label{eq:mcmc-phi}
-  \hat{\phi}(t) = \sum_{i=1}^{N_s}\hat{q}_i\delta(t-t'_i).
+  \label{eq:mcmc-w}
+  \hat{w}(t) = \sum_{i=1}^{N_\mathrm{s}}\hat{q}_iV_\mathrm{PE}(t-t'_i).
 \end{equation}
+$D_w$ and RSS are then calculated accordingly.
 
-$D_w$ with $\mu=4, \tau_\mathrm{l}=\SI{20}{ns}$, and $\sigma_\mathrm{l}=\SI{5}{ns}$ is shown in figure~\ref{fig:mcmc-npe}.
 \begin{figure}[H]
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/mcmcchargestats.pgf}}
-    \caption{\label{fig:mcmc-npe} $D_w$ vs $N_{\mathrm{PE}}$ Box plot \& Histogram}
+    \caption{\label{fig:mcmc-npe} $D_w$ histogram and its distributions conditioned \\ on $N_{\mathrm{PE}}$.}
   \end{subfigure}
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/mcmc.pgf}}
-    \caption{\label{fig:mcmc}$\mathrm{RSS}=\SI{16.25}{mV^2},D_w=\SI{0.76}{ns},\Delta{t_0}=\SI{-2.48}{ns}$}
+    \caption{\label{fig:mcmc}An example with \\ $\Delta{t_0}=\SI{-2.48}{ns}$, $\mathrm{RSS}=\SI{16.25}{mV^2}$, $D_w=\SI{0.76}{ns}$.}
   \end{subfigure}
-  \caption{MCMC results when $\mu=4, \tau_\mathrm{l}=\SI{20}{ns}, \sigma_\mathrm{l}=\SI{5}{ns}$ show in~\subref{fig:mcmc-npe}. The horizontal axis of the right subplot is in arbitrary unit. A demonstration shows in~\subref{fig:mcmc}.}
+  \caption{Demonstration of MCMC with $\num[retain-unity-mantissa=false]{1e4}$ waveforms in~\subref{fig:fitting-npe} and one waveform in~subref{fig:fitting} sampled from the same setup as figure~\ref{fig:method}.  Although using a more dedicated model, MCMC performs worse than direct charge fitting in figure~\ref{fig:dcf}. We suspect the chain is not long enough.}
 \end{figure}
+Although we imposed a $\mathcal{N}(1, \sigma_q)$ prior, The charges $\hat{q}_i$ in figure~\ref{fig:fitting} are still less than 1.  The $D_w$ marginal distribution in figure~\ref{fig:mcmc-npe} is less smooth than that of direct charge fitting in figure~\ref{fig:fitting-npe}.  Similarly, RSS in figure~\ref{fig:mcmc} is slightly worse than that in figure~\ref{fig:fitting}.  We suspect the markov chain has not finally converged due to the trans-dimensional property of eq.~\eqref{eq:mixnormal}.  Enlonging the burning and chain is not a solution because MCMC is already much slower than direct fitting in section~\ref{sec:dcf}.  We need an algorithm that keeps the model of eq.~\eqref{eq:mixnormal} but much faster than MCMC.
 
 \subsubsection{Fast Bayesian matching pursuit}
 \label{subsec:fbmp}
-We find that $w(t)$ is a Gaussian process subject to $\bm{z}$,
+Considering the distribution of $q'_i$, $w(t)$ in eq.~\eqref{eq:mixnormal} is a Gaussian process subject to $\bm{z}$,
 \begin{equation}
     w(t)|\bm{z} \sim \mathcal{GP}\left[\sum_{i|z_i=1}V_\mathrm{PE}(t-t'_i), \sigma_q^2 \sum_{i|z_i=1}V_\mathrm{PE}(t'_i-t)V_\mathrm{PE}(s-t'_i) + \sigma_\epsilon^2 \right],
 \end{equation}
@@ -378,7 +376,7 @@ The logarithm numerator of \eqref{eq:z}
     \label{eq:metric}
     \begin{aligned}
         \nu =& \log[p(\bm{w},\bm{z})] = \log[p(\bm{w}|\bm{z})p(\bm{z})] \\
-        =& -\frac{1}{2}(\bm{w}-\bm{V}_\mathrm{PE}\bm{z})^\intercal\bm{\Sigma}_z^{-1}(\bm{w}-\bm{V}_\mathrm{PE}\bm{z})-\frac{1}{2}\log\det\bm{\Sigma}_z-\frac{N_s}{2}\log2\pi \\
+        =& -\frac{1}{2}(\bm{w}-\bm{V}_\mathrm{PE}\bm{z})^\intercal\bm{\Sigma}_z^{-1}(\bm{w}-\bm{V}_\mathrm{PE}\bm{z})-\frac{1}{2}\log\det\bm{\Sigma}_z-\frac{N_\mathrm{s}}{2}\log2\pi \\
         & +\sum_{i}\log{\mathrm{Poisson}(z_i,\mu_i)}
     \end{aligned}
 \end{equation}
