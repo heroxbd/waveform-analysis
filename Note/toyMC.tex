@@ -41,7 +41,7 @@ S.~Jetter et al.~\cite{jetter_pmt_2012} parameterizes $V_\mathrm{PE}(t)$ as,
   V_\mathrm{PE}(t) = V_{0}\exp\left[-\frac{1}{2}\left(\frac{\log(t/\tau_\mathrm{PE})}{\sigma_\mathrm{PE}}\right)^{2}\right],
   \label{eq:dayaspe}
 \end{equation}
-where shape parameters $\tau_\mathrm{PE}=\SI{8}{ns}$, $\sigma_\mathrm{PE}=\SI{0.5}{ns}$ and $V_{0}=\SI{14.08}{mV}$, see figure~\ref{fig:spe}.  A sample of PEs from the light curve $\phi(t)$ in eq.~\eqref{eq:time-pro} can be formulated as several delta functions, 
+where shape parameters $\tau_\mathrm{PE}=\SI{8}{ns}$, $\sigma_\mathrm{PE}=\SI{0.5}{ns}$ and $V_{0}=\SI{14.08}{mV}$, see figure~\ref{fig:spe}.  A sample of PEs from the light curve $\phi(t)$ in eq.~\eqref{eq:time-pro} can be formulated as several delta functions, also known as sparse spike train~\cite{levy_reconstruction_1981}, 
 \begin{equation}
   \label{eq:lc-sample}
   \tilde{\phi}(t) = \sum_{i=1}^{N_{\mathrm{PE}}} q_i \delta(t-t_i),
