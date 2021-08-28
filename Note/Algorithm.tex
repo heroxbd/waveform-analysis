@@ -157,6 +157,7 @@ Figure~\ref{fig:fd} illustrates that fourier deconvolution outperforms heuristic
 \end{figure}
 
 \subsubsection{Richardson-Lucy direct demodulation}
+\label{sec:lucyddm}
 
 \textit{Richardson-Lucy direct demodulation}~(LucyDDM)~\cite{lucy_iterative_1974} with a non-linear iteration to calculate deconvolution has a wide application in astronomy~\cite{li_richardson-lucy_2019} and image processing. We view $V_{\mathrm{PE}*}(t-s)$ as a conditional probability distribution $p(t|s)$ where $t$ denotes PMT amplified electron time and $s$ denotes the given PE time. By the Bayesian rule,
 \begin{equation}
@@ -225,33 +226,32 @@ In figure~\ref{fig:cnn-npe} it is reasonable that $D_w$ is the smallest for one 
 
 \subsection{Regression analysis}
 \label{sec:regression}
-With the generative waveform model in eq.~\eqref{eq:1}, regression is the best for waveform analysis. Although computational complexity hinders the applications of regression in vast volumes of raw data, the advancement of big data infrastructure and sparsity research make the advantage of regression more pronounced.
+With the generative waveform model in eq.~\eqref{eq:1}, regression is the best for analysis. Although computational complexity hinders the applications of regression due to the vast volumes of raw data, the advancement of big data infrastructure and sparsity strengthens the advantage of regression.
 
-We replace $\hat{N}$ with a fixed sample size $N_s$ and $\hat{t}_i$ with a fixed vector of times $t'_i$ in equation~\ref{eq:w-hat} and obtain, 
+We replace $\hat{N}$ with a fixed sample size $N_s$ and $\hat{t}_i$ with a fixed vector of times $t'_i$ in eq.~\eqref{eq:w-hat}, 
 \begin{equation}
   \label{eq:gd}
   w'(t) = \sum_{i=1}^{N_s}q'_iV_\mathrm{PE}(t-t'_i).
 \end{equation}
-
 When $\{t'_i\}$ is dense enough, $\{\hat{q}_i\}$ determines the inferred PE distribution $\hat{\phi}(t)$,
 \begin{equation}
   \label{eq:gd-phi}
   \hat{\phi}(t) = \sum_{i=1}^{N_s}\hat{q}_i\delta(t-t'_i).
 \end{equation}
+From the output $\hat{\phi}_\mathrm{dec}(t)$ of a deconvolution method in section~\ref{sec:lucyddm}, we can confidently leave out all the $t'_i$ that $\hat{\phi}_\mathrm{dec}(t_i')=0$ in eq.~\eqref{eq:gd-phi} to reduce the number of parameters.
 
-We have attempted to replace the dense $\bm{t'}$ grid in equation~\eqref{eq:gd} with a length-varying vector of sparse PEs. However, the truth $N_\mathrm{PE}$ is unknown, which prevents formulating an explicit trans-dimensional model. 
 
-Because the output $\hat{\phi}(t)$ from a deconvolution method~(section~\ref{sec:deconv}) covers locations of non-zero $\bm{q}'$, it can initialize the $\bm{t}'$ grid to reduce $N_s$ with discretization and consequently the time consumption. 
+We have attempted to replace the dense $\bm{t'}$ grid in equation~\eqref{eq:gd} with a length-varying vector of sparse PEs. However, the truth $N_\mathrm{PE}$ is unknown and formulating an explicit trans-dimensional model is expansive. 
 
-\subsubsection{Gradient descent}
+\subsubsection{Direct charge fitting}
 
-We construct estimators $\hat{q}_i$ by minimizing RSS of $w'(t)$ and $w(t)$, 
+Fitting the charges $q'_i$ in eq.~\eqref{eq:gd} directly by minimizing RSS of $w'(t)$ and $w(t)$, we get
 \begin{equation}
   \label{eq:gd-q}
   \bm{\hat{q}} = \arg \underset{\bm{q'}}{\min} \mathrm{RSS}\left[w'(t),w(t)\right].
 \end{equation}
 
-We realize an optimizer by a limited-memory Broyden-Fletcher-Goldfarb-Shanno algorithm with a bound constraint~\cite{byrd_limited_1995}. It imposes constraints that $q'_i > 0$. However, because this method minimizes RSS, we do not scale the converged $\bm{\hat{q}}$. The demonstration~\ref{fig:fitting} here shows a result with $D_w = \SI{0.68}{ns}$.
+We optimize eq.~\eqref{eq:gd-q} with constraint $q'_i \ge 0$ by Broyden-Fletcher-Goldfarb-Shanno algorithm with a bound constraint~\cite{byrd_limited_1995}. To However, because this method minimizes RSS, we do not scale the converged $\bm{\hat{q}}$. The demonstration~\ref{fig:fitting} here shows a result with $D_w = \SI{0.68}{ns}$.
 
 \begin{figure}[H]
   \begin{subfigure}{.5\textwidth}
@@ -312,7 +312,7 @@ $D_w$ with $\mu=4, \tau_\mathrm{l}=\SI{20}{ns}$, and $\sigma_\mathrm{l}=\SI{5}{n
   \caption{MCMC results when $\mu=4, \tau_\mathrm{l}=\SI{20}{ns}, \sigma_\mathrm{l}=\SI{5}{ns}$ show in~\subref{fig:mcmc-npe}. The horizontal axis of the right subplot is in arbitrary unit. A demonstration shows in~\subref{fig:mcmc}.}
 \end{figure}
 
-\subsubsection{Fast Bayesian Matching Pursuit}
+\subsubsection{Fast Bayesian matching pursuit}
 \label{subsec:fbmp}
 We find that $w(t)$ is a Gaussian process subject to $\bm{z}$,
 \begin{equation}
