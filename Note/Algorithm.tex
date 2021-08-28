@@ -264,7 +264,7 @@ Slawski and Hein~\cite{slawski_non-negative_2013} prove that in deconvolution pr
     \resizebox{\textwidth}{!}{\input{figures/xiaopeip.pgf}}
     \caption{\label{fig:fitting}An example giving \\ $\Delta{t_0}=\SI{-3.22}{ns}$, $\mathrm{RSS}=\SI{7.63}{mV^2}$,$D_w=\SI{0.68}{ns}$.}
   \end{subfigure}
-  \caption{\label{fig:dcf}Demonstration of direct charge fitting with $\num[retain-unity-mantissa=false]{1e4}$ waveforms in~\subref{fig:fitting-npe} and one waveform in~subref{fig:fitting} sampled from the same setup as figure~\ref{fig:method}.  Direct charge fitting shows a better performance than LucyDDM in figure~\ref{fig:lucy} and a comparable $D_w$ to CNN in figure~\ref{fig:cnn}.}
+  \caption{\label{fig:dcf}Demonstration of direct charge fitting with $\num[retain-unity-mantissa=false]{1e4}$ waveforms in~\subref{fig:fitting-npe} and one waveform in~\subref{fig:fitting} sampled from the same setup as figure~\ref{fig:method}.  Direct charge fitting shows a better performance than LucyDDM in figure~\ref{fig:lucy} and a comparable $D_w$ to CNN in figure~\ref{fig:cnn}.}
 \end{figure}
 
 In figure~\ref{fig:fitting}, sparsity of $q'_i$ is evident as speculated.  However, the majority of the results $\hat{q}_i$ is less than 1.  That motivates us to incorporate prior knowledge of $q'_i$ towards a more sparse and performant model than directly fitting charges.
@@ -306,9 +306,9 @@ $D_w$ and RSS are then calculated accordingly.
     \resizebox{\textwidth}{!}{\input{figures/mcmc.pgf}}
     \caption{\label{fig:mcmc}An example with \\ $\Delta{t_0}=\SI{-2.48}{ns}$, $\mathrm{RSS}=\SI{16.25}{mV^2}$, $D_w=\SI{0.76}{ns}$.}
   \end{subfigure}
-  \caption{Demonstration of MCMC with $\num[retain-unity-mantissa=false]{1e4}$ waveforms in~\subref{fig:fitting-npe} and one waveform in~subref{fig:fitting} sampled from the same setup as figure~\ref{fig:method}.  Although using a more dedicated model, MCMC performs worse than direct charge fitting in figure~\ref{fig:dcf}. We suspect the chain is not long enough.}
+  \caption{Demonstration of MCMC with $\num[retain-unity-mantissa=false]{1e4}$ waveforms in~\subref{fig:mcmc-npe} and one waveform in~\subref{fig:mcmc} sampled from the same setup as figure~\ref{fig:method}.  Although using a more dedicated model, MCMC performs worse than direct charge fitting in figure~\ref{fig:dcf}. We suspect the chain is not long enough.}
 \end{figure}
-Although we imposed a $\mathcal{N}(1, \sigma_q)$ prior, The charges $\hat{q}_i$ in figure~\ref{fig:fitting} are still less than 1.  The $D_w$ marginal distribution in figure~\ref{fig:mcmc-npe} is less smooth than that of direct charge fitting in figure~\ref{fig:fitting-npe}.  Similarly, RSS in figure~\ref{fig:mcmc} is slightly worse than that in figure~\ref{fig:fitting}.  We suspect the markov chain has not finally converged due to the trans-dimensional property of eq.~\eqref{eq:mixnormal}.  Enlonging the burning and chain is not a solution because MCMC is already much slower than direct fitting in section~\ref{sec:dcf}.  We need an algorithm that keeps the model of eq.~\eqref{eq:mixnormal} but much faster than MCMC.
+Although we imposed a $\mathcal{N}(1, \sigma_q)$ prior, The charges $\hat{q}_i$ in figure~\ref{fig:fitting} are still less than 1.  The $D_w$ marginal distribution in figure~\ref{fig:mcmc-npe} is less smooth than that of direct charge fitting in figure~\ref{fig:fitting-npe}.  Similarly, RSS in figure~\ref{fig:mcmc} is slightly worse than that in figure~\ref{fig:fitting}.  We suspect the markov chain has not finally converged due to the trans-dimensional property of eq.~\eqref{eq:mixnormal}.  Enlonging the burning and chain is not a solution because MCMC is already much slower than direct fitting in section~\ref{sec:dcf}.  We need an algorithm that pertains the model of eq.~\eqref{eq:mixnormal} but much faster than MCMC.
 
 \subsubsection{Fast Bayesian matching pursuit}
 \label{subsec:fbmp}
