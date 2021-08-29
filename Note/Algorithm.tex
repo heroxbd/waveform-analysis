@@ -358,8 +358,8 @@ gives the probability of $\bm{w}$ subject to $\mu$ and $t_0$ with the correspond
   \label{eq:VI}
   \begin{aligned}
     p_\Omega(\bm{z}) &= \begin{cases}
-      \frac{p(\bm{w},\bm{z})}{\sum_{z' \in \Omega} p(\bm{w},\bm{z}')} & \text{ if } \bm{z} \in S \\ 
-      0 & \text{ if } \bm{z} \notin S
+      \frac{p(\bm{w},\bm{z})}{\sum_{z' \in \Omega} p(\bm{w},\bm{z}')} & \text{ if } \bm{z} \in \Omega \\ 
+      0 & \text{ if } \bm{z} \notin \Omega
     \end{cases}\\
     \log p(\bm{w}) - D_\mathrm{KL}\left[p_\Omega(\bm{z}) \parallel p(\bm{z}|\bm{w})\right] &= \sum_z p_\Omega(\bm{z}) \log \frac{p(\bm{w}) p(\bm{z}|\bm{w})}{p_\Omega(\bm{z})} \\
     &= \log \sum_{z \in \Omega} p(\bm{w}, \bm{z}).
