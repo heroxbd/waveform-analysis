@@ -60,10 +60,10 @@ Following eqs.~\eqref{eq:1} and~\eqref{eq:lc}, we construct an estimator of a wa
   \label{eq:w-hat}
   \hat{w}(t) = \sum_{i=1}^{\hat{N}}\hat{q}_i V_\mathrm{PE}(t-\hat{t}_i) = \hat{\phi}(t) \otimes V_\mathrm{PE}(t).
 \end{equation}
-Residual sum of squares~(RSS) of $\hat{w}(t)$ from $w(t)$ is a $\ell_2$-metric inspired by the Gaussian noise term in \eqref{eq:1},
+Residual sum of squares~(RSS) of $\hat{w}(t)$ from $\tilde{w}(t)$ is a $\ell_2$-metric,
 \begin{equation}
   \label{eq:rss}
-  \mathrm{RSS} \coloneqq\int\left[\hat{w}(t) - w(t)\right]^2\mathrm{d}t.
+  \mathrm{RSS} \coloneqq\int\left[\hat{w}(t) - \tilde{w}(t)\right]^2\mathrm{d}t.
 \end{equation}
 
 Figure~\ref{fig:l2} demonstrates that if two functions do not overlap, the RSS of them remains constant no matter what their relative positions are.  The sampled light curves $\hat{\phi}(t)$ and $\tilde{\phi}(t)$ consist with delta functions and hardly overlap, therefore the RSS of them is useless.  Futhermore, RSS cannot compare a discrete function with a continuous one.  We shall only consider the RSS of waveforms.
