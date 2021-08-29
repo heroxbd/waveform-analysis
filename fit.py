@@ -48,9 +48,10 @@ def fitting(a, b):
 
             time_method_start = time.time()
             if method == 'xiaopeip':
-#                 pet, cha, ped = wff.xiaopeip(wave, spe_pre[ent[i]['ChannelID']])
-#                 wave = wave - ped
-                pet, cha = wff.xiaopeip(wave, spe_pre[ent[i]['ChannelID']], eta=0)
+                # pet, cha, ped = wff.xiaopeip(wave, spe_pre[ent[i]['ChannelID']])
+                # wave = wave - ped
+                # pet, cha = wff.xiaopeip(wave, spe_pre[ent[i]['ChannelID']], eta=0)
+                pet, cha = wff.xiaopeip_new(wave, spe_pre[ent[i]['ChannelID']], Tau, Sigma, 0.1, p, eta=0)
             elif method == 'lucyddm':
                 pet, cha = wff.lucyddm(wave, spe_pre[ent[i]['ChannelID']]['spe'])
             elif method == 'fftrans':

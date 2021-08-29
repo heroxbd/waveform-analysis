@@ -54,8 +54,8 @@ def xiaopeip(wave, spe_pre, eta=0):
         pet = lowp - spe_pre['peak_c']
         pet = np.unique(np.clip(pet, 0, len(wave)-1))
         if len(pet) != 0:
-#             cha, ped = xiaopeip_core(wave, spe_pre['spe'], fitp, pet, eta=eta)
-            cha = xiaopeip_core(wave, spe_pre['spe'], fitp, pet, eta=eta)
+            # cha, ped = xiaopeip_core(wave, spe_pre['spe'], fitp, pet, eta=eta)
+            cha = xiaopeip_core(wave[fitp], spe_pre['spe'], fitp, pet, eta=eta)
         else:
             flag = 0
     else:
@@ -63,8 +63,17 @@ def xiaopeip(wave, spe_pre, eta=0):
     if flag == 0:
         pet = np.array([np.argmax(wave[spe_pre['peak_c']:])])
         cha = np.array([1])
-#     return pet, cha, ped
+    # return pet, cha, ped
     return pet, cha
+
+def xiaopeip_new(wave, spe_pre, Tau, Sigma, Thres, p, eta=0):
+    nsp = 4
+    nstd = 3
+    _, wave_r, tlist, _, _, _, left_wave, right_wave = initial_params(wave, spe_pre, Tau, Sigma, gmu, Thres, p, nsp, nstd, is_t0=False, is_delta=False, n=1)
+    fitp = np.arange(left_wave, right_wave)
+    # cha, ped = xiaopeip_core(wave_r, spe_pre['spe'], fitp, tlist, eta=eta)
+    cha = xiaopeip_core(wave_r, spe_pre['spe'], fitp, tlist.astype(int), eta=eta)
+    return tlist, cha
 
 # def xiaopeip_core(wave, spe, fitp, possible, eta=0):
 #     l = len(wave)
@@ -84,19 +93,19 @@ def xiaopeip(wave, spe_pre, eta=0):
 # def norm_fit(x, M, y, eta=0):
 #     return np.power(y - x[-1] - np.matmul(M, x[:-1]), 2).sum() + eta * x.sum()
 
-def xiaopeip_core(wave, spe, fitp, possible, eta=0):
-    l = len(wave)
+def xiaopeip_core(wave_r, spe, fitp, possible, eta=0):
+    l = window
     spe = np.concatenate([spe, np.zeros(l - len(spe))])
     ans0 = np.ones(len(possible)).astype(np.float64)
     b = np.zeros((len(possible), 2)).astype(np.float64)
     b[:, 1] = np.inf
     mne = spe[np.mod(fitp.reshape(len(fitp), 1) - possible.reshape(1, len(possible)), l)]
     try:
-        ans = opti.fmin_l_bfgs_b(norm_fit, ans0, args=(mne, wave[fitp], eta), approx_grad=True, bounds=b, maxfun=500000)
+        ans = opti.fmin_l_bfgs_b(norm_fit, ans0, args=(mne, wave_r, eta), approx_grad=True, bounds=b, maxfun=500000)
     except ValueError:
         ans = [np.ones(len(possible)) * 0.2]
-    # ans = opti.fmin_slsqp(norm_fit, ans0, args=(mne, wave[fitp]), bounds=b, iprint=-1, iter=500000)
-    # ans = opti.fmin_tnc(norm_fit, ans0, args=(mne, wave[fitp]), approx_grad=True, bounds=b, messages=0, maxfun=500000)
+    # ans = opti.fmin_slsqp(norm_fit, ans0, args=(mne, wave_r), bounds=b, iprint=-1, iter=500000)
+    # ans = opti.fmin_tnc(norm_fit, ans0, args=(mne, wave_r), approx_grad=True, bounds=b, messages=0, maxfun=500000)
     return ans[0]
 
 def norm_fit(x, M, y, eta=0):
