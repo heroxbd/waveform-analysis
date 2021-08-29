@@ -216,7 +216,7 @@ It is reasonable that $D_w$ is the smallest for one PE.  $D_w$ stops increasing 
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/takarachargestats.pgf}}
-    \caption{\label{fig:cnn-npe} $D_w$ histogram and its distributions conditioned \\ on $N_{\mathrm{PE}}$.}
+    \caption{\label{fig:cnn-npe} $D_w$ histogram and its distributions conditioned \\ on $N_{\mathrm{PE}}$. ``arbi. unit'' means arbitrary unit.}
   \end{subfigure}
   \begin{subfigure}{.5\textwidth}
     \centering
@@ -274,28 +274,28 @@ In figure~\ref{fig:fitting}, sparsity of $q'_i$ is evident as speculated.  Howev
 
 \subsubsection{Markov chain Monte Carlo}
 \label{subsec:mcmc}
-Chaining the $q'_i$ distribution~(section~\ref{subsec:spe}), the charge fitting eq.~\eqref{eq:gd-q} and the light curve eq.~\eqref{eq:time-pro}, we arrive at a hierarchical Bayesian model in eq.~\eqref{eq:mixnormal}.
+Chaining the $q'_i$ distribution~(section~\ref{subsec:spe}), the charge fitting eq.~\eqref{eq:gd-q} and the light curve eq.~\eqref{eq:time-pro}, we arrive at a hierarchical Bayesian model,
 \begin{equation}
   \begin{aligned}
     t_{0} &\sim \mathcal{U}(0, \overline{t_0}) \\
-    p_i &= \mu \int_{t'_i-\frac{\Delta t'}{2}}^{t'_i+\frac{\Delta t'}{2}} \phi(t' - t_0)\mathrm{d}t' \approx \mu\phi(t'_i - t_0)\Delta{t'} \\
-    z_i &\sim \mathcal{B}(p_i) \\
+    \mu_i &= \mu \int_{t'_i-\frac{\Delta t'}{2}}^{t'_i+\frac{\Delta t'}{2}} \phi(t' - t_0)\mathrm{d}t' \approx \mu\phi(t'_i - t_0)\Delta{t'} \\
+    z_i &\sim \mathcal{B}(\mu_i) \\
     q'_{i,0}&=0\\
-    q'_{i,1}& \sim \mathcal{N}(1, \sigma_q)\\
+    q'_{i,1}& \sim \mathcal{N}(1, \sigma_\mathrm{q})\\
     q'_i &= q'_{i,z_i}\\
     w'(t) & = \sum_{i=1}^{N_\mathrm{s}}q'_iV_\mathrm{PE}(t-t'_i)\\
     w(t) &\sim \mathcal{N}(w'(t), \sigma_\epsilon)
   \end{aligned}
   \label{eq:mixnormal}
 \end{equation}
-where $\mathcal{U}$ and $\mathcal{B}$ stands for uniform and Bernoulli distributions, $\overline{t_0}$ is an upper bound of $t_0$, and $q'_i$ is a mixture of 0 (no PE) and normally distributed $q'_{i,1}$ (1 PE). When expection $p_i$ of a PE hitting $(t'_{i} - \frac{\Delta t'}{2}, t'_{i} + \frac{\Delta t'}{2})$ is small enough, that 0-1 approximation is valid.  The inferred waveform $w'(t)$ differs from observable $w(t)$ by a white noise $\epsilon(t) \sim \mathcal{N}(0, \sigma_\epsilon)$ motivated by eq.~\eqref{eq:1}.  When a indicator $z_i=0$, it turns off $q'_i$, reducing the number of parameters by one.  That is how eq.~\eqref{eq:mixnormal} achieves sparsity.
+where $\mathcal{U}$ and $\mathcal{B}$ stands for uniform and Bernoulli distributions, $\overline{t_0}$ is an upper bound of $t_0$, and $q'_i$ is a mixture of 0 (no PE) and normally distributed $q'_{i,1}$ (1 PE). When expection $\mu_i$ of a PE hitting $(t'_{i} - \frac{\Delta t'}{2}, t'_{i} + \frac{\Delta t'}{2})$ is small enough, that 0-1 approximation is valid.  The inferred waveform $w'(t)$ differs from observable $w(t)$ by a white noise $\epsilon(t) \sim \mathcal{N}(0, \sigma_\epsilon)$ motivated by eq.~\eqref{eq:1}.  When a indicator $z_i=0$, it turns off $q'_i$, reducing the number of parameters by one.  That is how eq.~\eqref{eq:mixnormal} achieves sparsity.
 
-We generate posterior samples of $t_0$ and $\bm{q'}$ by Hamiltonian Monte Carlo~(HMC)~\cite{neal_mcmc_2012}, a variant of Markov chain Monte Carlo that is suitable to high-dimensional problems. Construct $\hat{t}$ and $\hat{q}_i$ as the mean estimators of posterior samples $t_0$ and $q'_i$ at $z_i=1$.  Unlike the $\hat{t}_\mathrm{KL}$ discussed in section~\ref{sec:pseudo}, $\hat{t}$ is a direct Bayesian estimator from eq.~\eqref{eq:mixnormal}.  We construct $\hat{\phi}(t)$ by eq.~\eqref{eq:gd-phi} and $\hat{w}(t)$ by
+We generate posterior samples of $t_0$ and $\bm{q'}$ by Hamiltonian Monte Carlo~(HMC)~\cite{neal_mcmc_2012}, a variant of Markov chain Monte Carlo that is suitable to high-dimensional problems. Construct $\hat{t}$ and $\hat{q}_i$ as the mean estimators of posterior samples $t_0$ and $q'_i$ at $z_i=1$.  Unlike the $\hat{t}_\mathrm{KL}$ discussed in section~\ref{sec:pseudo}, $\hat{t}_0$ is a direct Bayesian estimator from eq.~\eqref{eq:mixnormal}.  We construct $\hat{\phi}(t)$ by eq.~\eqref{eq:gd-phi} and $\hat{w}(t)$ by
 \begin{equation}
   \label{eq:mcmc-w}
   \hat{w}(t) = \sum_{i=1}^{N_\mathrm{s}}\hat{q}_iV_\mathrm{PE}(t-t'_i).
 \end{equation}
-$D_w$ and RSS are then calculated accordingly.
+RSS and $D_w$ are then calculated according to eqs.~(\ref{eq:rss}) and (\ref{eq:numerical}).
 
 \begin{figure}[H]
   \begin{subfigure}{.5\textwidth}
@@ -310,123 +310,87 @@ $D_w$ and RSS are then calculated accordingly.
   \end{subfigure}
   \caption{Demonstration of MCMC with $\num[retain-unity-mantissa=false]{1e4}$ waveforms in~\subref{fig:mcmc-npe} and one waveform in~\subref{fig:mcmc} sampled from the same setup as figure~\ref{fig:method}.  Although using a more dedicated model, MCMC performs worse than direct charge fitting in figure~\ref{fig:dcf}. We suspect the chain is not long enough.}
 \end{figure}
-Although we imposed a $\mathcal{N}(1, \sigma_q)$ prior, The charges $\hat{q}_i$ in figure~\ref{fig:fitting} are still less than 1.  The $D_w$ marginal distribution in figure~\ref{fig:mcmc-npe} is less smooth than that of direct charge fitting in figure~\ref{fig:fitting-npe}.  Similarly, RSS in figure~\ref{fig:mcmc} is slightly worse than that in figure~\ref{fig:fitting}.  We suspect the markov chain has not finally converged due to the trans-dimensional property of eq.~\eqref{eq:mixnormal}.  Enlonging the burning and chain is not a solution because MCMC is already much slower than direct fitting in section~\ref{sec:dcf}.  We need an algorithm that pertains the model of eq.~\eqref{eq:mixnormal} but much faster than MCMC.
+Although we imposed a $\mathcal{N}(1, \sigma_\mathrm{q})$ prior, The charges $\hat{q}_i$ in figure~\ref{fig:fitting} are still less than 1.  The $D_w$ marginal distribution in figure~\ref{fig:mcmc-npe} is less smooth than that of direct charge fitting in figure~\ref{fig:fitting-npe}.  Similarly, RSS in figure~\ref{fig:mcmc} is slightly worse than that in figure~\ref{fig:fitting}.  We suspect the markov chain has not finally converged due to the trans-dimensional property of eq.~\eqref{eq:mixnormal}.  Enlonging the burning and chain is not a solution because MCMC is already much slower than direct fitting in section~\ref{sec:dcf}.  We need an algorithm that pertains the model of eq.~\eqref{eq:mixnormal} but much faster than MCMC.
 
 \subsubsection{Fast Bayesian matching pursuit}
 \label{subsec:fbmp}
-Considering the distribution of $q'_i$, $w(t)$ in eq.~\eqref{eq:mixnormal} is a Gaussian process subject to $\bm{z}$,
+If we discretize waveform variable $t$ in eq.~\eqref{eq:mixnormal} into $t_j$, $w(t)$ becomes a vector $w_j \coloneqq w(t_j)$ and $V_\mathrm{PE}(t - t'_i)$ a matrix $V_{\mathrm{PE},ji} \coloneqq V_\mathrm{PE}(t_j - t'_i)$.  Such a formulation unveils a joint multivariate normal distribution of $\bm{w}$ and $\bm{q}'$ subject to $\bm{z}$,
 \begin{equation}
-    w(t)|\bm{z} \sim \mathcal{GP}\left[\sum_{i|z_i=1}V_\mathrm{PE}(t-t'_i), \sigma_q^2 \sum_{i|z_i=1}V_\mathrm{PE}(t'_i-t)V_\mathrm{PE}(s-t'_i) + \sigma_\epsilon^2 \right],
-\end{equation}
-where $\bm{z}$ controls which $t'_i$ is in use. In this method, we discretize the Gaussian process as a multivariate normal distribution together with $\bm{q}'$, 
-\begin{equation}
-\label{eq:mgauss}
-\begin{aligned}
+  \label{eq:mgauss}
+  \begin{aligned}
     \left.
-    \begin{bmatrix}
+      \begin{bmatrix}
         \bm{w} \\
         \bm{q}'
-    \end{bmatrix}
+      \end{bmatrix}
     \right\vert\bm{z}
-    &\sim \mathrm{Normal}\left(
-    \begin{bmatrix}
+    &\sim \mathcal{N}\left(
+      \begin{bmatrix}
         \bm{V}_\mathrm{PE}\bm{z} \\
         \bm{z}
-    \end{bmatrix}, 
-    \begin{bmatrix}
-        \bm{\Sigma}_z & \bm{V}_\mathrm{PE}\bm{Z} \\
+      \end{bmatrix}, 
+      \begin{bmatrix}
+        \bm{\Sigma} & \bm{V}_\mathrm{PE}\bm{Z} \\
         \bm{Z}\bm{V}_\mathrm{PE}^\intercal & \bm{Z}
-    \end{bmatrix}
+      \end{bmatrix}
     \right) \\
-    \bm{\Sigma}_z &= \bm{V}_\mathrm{PE}\bm{Z}\bm{V}_\mathrm{PE}^\intercal+\sigma_\epsilon^2\bm{I}
-\end{aligned}
+    \bm{Z} &= \sigma_\mathrm{q}^2 \begin{bmatrix}
+      z_1 & & \\
+      & \ddots \\
+      && z_{N_\mathrm{s}}
+    \end{bmatrix}\\
+    \bm{\Sigma} &= \bm{V}_\mathrm{PE}\bm{Z}\bm{V}_\mathrm{PE}^\intercal+\sigma_\epsilon^2\bm{I}\\
+    z_i &\sim \mathcal{P}(\mu_i) \\
+    \mu_i &= \mu \int_{t'_i-\frac{\Delta t'}{2}}^{t'_i+\frac{\Delta t'}{2}} \phi(t' - t_0)\mathrm{d}t' \\
+  \end{aligned}
 \end{equation}
-where $\bm{Z}$ is the diagonal matrix controlling the spread of $q'_i$. $\bm{I}$ is a unit matrix. Here $\bm{z}$ is not the same as that in section~\ref{subsec:mcmc}: 
-
+where $\mathcal{P}$ is for Poisson distribution.  Unlike eq.~\eqref{eq:mixnormal}, $z_i$ can take non-negative integers larger than 1, meaning the number of PE's in the $i$-th time bin.  Marginalizing out $\bm{z}$,
 \begin{equation}
   \begin{aligned}
-    \mu_i &= \mu \int_{t'_i-\frac{\Delta t'}{2}}^{t'_i+\frac{\Delta t'}{2}} \phi(t' - t_0)\mathrm{d}t' \\
-    z_i &\sim \mathrm{Poisson}(\mu_i).
-  \end{aligned}
-  \label{eq:poissonfbmp}
-\end{equation}
-
-A set $\mathcal{Z}$ contains infinite combinations of $\bm{z}$. But only a few $\bm{z}$'s dominate in $\mathcal{Z}$, leading to the Fast Bayesian Matching Pursuit~(FBMP), a parameter estimation method for sparse linear models~\cite{schniter_fast_2008}. FBMP defines a targeted subset $\mathcal{Z}'$ of $\mathcal{Z}$ with only the $\bm{z}$ giving non-negligible $p(\bm{w}|\bm{z})$. We approximate the posterior of $\bm{z}$ as 
-\begin{equation}
-    \label{eq:z}
-    \begin{aligned}
-    p(\bm{z}|\bm{w}) &= \frac{p(\bm{w}|\bm{z})p(\bm{z})}{\sum_{\bm{z}'\in\mathcal{Z}}p(\bm{w}|\bm{z'})p(\bm{z'})} \\
-    &\approx \frac{p(\bm{w}|\bm{z})p(\bm{z})}{\sum_{\bm{z}'\in\mathcal{Z}'}p(\bm{w}|\bm{z'})p(\bm{z'})}.
-    \end{aligned}
-\end{equation}
-A Poisson distributions of binned light curve gives the prior $p(\bm{z})$, 
-\begin{equation}
-\begin{aligned}
-    p(\bm{z}|t_0, \mu) &= \prod_{i}\mathrm{Poisson}(z_i,\mu_i)
-\end{aligned}
-\end{equation}
-where $\mu$ is the prior expected number of PEs and satisfies the normalization condition in equation~\eqref{eq:normal}. 
-\begin{equation}
-\label{eq:normal}
-\begin{aligned}
-  \sum_i \mu_i &= \mu
-\end{aligned}
-\end{equation}
-
-The logarithm numerator of \eqref{eq:z}
-\begin{equation}
-    \label{eq:metric}
-    \begin{aligned}
-        \nu =& \log[p(\bm{w},\bm{z})] = \log[p(\bm{w}|\bm{z})p(\bm{z})] \\
-        =& -\frac{1}{2}(\bm{w}-\bm{V}_\mathrm{PE}\bm{z})^\intercal\bm{\Sigma}_z^{-1}(\bm{w}-\bm{V}_\mathrm{PE}\bm{z})-\frac{1}{2}\log\det\bm{\Sigma}_z-\frac{N_\mathrm{s}}{2}\log2\pi \\
-        & +\sum_{i}\log{\mathrm{Poisson}(z_i,\mu_i)}
-    \end{aligned}
-\end{equation}
-is a \textit{model selection metric}. A repeated greedy search (RGS) guided by equation~\eqref{eq:metric} is performed to construct the target set $\mathcal{Z}'$. Additionally, a linear algebraic iteration reduces the complexity of $p(\bm{z}|\bm{w})$ calculation~\cite{schniter_fast_2008}. 
-
-For each $\bm{z} \in \mathcal{Z}'$, from \eqref{eq:mgauss} the expectation estimation of $\bm{q}'$ is, 
-\begin{align}
-    \hat{\bm{q}}_z = E(\bm{q}'|\bm{w},\bm{z}) &= \bm{z} + \bm{Z}\bm{V}_\mathrm{PE}^\intercal\bm{\Sigma}_z^{-1}(\bm{w}-\bm{V}_\mathrm{PE}\bm{z})
-    \label{eq:fbmpcharge}
-\end{align}
-
-Finally, we collect all the $\bm{z} \in \mathcal{Z}'$ and their corresponding posterior probabilities $p(\bm{z}|\bm{w})$, as well as estimation $\hat{\bm{q}}_z$, to be the final posterior distribution. $\hat{\bm{z}}$ is the PE number in each time bin $\hat{\bm{t}}$. $\hat{\bm{q}}$, which is the total charge in each time bin, is estimated by the maximum posterior probability, 
-\begin{equation}
-    \begin{aligned}
-        \label{eq:zposterior}
-        \hat{\bm{z}} &= \arg \underset{\bm{z}}{\max} p(\bm{z}|\bm{w}) \\
-        \hat{\bm{q}} &= \hat{\bm{q}}_{\hat{z}} \\
-        \hat{w}(t) &= \sum_{i} \hat{q}_i V_\mathrm{PE}(t-t'_i)
-    \end{aligned}
-\end{equation}
-
-Figure~\ref{fig:fbmp} shows one of the FBMP results. We can see that the original waveform $w(t)$ and the reconstructed waveform $\hat{w}(t)$ are very similar. The reconstructed and truth $\bm{q}$ are also similar. 
-
-\begin{figure}[H]
-    \centering
-    \resizebox{0.6\textwidth}{!}{\input{figures/demoe2c0.pgf}}
-    \caption{\label{fig:fbmp} FBMP Demo, $\mathrm{RSS}=\SI{15.8}{mV^2},D_w=\SI{0.59}{ns},\Delta{t_0}=\SI{-3.51}{ns}$}
-\end{figure}
-
-The result of $\hat{q}$ with $\mu=4, \tau_\mathrm{l}=\SI{20}{ns}$, and $\sigma_\mathrm{l}=\SI{5}{ns}$ is shown in figure~\ref{fig:fbmp-npe}. The left panel is the box plot which shows the $D_w$ percentiles vs $N_{\mathrm{PE}}$, and the right panel is the overall histogram of $D_w$. 
-
-\begin{figure}[H]
-    \centering
-    \resizebox{0.5\textwidth}{!}{\input{figures/fbmpchargestats.pgf}}
-    \caption{\label{fig:fbmp-npe} $D_w$ histogram and its distributions of FBMP on $\num[retain-unity-mantissa=false]{1e4}$ waveforms sampled from the same setup as figure~\ref{fig:method}, conditioned on $N_{\mathrm{PE}}$.  The horizontal axis of the right subplot is in arbitrary unit. }
-\end{figure}
-
-The denominator of equation~\eqref{eq:z} is actually the evidence $p(\bm{w}|t_0, \mu)$, which provides a superior estimator of $\mu$ and $t_0$ to equation~\eqref{eq:pseudo},
-\begin{equation}
-\begin{aligned}
     \label{eq:bayesianinter}
-    \left(\hat{t}_0, \hat{\mu}\right) &= \arg\underset{t_0,\mu}{\max} p(\bm{w} | t_0, \mu) \\
-    p(\bm{w}|t_0, \mu) &= \sum_{\bm{z}'\in\mathcal{Z}'}p(\bm{w}|\bm{z}',t_0,\mu)p(\bm{z}'|t_0,\mu) \\
-    &= \sum_{\bm{z}'\in\mathcal{Z}'}p(\bm{w}|\bm{z}')p(\bm{z}'|t_0,\mu).
-\end{aligned}
+    p(\bm{w}|t_0, \mu) & = \sum_{\bm{z}}p(\bm{w}, \bm{z}|t_0,\mu) = \sum_{\bm{z}}p(\bm{w}|\bm{z})p(\bm{z}|t_0,\mu)\\
+    \left(\hat{t}_0, \hat{\mu}\right) &= \arg\underset{t_0,\mu}{\max} p(\bm{w} | t_0, \mu)
+  \end{aligned}
 \end{equation}
-where $p(\bm{w}|z', t_0, \mu) = p(\bm{w}|z')$ because $\bm{w}$ does not depend on $t_0$ or $\mu$ if $z'$ is given. If $t_0$ and $\mu$ are predicted by an event model $p(t_0, \mu | \mathcal{E})$, we can extend FBMP to the event reconstruction, bypassing the need to save PE $\bm{t}'$ and $\bm{q}'$. While FBMP provides the Bayesian interface of waveform analysis and event reconstruction, it is however out of the scope of this work and will be covered elsewhere. 
+gives the probability of $\bm{w}$ subject to $\mu$ and $t_0$ with the corresponding estimators. $p(\bm{w}|z')$ is in place of $p(\bm{w}|z', t_0, \mu)$ because $\bm{w}$ does not depend on $t_0$ or $\mu$ if $\bm{z}$ is given.  The summation over $\bm{z}$, however, takes infinite combinations. Only a few $\bm{z}$'s contribute significantly in eq.~\eqref{eq:bayesianinter}.  Schniter et al.~\cite{schniter_fast_2008} proposes fast Bayesian matching pursuit~(FBMP) to construct a dominating set $\Omega$ of $\bm{z}$ with non-negligible $p(\bm{w}|\bm{z})$.  In terms of variational inference~(e.g.~\cite{mackay_information_2003}), the dominating set $\Omega$ defines an approximation $p_\Omega(\bm{z})$ to $p(\bm{z}|\bm{w})$, dropping the context $t_0$ and $\mu$ for simplicity,
 
+\begin{equation}
+  \label{eq:VI}
+  \begin{aligned}
+    p_\Omega(\bm{z}) &= \begin{cases}
+      \frac{p(\bm{w},\bm{z})}{\sum_{z' \in \Omega} p(\bm{w},\bm{z}')} & \text{ if } \bm{z} \in S \\ 
+      0 & \text{ if } \bm{z} \notin S
+    \end{cases}\\
+    \log p(\bm{w}) - D_\mathrm{KL}\left[p_\Omega(\bm{z}) \parallel p(\bm{z}|\bm{w})\right] &= \sum_z p_\Omega(\bm{z}) \log \frac{p(\bm{w}) p(\bm{z}|\bm{w})}{p_\Omega(\bm{z})} \\
+    &= \log \sum_{z \in \Omega} p(\bm{w}, \bm{z}).
+  \end{aligned}
+\end{equation}
+Since the KL divergence is non-negative, $\log \sum_{\bm{z} \in \Omega} p(\bm{w}, \bm{z})$ is the evidence lower bound~(ELBO) to $\log p(\bm{w})$.  Schniter et al.~\cite{schniter_fast_2008} construct $\Omega$ by repeated greedy search~(RGS) of $\bm{z}$'s with largest $p(\bm{w}, \bm{z})$.  But we find an RGS on $p(\bm{w}|\bm{z})$ instead gives better ELBO and less biased $\hat{\mu}$~(section~\ref{subsec:chargereconstruction}).  An iteration scheme~\cite{schniter_fast_2008} efficiently computes $p(\bm{w}|\bm{z})$ in eq.~(\ref{eq:mgauss}) and overcomes the difficulty of MCMC~(section~\ref{subsec:mcmc}) to make FBMP practical.
+
+We take the maximum a posteriori estimation $\hat{\bm{z}}$ and the expectation estimation of $\hat{\bm{q}}$,
+\begin{equation}
+  \label{eq:fbmpcharge}
+  \begin{aligned}
+    \hat{\bm{z}} &= \arg \underset{\bm{z} \in \Omega}{\max} p(\bm{w}|\bm{z}) \\
+    \hat{\bm{q}}_{\hat{\bm{z}}} &= E(\bm{q}'|\bm{w},\hat{\bm{z}}) = \hat{\bm{z}} + \bm{Z}\bm{V}_\mathrm{PE}^\intercal\bm{\Sigma}^{-1}(\bm{w}-\bm{V}_\mathrm{PE}\hat{\bm{z}})
+  \end{aligned}
+\end{equation}
+We calculate RSS and $D_w$ by eqs.~\eqref{eq:rss}, \eqref{eq:mcmc-w}, \eqref{eq:numerical} and \eqref{eq:gd-phi}.
+
+\begin{figure}[H]
+  \begin{subfigure}[b]{.45\textwidth}
+    \centering
+    \resizebox{1.05\textwidth}{!}{\input{figures/fbmpchargestats.pgf}}
+    \caption{\label{fig:fbmp-npe} $D_w$ histogram and its distributions \\ conditioned on $N_{\mathrm{PE}}$.}
+  \end{subfigure}
+  \begin{subfigure}[b]{.55\textwidth}
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/demoe2c0.pgf}}
+    \caption{\label{fig:fbmp} An example giving \\ $\Delta{t_0}=\SI{-3.51}{ns}$, $\mathrm{RSS}=\SI{15.8}{mV^2}$, $D_w=\SI{0.59}{ns}$.}
+  \end{subfigure}
+  \caption{Demonstration of FBMP with $\num[retain-unity-mantissa=false]{1e4}$ waveforms in~\subref{fig:fbmp-npe} and one waveform in~\subref{fig:fbmp} sampled from the same setup as figure~\ref{fig:method}.  FBMP reconstructs the waveform and charges flawlessly.}
+\end{figure}
+In terms of $D_w$, figure~\ref{fig:fbmp-npe} show that FBMP is on par with CNN in figure~\ref{fig:cnn-npe}.  Figure~\ref{fig:fbmp} demonstrates a perfect reconstruction example where the true and reconstructed charges and waveforms overlap.  A bias of $\Delta{t_0}=\SI{-3.51}{ns}$ aligns with $\hat{t}_\mathrm{ALL}$ in eq.~\eqref{eq:2}, which will be covered in section~\ref{subsec:timeresolution}.  The superior performance of FBMP attributes to sparsity and positiveness of $q'_i$, correct modeling of $V_\mathrm{PE}$, $q'$ distribution and white noise.  In addition, FBMP provides a Bayesian interface to event reconstruction by eq.~\eqref{eq:bayesianinter}.  We will investigate it in the future studies.
 \subsection{Performance}
 
 % Methods
