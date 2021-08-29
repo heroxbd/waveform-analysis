@@ -58,13 +58,13 @@ mtsi['wdist'] = np.nan
 mtsi['RSS'] = np.nan
 mtsi = np.sort(mtsi, kind='stable', order=['mu', 'tau', 'sigma'])
 
-mts = {'findpeak':mtsi.copy(), 'threshold':mtsi.copy(), 'fftrans':mtsi.copy(), 'mcmc':mtsi.copy(), 'takara':mtsi.copy(), 'xiaopeip':mtsi.copy(), 'lucyddm':mtsi.copy(), 'fbmp':mtsi.copy()}
-deltalabel = {'1st':'\mathrm{1st}', 'tru':'\mathrm{ALL}', 'findpeak':'\mathrm{FindPeak}', 'threshold':'\mathrm{Shift}', 'fftrans':'\mathrm{FFT}', 'lucyddm':'\mathrm{LucyDDM}', 'xiaopeip':'\mathrm{Fitting}', 'takara':'\mathrm{CNN}', 'fbmp':'\mathrm{FBMP}', 'fbmpone':'\mathrm{FBMPmax}', 'mcmc':'\mathrm{MCMCt0}', 'mcmcone':'\mathrm{MCMCcha}'}
-label = {'1st':'\mathrm{1st}', 'tru':'\mathrm{ALL}', 'findpeak':'\mathrm{FindPeak}', 'threshold':'\mathrm{Shift}', 'fftrans':'\mathrm{FFT}', 'lucyddm':'\mathrm{LucyDDM}', 'xiaopeip':'\mathrm{Fitting}', 'takara':'\mathrm{CNN}', 'fbmp':'\mathrm{FBMP}', 'fbmpone':'\mathrm{FBMPmax}', 'mcmc':'\mathrm{MCMC}'}
-marker = {'1st':'o', 'tru':'h', 'findpeak':',', 'threshold':'1', 'fftrans':'+', 'lucyddm':'p', 'xiaopeip':'*', 'takara':'x', 'fbmp':'s', 'fbmpone':'^', 'mcmc':'X', 'mcmcone':'>'}
-color = {'1st':'g', 'tru':'k', 'findpeak':'C1', 'threshold':'C2', 'fftrans':'m', 'lucyddm':'y', 'xiaopeip':'c', 'takara':'C0', 'fbmp':'r', 'fbmpone':'b', 'mcmc':'C4', 'mcmcone':'C5'}
+mts = {'findpeak':mtsi.copy(), 'threshold':mtsi.copy(), 'fftrans':mtsi.copy(), 'mcmc':mtsi.copy(), 'takara':mtsi.copy(), 'xiaopeip':mtsi.copy(), 'lucyddm':mtsi.copy(), 'fbmp':mtsi.copy(), 'firstthres':mtsi.copy()}
+deltalabel = {'1st':'\mathrm{1st}', 'tru':'\mathrm{ALL}', 'findpeak':'\mathrm{FindPeak}', 'threshold':'\mathrm{Shift}', 'fftrans':'\mathrm{FFT}', 'lucyddm':'\mathrm{LucyDDM}', 'xiaopeip':'\mathrm{Fitting}', 'takara':'\mathrm{CNN}', 'fbmp':'\mathrm{FBMP}', 'fbmpone':'\mathrm{FBMPmax}', 'mcmc':'\mathrm{MCMCt0}', 'mcmcone':'\mathrm{MCMCcha}', 'firstthres':'\mathrm{1stthres}'}
+label = {'1st':'\mathrm{1st}', 'tru':'\mathrm{ALL}', 'findpeak':'\mathrm{FindPeak}', 'threshold':'\mathrm{Shift}', 'fftrans':'\mathrm{FFT}', 'lucyddm':'\mathrm{LucyDDM}', 'xiaopeip':'\mathrm{Fitting}', 'takara':'\mathrm{CNN}', 'fbmp':'\mathrm{FBMP}', 'fbmpone':'\mathrm{FBMPmax}', 'mcmc':'\mathrm{MCMC}', 'firstthres':'\mathrm{1stthres}'}
+marker = {'1st':'o', 'tru':'h', 'findpeak':',', 'threshold':'1', 'fftrans':'+', 'lucyddm':'p', 'xiaopeip':'*', 'takara':'x', 'fbmp':'s', 'fbmpone':'^', 'mcmc':'X', 'mcmcone':'>', 'firstthres':'>'}
+color = {'1st':'g', 'tru':'k', 'findpeak':'C1', 'threshold':'C2', 'fftrans':'m', 'lucyddm':'y', 'xiaopeip':'c', 'takara':'C0', 'fbmp':'r', 'fbmpone':'b', 'mcmc':'C4', 'mcmcone':'C5', 'firstthres':'C6'}
 jit = 0.05
-jitter = {'mcmcone':-5 * jit, 'mcmc':-4 * jit, 'tru':-3 * jit, 'fbmp':-2 * jit, 'fbmpone':-1 * jit, 'lucyddm':0 * jit, 'xiaopeip':1 * jit, 'takara':2 * jit, '1st':3 * jit, 'fftrans':4 * jit, 'findpeak':5 * jit, 'threshold':6 * jit}
+jitter = {'mcmcone':-5 * jit, 'mcmc':-4 * jit, 'tru':-3 * jit, 'fbmp':-2 * jit, 'fbmpone':-1 * jit, 'lucyddm':0 * jit, 'xiaopeip':1 * jit, 'takara':2 * jit, '1st':3 * jit, 'fftrans':4 * jit, 'findpeak':5 * jit, 'threshold':6 * jit, 'firstthres':7 * jit}
 
 alpha = 0.05
 for key in mts.keys():
@@ -117,7 +117,7 @@ figr = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
 gsr = gridspec.GridSpec(len(Sigma), len(Tau), figure=figr, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
 lim = {'deltadiv':np.array([[0.3, 0.5]]), 'wdist':np.array([[1.5, 3.0]]), 'rss':np.array([[0.37e3, 1.7e3]])}
 keylist = list(mts.keys())
-badkey = ['findpeak', 'threshold', 'fftrans', 'mcmc']
+badkey = ['findpeak', 'threshold', 'fftrans', 'mcmc', 'firstthres']
 for i, sigma in enumerate(Sigma):
     for j, tau in enumerate(Tau):
         ax = figd.add_subplot(gsd[i, j])
@@ -140,7 +140,7 @@ for i, sigma in enumerate(Sigma):
         # ax.set_yscale('log')
         ax.grid()
         if i == len(Sigma) - 1 and j == len(Tau) - 1:
-            ax.legend(loc='upper left', bbox_to_anchor=(1., 0.9))
+            ax.legend(loc='upper left', bbox_to_anchor=(1., 0.9), prop={'size': 5})
 
         ax = figb.add_subplot(gsb[i, j])
         stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == tau) & (mts['lucyddm']['sigma'] == sigma)]
@@ -241,13 +241,14 @@ figr.savefig('Note/figures/vs-rss.pdf')
 figr.savefig('Note/figures/vs-rss.png')
 plt.close(figr)
 
+thresfirst = False
 marker2 = [['s', '^']]
 colors2 = [['r', 'b']]
 fig = plt.figure(figsize=(8, 4))
 gs = gridspec.GridSpec(1, 2, figure=fig, left=0.1, right=0.85, top=0.92, bottom=0.15, wspace=0.25, hspace=0.2)
 ax = fig.add_subplot(gs[0, 0])
 std1sttruth = np.empty(len(stdlist['mu']))
-stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == Tau[0]) & (mts['lucyddm']['sigma'] == Sigma[0])]
+stdlist = mts['firstthres'][(mts['firstthres']['tau'] == Tau[0]) & (mts['firstthres']['sigma'] == Sigma[0])]
 sigma = 0
 tau = max(Tau)
 np.random.seed(0)
@@ -263,7 +264,9 @@ ax.errorbar(stdlist['mu'], std1sttruth, yerr=yerr, label='$\sigma_'+deltalabel['
 ax.errorbar(stdlist['mu'], std1sttruth, yerr=yerr, label='$\sigma_'+deltalabel['1st']+fr',\,\tau_l={tau}\si{{ns}},\,\sigma_l={sigma}\si{{ns}}$', marker='o', color='g', linestyle='dashed')
 for i, sigma in enumerate(Sigma):
     for j, tau in enumerate(Tau):
-        stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == tau) & (mts['lucyddm']['sigma'] == sigma)]
+        stdlist = mts['firstthres'][(mts['firstthres']['tau'] == tau) & (mts['firstthres']['sigma'] == sigma)]
+        if thresfirst:
+            stdlist['std1sttruth'] = stdlist['std']
         yerrall = np.vstack([stdlist['stdtruth']-np.sqrt(np.power(stdlist['stdtruth'],2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(stdlist['stdtruth'],2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-stdlist['stdtruth']])
         yerr1st = np.vstack([stdlist['std1sttruth']-np.sqrt(np.power(stdlist['std1sttruth'],2)*stdlist['N']/chi2.ppf(1-alpha/2, stdlist['N'])), np.sqrt(np.power(stdlist['std1sttruth'],2)*stdlist['N']/chi2.ppf(alpha/2, stdlist['N']))-stdlist['std1sttruth']])
         ax.errorbar(stdlist['mu'], stdlist['stdtruth'], yerr=yerrall, marker=marker2[i][j], color=colors2[i][j])
@@ -275,12 +278,14 @@ ax.grid()
 ax = fig.add_subplot(gs[0, 1])
 sigma = 0
 tau = max(Tau)
-stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == Tau[0]) & (mts['lucyddm']['sigma'] == Sigma[0])]
+stdlist = mts['firstthres'][(mts['firstthres']['tau'] == Tau[0]) & (mts['firstthres']['sigma'] == Sigma[0])]
 yerr = std1sttruth / std1sttruth / np.sqrt(stdlist['N'])
 ax.errorbar(stdlist['mu'], std1sttruth / std1sttruth, yerr=yerr, label=fr'$(20,0)$', marker='o', color='g')
 for i, sigma in enumerate(Sigma):
     for j, tau in enumerate(Tau):
-        stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == tau) & (mts['lucyddm']['sigma'] == sigma)]
+        stdlist = mts['firstthres'][(mts['firstthres']['tau'] == tau) & (mts['firstthres']['sigma'] == sigma)]
+        if thresfirst:
+            stdlist['std1sttruth'] = stdlist['std']
         sigma = int(sigma)
         tau = int(tau)
         yerr = stdlist['std1sttruth'] / stdlist['stdtruth'] / np.sqrt(stdlist['N'])
@@ -295,10 +300,12 @@ fig.savefig('Note/figures/vs-deltadiv.pdf')
 fig.savefig('Note/figures/vs-deltadiv.png')
 plt.close(fig)
 
-x = np.arange(0, len(keylist))
+# del mts['firstthres']
+# keylist = list(mts.keys())
+x = np.arange(0, len(keylist) - 1)
 tau = 20
 sigma = 5
-wdist = np.vstack([mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]['wdist'].mean(axis=0) for key in keylist])
+wdist = np.vstack([mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]['wdist'].mean(axis=0) for key in keylist if key != 'firstthres'])
 dy = np.vstack([wdist[:, 1] - wdist[:, 0], wdist[:, 2] - wdist[:, 1]])
 fig = plt.figure(figsize=(10, 3))
 fig.tight_layout()
@@ -307,7 +314,7 @@ ax.bar(x, wdist[:, 1], color='b')
 ax.set_ylim(0, math.ceil(wdist[~np.isnan(wdist)].max() + 0.5))
 ax.set_ylabel(r'$\mathrm{Wasserstein\ Distance}/\si{ns}$')
 ax.set_xticks(x)
-ax.set_xticklabels(['$'+label[key]+'$' for key in keylist])
+ax.set_xticklabels(['$'+label[key]+'$' for key in keylist if key != 'firstthres'])
 ax.errorbar(x, wdist[:, 1], yerr=dy, fmt='o', ecolor='r', color='b', elinewidth=2, capsize=3)
 # ax.set_title(fr'$\tau_l={tau}\si{{ns}},\,\sigma_l={sigma}\si{{ns}}$')
 fig.savefig('Note/figures/summarycharge.pgf')

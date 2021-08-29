@@ -158,6 +158,15 @@ def threshold(wave, spe_pre):
         cha = np.array([1])
     return pet, cha
 
+def firstthres(wave, spe_pre):
+    pet = np.argwhere(wave[spe_pre['peak_c']:] > spe_pre['std'] * 5).flatten()
+    if len(pet) == 0:
+        pet = np.array([np.argmax(wave[spe_pre['peak_c']:])])
+    else:
+        pet = pet[:1]
+    cha = np.array([1])
+    return pet, cha
+
 def findpeak(wave, spe_pre):
     w = savgol_filter(wave, 11, 2)
     dpta = np.where(np.diff(w, prepend=w[0]) > 0, 1, -1)

@@ -31,7 +31,7 @@ fopt = args.opt
 reference = args.ref
 method = args.met
 
-Thres = {'xiaopeip':0, 'lucyddm':0.2, 'fftrans':0.1, 'findpeak':0.1, 'threshold':0, 'omp':0}
+Thres = {'xiaopeip':0, 'lucyddm':0.2, 'fftrans':0.1, 'findpeak':0.1, 'threshold':0, 'firstthres':0, 'omp':0}
 
 def fitting(a, b):
     nsp = 4
@@ -59,6 +59,8 @@ def fitting(a, b):
                 pet, cha = wff.findpeak(wave, spe_pre[ent[i]['ChannelID']])
             elif method == 'threshold':
                 pet, cha = wff.threshold(wave, spe_pre[ent[i]['ChannelID']])
+            elif method == 'firstthres':
+                pet, cha = wff.firstthres(wave, spe_pre[ent[i]['ChannelID']])
             pet, cha = wff.clip(pet, cha, Thres[method])
             if method in ['xiaopeip', 'lucyddm', 'fftrans', 'findpeak', 'threshold']:
                 if method == 'xiaopeip':
