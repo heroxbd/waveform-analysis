@@ -63,7 +63,7 @@ See figure~\ref{fig:pile} for an example.
 \label{sec:time}
 We see in figure~\ref{fig:pile} that pile-ups and noises hinder the time $t_i$ of the PEs. Fortunately in vertex reconstruction only the global shift $t_0$ of the light curve $\phi(t-t_0)$ encodes the time of flight.  All the uncertainties of $\hat{t}_i$ contribute their impact via $\hat{t}_0$. In this article, we denote $\hat{x}$ as an estimator for the corresponding variable $x$ if not otherwise specified.
 
-Classical TDC/QDC extracts the waveform's threshold crossing time $\hat{t}_\mathrm{1st}$ and the total charge $Q$ by integration.  $\hat{t}_\mathrm{1st}$ is dominated by the first PE in the PMT.  It is a biased $t_0$ estimator affected by the light intensity $\mu$. We define the resolution $\sigma_\mathrm{1st}$ for a batch of waveforms as the standard deviation of $\Delta t_0 = \hat{t}_\mathrm{1st} - t_0$.
+Classical TDC/QDC extracts the waveform's threshold crossing time $\hat{t}_\mathrm{1st}$~(an approximation of first PE hit time) and the total charge $Q$ by integration.  $\hat{t}_\mathrm{1st}$ is a biased $t_0$ estimator affected by the light intensity $\mu$. We define the resolution $\sigma_\mathrm{1st}$ for a batch of waveforms as the standard deviation of $\Delta t_0 = \hat{t}_\mathrm{1st} - t_0$.
 
 From a hypothetical perfect measurement of $t_i$, we define an ideal maximum likelihood estimator~(MLE) $\hat{t}_\mathrm{ALL}$ to capture time information of all the PEs,
 \begin{equation}
@@ -77,7 +77,7 @@ To characterize $\hat{t}_\mathrm{1st}$ and $\hat{t}_\mathrm{ALL}$, we scan $\mu$
 \begin{figure}[H]
   \centering
   \resizebox{0.8\textwidth}{!}{\input{figures/vs-deltadiv.pgf}}
-  \caption{\label{fig:reso-diff} Time resolution comparisons between $\hat{t}_{\mathrm{ALL}}$~(solid lines, when using information of all PEs) and $\hat{t}_\mathrm{1st}$~(dashed lines, only using the first PE). The difference is manifested especially when $\sigma_\mathrm{l}$ and $\mu$ are large. The three cases of $(\tau_\mathrm{l}, \sigma_\mathrm{l})/\si{ns}$ represent the scintillation with ultra-fast PMTs~$(20, 0)$, Cherenkov~$(0, 5)$ and scintilation coupled with PMT TTS~$(20, 5)$. The performance of waveform analysis lies between $\sigma_{\mathrm{1st}}$ and $\sigma_{\mathrm{ALL}}$. }
+  \caption{\label{fig:reso-diff} Time resolution comparisons between $\hat{t}_{\mathrm{ALL}}$~(solid lines, when using information of all PEs) and $\hat{t}_\mathrm{1st}$~(dashed lines, using the true first PE instead of the threshold crossing time to eliminate the influence from TDC, while their resolutions are in comparison).  The difference is manifested especially when $\sigma_\mathrm{l}$ and $\mu$ are large. The three cases of $(\tau_\mathrm{l}, \sigma_\mathrm{l})/\si{ns}$ represent the scintillation with ultra-fast PMTs~$(20, 0)$, Cherenkov~$(0, 5)$ and scintilation coupled with PMT TTS~$(20, 5)$. The performance of waveform analysis lies between $\sigma_{\mathrm{1st}}$ and $\sigma_{\mathrm{ALL}}$. }
 \end{figure}
 
 Nevertheless, for $\sigma_\mathrm{l} > 0$ and $\mu >0$, the $\sigma_{\mathrm{1st}}$ significantly deteriorates from $\sigma_{\mathrm{ALL}}$.  For Cherenkov and scintillation experiments with non-negligible PMT TTS and occupancy, we shall explore more sophisticated waveform analysis algorithms to go beyond $\hat{t}_{\mathrm{1st}}$ and recover the accuracy of $\hat{t}_\mathrm{ALL}$ in eq.~\eqref{eq:2} from waveform in eq.~\eqref{eq:1}.
