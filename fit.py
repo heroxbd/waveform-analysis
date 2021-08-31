@@ -31,7 +31,7 @@ fopt = args.opt
 reference = args.ref
 method = args.met
 
-Thres = {'xiaopeip':0, 'lucyddm':0.2, 'fftrans':0.1, 'findpeak':0.1, 'threshold':0, 'firstthres':0, 'omp':0}
+Thres = wff.Thres
 
 def fitting(a, b):
     nsp = 4
@@ -48,10 +48,7 @@ def fitting(a, b):
 
             time_method_start = time.time()
             if method == 'xiaopeip':
-                # pet, cha, ped = wff.xiaopeip(wave, spe_pre[ent[i]['ChannelID']])
-                # wave = wave - ped
-                # pet, cha = wff.xiaopeip(wave, spe_pre[ent[i]['ChannelID']], eta=0)
-                pet, cha = wff.xiaopeip_new(wave, spe_pre[ent[i]['ChannelID']], Tau, Sigma, 0.1, p, eta=0)
+                pet, cha = wff.xiaopeip(wave, spe_pre[ent[i]['ChannelID']], Tau, Sigma, Thres['lucyddm'], p, eta=0)
             elif method == 'lucyddm':
                 pet, cha = wff.lucyddm(wave, spe_pre[ent[i]['ChannelID']]['spe'])
             elif method == 'fftrans':

@@ -35,9 +35,9 @@ Mu = float(mtslist[0])
 Tau = float(mtslist[1])
 Sigma = float(mtslist[2])
 
-p = [8., 0.5, 24.]
+p = wff.p
 p[2] = p[2] * gmu / integrate.quad(lambda t : wff.spe(np.array([t]), tau=p[0], sigma=p[1], A=p[2]), 0, 100)[0]
-std = 1.
+std = wff.std
 
 def sampling(a0, a1, mu, tau, sigma):
     np.random.seed(a0 + round(Tau + Sigma))

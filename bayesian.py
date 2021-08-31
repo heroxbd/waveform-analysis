@@ -70,8 +70,7 @@ if Tau != 0:
     Alpha = 1 / Tau
     Co = (Alpha / 2. * np.exp(Alpha ** 2 * Sigma ** 2 / 2.)).item()
 std = 1.
-Thres = {'mcmc':std / gsigma, 'lucyddm':0.1, 'fbmp':1e-6}
-# Thres = {'mcmc':std / gsigma, 'lucyddm':0.01, 'fbmp':1e-6}
+Thres = wff.Thres
 mix0sigma = 1e-3
 mu0 = np.arange(1, int(Mu + 5 * np.sqrt(Mu)))
 n_t = np.arange(1, 20)
@@ -102,8 +101,6 @@ class mNormal(numpyro.distributions.distribution.Distribution):
         return jax.scipy.special.logsumexp(prob, axis=0, b=pl)
 
 def time_numpyro(a0, a1):
-    nsp = 4
-    nstd = 3
     Awindow = int(window * 0.95)
     rng_key = jax.random.PRNGKey(1)
     rng_key, rng_key_ = jax.random.split(rng_key)
@@ -135,7 +132,7 @@ def time_numpyro(a0, a1):
 
         mu = abs(wave.sum() / gmu)
         n = ndict[min(math.ceil(mu), max(mu0))]
-        AV, wave, tlist, t0_init, t0_init_delta, A_init, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[cid], Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, n=n, nshannon=1)
+        AV, wave, tlist, t0_init, t0_init_delta, A_init, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[cid], Tau, Sigma, gmu, Thres['lucyddm'], p, is_t0=True, n=n, nshannon=1)
         mu = abs(wave.sum() / gmu)
         AV = jnp.array(AV)
         wave = jnp.array(wave)
@@ -183,8 +180,6 @@ def time_numpyro(a0, a1):
 
 def fbmp_inference(a0, a1):
     prior = False
-    nsp = 4
-    nstd = 3
     t0_wav = np.empty(a1 - a0)
     t0_cha = np.empty(a1 - a0)
     mu_wav = np.empty(a1 - a0)
@@ -207,7 +202,7 @@ def fbmp_inference(a0, a1):
         # initialization
         mu_t = abs(wave.sum() / gmu)
         n = 2
-        A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, Thres['lucyddm'], p, nsp, nstd, is_t0=True, is_delta=False, n=n, nshannon=1)
+        A, wave_r, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, Thres['lucyddm'], p, is_t0=True, is_delta=False, n=n, nshannon=1)
         mu_t = abs(wave_r.sum() / gmu)
         def optit0mu(t0, mu, n, psy_star, c_star, la):
             ys = np.log(psy_star)

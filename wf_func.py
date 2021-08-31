@@ -43,8 +43,11 @@ nshannon = 1
 window = 1029
 gmu = 160.
 gsigma = 40.
+std = 1.
+p = [8., 0.5, 24.]
+Thres = {'mcmc':std / gsigma, 'xiaopeip':0, 'lucyddm':0.2, 'fbmp':0, 'fftrans':0.1, 'findpeak':0.1, 'threshold':0, 'firstthres':0, 'omp':0}
 
-def xiaopeip(wave, spe_pre, eta=0):
+def xiaopeip_old(wave, spe_pre, eta=0):
     l = len(wave)
     flag = 1
     lowp = np.argwhere(wave > 5 * spe_pre['std']).flatten()
@@ -66,12 +69,10 @@ def xiaopeip(wave, spe_pre, eta=0):
     # return pet, cha, ped
     return pet, cha
 
-def xiaopeip_new(wave, spe_pre, Tau, Sigma, Thres, p, eta=0):
-    nsp = 4
-    nstd = 3
-    _, wave_r, tlist, _, _, _, left_wave, right_wave = initial_params(wave, spe_pre, Tau, Sigma, gmu, Thres, p, nsp, nstd, is_t0=False, is_delta=False, n=1)
+def xiaopeip(wave, spe_pre, Tau, Sigma, Thres, p, eta=0):
+    _, wave_r, tlist, _, _, _, left_wave, right_wave = initial_params(wave, spe_pre, Tau, Sigma, gmu, Thres, p, is_t0=False, is_delta=False, n=1)
     fitp = np.arange(left_wave, right_wave)
-    # cha, ped = xiaopeip_core(wave_r, spe_pre['spe'], fitp, tlist, eta=eta)
+    # cha, ped = xiaopeip_core(wave_r, spe_pre['spe'], fitp, tlist.astype(int), eta=eta)
     cha = xiaopeip_core(wave_r, spe_pre['spe'], fitp, tlist.astype(int), eta=eta)
     return tlist, cha
 
@@ -490,7 +491,7 @@ def likelihoodt0(hitt, char, gmu, Tau, Sigma, mode='charge', is_delta=False):
         t0delta = abs(opti.fmin_l_bfgs_b(logLvdelta, x0=[tlist[np.argmin(np.abs(logLv_tlist - logL(t0) - 0.5))]], approx_grad=True, bounds=[b], maxfun=500000)[0] - t0)
     return t0, t0delta
 
-def initial_params(wave, spe_pre, Tau, Sigma, gmu, Thres, p, nsp, nstd, is_t0=False, is_delta=False, n=1, nshannon=1):
+def initial_params(wave, spe_pre, Tau, Sigma, gmu, Thres, p, nsp=4, nstd=3, is_t0=False, is_delta=False, n=1, nshannon=1):
     hitt, char = lucyddm(wave[::nshannon], spe_pre['spe'][::nshannon])
     hitt, char = clip(hitt, char, Thres)
     char = char / char.sum() * np.clip(np.abs(wave[::nshannon].sum()), 1e-6, np.inf)
