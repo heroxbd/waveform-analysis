@@ -79,8 +79,10 @@ for key in mts.keys():
                 record = distf['Record'][:]
                 start = wavef['SimTruth/T'][:]
                 r = wavef['SimTruth/T'].attrs['r']
+                r = np.inf
             mts[key][i]['N'] = len(start)
             vali = np.abs(time['tscharge'] - start['T0'] - np.mean(time['tscharge'] - start['T0'])) <= r * np.std(time['tscharge'] - start['T0'], ddof=-1)
+            # vali = np.full(start['T0'].shape, True)
             mts[key][i]['std1sttruth'] = np.std(start['ts1sttruth'] - start['T0'], ddof=-1)
             mts[key][i]['stdtruth'] = np.std(start['tstruth'] - start['T0'], ddof=-1)
             mts[key][i]['std'], mts[key][i]['stdsuccess'] = wff.stdrmoutlier(time['tscharge'] - start['T0'], r)
@@ -370,6 +372,7 @@ for key in mts.keys():
                 gmu = wavef['SimTriggerInfo/PEList'].attrs['gmu']
                 gsigma = wavef['SimTriggerInfo/PEList'].attrs['gsigma']
                 r = wavef['SimTruth/T'].attrs['r']
+                r = np.inf
             mts[key][i]['N'] = len(start)
             vali = np.abs(time['tscharge'] - start['T0'] - np.mean(time['tscharge'] - start['T0'])) <= r * np.std(time['tscharge'] - start['T0'], ddof=-1)
             Chnum = len(np.unique(pelist['PMTId']))
