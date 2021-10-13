@@ -231,9 +231,9 @@ It is reasonable that $D_w$ is the smallest for one PE.  $D_w$ stops increasing 
 
 \subsection{Regression analysis}
 \label{sec:regression}
-With the generative waveform model in eq.~\eqref{eq:1}, regression is the best for analysis. Although computational complexity hinders the applications of regression due to the vast volumes of raw data, the advancement of big data infrastructure and sparsity strengthens the advantage of regression.
+With the generative waveform model in eq.~\eqref{eq:1}, regression is ideal for analysis. Although computational complexity hinders the applications of regression by the vast volumes of raw data, the advancement of sparse models and big data infrastructures strengthens the advantage of regression.
 
-We replace $\hat{N}$ with a fixed sample size $N_\mathrm{s}$ and $\hat{t}_i$ with a fixed vector of times $t'_i$ in eq.~\eqref{eq:w-hat}, 
+We replace $\hat{N}$ with a fixed sample size $N_\mathrm{s}$ and $\hat{t}_i$ with a fixed grid of times $t'_i$ in eq.~\eqref{eq:w-hat}, 
 \begin{equation}
   \label{eq:gd}
   w'(t) = \sum_{i=1}^{N_\mathrm{s}}q'_iV_\mathrm{PE}(t-t'_i).
@@ -246,7 +246,7 @@ When $\{t'_i\}$ is dense enough, $\{\hat{q}_i\}$ determines the inferred PE dist
 From the output $\hat{\phi}_\mathrm{dec}(t)$ of a deconvolution method in section~\ref{sec:lucyddm}, we confidently leave out all the $t'_i$ that $\hat{\phi}_\mathrm{dec}(t_i')=0$ in eq.~\eqref{eq:gd-phi} to reduce the number of parameters and the complexity.
 
 
-We have attempted to replace the dense $\bm{t'}$ grid in eq.~\eqref{eq:gd} with a length-varying vector of sparse PEs. However, the truth $N_\mathrm{PE}$ is unknown and formulating an explicit trans-dimensional model is expansive. 
+We attempted to replace the dense $\bm{t'}$ grid in eq.~\eqref{eq:gd} with a length-varying vector of sparse PEs. However, the truth $N_\mathrm{PE}$ is unknown and formulating an explicit trans-dimensional model is expansive.  We shall leave this possibility to the future.
 
 \subsubsection{Direct charge fitting}
 \label{sec:dcf}
@@ -311,7 +311,7 @@ RSS and $D_w$ are then calculated according to eqs.~(\ref{eq:rss}) and (\ref{eq:
     \resizebox{\textwidth}{!}{\input{figures/mcmc.pgf}}
     \caption{\label{fig:mcmc}An example with \\ $\Delta{t_0}=\SI{-2.48}{ns}$, $\mathrm{RSS}=\SI{16.25}{mV^2}$, $D_w=\SI{0.76}{ns}$.}
   \end{subfigure}
-  \caption{Demonstration of MCMC with $\num[retain-unity-mantissa=false]{1e4}$ waveforms in~\subref{fig:mcmc-npe} and one waveform in~\subref{fig:mcmc} sampled from the same setup as figure~\ref{fig:method}.  Although using a more dedicated model, MCMC performs worse than direct charge fitting in figure~\ref{fig:dcf}. We suspect the chain is not long enough.}
+  \caption{Demonstration of MCMC with $\num[retain-unity-mantissa=false]{1e4}$ waveforms in~\subref{fig:mcmc-npe} and one waveform in~\subref{fig:mcmc} sampled from the same setup as figure~\ref{fig:method}.  Although using a more dedicated model, MCMC performs worse than direct charge fitting in figure~\ref{fig:dcf}. We suspect the Markov chain is not long enough.}
 \end{figure}
 Although we imposed a $\mathcal{N}(1, \sigma_\mathrm{q})$ prior, The charges $\hat{q}_i$ in figure~\ref{fig:fitting} are still less than 1.  The $D_w$ marginal distribution in figure~\ref{fig:mcmc-npe} is less smooth than that of direct charge fitting in figure~\ref{fig:fitting-npe}.  Similarly, RSS in figure~\ref{fig:mcmc} is slightly worse than that in figure~\ref{fig:fitting}.  We suspect the markov chain has not finally converged due to the trans-dimensional property of eq.~\eqref{eq:mixnormal}.  Enlonging the burning and chain is not a solution because MCMC is already much slower than direct fitting in section~\ref{sec:dcf}.  We need an algorithm that pertains the model of eq.~\eqref{eq:mixnormal} but much faster than MCMC.
 
@@ -347,7 +347,7 @@ If we discretize waveform variable $t$ in eq.~\eqref{eq:mixnormal} into $t_j$, $
     \mu_i &= \mu \int_{t'_i-\frac{\Delta t'}{2}}^{t'_i+\frac{\Delta t'}{2}} \phi(t' - t_0)\mathrm{d}t' \\
   \end{aligned}
 \end{equation}
-where $\mathcal{P}$ stands for Poisson distribution.  Unlike eq.~\eqref{eq:mixnormal}, $z_i$ can take non-negative integers larger than 1, meaning the number of PE's in the $i$-th time bin.  Marginalizing out $\bm{z}$,
+where $\mathcal{P}$ stands for Poisson distribution.  Unlike eq.~\eqref{eq:mixnormal}, $z_i$ can take non-negative integers larger than 1, encoding the number of PE's in the $i$-th time bin.  Marginalizing out $\bm{z}$,
 \begin{equation}
   \begin{aligned}
     \label{eq:bayesianinter}
@@ -355,7 +355,7 @@ where $\mathcal{P}$ stands for Poisson distribution.  Unlike eq.~\eqref{eq:mixno
     \left(\hat{t}_0, \hat{\mu}\right) &= \arg\underset{t_0,\mu}{\max} ~p(\bm{w} | t_0, \mu),
   \end{aligned}
 \end{equation}
-gives the probability of $\bm{w}$ subject to $\mu$ and $t_0$ with the corresponding estimators. $p(\bm{w}|z')$ is in place of $p(\bm{w}|z', t_0, \mu)$ because $\bm{w}$ does not depend on $t_0$ or $\mu$ if $\bm{z}$ is given.  The summation over $\bm{z}$, however, takes infinite combinations. Only a few $\bm{z}$'s contribute significantly in eq.~\eqref{eq:bayesianinter}.  Schniter et al.~\cite{schniter_fast_2008} proposes fast Bayesian matching pursuit~(FBMP) to construct a dominating set $\Omega$ of $\bm{z}$ with non-negligible $p(\bm{w}|\bm{z})$.  In terms of variational inference~(e.g.~\cite{mackay_information_2003}), the dominating set $\Omega$ defines an approximation $p_\Omega(\bm{z})$ to $p(\bm{z}|\bm{w})$, dropping the context $t_0$ and $\mu$ for simplicity,
+gives the probability of $\bm{w}$ subject to $\mu$ and $t_0$ with the corresponding estimators. $p(\bm{w}|z)$ is in place of $p(\bm{w}|z, t_0, \mu)$ because $\bm{w}$ does not depend on $t_0$ or $\mu$ if $\bm{z}$ is given.  The summation over $\bm{z}$, however, takes exploding number of combinations. Only a few $\bm{z}$'s contribute significantly in eq.~\eqref{eq:bayesianinter}.  Schniter~et al.~\cite{schniter_fast_2008} propose fast Bayesian matching pursuit~(FBMP) to construct a dominating set $\Omega$ of $\bm{z}$ with non-negligible $p(\bm{w}|\bm{z})$.  In terms of variational inference~(e.g.~\cite{mackay_information_2003}), the dominating set $\Omega$ defines an approximation $p_\Omega(\bm{z})$ to $p(\bm{z}|\bm{w})$, dropping the context $t_0$ and $\mu$ for simplicity,
 
 \begin{equation}
   \label{eq:VI}
@@ -365,6 +365,7 @@ gives the probability of $\bm{w}$ subject to $\mu$ and $t_0$ with the correspond
       0 & \text{ if } \bm{z} \notin \Omega
     \end{cases}\\
     \log p(\bm{w}) - D_\mathrm{KL}\left[p_\Omega(\bm{z}) \parallel p(\bm{z}|\bm{w})\right] &= \sum_z p_\Omega(\bm{z}) \log \frac{p(\bm{w}) p(\bm{z}|\bm{w})}{p_\Omega(\bm{z})} \\
+    &= \left[\sum_z p_\Omega(\bm{z})\right]\left[\log \sum_{z' \in \Omega} p(\bm{w}, \bm{z'}) \right] \\
     &= \log \sum_{z \in \Omega} p(\bm{w}, \bm{z}).
   \end{aligned}
 \end{equation}
@@ -378,7 +379,7 @@ We take the maximum a posteriori estimation $\hat{\bm{z}}$ and the expectation e
     \hat{\bm{q}}_{\hat{\bm{z}}} &= E(\bm{q}'|\bm{w},\hat{\bm{z}}) = \hat{\bm{z}} + \bm{Z}\bm{V}_\mathrm{PE}^\intercal\bm{\Sigma}^{-1}(\bm{w}-\bm{V}_\mathrm{PE}\hat{\bm{z}})
   \end{aligned}
 \end{equation}
-We calculate RSS and $D_w$ by eqs.~\eqref{eq:rss}, \eqref{eq:mcmc-w}, \eqref{eq:numerical} and \eqref{eq:gd-phi}.
+and calculate RSS and $D_w$ by eqs.~\eqref{eq:rss}, \eqref{eq:mcmc-w}, \eqref{eq:numerical} and \eqref{eq:gd-phi}.
 
 \begin{figure}[H]
   \begin{subfigure}[b]{.45\textwidth}
@@ -393,7 +394,7 @@ We calculate RSS and $D_w$ by eqs.~\eqref{eq:rss}, \eqref{eq:mcmc-w}, \eqref{eq:
   \end{subfigure}
   \caption{Demonstration of FBMP with $\num[retain-unity-mantissa=false]{1e4}$ waveforms in~\subref{fig:fbmp-npe} and one waveform in~\subref{fig:fbmp} sampled from the same setup as figure~\ref{fig:method}.  FBMP reconstructs the waveform and charges flawlessly.}
 \end{figure}
-In terms of $D_w$, figure~\ref{fig:fbmp-npe} show that FBMP is on par with CNN in figure~\ref{fig:cnn-npe}.  Figure~\ref{fig:fbmp} demonstrates a perfect reconstruction example where the true and reconstructed charges and waveforms overlap.  A bias of $\Delta{t_0}=\SI{-3.51}{ns}$ aligns with $\hat{t}_\mathrm{ALL}$ in eq.~\eqref{eq:2}, which will be covered in section~\ref{subsec:timeresolution}.  The superior performance of FBMP attributes to sparsity and positiveness of $q'_i$, correct modeling of $V_\mathrm{PE}$, $q'$ distribution and white noise.  In addition, FBMP provides a Bayesian interface to event reconstruction by eq.~\eqref{eq:bayesianinter}.  We will investigate it in the future studies.
+In terms of $D_w$, figure~\ref{fig:fbmp-npe} show that FBMP is on par with CNN in figure~\ref{fig:cnn-npe}.  Figure~\ref{fig:fbmp} demonstrates a perfect reconstruction example where the true and reconstructed charges and waveforms overlap.  A bias of $\Delta{t_0}=\SI{-3.51}{ns}$ aligns with $\hat{t}_\mathrm{ALL}$ in eq.~\eqref{eq:2}, which will be covered in section~\ref{subsec:timeresolution}.  The superior performance of FBMP attributes to sparsity and positiveness of $q'_i$, correct modeling of $V_\mathrm{PE}$, $q'$ distribution and white noise.  In addition, FBMP provides a Bayesian interface to event reconstruction by eq.~\eqref{eq:bayesianinter}.  We shall investigate it in the upcoming publications.
 \subsection{Performance}
 
 % Methods
