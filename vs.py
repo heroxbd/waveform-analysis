@@ -58,9 +58,9 @@ mtsi['wdist'] = np.nan
 mtsi['RSS'] = np.nan
 mtsi = np.sort(mtsi, kind='stable', order=['mu', 'tau', 'sigma'])
 
-mts = {'findpeak':mtsi.copy(), 'threshold':mtsi.copy(), 'fftrans':mtsi.copy(), 'mcmc':mtsi.copy(), 'takara':mtsi.copy(), 'xiaopeip':mtsi.copy(), 'lucyddm':mtsi.copy(), 'fbmp':mtsi.copy(), 'firstthres':mtsi.copy()}
+mts = {'firstthres':mtsi.copy(), 'threshold':mtsi.copy(), 'findpeak':mtsi.copy(), 'fftrans':mtsi.copy(), 'lucyddm':mtsi.copy(), 'takara':mtsi.copy(), 'xiaopeip':mtsi.copy(), 'mcmc':mtsi.copy(), 'fbmp':mtsi.copy()}
 deltalabel = {'1st':'\mathrm{1st}', 'tru':'\mathrm{ALL}', 'findpeak':'\mathrm{FindPeak}', 'threshold':'\mathrm{Shift}', 'fftrans':'\mathrm{FFT}', 'lucyddm':'\mathrm{LucyDDM}', 'xiaopeip':'\mathrm{Fitting}', 'takara':'\mathrm{CNN}', 'fbmp':'\mathrm{FBMP}', 'fbmpone':'\mathrm{FBMPmax}', 'mcmc':'\mathrm{MCMCt0}', 'mcmcone':'\mathrm{MCMCcha}', 'firstthres':'\mathrm{1stthres}'}
-label = {'1st':'\mathrm{1st}', 'tru':'\mathrm{ALL}', 'findpeak':'\mathrm{FindPeak}', 'threshold':'\mathrm{Shift}', 'fftrans':'\mathrm{FFT}', 'lucyddm':'\mathrm{LucyDDM}', 'xiaopeip':'\mathrm{Fitting}', 'takara':'\mathrm{CNN}', 'fbmp':'\mathrm{FBMP}', 'fbmpone':'\mathrm{FBMPmax}', 'mcmc':'\mathrm{MCMC}', 'firstthres':'\mathrm{1stthres}'}
+label = {'1st':'\mathrm{1st}', 'tru':'\mathrm{ALL}', 'findpeak':'\mathrm{Peak\ finding}', 'threshold':'\mathrm{Waveform\ shifting}', 'fftrans':'\mathrm{Fourier\ deconvolution}', 'lucyddm':'\mathrm{LucyDDM}', 'xiaopeip':'\mathrm{Fitting}', 'takara':'\mathrm{CNN}', 'fbmp':'\mathrm{FBMP}', 'fbmpone':'\mathrm{FBMPmax}', 'mcmc':'\mathrm{MCMC}', 'firstthres':'\mathrm{1stthres}'}
 marker = {'1st':'o', 'tru':'h', 'findpeak':',', 'threshold':'1', 'fftrans':'+', 'lucyddm':'p', 'xiaopeip':'*', 'takara':'x', 'fbmp':'s', 'fbmpone':'^', 'mcmc':'X', 'mcmcone':'>', 'firstthres':'>'}
 color = {'1st':'g', 'tru':'k', 'findpeak':'C1', 'threshold':'C2', 'fftrans':'m', 'lucyddm':'y', 'xiaopeip':'c', 'takara':'C0', 'fbmp':'r', 'fbmpone':'b', 'mcmc':'C4', 'mcmcone':'C5', 'firstthres':'C6'}
 jit = 0.05
@@ -309,15 +309,25 @@ tau = 20
 sigma = 5
 wdist = np.vstack([mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]['wdist'].mean(axis=0) for key in keylist if key != 'firstthres'])
 dy = np.vstack([wdist[:, 1] - wdist[:, 0], wdist[:, 2] - wdist[:, 1]])
-fig = plt.figure(figsize=(10, 3))
+fig = plt.figure(figsize=(10, 5))
 fig.tight_layout()
-ax = fig.add_subplot(111)
-ax.bar(x, wdist[:, 1], color='b')
-ax.set_ylim(0, math.ceil(wdist[~np.isnan(wdist)].max() + 0.5))
+gs = gridspec.GridSpec(1, 1, figure=fig, left=0.1, right=0.9, top=0.9, bottom=0.3, wspace=0., hspace=0.)
+ax = fig.add_subplot(gs[0, 0])
+bar_colors = ['b' if key in ['lucyddm', 'takara', 'xiaopeip', 'fbmp'] else 'c' for key in keylist if key != 'firstthres']
+ax.bar(x, wdist[:, 1], color=bar_colors)
+# ax.set_ylim(0, math.ceil(wdist[~np.isnan(wdist)].max() + 0.5))
+ax.set_xlim(-0.5, 7.5)
+ax.set_ylim(0, 4)
 ax.set_ylabel(r'$\mathrm{Wasserstein\ Distance}/\si{ns}$')
 ax.set_xticks(x)
-ax.set_xticklabels(['$'+label[key]+'$' for key in keylist if key != 'firstthres'])
-ax.errorbar(x, wdist[:, 1], yerr=dy, fmt='o', ecolor='r', color='b', elinewidth=2, capsize=3)
+ax.set_xticklabels(['$'+label[key]+'$' for key in keylist if key != 'firstthres'], rotation=45)
+ax.errorbar(x, wdist[:, 1], yerr=dy, fmt='o', ecolor='r', c='r', elinewidth=2, capsize=3)
+ax.axvline(x=1.5, color='k', linestyle='dashed')
+ax.axvline(x=3.5, color='k', linestyle='dashed')
+ax.axvline(x=4.5, color='k', linestyle='dashed')
+ax2 = ax.twiny()
+ax2.set_xticks([-0.5, 0.5, 1.5, 2.5, 3.5, 4.5, 6.0, 7.5])
+ax2.set_xticklabels(['', r'$\mathrm{Heuristic\ methods}$', '', r'$\mathrm{Deconvolution}$', '', '', r'$\mathrm{Regression\ analysis}', ''])
 # ax.set_title(fr'$\tau_l={tau}\si{{ns}},\,\sigma_l={sigma}\si{{ns}}$')
 fig.savefig('Note/figures/summarycharge.pgf')
 fig.savefig('Note/figures/summarycharge.pdf')
