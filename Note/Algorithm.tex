@@ -61,7 +61,7 @@ Following eqs.~\eqref{eq:1} and~\eqref{eq:lc}, we construct an estimator of a wa
   \hat{w}(t) = \sum_{i=1}^{\hat{N}}\hat{q}_i V_\mathrm{PE}(t-\hat{t}_i) = \hat{\phi}(t) \otimes V_\mathrm{PE}(t).
 \end{equation}
 
-Residual sum of squares~(RSS) of $\hat{w}(t)$ from $\tilde{w}(t)$ is a $\ell_2$-metric,
+For a noise-free evaluation of $\hat{w}(t)$, residual sum of squares~(RSS) is a $\ell_2$-distance of it to $\tilde{w}(t)$,
 \begin{equation}
   \label{eq:rss}
   \mathrm{RSS} \coloneqq\int\left[\hat{w}(t) - \tilde{w}(t)\right]^2\mathrm{d}t.
@@ -137,9 +137,10 @@ where $I(x)$ is the indicator function, and $\hat{\alpha}$ is a scaling factor t
     \end{array}
     \right.
     \quad~~~
-    \hat{\alpha} = \arg \underset{\alpha}{\min}\mathrm{RSS}\left[\alpha\hat{\phi}(t)\otimes V_\mathrm{PE}(t),w(t)\right]. \\
+    \hat{\alpha} = \arg \underset{\alpha}{\min}\mathrm{RSS}\left[\alpha\hat{w}(t),w(t)\right]. \\
   \end{aligned}
 \end{equation*}
+$\tilde{w}(t)$ unknown in data analysis, we replace it in eq.~(\ref{eq:rss}) with $w(t)$.
 
 Figure~\ref{fig:fd} illustrates that Fourier deconvolution outperforms heuristic methods.  Meanwhile, noise and precision loss in the waveform lead to smaller and even negative $\hat{q}_i$. Those can be mitigated by thresholding and scaling in eq.~\eqref{eq:fdconv2}, but calls for a more elegant solution.
 
