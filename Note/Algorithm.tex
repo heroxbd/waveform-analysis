@@ -190,7 +190,7 @@ Convolutional neural networks~(CNN) made breakthroughs in various fields like co
 
 We choose a shallow network structure of 5 layers to recognize patterns as shown in figure~\ref{fig:struct} motivated by the pulse shape and universality of $V_\mathrm{PE}(t)$ for all the PEs.  The convolutional widths are selected considering the localized nature of $V_\mathrm{PE}(t)$.
 
-The workflow of data processing consists of training and predicting. We find a mapping from waveform $w(t)$ to PE $\tilde{\phi}(t)$ with backpropagation method and supervised learning. We formulate the training loss as optimizing $D_w\left[\hat{\phi}, \tilde{\phi}\right] $, the Wasserstein distance between the truth $\tilde{\phi}$ and predicted $\hat{\phi}$. As discussed in section~\ref{sec:W-dist}, $D_w$ can handle the PE sparsity in training iterations. Figure~\ref{fig:loss} shows the convergence of Wasserstein distance during training.
+The workflow of data processing consists of training and predicting. We find a mapping from waveform $w(t)$ to PE $\tilde{\phi}(t)$ with backpropagation method and supervised learning. We formulate the training loss as optimizing $D_w[\hat{\phi}, \tilde{\phi}] $, the Wasserstein distance between the truth $\tilde{\phi}$ and predicted $\hat{\phi}$. As discussed in section~\ref{sec:W-dist}, $D_w$ can handle the PE sparsity in training iterations. Figure~\ref{fig:loss} shows the convergence of Wasserstein distance during training.
 
 The output of CNN is scaled by $\hat{\alpha}$ following eq.~\eqref{eq:fdconv2} to get $\hat{\phi}$.
 
@@ -211,9 +211,9 @@ The output of CNN is scaled by $\hat{\alpha}$ following eq.~\eqref{eq:fdconv2} t
 \end{figure}
 
 \vspace{-0.5cm}
-In figure~\ref{fig:cnn-npe}, we use box plot to describe $D_w$ distributions. The middle line is the median of distribution. The upper and lower hinge are first quartile~($Q_1$, 25$\%$) and third quartile~($Q_3$, 75$\%$). The upper and lower whiskers are $Q_1-1.5(Q_3-Q_1)$ and $Q_3+1.5(Q_3-Q_1)$, respectively.  %This definition applies throughout this paper.  
+In figure~\ref{fig:cnn-npe}, we use box plot to describe $D_w$ distributions. From figure~\ref{fig:cnn-npe}, we find $D_w$ is the smallest for one PE.  $D_w$ stops increasing with $N_\mathrm{PE}$ at about 6 PEs, where the PE times are the most challenging to extract.  When the number of PEs is more than 6, pile-ups tend to produce a continuous waveform and the average PE time accuracy stays flat. Thus waveform analysis is the most important in recovering time accuracy for PEs less than 10.
 
-It is reasonable that $D_w$ is the smallest for one PE.  $D_w$ stops increasing with $N_\mathrm{PE}$ at about 6 PEs, showing CNN performs well in $D_w$ at large pile-ups.  The small $D_w$ from CNN provides a precise matching of waveforms horizontally to guarantee effective $\hat{\alpha}$ scaling, explaining why $\mathrm{RSS}$ is also small in figure~\ref{fig:cnn}.
+Such small $D_w$ in figure~\ref{fig:cnn-npe} provides a precise matching of waveforms horizontally to guarantee effective $\hat{\alpha}$ scaling, explaining why $\mathrm{RSS}$ is also small in figure~\ref{fig:cnn}.
 
 \begin{figure}[H]
   \begin{subfigure}{.5\textwidth}
@@ -226,7 +226,7 @@ It is reasonable that $D_w$ is the smallest for one PE.  $D_w$ stops increasing 
     \resizebox{\textwidth}{!}{\input{figures/takara.pgf}}
     \caption{\label{fig:cnn}An example giving \\ $\Delta t_0=\SI{-3.05}{ns}$, $\mathrm{RSS}=\SI{10.0}{mV^2}$, $D_w=\SI{0.64}{ns}$.}
   \end{subfigure}
-  \caption{Demonstration of CNN on $\num[retain-unity-mantissa=false]{1e4}$ waveforms in~\subref{fig:cnn-npe} and one waveform in~\subref{fig:cnn} sampled from the same setup as figure~\ref{fig:method}.}
+  \caption{\label{fig:cnn-performance}Demonstration of CNN on $\num[retain-unity-mantissa=false]{1e4}$ waveforms in~\subref{fig:cnn-npe} and one waveform in~\subref{fig:cnn} sampled from the same setup as figure~\ref{fig:method}.  In figure~\subref{fig:cnn-npe}, the middle line is the median of distribution. The upper and lower hinge are the first quartile $Q_1$ at \SI{25}{\percent} and the third quartile $Q_3$ at \SI{75}{\percent}. The upper and lower whiskers are $Q_1 \pm 1.5(Q_3-Q_1)$. }
 \end{figure}
 
 \subsection{Regression analysis}
@@ -262,7 +262,7 @@ Slawski and Hein~\cite{slawski_non-negative_2013} prove that in deconvolution pr
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/xiaopeipchargestats.pgf}}
-    \caption{\label{fig:fitting-npe} $D_w$ histogram and its distributions conditioned \\ on $N_{\mathrm{PE}}$.}
+    \caption{\label{fig:fitting-npe} $D_w$ histogram and its distributions conditioned \\ on $N_{\mathrm{PE}}$, boxplot explained in figure~\ref{fig:cnn-performance}.}
   \end{subfigure}
   \begin{subfigure}{.5\textwidth}
     \centering
@@ -304,7 +304,7 @@ RSS and $D_w$ are then calculated according to eqs.~(\ref{eq:rss}) and (\ref{eq:
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/mcmcchargestats.pgf}}
-    \caption{\label{fig:mcmc-npe} $D_w$ histogram and its distributions conditioned \\ on $N_{\mathrm{PE}}$.}
+    \caption{\label{fig:mcmc-npe} $D_w$ histogram and its distributions conditioned \\ on $N_{\mathrm{PE}}$, boxplot explained in figure~\ref{fig:cnn-performance}.}
   \end{subfigure}
   \begin{subfigure}{.5\textwidth}
     \centering
@@ -385,8 +385,9 @@ and calculate RSS and $D_w$ by eqs.~\eqref{eq:rss}, \eqref{eq:mcmc-w}, \eqref{eq
   \begin{subfigure}[b]{.45\textwidth}
     \centering
     \resizebox{1.05\textwidth}{!}{\input{figures/fbmpchargestats.pgf}}
-    \caption{\label{fig:fbmp-npe} $D_w$ histogram and its distributions \\ conditioned on $N_{\mathrm{PE}}$.}
+    \caption{\label{fig:fbmp-npe} $D_w$ histogram and distributions conditioned on $N_{\mathrm{PE}}$, boxplot explained in figure~\ref{fig:cnn-performance}.}
   \end{subfigure}
+  \hspace{0.5em}
   \begin{subfigure}[b]{.55\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/demoe2c0.pgf}}
