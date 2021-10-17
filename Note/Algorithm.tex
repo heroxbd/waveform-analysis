@@ -30,27 +30,33 @@ We construct a light curve estimator $\hat{\phi}(t)$ from $\bm{\hat{t}}$, $\bm{\
   \hat{\phi}(t) = \sum_{i=1}^{\hat{N}} \hat{q}_i\delta(t-\hat{t}_i),
 \end{equation}
 which resembles eq.~\eqref{eq:lc-sample}.
-Consider the non-normalized Kullback-Leibler~(KL) divergence~\cite{mihoko_robust_2002} between $\hat{\phi}(t)$ and $\phi(t-t_{0})$,
+Consider the non-normalized Kullback-Leibler~(KL) divergence~\cite{mihoko_robust_2002} between $\hat{\phi}(t)$ and $\mu \phi(t-t_{0})$,
 \begin{equation}
   \begin{aligned}
-    D_\mathrm{KL}\left[\hat{\phi}(t) \parallel \phi(t-t_0)\right] & =\int \left[\hat{\phi}(t) \log\frac{\hat{\phi}(t)}{\phi(t-t_0)} + \phi(t-t_0) - \hat{\phi}(t) \right]\mathrm{d}t \\
-    & = - \int \hat{\phi}(t) \log\phi(t-t_0)\mathrm{d}t + \int \left[\hat{\phi}(t) \log\hat{\phi}(t) + \phi(t) - \hat{\phi}(t) \right]\mathrm{d}t \\
-    & = - \sum_{i=1}^{\hat{N}}\int \hat{q}_i\delta(t-\hat{t_i}) \log\phi(t-t_0)\mathrm{d}t + C \\
-    & = -\log \prod_{i=1}^{\hat{N}} \left[\phi(\hat{t}_i-t_0)\right]^{\hat{q}_i} + C
+    D_\mathrm{KL}\left[\hat{\phi}(t) \parallel \mu\phi(t-t_0)\right] & =\int \left[\hat{\phi}(t) \log\frac{\hat{\phi}(t)}{\mu\phi(t-t_0)} + \mu\phi(t-t_0) - \hat{\phi}(t) \right]\mathrm{d}t \\
+    & = - \int \hat{\phi}(t) \log\phi(t-t_0)\mathrm{d}t - \log\mu\int\hat{\phi}(t)\mathrm{d}t + \mu + \int \left[\hat{\phi}(t) \log\hat{\phi}(t) - \hat{\phi}(t) \right]\mathrm{d}t \\
+    & = - \sum_{i=1}^{\hat{N}}\int \hat{q}_i\delta(t-\hat{t_i}) \log\phi(t-t_0)\mathrm{d}t - \log\mu\int\hat{q}_i\delta(t-\hat{t_i})\mathrm{d}t + \mu +  C \\
+    & = -\log \prod_{i=1}^{\hat{N}} \left[\phi(\hat{t}_i-t_0)\right]^{\hat{q}_i} - \log\mu\sum_{i=1}^{\hat{N}} \hat{q}_i + \mu + C
   \label{eq:kl}
   \end{aligned}
 \end{equation}
-where $C$ is a constant regarding $t_0$.  Define the KL estimator as
+where $C$ is a constant regarding $t_0$ and $\mu$.  Define the time KL estimator as
 \begin{equation}
   \begin{aligned}
   \label{eq:pseudo}
-  \hat{t}_\mathrm{KL} &= \arg\underset{t_0}{\min}~D_\mathrm{KL}\left[\hat{\phi}(t) \parallel \phi(t-t_0)\right] \\
+  \hat{t}_\mathrm{KL} &= \arg\underset{t_0}{\min}~D_\mathrm{KL}\left[\hat{\phi}(t) \parallel \mu\phi(t-t_0)\right] \\
   &= \arg\underset{t_0}{\max} \prod_{i=1}^{\hat{N}} \left[\phi(\hat{t}_i-t_0)\right]^{\hat{q}_i},
   \end{aligned}
 \end{equation}
 which reduces to an MLE like eq.~\eqref{eq:2} if $\hat{q}_i\equiv 1$.  $\hat{t}_\mathrm{KL}$ estimates $t_0$ when $t_i, q_i, N_\mathrm{PE}$ are all uncertain.
-
 Denoting $\Delta t_0$ as $\hat{t}_\mathrm{KL} - t_0$, the standard deviation $\sigma_\mathrm{KL}$ of $\Delta t_0$ on a batch of waveforms is the resolution of an algorithm.
+
+The intensity KL estimator is,
+\begin{equation}
+  \label{eq:pseudo-mu}
+  \hat{\mu}_\mathrm{KL} = \arg\underset{\mu}{\min}~D_\mathrm{KL}\left[\hat{\phi}(t) \parallel \mu\phi(t-t_0)\right] = \sum_{i=1}^{\hat{N}} \hat{q}_i.
+\end{equation}
+
 
 \subsubsection{Residual sum of squares}
 \label{sec:rss}
