@@ -161,7 +161,7 @@ Figure~\ref{fig:fd} illustrates that Fourier deconvolution outperforms heuristic
     \resizebox{\textwidth}{!}{\input{figures/lucyddm.pgf}}
     \caption{\label{fig:lucy} A Richardson-Lucy direct demodulation example:\\ $\Delta t_0=\SI{-0.75}{ns}$, $\mathrm{RSS}=\SI{70.3}{mV^2}$, $D_w=\SI{1.10}{ns}$.}
   \end{subfigure}
-  \caption{Demonstrations of deconvolution methods on a waveform sampled from the same setup as figure~\ref{fig:method}. Richardson-Lucy direct demodulation in~\subref{fig:lucy} imposes positive charges in iterations and obtains better results than Fourier deconvolution in~\subref{fig:fd}.}
+  \caption{\label{fig:deconv}Demonstrations of deconvolution methods on a waveform sampled from the same setup as figure~\ref{fig:method}. Richardson-Lucy direct demodulation in~\subref{fig:lucy} imposes positive charges in iterations and obtains better results than Fourier deconvolution in~\subref{fig:fd}.}
 \end{figure}
 
 \subsubsection{Richardson-Lucy direct demodulation}
@@ -318,7 +318,7 @@ RSS and $D_w$ are then calculated according to eqs.~(\ref{eq:rss}) and (\ref{eq:
     \resizebox{\textwidth}{!}{\input{figures/mcmc.pgf}}
     \caption{\label{fig:mcmc}An example with \\ $\Delta{t_0}=\SI{-2.48}{ns}$, $\mathrm{RSS}=\SI{16.25}{mV^2}$, $D_w=\SI{0.76}{ns}$.}
   \end{subfigure}
-  \caption{Demonstration of MCMC with $\num[retain-unity-mantissa=false]{1e4}$ waveforms in~\subref{fig:mcmc-npe} and one waveform in~\subref{fig:mcmc} sampled from the same setup as figure~\ref{fig:method}.  Although using a more dedicated model, MCMC performs worse than direct charge fitting in figure~\ref{fig:dcf}. We suspect the Markov chain is not long enough.}
+  \caption{\label{fig:mcmc-performance}Demonstration of MCMC with $\num[retain-unity-mantissa=false]{1e4}$ waveforms in~\subref{fig:mcmc-npe} and one waveform in~\subref{fig:mcmc} sampled from the same setup as figure~\ref{fig:method}.  Although using a more dedicated model, MCMC performs worse than direct charge fitting in figure~\ref{fig:dcf}. We suspect the Markov chain is not long enough.}
 \end{figure}
 Although we imposed a $\mathcal{N}(1, \sigma_\mathrm{q})$ prior, The charges $\hat{q}_i$ in figure~\ref{fig:fitting} are still less than 1.  The $D_w$ marginal distribution in figure~\ref{fig:mcmc-npe} is less smooth than that of direct charge fitting in figure~\ref{fig:fitting-npe}.  Similarly, RSS in figure~\ref{fig:mcmc} is slightly worse than that in figure~\ref{fig:fitting}.  We suspect the markov chain has not finally converged due to the trans-dimensional property of eq.~\eqref{eq:mixnormal}.  Enlonging the burning and chain is not a solution because MCMC is already much slower than direct fitting in section~\ref{sec:dcf}.  We need an algorithm that pertains the model of eq.~\eqref{eq:mixnormal} but much faster than MCMC.
 
@@ -400,36 +400,8 @@ and calculate RSS and $D_w$ by eqs.~\eqref{eq:rss}, \eqref{eq:mcmc-w}, \eqref{eq
     \resizebox{\textwidth}{!}{\input{figures/demoe2c0.pgf}}
     \caption{\label{fig:fbmp} An example giving \\ $\Delta{t_0}=\SI{-3.51}{ns}$, $\mathrm{RSS}=\SI{15.8}{mV^2}$, $D_w=\SI{0.59}{ns}$.}
   \end{subfigure}
-  \caption{Demonstration of FBMP with $\num[retain-unity-mantissa=false]{1e4}$ waveforms in~\subref{fig:fbmp-npe} and one waveform in~\subref{fig:fbmp} sampled from the same setup as figure~\ref{fig:method}.  FBMP reconstructs the waveform and charges flawlessly.}
+  \caption{\label{fig:fbmp-performance}Demonstration of FBMP with $\num[retain-unity-mantissa=false]{1e4}$ waveforms in~\subref{fig:fbmp-npe} and one waveform in~\subref{fig:fbmp} sampled from the same setup as figure~\ref{fig:method}.  FBMP reconstructs the waveform and charges flawlessly.}
 \end{figure}
-In terms of $D_w$, figure~\ref{fig:fbmp-npe} show that FBMP is on par with CNN in figure~\ref{fig:cnn-npe}.  Figure~\ref{fig:fbmp} demonstrates a perfect reconstruction example where the true and reconstructed charges and waveforms overlap.  A bias of $\Delta{t_0}=\SI{-3.51}{ns}$ aligns with $\hat{t}_\mathrm{ALL}$ in eq.~\eqref{eq:2}, which will be covered in section~\ref{subsec:timeresolution}.  The superior performance of FBMP attributes to sparsity and positiveness of $q'_i$, correct modeling of $V_\mathrm{PE}$, $q'$ distribution and white noise.  In addition, FBMP provides a Bayesian interface to event reconstruction by eq.~\eqref{eq:bayesianinter}.  We shall investigate it in the upcoming publications.
-\subsection{Performance}
+In terms of $D_w$, figure~\ref{fig:fbmp-npe} show that FBMP is on par with CNN in figure~\ref{fig:cnn-npe}.  Figure~\ref{fig:fbmp} demonstrates a perfect reconstruction example where the true and reconstructed charges and waveforms overlap.  A bias of $\Delta{t_0}=\SI{-3.51}{ns}$ aligns with $\hat{t}_\mathrm{ALL}$ in eq.~\eqref{eq:2}, which will be covered in section~\ref{subsec:timeresolution}.  The superior performance of FBMP attributes to sparsity and positiveness of $q'_i$, correct modeling of $V_\mathrm{PE}$, $q'$ distribution and white noise.
 
-% Methods
-
-Figure~\ref{fig:chargesummary} shows the $D_w$ summary of all methods with $\tau_\mathrm{l}=\SI{20}{ns}$, and $\sigma_\mathrm{l}=\SI{5}{ns}$. The error bars show 5 to 95 percentile of Wasserstein distance distributions. 
-
-\begin{figure}[H]
-    \centering
-    \resizebox{\textwidth}{!}{\input{figures/summarycharge.pgf}}
-    \caption{\label{fig:chargesummary} $D_w$ for all the methods with light curve $\mu=4, \tau_\mathrm{l}=\SI{20}{ns}, \sigma_\mathrm{l}=\SI{5}{ns}$. The methods colored with dark blue are discussed in section~\ref{sec:discussion}. }
-\end{figure}
-
-It is apparent that FindPeak, Shift, and FFT are second-rated among all eight methods. On time resolution and charge reconstruction which we discuss in sections~\ref{subsec:timeresolution} and~\ref{subsec:chargereconstruction}, MCMC does not perform well and is time-consuming. So we only discuss the other four methods below. 
-
-% Figure of Merits
-
-The $D_w$ summary of four methods (LucyDDM, Fitting, CNN, FBMP) is plotted in figure~\ref{fig:wdistsummary}, with all dataset parameters combination. The error bar shows 5 to 95 percentile of Wasserstein distance distribution. Wasserstein distances of all 4 methods are approaching each other when $\mu$ increases. 
-
-We can see the Wasserstein distance of method CNN is the smallest, as it directly uses Wasserstein distance as the loss during training. While the Fitting method treats RSS as its loss, FBMP obtains the least RSS among four methods (see figure~\ref{fig:rsssummary}). 
-\begin{figure}[H]
-    \centering
-    \resizebox{\textwidth}{!}{\input{figures/vs-wdist.pgf}}
-    \caption{\label{fig:wdistsummary} $D_w$ of methods, error bar 5--95 percentile ($\hat{q}$)}
-\end{figure}
-
-\begin{figure}[H]
-    \centering
-    \resizebox{\textwidth}{!}{\input{figures/vs-rss.pgf}}
-    \caption{\label{fig:rsssummary} RSS of methods, error bar 5--95 percentile ($\hat{q}$)}
-\end{figure}
+FBMP provides a Bayesian interface to event reconstruction by eq.~\eqref{eq:bayesianinter}.  We shall investigate it in the upcoming publications.
