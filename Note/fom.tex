@@ -1,6 +1,6 @@
-Wasserstein distance $D_w$ is a metric between two distributions, either of which can be discrete or continuous. It can capture the difference between a waveform analysis result $\hat{\phi}$ and the sampled light curve $\tilde{\phi}(t)$ in eq.~\eqref{eq:lc-sample}.
+Wasserstein distance $D_\mathrm{w}$ is a metric between two distributions, either of which can be discrete or continuous. It can capture the difference between a waveform analysis result $\hat{\phi}$ and the sampled light curve $\tilde{\phi}(t)$ in eq.~\eqref{eq:lc-sample}.
 \begin{equation}
-  D_w\left[\hat{\phi}_*, \tilde{\phi}_*\right] = \inf_{\gamma \in \Gamma} \left[\int \left\vert t_1 - t_2 \right\vert \gamma(t_1, t_2)\mathrm{d}t_1\mathrm{d}t_2\right],
+  D_\mathrm{w}\left[\hat{\phi}_*, \tilde{\phi}_*\right] = \inf_{\gamma \in \Gamma} \left[\int \left\vert t_1 - t_2 \right\vert \gamma(t_1, t_2)\mathrm{d}t_1\mathrm{d}t_2\right],
 \end{equation}
 where $*$ denotes the normalized light curves and $\Gamma$ is the collection of joint distributions with marginals $\hat{\phi}_*(t)$ and $\tilde{\phi}_*(t)$,
 \begin{equation*}
@@ -9,8 +9,8 @@ where $*$ denotes the normalized light curves and $\Gamma$ is the collection of 
 \end{equation*}
 It is also known as the \textit{earth mover's distance}~\cite{levina_earth_2001}, ecoding the minimum cost to transport mass from one distribution to the other, as shown in figure~\ref{fig:l2}.
 
-Alternatively, we can calculate $D_w$ from cumulative distribution functions (CDF). Let $\hat\Phi(t)$ and $\tilde\Phi(t)$ denote the CDF of $\hat{\phi}_*(t)$ and $\tilde{\phi}_*(t)$, respectively. Then $D_w$ is equivalent to the $\ell_1$-metric between the two CDFs,
+Alternatively, we can calculate $D_\mathrm{w}$ from cumulative distribution functions (CDF). Let $\hat\Phi(t)$ and $\tilde\Phi(t)$ denote the CDF of $\hat{\phi}_*(t)$ and $\tilde{\phi}_*(t)$, respectively. Then $D_w$ is equivalent to the $\ell_1$-metric between the two CDFs,
 \begin{equation}
-    D_w\left[\hat{\phi}_*, \tilde{\phi}_*\right] = \int\left|\hat{\Phi}(t) - \tilde{\Phi}(t)\right| \mathrm{d}t.
+    D_\mathrm{w}\left[\hat{\phi}_*, \tilde{\phi}_*\right] = \int\left|\hat{\Phi}(t) - \tilde{\Phi}(t)\right| \mathrm{d}t.
     \label{eq:numerical}
 \end{equation}

@@ -5,13 +5,13 @@ In this section, we shall address the burning question: which waveform analysis 
 
 \subsection{Performance}
 
-First, we constrain the candidates by time consumption, algorithm category and $D_w$.  Figure~\ref{fig:chargesummary} shows the $D_w$ summary of all 8 methods with the same sample as figure~\ref{fig:method}.
+First, we constrain the candidates by time consumption, algorithm category and $D_\mathrm{w}$.  Figure~\ref{fig:chargesummary} shows the $D_w$ summary of all 8 methods with the same sample as figure~\ref{fig:method}.
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/summarycharge.pgf}}
-    \caption{\label{fig:chargesummary} $D_w$ for all the methods with the same dataset as figure~\ref{fig:method}. The error bars are 5 to 95 percentiles.  The methods colored with dark blue are discussed in section~\ref{sec:discussion}. }
+    \caption{\label{fig:chargesummary} $D_\mathrm{w}$ for all the methods with the same dataset as figure~\ref{fig:method}. The error bars are 5 to 95 percentiles.  The methods colored with dark blue are discussed in section~\ref{sec:discussion}. }
 \end{figure}
-The $D_w$ performance of Waveform shifting, peak finding and Fourier deconvolution are suboptimal.  MCMC is too time consuming and the principle is not too different from FBMP.  We therefore leave out those in the following discussion.
+The $D_\mathrm{w}$ performance of Waveform shifting, peak finding and Fourier deconvolution are suboptimal.  MCMC is too time consuming and the principle is not too different from FBMP.  We therefore leave out those in the following discussion.
 
 Table~\ref{tab:efficiency} gives the efficiency of four performant methods on our simulation datasets. The CNN on GPU is the fastest. The number of iteration for LucyDDM and gradient descent, as well as $t'_i$ sampling frequency of FBMP can be decreased to trade for speed. The time consumed by FBMP contains the initialization time of a LucyDDM pre-conditioner. 
 
@@ -32,13 +32,13 @@ Table~\ref{tab:efficiency} gives the efficiency of four performant methods on ou
 
 % Figure of Merits
 
-The $D_w$ dependence on $\mu$ of four remaining methods, LucyDDM, Fitting, CNN and FBMP, is plotted in figure~\ref{fig:wdistsummary}.  We see they approaching each other when $\mu$ increases.
+The $D_\mathrm{w}$ dependence on $\mu$ of four remaining methods, LucyDDM, Fitting, CNN and FBMP, is plotted in figure~\ref{fig:wdistsummary}.  We see they approaching each other when $\mu$ increases.
 
 We can see the Wasserstein distance of method CNN is the smallest, as it directly uses Wasserstein distance as the loss during training. While the Fitting method treats RSS as its loss, FBMP obtains the least RSS among four methods (see figure~\ref{fig:rsssummary}). 
 \begin{figure}[H]
   \begin{subfigure}[b]{\textwidth}
     \resizebox{\textwidth}{!}{\input{figures/vs-wdist.pgf}}
-    \caption{\label{fig:wdistsummary} $D_w$}
+    \caption{\label{fig:wdistsummary} $D_\mathrm{w}$}
   \end{subfigure}
   \begin{subfigure}[b]{\textwidth}
     \resizebox{\textwidth}{!}{\input{figures/vs-rss.pgf}}
@@ -90,7 +90,7 @@ From figure~\ref{fig:deltamethods}, we can see that the $t_0$ estimation biases 
 
 The reconstruction results of hit time, $\bm{\hat{t}}$, are discrete values (time bin edges in a DAQ window). Obtaining continuous values of $\bm{\hat{t}}$ may result in better analysis results. The results in the study show that when using refined time bins, the time resolution, the sparsity of reconstructed PEs, and all figures of merits (Wasserstein distance and RSS) are better; however, a lost efficiency. 
 
-\subsection{Charge resolution}
+\subsection{Intensity resolution}
 \label{subsec:chargereconstruction}
 
 Integration estimation (footnoted as $\mathrm{int}$) with $\hat{\mu}=\int w(t)\mathrm{d}t$ is deteriorated by the randomization process, such as charge distribution and Gaussian white noise in section~\ref{subsec:spe}. 
@@ -103,14 +103,14 @@ Figure~\ref{fig:biasmu} shows the bias of $\log\hat{\mu}$ of all four methods, w
   \begin{subfigure}[b]{\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/vs-biasmut.pgf}}
-    \caption{\label{fig:biasmu} energy reconstruction bias of methods}
+    \caption{\label{fig:biasmu} intensity reconstruction bias of methods}
   \end{subfigure}
   \begin{subfigure}[b]{\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/vs-deltamethodsdivmu.pgf}}
-    \caption{\label{fig:deltamu} energy reconstruction ratio of resolution $\sigma/\sigma_{\log\mu}$ of methods}
+    \caption{\label{fig:deltamu} intensity reconstruction ratio of resolution $\sigma/\sigma_{\log\mu}$ of methods}
   \end{subfigure}
-  \caption{energy reconstruction performance}
+  \caption{intensity reconstruction performance}
 \end{figure}
 
 Figure~\ref{fig:deltamu} shows the charge resolution of both integration and the four methods. While estimating the PE number $\hat{\bm{z}}$ in each time bin $\hat{\bm{t}}$ with model selection, $\hat{\mu}$ of FBMP is not critically affected by the charge distribution, which gives a better charge resolution especially when $\mu$ is small. 
