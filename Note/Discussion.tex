@@ -44,7 +44,7 @@ The $D_\mathrm{w}$ and RSS dependence on $\mu$ of four remaining methods, LucyDD
     \resizebox{\textwidth}{!}{\input{figures/vs-rss.pgf}}
     \caption{\label{fig:rsssummary}Dependence of residual sum of squares by four methods on light intensity.}
   \end{subfigure}
-  \caption{\label{fig:summary}The dependence of $D_\mathrm{w}$~\subref{fig:wdistsummary} and RSS~\subref{fig:rsssummary} on light intensity $\mu$ for typical Cherenkov (left) and scintillation (right) configurations.  With more pile-ups, $D_\mathrm{w}$ tends to converge while RSS diverges.  The pile-up effect is more significant for Cherenkov case because the time scale of light curve is narrower.  The error bars are 5--95 percentile.  Method abbreviations are the same as figure~\ref{fig:chargesummary}. }
+  \caption{\label{fig:summary}The dependence of $D_\mathrm{w}$~\subref{fig:wdistsummary} and RSS~\subref{fig:rsssummary} on light intensity $\mu$ for typical Cherenkov (left) and scintillation (right) configurations.  With more pile-ups, $D_\mathrm{w}$ tends to converge while RSS diverges.  The pile-up effect is more significant for Cherenkov case because the time scale of light curve is narrower.  The error bars are 5--95 percentiles.  Method abbreviations are the same as figure~\ref{fig:chargesummary}. }
 \end{figure}
 
 CNN and FBMP are the kings of $D_\mathrm{w}$ and RSS.  Because their loss functions are chosen accordingly.  It is therefore informative to study the posterior charge distribution which is not related to the loss function of any method.
@@ -52,21 +52,21 @@ CNN and FBMP are the kings of $D_\mathrm{w}$ and RSS.  Because their loss functi
 \subsection{Charge fidelity and sparsity}
 
 All the discussed mothods output $\hat{q}_i$ as the inferred charge of the PE at $t_i'$.  Evident in figure~\ref{fig:recchargehist}, FBMP considers and almost retains the true charge distribution.  It is the only method modeling PE correctly.
+
+In contrast, the distributions of LucyDDM, Fitting, and CNN are severely distorted.  During the optimization process of $D_\mathrm{w}$ or RSS, the number of $q_i$ is a constant. Many $\hat{q}_i$ are inferred to be fragmented values.  In this view, retaining charge distribution is a manifestation of sparsity.  FBMP has the best sparsity because it chooses a PE configuration $\bm{z}$ before fitting $\hat{q}_i$.  CNN somehow learns the sparsity better than Fitting, although the latter in theory has self-regulated sparsity.  It is interesting to notice, but we are ignorant of the mechanism.
+
 \begin{figure}[H]
   \centering
   \resizebox{0.6\textwidth}{!}{\input{figures/recchargehist.pgf}}
   \caption{\label{fig:recchargehist} $\hat{q}_i$ distributions on the same waveform dataset as figure~\ref{fig:method}.  Method abbreviations are defined in figure~\ref{fig:chargesummary}. ChargePDF is the charge distribution introduced for simulation in section~\ref{subsec:spe}. The cut-off near 0 in LucyDDM is an artifect of thresholding in eq.~\eqref{eq:fdconv2}.}
 \end{figure}
-In contrast, the distributions of LucyDDM, Fitting, and CNN are severely distorted.  During the optimization process of $D_\mathrm{w}$ or RSS, the number of $q_i$ is a constant. Many $\hat{q}_i$ are inferred to be fragmented values.  In this view, retaining charge distribution is a manifestation of sparsity.  FBMP has the best sparsity because it chooses a PE configuration $\bm{z}$ before fitting $\hat{q}_i$.  CNN somehow learns the sparsity better than Fitting, although the latter in theory has self-regulated sparsity.  It is interesting to notice, but we are ignorant of the mechanism.
 
 For large $N_\mathrm{PE}$ waveforms the sparsity condition is by definition lost.  The equivalence of charge fidelity and sparity implies that FBMP breaks for large $N_\mathrm{PE}$ cases where PMTs operates in current mode, as we shall see in the next sections.
 
 \subsection{Time resolution}
 \label{subsec:timeresolution}
 
-% Likelihood
-
-The time resolution using these methods' results (time $\bm{\hat{t}}$ and charge $\bm{\hat{q}}$) are computed and collected. The $t_{0}$ reconstruction process is MLE by equation~\eqref{eq:pseudo} except FBMP, where $q_{i}$ is the charge in each time bin $t_{i}$ rather than the number of PE. For FBMP, equation~\eqref{eq:bayesianinter} is the likelihood to estimate both $t_{0}$ and $\mu$ (instead of complete uncertainty propagation, we may use the maximum posterior PE model with less accuracy). The comparison between time resolution using all PEs and the four methods is shown in figure~\ref{fig:deltamethods}, where error bars show 5 to 95 percentile confidential intervals. 
+Like figure~\ref{fig:summary}, we show the dependence on $\mu$ of bias~(figure~\ref{fig:biasmethods}) and resolution~(figure~\ref{fig:deltamethods}) for different time estimators in two typical experimental setups.  Comparing with figure~\ref{fig:reso-diff}, In figure~\ref{fig:deltamethods}, all 4 methods (LucyDDM, Fitting, CNN, FBMP) provide better time resolution than only using the first PE during construction.
 
 \begin{figure}[H]
   \begin{subfigure}[b]{\textwidth}
@@ -79,12 +79,10 @@ The time resolution using these methods' results (time $\bm{\hat{t}}$ and charge
     \resizebox{\textwidth}{!}{\input{figures/vs-deltamethodsdiv.pgf}}
     \caption{\label{fig:deltamethods} Time reconstruction ratio of resolution $\sigma/\sigma_{\mathrm{ALL}}$ of methods}
   \end{subfigure}
-  \caption{time reconstruction performance}
+  \caption{ALL is the $\hat{t}_\mathrm{ALL}$ estimator defined in eq.~\eqref{eq:2}. LucyDDM, Fitting, CNN use eq.~\eqref{eq:pseudo}.  FBMP has its own natural $\hat{t}_0$ estimator in eq.~\eqref{eq:bayesianinter}. Error bars are 5--95 percentiles.}
 \end{figure}
 
-In figure~\ref{fig:deltamethods}, all 4 methods (LucyDDM, Fitting, CNN, FBMP) provide better time resolution than only using the first PE during construction, comparing to figure~\ref{fig:reso-diff}. 
-
-From figure~\ref{fig:deltamethods}, we can see that the $t_0$ estimation biases for the four methods are all similar to those based on all PEs. The considerable bias for the datasets with $\tau_l=\SI{20}{ns}$, and $\sigma_l=\SI{5}{ns}$ when $\mu$ is small is intrinsic. 
+From figure~\ref{fig:biasmethods}, we can see that the $t_0$ estimation biases for the four methods are all similar to those based on all PEs. The considerable bias for the datasets with $\tau_l=\SI{20}{ns}$, and $\sigma_l=\SI{5}{ns}$ when $\mu$ is small is intrinsic. 
 
 % Time bin
 
