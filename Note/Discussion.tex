@@ -44,23 +44,22 @@ The $D_\mathrm{w}$ and RSS dependence on $\mu$ of four remaining methods, LucyDD
     \resizebox{\textwidth}{!}{\input{figures/vs-rss.pgf}}
     \caption{\label{fig:rsssummary}Dependence of residual sum of squares by four methods on light intensity.}
   \end{subfigure}
-  \caption{The dependence of $D_\mathrm{w}$~\subref{fig:wdistsummary} and RSS~\subref{fig:rsssummary} on light intensity $\mu$ for typical Cherenkov (left) and scintillation (right) configurations.  The error bars are 5--95 percentile.}
+  \caption{\label{fig:summary}The dependence of $D_\mathrm{w}$~\subref{fig:wdistsummary} and RSS~\subref{fig:rsssummary} on light intensity $\mu$ for typical Cherenkov (left) and scintillation (right) configurations.  With more pile-ups, $D_\mathrm{w}$ tends to converge while RSS diverges.  The pile-up effect is more significant for Cherenkov case because the time scale of light curve is narrower.  The error bars are 5--95 percentile.  Method abbreviations are the same as figure~\ref{fig:chargesummary}. }
 \end{figure}
-CNN and FBMP are the kings of $D_\mathrm{w}$ and RSS.  Because their loss functions are chosen accordingly.
 
-\subsection{Posterior charge distribution}
+CNN and FBMP are the kings of $D_\mathrm{w}$ and RSS.  Because their loss functions are chosen accordingly.  It is therefore informative to study the posterior charge distribution which is not related to the loss function of any method.
 
+\subsection{Charge fidelity and sparsity}
+
+All the discussed mothods output $\hat{q}_i$ as the inferred charge of the PE at $t_i'$.  Evident in figure~\ref{fig:recchargehist}, FBMP considers and almost retains the true charge distribution.  It is the only method modeling PE correctly.
 \begin{figure}[H]
-    \centering
-    \resizebox{0.6\textwidth}{!}{\input{figures/recchargehist.pgf}}
-    \caption{\label{fig:recchargehist} $\hat{q}_i$ distribution with $\mu=4, \tau_l=\SI{20}{ns}$, and $\sigma_l=\SI{5}{ns}$.}
+  \centering
+  \resizebox{0.6\textwidth}{!}{\input{figures/recchargehist.pgf}}
+  \caption{\label{fig:recchargehist} $\hat{q}_i$ distributions on the same waveform dataset as figure~\ref{fig:method}.  Method abbreviations are defined in figure~\ref{fig:chargesummary}. ChargePDF is the charge distribution introduced for simulation in section~\ref{subsec:spe}. The cut-off near 0 in LucyDDM is an artifect of thresholding in eq.~\eqref{eq:fdconv2}.}
 \end{figure}
+In contrast, the distributions of LucyDDM, Fitting, and CNN are severely distorted.  During the optimization process of $D_\mathrm{w}$ or RSS, the number of $q_i$ is a constant. Many $\hat{q}_i$ are inferred to be fragmented values.  In this view, retaining charge distribution is a manifestation of sparsity.  FBMP has the best sparsity because it chooses a PE configuration $\bm{z}$ before fitting $\hat{q}_i$.  CNN somehow learns the sparsity better than Fitting, although the latter in theory has self-regulated sparsity.  It is interesting to notice, but we are ignorant of the mechanism.
 
-Figure~\ref{fig:recchargehist} shows distribution of charge reconstruction result, $\hat{q}_i$, with $\mu=4, \tau_l=20\mathrm{ns}$, and $\sigma_l=5\mathrm{ns}$. 
-
-The steep edge near 0 in LucyDDM distributions results from the threshold of the original $\hat{q}_i$. As we can see in figure~\ref{fig:recchargehist}, the charge distribution of LucyDDM, Fitting, and CNN are severely distorted, while the charge distribution of FBMP partly retains the shape of the original (or prior) distribution of charge. 
-
-During optimization of Wasserstein distance between $\hat{\phi}(t)$ and $\tilde{\phi}(t)$ (e.g., CNN) or RSS between reconstructed wave $\hat{w}(t)$ and the original wave $w(t)$ (e.g., Fitting), the total number of hit time, which is the degree of freedom (DOF) of parameters, is a constant. So many $\hat{q}_i$'s turn out to be fragment values. The reduction of DOF before estimation of parameters in FBMP gives relatively good results in sparsity, though it is still noticeable that the slight skewness of charge distribution of FBMP persists. 
+For large $N_\mathrm{PE}$ waveforms the sparsity condition is by definition lost.  The equivalence of charge fidelity and sparity implies that FBMP breaks for large $N_\mathrm{PE}$ cases where PMTs operates in current mode, as we shall see in the next sections.
 
 \subsection{Time resolution}
 \label{subsec:timeresolution}
