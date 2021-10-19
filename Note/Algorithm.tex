@@ -191,7 +191,7 @@ Like Fourier deconvolution in eq.~\eqref{eq:fdconv2}, we threshold and scale the
 The remaining noise in the smoothed $\tilde{w}$ crucially influence deconvolution.  A probablistic method will correctly model the noise term $\epsilon$, as we shall see in section \ref{sec:regression}.  Before that let's try something different.
 
 \subsection{Convolutional neural network}
-
+\label{sec:cnn}
 % Network structure
 Convolutional neural networks~(CNN) made breakthroughs in various fields like computer vision~\cite{he_deep_2016} and natural language processing~\cite{vaswani_attention_2017}. As an efficient composition of weighted additions and non-linear functions, neural networks outperform many traditional algorithms.
 
@@ -218,7 +218,7 @@ The output of CNN is scaled by $\hat{\alpha}$ following eq.~\eqref{eq:fdconv2} t
 \end{figure}
 
 \vspace{-0.5cm}
-In figure~\ref{fig:cnn-npe}, we use box plot to describe $D_\mathrm{w}$ distributions. From figure~\ref{fig:cnn-npe}, we find $D_w$ is the smallest for one PE.  $D_w$ stops increasing with $N_\mathrm{PE}$ at about 6 PEs, where the PE times are the most challenging to extract.  When the number of PEs is more than 6, pile-ups tend to produce a continuous waveform and the average PE time accuracy stays flat. Thus waveform analysis is the most important in recovering time accuracy for PEs less than 10.
+In figure~\ref{fig:cnn-npe}, we use box plot to describe $D_\mathrm{w}$ distributions. From figure~\ref{fig:cnn-npe}, we find $D_w$ is the smallest for one PE.  $D_w$ stops increasing with $N_\mathrm{PE}$ at about 6 PEs, where the PE times are the most challenging to extract.  When $N_\mathrm{PE}$ is more than 6, pile-ups tend to produce a continuous waveform and the average PE time accuracy stays flat. Thus waveform analysis is the most important in recovering time accuracy for PEs less than 10.
 
 Such small $D_\mathrm{w}$ in figure~\ref{fig:cnn-npe} provides a precise matching of waveforms horizontally to guarantee effective $\hat{\alpha}$ scaling, explaining why $\mathrm{RSS}$ is also small in figure~\ref{fig:cnn}.
 
