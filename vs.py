@@ -496,7 +496,7 @@ for i, sigma in enumerate(Sigma):
         ax.set_xlabel(r'$\mu$')
         ax.set_ylabel(r'$\mathrm{ratio}$')
         ax.set_title(fr'$\tau_l={tau}\si{{ns}},\,\sigma_l={sigma}\si{{ns}}$')
-        ax.set_ylim(0.97, 1.52)
+        ax.set_ylim(0.96, 1.54)
         ax.yaxis.get_major_formatter().set_powerlimits((0, 0))
         ax.grid()
         if i == len(Sigma) - 1 and j == len(Tau) - 1:
@@ -542,7 +542,7 @@ for i, sigma in enumerate(Sigma):
         # ax.set_ylabel(r'$\Delta \log\mu$')
         ax.set_ylabel(r'$\mathrm{bias}$')
         ax.set_title(fr'$\tau_l={tau}\si{{ns}},\,\sigma_l={sigma}\si{{ns}}$')
-        ax.set_ylim(-0.056, 0.034)
+        ax.set_ylim(-0.056, 0.048)
         ax.yaxis.get_major_formatter().set_powerlimits((0, 0))
         ax.grid()
         if i == len(Sigma) - 1 and j == len(Tau) - 1:

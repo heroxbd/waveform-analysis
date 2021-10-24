@@ -178,8 +178,8 @@ def time_numpyro(a0, a1):
     return stime_t0, stime_cha, time_mcmc, dt, count, accep, mix0ratio
 
 def fbmp_inference(a0, a1):
-    prior = False
-    space = True
+    prior = True
+    space = False
     t0_wav = np.empty(a1 - a0)
     t0_cha = np.empty(a1 - a0)
     mu_wav = np.empty(a1 - a0)
@@ -241,8 +241,8 @@ def fbmp_inference(a0, a1):
         # Eq. (9) where the columns of A are taken to be unit-norm.
         factor = np.sqrt(np.diag(np.matmul(A.T, A)))
         A = A / factor
-        # la = mu_t * wff.convolve_exp_norm(tlist - t0_t, Tau, Sigma) / n + 1e-8
-        la = cha / cha.sum() * mu_t + 1e-8
+        la = mu_t * wff.convolve_exp_norm(tlist - t0_t, Tau, Sigma) / n + 1e-8
+        # la = cha / cha.sum() * mu_t + 1e-8
         la = la / la.sum() * mu_t
         xmmse, xmmse_star, psy_star, nu_star, nu_star_bk, T_star, d_max_i, num_i = wff.fbmpr_fxn_reduced(wave_r, A, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, len(la), p1=la, stop=5, truth=truth, i=i, left=left_wave, right=right_wave, tlist=tlist, gmu=gmu, para=p, prior=prior, space=space)
         time_fbmp[i - a0] = time.time() - time_fbmp_start
