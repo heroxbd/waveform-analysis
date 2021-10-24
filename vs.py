@@ -40,7 +40,7 @@ with open(args.conf) as f:
 filelist = os.listdir('result/fbmp/solu')
 filelist = [f for f in filelist if f[0] != '.' and os.path.splitext(f)[-1] == '.h5']
 numbers = [[float(i) for i in f[:-3].split('-')] for f in filelist]
-stype = np.dtype([('mu', np.float64), ('tau', np.float64), ('sigma', np.float64), ('n', np.uint), ('std1sttruth', np.float64), ('stdtruth', np.float64), ('std', np.float64), ('stdone', np.float64), ('bias1sttruth', np.float64), ('biastruth', np.float64), ('bias', np.float64), ('biasone', np.float64), ('wdist', np.float64, 3), ('RSS', np.float64, 3), ('N', np.uint), ('stdsuccess', np.uint), ('stdonesuccess', np.uint)])
+stype = np.dtype([('mu', np.float64), ('tau', np.float64), ('sigma', np.float64), ('n', np.uint), ('std1sttruth', np.float64), ('stdtruth', np.float64), ('std', np.float64), ('stdone', np.float64), ('bias1sttruth', np.float64), ('biastruth', np.float64), ('bias', np.float64), ('biasone', np.float64), ('wdist', np.float64, 3), ('RSS', np.float64, 3), ('N', np.uint), ('consumption', np.float64, 3), ('stdsuccess', np.uint), ('stdonesuccess', np.uint)])
 mtsi = np.zeros(len(numbers), dtype=stype)
 mtsi['mu'] = np.array([i[0] for i in numbers])
 mtsi['tau'] = np.array([i[1] for i in numbers])
@@ -56,6 +56,7 @@ mtsi['bias'] = np.nan
 mtsi['biasone'] = np.nan
 mtsi['wdist'] = np.nan
 mtsi['RSS'] = np.nan
+mtsi['consumption'] = np.nan
 mtsi = np.sort(mtsi, kind='stable', order=['mu', 'tau', 'sigma'])
 
 mts = {'firstthres':mtsi.copy(), 'threshold':mtsi.copy(), 'findpeak':mtsi.copy(), 'fftrans':mtsi.copy(), 'lucyddm':mtsi.copy(), 'takara':mtsi.copy(), 'xiaopeip':mtsi.copy(), 'mcmc':mtsi.copy(), 'fbmp':mtsi.copy()}
@@ -97,6 +98,10 @@ for key in mts.keys():
                 vali = np.abs(time['tswave'] - start['T0'] - np.mean(time['tswave'] - start['T0'])) < r * np.std(time['tswave'] - start['T0'], ddof=-1)
                 mts[key][i]['std'], mts[key][i]['stdsuccess'] = wff.stdrmoutlier(time['tswave'] - start['T0'], r)
                 mts[key][i]['bias'] = np.mean(time['tswave'][vali] - start['T0'][vali])
+            try:
+                mts[key][i]['consumption'] = np.insert(np.percentile(time['consumption'][vali], [alpha * 100, 100 - alpha * 100]), 1, time['consumption'][vali].mean())
+            except:
+                pass
         except:
             pass
 
@@ -106,6 +111,8 @@ whigh = np.array([[np.max(mts[key]['wdist'])] for key in mts.keys()])
 whigh = np.max(whigh[~np.isnan(whigh)]) * 1.05
 rhigh = np.array([[np.max(mts[key]['RSS'])] for key in mts.keys()])
 rhigh = np.max(rhigh[~np.isnan(rhigh)]) * 1.05
+
+lim = {'deltadiv':np.array([[0.3, 0.5]]), 'wdist':np.array([[1.0, 1.5]]), 'rss':np.array([[100, 200]])}
 
 figd = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
 gsd = gridspec.GridSpec(len(Sigma), len(Tau), figure=figd, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
@@ -117,7 +124,6 @@ figw = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
 gsw = gridspec.GridSpec(len(Sigma), len(Tau), figure=figw, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
 figr = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
 gsr = gridspec.GridSpec(len(Sigma), len(Tau), figure=figr, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
-lim = {'deltadiv':np.array([[0.3, 0.5]]), 'wdist':np.array([[1.5, 3.0]]), 'rss':np.array([[0.37e3, 1.7e3]])}
 keylist = list(mts.keys())
 badkey = ['findpeak', 'threshold', 'fftrans', 'mcmc', 'firstthres']
 for i, sigma in enumerate(Sigma):
@@ -305,23 +311,26 @@ plt.close(fig)
 # del mts['firstthres']
 # keylist = list(mts.keys())
 x = np.arange(0, len(keylist) - 1)
+mu = 4.0
 tau = 20
 sigma = 5
-wdist = np.vstack([mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]['wdist'].mean(axis=0) for key in keylist if key != 'firstthres'])
-dy = np.vstack([wdist[:, 1] - wdist[:, 0], wdist[:, 2] - wdist[:, 1]])
+wdist = np.vstack([mts[key][(mts[key]['mu'] == mu) & (mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]['wdist'] for key in keylist if key != 'firstthres'])
+wdist_dy = np.vstack([wdist[:, 1] - wdist[:, 0], wdist[:, 2] - wdist[:, 1]])
+bar_colors = ['b' if key in ['lucyddm', 'takara', 'xiaopeip', 'fbmp'] else 'c' for key in keylist if key != 'firstthres']
+labels = ['$'+label[key]+'$' for key in keylist if key != 'firstthres']
+keys = [key for key in keylist if key != 'firstthres']
 fig = plt.figure(figsize=(10, 5))
 fig.tight_layout()
 gs = gridspec.GridSpec(1, 1, figure=fig, left=0.1, right=0.9, top=0.9, bottom=0.3, wspace=0., hspace=0.)
 ax = fig.add_subplot(gs[0, 0])
-bar_colors = ['b' if key in ['lucyddm', 'takara', 'xiaopeip', 'fbmp'] else 'c' for key in keylist if key != 'firstthres']
 ax.bar(x, wdist[:, 1], color=bar_colors)
 # ax.set_ylim(0, math.ceil(wdist[~np.isnan(wdist)].max() + 0.5))
 ax.set_xlim(-0.5, 7.5)
 ax.set_ylim(0, 4)
 ax.set_ylabel(r'$\mathrm{Wasserstein\ Distance}/\si{ns}$')
 ax.set_xticks(x)
-ax.set_xticklabels(['$'+label[key]+'$' for key in keylist if key != 'firstthres'], rotation=45)
-ax.errorbar(x, wdist[:, 1], yerr=dy, fmt='o', ecolor='r', c='r', elinewidth=2, capsize=3)
+ax.set_xticklabels(labels, rotation=45)
+ax.errorbar(x, wdist[:, 1], yerr=wdist_dy, fmt='o', ecolor='r', c='r', elinewidth=1, capsize=3)
 ax.axvline(x=1.5, color='k', linestyle='dashed')
 ax.axvline(x=3.5, color='k', linestyle='dashed')
 ax.axvline(x=4.5, color='k', linestyle='dashed')
@@ -329,6 +338,37 @@ ax2 = ax.twiny()
 ax2.set_xticks([-0.5, 0.5, 1.5, 2.5, 3.5, 4.5, 6.0, 7.5])
 ax2.set_xticklabels(['', r'$\mathrm{Heuristic\ methods}$', '', r'$\mathrm{Deconvolution}$', '', '', r'$\mathrm{Regression\ analysis}', ''])
 # ax.set_title(fr'$\tau_l={tau}\si{{ns}},\,\sigma_l={sigma}\si{{ns}}$')
+# fig.savefig('Note/figures/summarycharge1d.pgf')
+# fig.savefig('Note/figures/summarycharge1d.pdf')
+fig.savefig('Note/figures/summarycharge1d.png')
+fig.clf()
+plt.close(fig)
+
+fig = plt.figure(figsize=(8, 6))
+fig.tight_layout()
+gs = gridspec.GridSpec(1, 1, figure=fig, left=0.1, right=0.95, top=0.95, bottom=0.1, wspace=0., hspace=0.)
+ax = fig.add_subplot(gs[0, 0])
+consumption = np.vstack([mts[key][(mts[key]['mu'] == mu) & (mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]['consumption'] for key in keylist if key != 'firstthres'])
+consumption_dy = np.vstack([consumption[:, 1] - consumption[:, 0], consumption[:, 2] - consumption[:, 1]])
+for i, (cc, ll, kk) in enumerate(zip(bar_colors, labels, keys)):
+    # plotline, caps, barlinecols = ax.errorbar(consumption[i, 1], wdist[i, 1], xerr=consumption_dy[:, i][:, None], yerr=wdist_dy[:, i][:, None], fmt='o', ecolor=cc, c=cc, elinewidth=1, capsize=3, label=ll)
+    ax.errorbar(consumption[i, 1], wdist[i, 1], xerr=consumption_dy[:, i][:, None], yerr=wdist_dy[:, i][:, None], fmt='o', ecolor=color[kk], c=color[kk], elinewidth=1, capsize=3, label=ll if kk != 'takara' else '$\mathrm{CNN(GPU)}$')
+    ax.text(consumption[i, 1], wdist[i, 1], s=ll)
+    if kk == 'takara':
+        with h5py.File('result/takara/solu/' + str(mu) + '-' + str(tau) + '-' + str(sigma) + '.h5', 'r', libver='latest', swmr=True) as soluf:
+            time = soluf['starttime_cpu'][:]
+            consumption_i = np.insert(np.percentile(time['consumption'], [alpha * 100, 100 - alpha * 100]), 1, time['consumption'].mean())
+        consumption_dy_i = np.array([consumption_i[1] - consumption_i[0], consumption_i[2] - consumption_i[1]])
+        ax.errorbar(consumption_i[1], wdist[i, 1], xerr=consumption_dy_i[:, None], yerr=wdist_dy[:, i][:, None], fmt='o', elinewidth=1, capsize=0, c=color[kk], label='$\mathrm{CNN(CPU)}$')
+ax.plot(np.logspace(-5, 2, 301), 2 - np.logspace(-5, 2, 301), color='k', alpha=0.5, linestyle='dashed')
+ax.fill_between(np.logspace(-5, 2, 301), y1=2 - np.logspace(-5, 2, 301), y2=10, color='k', alpha=0.2)
+ax.set_xlim(1e-3, 20)
+ax.set_ylim(0, 4)
+ax.set_xscale('log')
+ax.set_xlabel(r'$\mathrm{Time\ per\ waveform}/\si{s}$')
+ax.set_ylabel(r'$\mathrm{Wasserstein\ Distance}/\si{ns}$')
+ax.grid()
+# ax.legend()
 fig.savefig('Note/figures/summarycharge.pgf')
 fig.savefig('Note/figures/summarycharge.pdf')
 fig.savefig('Note/figures/summarycharge.png')
@@ -360,11 +400,7 @@ mtsi['biasmumax'] = np.nan
 mtsi['biasmu'] = np.nan
 mtsi = np.sort(mtsi, kind='stable', order=['mu', 'tau', 'sigma'])
 
-mts = {'fbmp':mtsi.copy(), 'takara':mtsi.copy(), 'xiaopeip':mtsi.copy(), 'lucyddm':mtsi.copy()}
-
-# marker = {'int':'o', 'tru':'h', 'pe':'p', 'fbmp':'s', 'max':'^', 'takara':'>', 'lucyddm':'+'}
-# color = {'int':'g', 'tru':'k', 'pe':'y', 'fbmp':'r', 'max':'b', 'takara':'m', 'lucyddm':'C0'}
-# label = {'fbmp':'\mathrm{FBMP}', 'takara':'\mathrm{CNN}', 'lucyddm':'\mathrm{LucyDDM}'}
+mts = {'lucyddm':mtsi.copy(), 'takara':mtsi.copy(), 'xiaopeip':mtsi.copy(), 'fbmp':mtsi.copy()}
 
 for key in mts.keys():
     for i in range(len(mts[key])):

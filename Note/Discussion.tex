@@ -5,30 +5,15 @@ In this section, we shall address the burning question: which waveform analysis 
 
 \subsection{Performance}
 
-First, we constrain the candidates by time consumption, algorithm category and $D_\mathrm{w}$.  Figure~\ref{fig:chargesummary} shows the $D_w$ summary of all 8 methods with the same sample as figure~\ref{fig:method}.
+First, we constrain the candidates by time consumption, algorithm category and $D_\mathrm{w}$.  Figure~\ref{fig:chargesummary} shows the $D_w$ and time consumption summary of all 8 methods with the same sample as figure~\ref{fig:method}.
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/summarycharge.pgf}}
-    \caption{\label{fig:chargesummary} $D_\mathrm{w}$ for all the methods with the same dataset as figure~\ref{fig:method}. The error bars are 5 to 95 percentiles.  The methods colored with dark blue are discussed in section~\ref{sec:discussion}. }
+    \caption{\label{fig:chargesummary} $D_\mathrm{w}$ for all the methods with the same dataset as figure~\ref{fig:method}. The error bars are 5 to 95 percentiles. Time consumption of CNN is in two conditions: CPU\tablefootnote{100 CPU cores of AMD EYPC\texttrademark\ 7742} and GPU\tablefootnote{one graphics card of NVIDIA\textsuperscript{\textregistered} A100.}. }
 \end{figure}
 The $D_\mathrm{w}$ performance of Waveform shifting, peak finding and Fourier deconvolution are suboptimal.  MCMC is too time consuming and the principle is not too different from FBMP.  We therefore leave out those in the following discussion.
 
-Table~\ref{tab:efficiency} gives the efficiency of four performant methods on our simulation datasets. The CNN on GPU is the fastest. The number of iteration for LucyDDM and gradient descent, as well as $t'_i$ sampling frequency of FBMP can be decreased to trade for speed. The time consumed by FBMP contains the initialization time of a LucyDDM pre-conditioner. 
-
-\begin{table}[H]
-    \centering
-    \caption{\label{tab:efficiency} Reconstruction Efficiency.}
-    \begin{tabular}{cc}
-        \hline
-        & Performance/$10^{5}$Waveform \\
-        \hline
-        CNN & 187.8s (GPU)\tablefootnote{one graphics card of NVIDIA\textsuperscript{\textregistered} A100.} \\
-        Direct Charge Fitting & 1560.1s (CPU)\tablefootnote{100 CPU cores of AMD EYPC\texttrademark\ 7742} \\
-        LucyDDM & 540.0s (CPU) \\
-        FBMP & 3557.4s (CPU) \\
-        \hline
-    \end{tabular}
-\end{table}
+The number of iteration for LucyDDM and gradient descent, as well as $t'_i$ sampling frequency of FBMP can be decreased to trade for speed. The time consumed by FBMP contains the initialization time of a LucyDDM pre-conditioner. 
 
 % Figure of Merits
 

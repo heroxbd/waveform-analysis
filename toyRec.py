@@ -55,30 +55,29 @@ with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as ipt, h5py.File(args
     tc['TriggerNo'] = charge['TriggerNo']
     tc['ChannelID'] = charge['ChannelID']
     tc = np.unique(tc)
-    if 'starttime' in ipt:
+    if method in ['fbmp', 'mcmc']:
+    # if 'starttime' in ipt:
     # if False:
         ts = ipt['starttime'][:]
     else:
-        if method in ['takara', 'xiaopeip', 'lucyddm', 'fftrans', 'findpeak', 'threshold']:
-            sdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('tscharge', np.float64), ('tswave', np.float64), ('mucharge', np.float64), ('muwave', np.float64)])
-        else:
-            sdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('tscharge', np.float64), ('tswave', np.float64)])
+        if method == 'takara':
+            ts_cpu = ipt['starttime_cpu'][:]
+        sdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('tscharge', np.float64), ('tswave', np.float64), ('mucharge', np.float64), ('muwave', np.float64), ('consumption', np.float64)])
         ts = np.zeros(N, dtype=sdtp)
         ts['TriggerNo'] = tc['TriggerNo']
         ts['ChannelID'] = tc['ChannelID']
-        ts['tswave'] = np.full(N, np.nan)
-        if method in ['takara', 'xiaopeip', 'lucyddm', 'fftrans', 'findpeak', 'threshold']:
-            ts['mucharge'] = np.full(N, np.nan)
-            e_ans, i_ans = np.unique(charge['TriggerNo'] * Chnum + charge['ChannelID'], return_index=True)
-            i_ans = np.append(i_ans, len(charge))
-            cha_sum = np.array([charge[i_ans[i]:i_ans[i+1]]['Charge'].sum() for i in range(len(e_ans))]) / gmu
-            ts['muwave'] = cha_sum
-
+        e_ans, i_ans = np.unique(charge['TriggerNo'] * Chnum + charge['ChannelID'], return_index=True)
+        i_ans = np.append(i_ans, len(charge))
+        cha_sum = np.array([charge[i_ans[i]:i_ans[i+1]]['Charge'].sum() for i in range(len(e_ans))]) / gmu
+        ts['muwave'] = cha_sum
+        ts['consumption'] = ipt['starttime']['consumption'][:]
         chunk = N // args.Ncpu + 1
         slices = np.vstack((np.arange(0, N, chunk), np.append(np.arange(chunk, N, chunk), N))).T.astype(int).tolist()
         with Pool(min(args.Ncpu, cpu_count())) as pool:
             result = pool.starmap(partial(start_time), slices)
         ts['tscharge'] = np.hstack(result)
+        ts['tswave'] = np.full(N, np.nan)
+        ts['mucharge'] = np.full(N, np.nan)
 
 with h5py.File(args.opt, 'w') as opt:
     dset = opt.create_dataset('starttime', data=ts, compression='gzip')
@@ -86,6 +85,8 @@ with h5py.File(args.opt, 'w') as opt:
     dset.attrs['mu'] = Mu
     dset.attrs['tau'] = Tau
     dset.attrs['sigma'] = Sigma
+    if method == 'takara':
+        dset = opt.create_dataset('starttime_cpu', data=ts_cpu, compression='gzip')
     print('The output file path is {}'.format(args.opt))
 
 print('Finished! Consuming {0:.02f}s in total, cpu time {1:.02f}s.'.format(time.time() - global_start, time.process_time() - cpu_global_start))

@@ -35,7 +35,7 @@ Thres = wff.Thres
 
 def fitting(a, b):
     nsp = 4
-    time_method = 0
+    time_method = np.empty(b - a)
     with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
         ent = ipt['Readout/Waveform'][:]
         pelist = ipt['SimTriggerInfo/PEList'][:]
@@ -44,9 +44,9 @@ def fitting(a, b):
         end = 0
         p = spe_pre[0]['parameters']
         for i in range(a, b):
+            time_method_start = time.time()
             wave = ent[i]['Waveform'].astype(np.float64)[::wff.nshannon] * spe_pre[ent[i]['ChannelID']]['epulse']
 
-            time_method_start = time.time()
             if method == 'xiaopeip':
                 pet, cha = wff.xiaopeip(wave, spe_pre[ent[i]['ChannelID']], Tau, Sigma, Thres['lucyddm'], p, eta=0)
             elif method == 'lucyddm':
@@ -70,7 +70,7 @@ def fitting(a, b):
                 cha = cha * alpha * wff.gmu
             else:
                 cha = cha / cha.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
-            time_method = time_method + time.time() - time_method_start
+            time_method[i - a] = time.time() - time_method_start
 
             # truth = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
             # wff.demo(pet, cha, truth, spe_pre[ent[i]['ChannelID']], window, wave, ent[i]['ChannelID'], p, fold='.', ext='.pdf')
@@ -91,6 +91,7 @@ WindowSize = wff.window
 t_auto = np.arange(WindowSize).reshape(WindowSize, 1) - np.arange(WindowSize).reshape(1, WindowSize)
 mnecpu = wff.spe((t_auto + np.abs(t_auto)) / 2, p[0], p[1], p[2])
 opdt = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('HitPosInWindow', np.float64), ('Charge', np.float64)])
+tidt = np.dtype([('consumption', np.float64)])
 with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
     l = len(ipt['Readout/Waveform'])
     print('{} waveforms will be computed'.format(l))
@@ -112,9 +113,10 @@ cpu_tic = time.process_time()
 fitting(0, 10)
 with Pool(min(args.Ncpu, cpu_count())) as pool:
     select_result = pool.starmap(fitting, slices)
+ts = np.zeros(l, dtype=tidt)
 result = np.hstack([select_result[i][0] for i in range(len(slices))])
-time_method = np.hstack([select_result[i][1] for i in range(len(slices))]).mean()
-print(method + ' finished, real time {0:.02f}s'.format(time_method))
+ts['consumption'] = np.hstack([select_result[i][1] for i in range(len(slices))])
+print(method + ' finished, real time {0:.02f}s'.format(ts['consumption'].sum()))
 result = np.sort(result, kind='stable', order=['TriggerNo', 'ChannelID'])
 print('Prediction generated, real time {0:.02f}s, cpu time {1:.02f}s'.format(time.time() - tic, time.process_time() - cpu_tic))
 with h5py.File(fopt, 'w') as opt:
@@ -123,5 +125,6 @@ with h5py.File(fopt, 'w') as opt:
     dset.attrs['mu'] = Mu
     dset.attrs['tau'] = Tau
     dset.attrs['sigma'] = Sigma
+    tsdset = opt.create_dataset('starttime', data=ts, compression='gzip')
     print('The output file path is {}'.format(fopt))
 print('Finished! Consuming {0:.02f}s in total, cpu time {1:.02f}s.'.format(time.time() - global_start, time.process_time() - cpu_global_start))

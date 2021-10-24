@@ -5,7 +5,7 @@ psr.add_argument('-o', dest='opt', help='output')
 psr.add_argument('-N', dest='NetDir', help='Network directory')
 psr.add_argument('--met', type=str, help='method')
 psr.add_argument('--ref', type=str, nargs='+', help='reference file')
-psr.add_argument('-B', '--batchsize', dest='BAT', type=int, default=15000)
+psr.add_argument('-B', '--batchsize', dest='BAT', type=int, default=5)
 psr.add_argument('-D', '--device', dest='Device', type=str, default='cpu')
 args = psr.parse_args()
 NetDir = args.NetDir
@@ -57,6 +57,7 @@ print('Initialization finished, real time {0:.02f}s, cpu time {1:.02f}s'.format(
 print('Processing {} entries'.format(Total_entries))
 
 with h5py.File(filename, 'r', libver='latest', swmr=True) as ipt:
+    l = len(ipt['Readout/Waveform'])
     Mu = ipt['Readout/Waveform'].attrs['mu']
     Tau = ipt['Readout/Waveform'].attrs['tau']
     Sigma = ipt['Readout/Waveform'].attrs['sigma']
@@ -76,11 +77,14 @@ Channel_Grouped_Waveform = Waveforms_and_info.groupby(by='ChannelID')
 
 # Loading CNN Net
 tic = time.time()
-Device = int(Device)
-device = torch.device(Device)
-nets = dict([])
+device_gpu = torch.device(int(Device) if Device != 'cpu' else Device)
+device_cpu = torch.device('cpu')
+nets_gpu = dict([])
 for channelid in tqdm(channelid_set, desc='Loading Nets of each channel') :
-    nets[channelid] = torch.load(NetDir + '/Channel{:02d}.torch_net'.format(channelid), map_location=device)
+    nets_gpu[channelid] = torch.load(NetDir + '/Channel{:02d}.torch_net'.format(channelid), map_location=device_gpu)
+nets_cpu = dict([])
+for channelid in tqdm(channelid_set, desc='Loading Nets of each channel') :
+    nets_cpu[channelid] = torch.load(NetDir + '/Channel{:02d}.torch_net'.format(channelid), map_location=device_cpu)
 print('Net Loaded, consuming {0:.02f}s'.format(time.time() - tic))
 
 filter_limit = 0.05
@@ -90,15 +94,18 @@ p = spe_pre[0]['parameters']
 t_auto = np.arange(WindowSize).reshape(WindowSize, 1) - np.arange(WindowSize).reshape(1, WindowSize)
 mnecpu = wff.spe((t_auto + np.abs(t_auto)) / 2, p[0], p[1], p[2])
 
-def Forward(channelid):
+def Forward(channelid, device, nets):
     Data_of_this_channel = Channel_Grouped_Waveform.get_group(channelid)
     Shifted_Wave = np.vstack(Data_of_this_channel['Waveform'])
     TriggerNos = np.array(Data_of_this_channel['TriggerNo'])
+    ChannelIDs = np.array(Data_of_this_channel['ChannelID'])
     HitPosInWindows = np.empty(0, dtype=np.int16)
     PEmeasure = np.empty(0, dtype=np.float32)
     EventData = np.empty(0, dtype=np.int64)
     slices = np.append(np.arange(0, len(Shifted_Wave), BATCHSIZE), len(Shifted_Wave))
+    time_cnn = np.empty(len(Shifted_Wave))
     for i in range(len(slices) - 1):
+        time_cnn_start = time.time()
         inputs = Shifted_Wave[slices[i]:slices[i + 1]]
         Prediction = nets[channelid].forward(torch.from_numpy(inputs).to(device=device)).data.cpu().numpy()
         # Total = np.clip(np.abs(inputs.sum(axis=1)) / wff.gmu, 1e-6 / wff.gmu, np.inf)
@@ -127,19 +134,35 @@ def Forward(channelid):
         TimeMatrix = np.repeat(Timeline, len(HitPosInWindow), axis=0)[HitPosInWindow]
         HitPosInWindows = np.append(HitPosInWindows, TimeMatrix)
         EventData = np.append(EventData, np.repeat(TriggerNos[slices[i]:slices[i + 1]], pe_numbers))
-        ChannelData = np.empty(EventData.shape, dtype=np.int16)
-        ChannelData.fill(channelid)
-    return pd.DataFrame({'HitPosInWindow': HitPosInWindows, 'Charge': PEmeasure, 'TriggerNo': EventData, 'ChannelID': ChannelData})
+        time_cnn[slices[i]:slices[i + 1]] = (time.time() - time_cnn_start) / (slices[i + 1] - slices[i])
+    ChannelData = np.empty(EventData.shape, dtype=np.int16)
+    ChannelData.fill(channelid)
+    return pd.DataFrame({'HitPosInWindow': HitPosInWindows, 'Charge': PEmeasure, 'TriggerNo': EventData, 'ChannelID': ChannelData}), time_cnn, TriggerNos, ChannelIDs
 
-tic = time.time()
+tidt = np.dtype([('consumption', np.float64)])
+time_cnn_gpu = np.empty(0)
+time_cnn_cpu = np.empty(0)
 cpu_tic = time.process_time()
 Result = []
+r_for_sort = np.empty(l, dtype=np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32)]))
 for ch in tqdm(channelid_set, desc='Predict for each channel'):
-    Result.append(Forward(ch))
+    result_i, time_cnn_gpu_i, TriggerNo_i, ChannelID_i = Forward(ch, device_gpu, nets_gpu)
+    Result.append(result_i)
+    r_for_sort['TriggerNo'][len(time_cnn_gpu):len(time_cnn_gpu)+len(TriggerNo_i)] = TriggerNo_i
+    r_for_sort['ChannelID'][len(time_cnn_gpu):len(time_cnn_gpu)+len(ChannelID_i)] = ChannelID_i
+    time_cnn_gpu = np.append(time_cnn_gpu, time_cnn_gpu_i)
+    _, time_cnn_cpu_i, _, _ = Forward(ch, device_cpu, nets_cpu)
+    time_cnn_cpu = np.append(time_cnn_cpu, time_cnn_cpu_i)
 Result = pd.concat(Result)
+time_cnn_gpu = time_cnn_gpu[np.argsort(r_for_sort, order=['TriggerNo', 'ChannelID'])]
+time_cnn_cpu = time_cnn_cpu[np.argsort(r_for_sort, order=['TriggerNo', 'ChannelID'])]
 Result = Result.sort_values(by=['TriggerNo', 'ChannelID'])
 Result = Result.to_records(index=False)
-print('Prediction generated, real time {0:.02f}s, cpu time {1:.02f}s'.format(time.time() - tic, time.process_time() - cpu_tic))
+ts_gpu = np.zeros(l, dtype=tidt)
+ts_gpu['consumption'] = time_cnn_gpu
+print('Prediction generated, real time {0:.02f}s, cpu time {1:.02f}s'.format(ts_gpu['consumption'].sum(), time.process_time() - cpu_tic))
+ts_cpu = np.zeros(l, dtype=tidt)
+ts_cpu['consumption'] = time_cnn_cpu
 
 with h5py.File(output, 'w') as opt:
     dset = opt.create_dataset('photoelectron', data=Result, compression='gzip')
@@ -147,6 +170,8 @@ with h5py.File(output, 'w') as opt:
     dset.attrs['mu'] = Mu
     dset.attrs['tau'] = Tau
     dset.attrs['sigma'] = Sigma
+    tsdset = opt.create_dataset('starttime', data=ts_gpu, compression='gzip')
+    ts_cpu_dset = opt.create_dataset('starttime_cpu', data=ts_cpu, compression='gzip')
     print('The output file path is {}'.format(output))
 
 print('Finished! Consuming {0:.02f}s in total, cpu time {1:.02f}s.'.format(time.time() - global_start, time.process_time() - cpu_global_start))
