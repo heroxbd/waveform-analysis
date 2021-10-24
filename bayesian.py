@@ -109,11 +109,11 @@ def time_numpyro(a0, a1):
     accep = np.full(a1 - a0, np.nan)
     mix0ratio = np.full(a1 - a0, np.nan)
     dt = np.zeros((a1 - a0) * Awindow * 2, dtype=opdt)
+    time_mcmc = np.empty(a1 - a0)
     start = 0
     end = 0
     count = 0
     b = [0., 600.]
-    time_mcmc = 0
     def model(n, y, mu, tlist, AV, t0left, t0right):
         t0 = numpyro.sample('t0', numpyro.distributions.Uniform(t0left, t0right))
         if Tau == 0:
@@ -126,6 +126,7 @@ def time_numpyro(a0, a1):
             obs = numpyro.sample('obs', numpyro.distributions.Normal(jnp.matmul(AV, A), scale=std), obs=y)
         return obs
     for i in range(a0, a1):
+        time_mcmc_start = time.time()
         truth = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
         cid = ent[i]['ChannelID']
         wave = ent[i]['Waveform'].astype(np.float64) * spe_pre[cid]['epulse']
@@ -140,26 +141,24 @@ def time_numpyro(a0, a1):
         t0_init = jnp.array(t0_init)
         A_init = jnp.array(A_init)
 
-        time_mcmc_start = time.time()
         nuts_kernel = numpyro.infer.NUTS(model, adapt_step_size=True, init_strategy=numpyro.infer.initialization.init_to_value(values={'t0': t0_init, 'A': A_init}))
         mcmc = numpyro.infer.MCMC(nuts_kernel, num_samples=1000, num_warmup=1000, num_chains=1, progress_bar=False, chain_method='sequential', jit_model_args=True)
         try:
             ticrun = time.time()
             mcmc.run(rng_key, n=n, y=wave, mu=mu, tlist=tlist, AV=AV, t0left=t0_init - 3 * Sigma, t0right=t0_init + 3 * Sigma, extra_fields=('accept_prob', 'potential_energy'))
             tocrun = time.time()
-            time_mcmc = time_mcmc + time.time() - time_mcmc_start
             potential_energy = np.array(mcmc.get_extra_fields()['potential_energy'])
             accep[i - a0] = np.array(mcmc.get_extra_fields()['accept_prob']).mean()
             t0_t0 = np.array(mcmc.get_samples()['t0']).flatten()
             A = np.array(mcmc.get_samples()['A'])
             count = count + 1
         except:
-            time_mcmc = time_mcmc + time.time() - time_mcmc_start
             t0_t0 = np.array(t0_init)
             t0_cha = t0_init
             tlist = np.array(tlist)
             A = np.array([A_init])
             print('Failed waveform is TriggerNo = {:05d}, ChannelID = {:02d}, i = {:05d}'.format(ent[i]['TriggerNo'], cid, i))
+        time_mcmc[i - a0] = time.time() - time_mcmc_start
         pet = np.array(tlist)
         cha = np.mean(A, axis=0)
         mix0ratio[i - a0] = (np.abs(cha) < 5 * mix0sigma).sum() / len(cha)
@@ -176,14 +175,17 @@ def time_numpyro(a0, a1):
         start = end
     dt = dt[:end]
     dt = np.sort(dt, kind='stable', order=['TriggerNo', 'ChannelID'])
-    return stime_t0, stime_cha, dt, count, time_mcmc, accep, mix0ratio
+    return stime_t0, stime_cha, time_mcmc, dt, count, accep, mix0ratio
 
 def fbmp_inference(a0, a1):
     prior = False
+    space = True
     t0_wav = np.empty(a1 - a0)
     t0_cha = np.empty(a1 - a0)
     mu_wav = np.empty(a1 - a0)
     mu_cha = np.empty(a1 - a0)
+    mu_kl = np.empty(a1 - a0)
+    time_fbmp = np.empty(a1 - a0)
     dt = np.zeros((a1 - a0) * window, dtype=opdt)
     d_tot = np.zeros(a1 - a0).astype(int)
     d_max = np.zeros(a1 - a0).astype(int)
@@ -194,8 +196,8 @@ def fbmp_inference(a0, a1):
     start = 0
     end = 0
     b_t0 = [0., 600.]
-    time_fbmp = 0
     for i in range(a0, a1):
+        time_fbmp_start = time.time()
         cid = ent[i]['ChannelID']
         wave = ent[i]['Waveform'].astype(np.float64) * spe_pre[cid]['epulse']
 
@@ -235,23 +237,21 @@ def fbmp_inference(a0, a1):
         # t0_t = t0_truth[i]['T0']
         # mu_t = len(truth)
         # 1st FBMP
-        time_fbmp_start = time.time()
+        
         # Eq. (9) where the columns of A are taken to be unit-norm.
         factor = np.sqrt(np.diag(np.matmul(A.T, A)))
         A = A / factor
         # la = mu_t * wff.convolve_exp_norm(tlist - t0_t, Tau, Sigma) / n + 1e-8
         la = cha / cha.sum() * mu_t + 1e-8
         la = la / la.sum() * mu_t
-        xmmse, xmmse_star, psy_star, nu_star, nu_star_bk, T_star, d_max_i, num_i = wff.fbmpr_fxn_reduced(wave_r, A, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, len(la), p1=la, stop=5, truth=truth, i=i, left=left_wave, right=right_wave, tlist=tlist, gmu=gmu, para=p, prior=prior)
-        time_fbmp = time_fbmp + time.time() - time_fbmp_start
+        xmmse, xmmse_star, psy_star, nu_star, nu_star_bk, T_star, d_max_i, num_i = wff.fbmpr_fxn_reduced(wave_r, A, spe_pre[cid]['std'] ** 2, (gsigma * factor / gmu) ** 2, factor, len(la), p1=la, stop=5, truth=truth, i=i, left=left_wave, right=right_wave, tlist=tlist, gmu=gmu, para=p, prior=prior, space=space)
+        time_fbmp[i - a0] = time.time() - time_fbmp_start
         c_star = np.zeros_like(xmmse_star).astype(int)
         for k in range(len(T_star)):
             t, c = np.unique(T_star[k], return_counts=True)
             c_star[k, t] = c
-        la_truth = len(truth) * wff.convolve_exp_norm(tlist - t0_truth[i]['T0'], Tau, Sigma) / n + 1e-8
-        if prior:
-            nu_star_prior = nu_star - poisson.logpmf(c_star, mu=la).sum(axis=1)
-        nu_star_prior = nu_star + poisson.logpmf(c_star, mu=la_truth).sum(axis=1)
+        la_truth = Mu * wff.convolve_exp_norm(tlist - t0_truth[i]['T0'], Tau, Sigma) / n + 1e-8
+        nu_space_prior = np.array([wff.nu_direct(wave_r, A, c_star[j], factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la_truth, prior=True, space=True) for j in range(len(psy_star))])
 
         nx = np.sum([(tlist - 0.5 / n <= truth['HitPosInWindow'][j]) * (tlist + 0.5 / n > truth['HitPosInWindow'][j]) for j in range(len(truth))], axis=0)
         cc = np.sum([np.where(tlist - 0.5 / n < truth['HitPosInWindow'][j], np.sqrt(truth['Charge'][j]), 0) * np.where(tlist + 0.5 / n > truth['HitPosInWindow'][j], np.sqrt(truth['Charge'][j]), 0) for j in range(len(truth))], axis=0)
@@ -260,20 +260,14 @@ def fbmp_inference(a0, a1):
             c_star_truth[0] = 1
         pp = np.arange(left_wave, right_wave)
         wav_ans = np.sum([np.where(pp > truth['HitPosInWindow'][j], wff.spe(pp - truth['HitPosInWindow'][j], tau=p[0], sigma=p[1], A=p[2]) * truth['Charge'][j] / gmu, 0) for j in range(len(truth))], axis=0)
-        nu_truth[i - a0] = wff.nu_direct(wave_r, A, nx, factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la, prior=prior)
+        nu_truth[i - a0] = wff.nu_direct(wave_r, A, nx, factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la, prior=prior, space=space)
         rss_truth = np.power(wav_ans - np.matmul(A, cc / gmu * factor), 2).sum()
-        nu = np.array([wff.nu_direct(wave_r, A, c_star[j], factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la, prior=prior) for j in range(len(psy_star))])
-        # nu_star_prior = np.array([wff.nu_direct(wave_r, A, c_star[j], factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la_truth, prior=True) for j in range(len(psy_star))])
-        # psy_star = np.exp(nu - nu.max()) / np.sum(np.exp(nu - nu.max()))
+        nu = np.array([wff.nu_direct(wave_r, A, c_star[j], factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la, prior=prior, space=space) for j in range(len(psy_star))])
         assert abs(nu - nu_star).max() < 1e-6
         nu_max[i - a0] = nu[0]
         rss = np.array([np.power(wav_ans - np.matmul(A, xmmse_star[j]), 2).sum() for j in range(len(psy_star))])
 
-        if prior:
-            nu_re = nu_star
-        else:
-            nu_re = nu_star + poisson.logpmf(c_star, mu=la).sum(axis=1)
-        maxindex = nu_re.argmax()
+        maxindex = nu_star.argmax()
         xmmse_most = np.clip(xmmse_star[maxindex], 0, np.inf)
         pet = np.repeat(tlist[xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
         cha = np.repeat(xmmse_most[xmmse_most > 0] / factor[xmmse_most > 0] / c_star[maxindex][xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
@@ -289,13 +283,14 @@ def fbmp_inference(a0, a1):
 
         d_tot[i - a0] = len(la)
         d_max[i - a0] = d_max_i
-        elbo[i - a0] = wff.elbo(nu_star_prior)
+        elbo[i - a0] = wff.elbo(nu_space_prior)
         pet, cha = wff.clip(pet, cha, Thres[method])
         cha = cha * gmu
         t0_wav[i - a0] = t0
         t0_cha[i - a0] = t0_i
         mu_wav[i - a0] = mu
         mu_cha[i - a0] = mu_i
+        mu_kl[i - a0] = cha.sum()
         num[i - a0] = num_i
         end = start + len(cha)
         dt['HitPosInWindow'][start:end] = pet
@@ -305,7 +300,7 @@ def fbmp_inference(a0, a1):
         start = end
     dt = dt[:end]
     dt = np.sort(dt, kind='stable', order=['TriggerNo', 'ChannelID'])
-    return t0_wav, t0_cha, dt, mu_wav, mu_cha, d_tot, d_max, time_fbmp, nu_truth, nu_max, num, elbo
+    return t0_wav, t0_cha, dt, mu_wav, mu_cha, mu_kl, time_fbmp, d_tot, d_max, nu_truth, nu_max, num, elbo
 
 if args.Ncpu == 1:
     slices = [[0, N]]
@@ -326,7 +321,7 @@ i_pel = np.append(i_pel, len(ent))
 opdt = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('HitPosInWindow', np.float64), ('Charge', np.float64)])
 
 if method == 'mcmc':
-    sdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('tscharge', np.float64), ('tswave', np.float64)])
+    sdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('tscharge', np.float64), ('tswave', np.float64), ('consumption', np.float64)])
     ts = np.zeros(N, dtype=sdtp)
     ts['TriggerNo'] = ent['TriggerNo']
     ts['ChannelID'] = ent['ChannelID']
@@ -334,10 +329,10 @@ if method == 'mcmc':
         result = pool.starmap(partial(time_numpyro), slices)
     ts['tswave'] = np.hstack([result[i][0] for i in range(len(slices))])
     ts['tscharge'] = np.hstack([result[i][1] for i in range(len(slices))])
-    As = np.hstack([result[i][2] for i in range(len(slices))])
-    count = np.sum([result[i][3] for i in range(len(slices))])
-    time_mcmc = np.hstack([result[i][4] for i in range(len(slices))]).mean()
-    print('MCMC finished, real time {0:.02f}s'.format(time_mcmc))
+    ts['consumption'] = np.hstack([result[i][2] for i in range(len(slices))])
+    print('MCMC finished, real time {0:.02f}s'.format(ts['consumption'].sum()))
+    As = np.hstack([result[i][3] for i in range(len(slices))])
+    count = np.sum([result[i][4] for i in range(len(slices))])
     accep = np.hstack([result[i][5] for i in range(len(slices))])
     mix0ratio = np.hstack([result[i][6] for i in range(len(slices))])
 
@@ -360,7 +355,7 @@ if method == 'mcmc':
     As = np.sort(As, kind='stable', order=['TriggerNo', 'ChannelID'])
     print('Successful MCMC ratio is {:.4%}'.format(count / N))
 elif method == 'fbmp':
-    sdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('tscharge', np.float64), ('tswave', np.float64), ('mucharge', np.float64), ('muwave', np.float64)])
+    sdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('tscharge', np.float64), ('tswave', np.float64), ('mucharge', np.float64), ('muwave', np.float64), ('mukl', np.float64), ('consumption', np.float64)])
     ts = np.zeros(N, dtype=sdtp)
     ts['TriggerNo'] = ent['TriggerNo']
     ts['ChannelID'] = ent['ChannelID']
@@ -371,14 +366,15 @@ elif method == 'fbmp':
     As = np.hstack([result[i][2] for i in range(len(slices))])
     ts['muwave'] = np.hstack([result[i][3] for i in range(len(slices))])
     ts['mucharge'] = np.hstack([result[i][4] for i in range(len(slices))])
-    d_tot = np.hstack([result[i][5] for i in range(len(slices))])
-    d_max = np.hstack([result[i][6] for i in range(len(slices))])
-    time_fbmp = np.hstack([result[i][7] for i in range(len(slices))]).mean()
-    nu_truth = np.hstack([result[i][8] for i in range(len(slices))])
-    nu_max = np.hstack([result[i][9] for i in range(len(slices))])
-    num = np.hstack([result[i][10] for i in range(len(slices))])
-    elbo = np.hstack([result[i][11] for i in range(len(slices))])
-    print('FBMP finished, real time {0:.02f}s'.format(time_fbmp))
+    ts['mukl'] = np.hstack([result[i][5] for i in range(len(slices))])
+    ts['consumption'] = np.hstack([result[i][6] for i in range(len(slices))])
+    print('FBMP finished, real time {0:.02f}s'.format(ts['consumption'].sum()))
+    d_tot = np.hstack([result[i][7] for i in range(len(slices))])
+    d_max = np.hstack([result[i][8] for i in range(len(slices))])
+    nu_truth = np.hstack([result[i][9] for i in range(len(slices))])
+    nu_max = np.hstack([result[i][10] for i in range(len(slices))])
+    num = np.hstack([result[i][11] for i in range(len(slices))])
+    elbo = np.hstack([result[i][12] for i in range(len(slices))])
     print('nu max larger than nu truth fraction is {0:.02%}'.format((nu_max > nu_truth).sum() / len(nu_truth)))
 
     matplotlib.use('Agg')
