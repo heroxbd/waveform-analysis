@@ -72,7 +72,7 @@ From a hypothetical perfect measurement of $t_i$, we define an ideal maximum lik
 \end{equation}
 The corresponding $\sigma_\mathrm{ALL}$ is the lower bound of time resolution. 
 
-To characterize $\hat{t}_\mathrm{1st}$ and $\hat{t}_\mathrm{ALL}$, we scan $\mu$ from \numrange{0}{30} for each light curve in figure~\ref{fig:time-pro}. After removing waveforms which have no PE, we generate a sample of $\num[retain-unity-mantissa=false]{1e4}$ waveforms for every triplet of $(\tau_\mathrm{l}, \sigma_\mathrm{l}, \mu)$.  Figure~\ref{fig:reso-diff} shows that $\sigma_{\mathrm{1st}}$ equals $\sigma_{\mathrm{ALL}}$ when $\tau_\mathrm{l} \gg \sigma_\mathrm{l}$, because $\hat{t}_\mathrm{ALL}$ reduces to $\hat{t}_\mathrm{1st}$(=$\min_i t_i$) for an exponential light curve. For $\mu \to 0$, $\sigma_{\mathrm{1st}}$ and $\sigma_{\mathrm{ALL}}$ are also equal because at most 1 PE is available.  TDC/QDC is effective in those cases.
+To characterize $\hat{t}_\mathrm{1st}$ and $\hat{t}_\mathrm{ALL}$, we scan $\mu$ from \numrange{0}{30} for each light curve in figure~\ref{fig:time-pro}. We generate a sample of $\num[retain-unity-mantissa=false]{1e4}$ waveforms having at least 1 PE for every triplet of $(\tau_\mathrm{l}, \sigma_\mathrm{l}, \mu)$.  Figure~\ref{fig:reso-diff} shows that $\sigma_{\mathrm{1st}}$ equals $\sigma_{\mathrm{ALL}}$ when $\tau_\mathrm{l} \gg \sigma_\mathrm{l}$, because $\hat{t}_\mathrm{ALL}$ reduces to $\hat{t}_\mathrm{1st}$(=$\min_i t_i$) for an exponential light curve. For $\mu \to 0$, $\sigma_{\mathrm{1st}}$ and $\sigma_{\mathrm{ALL}}$ are also equal because at most 1 PE is available.  TDC/QDC is effective in those cases.
 
 \begin{figure}[H]
   \centering
