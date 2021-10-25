@@ -1,19 +1,7 @@
 \section{Algorithms and their performance}
 \label{sec:algorithm}
 
-Waveform analysis is to obtain $t_i$ and $q_i$ estimators $\hat{t}_i$ and $\hat{q}_i$ from waveform $w(t)$, where the output indices $i$ are from 1 to $\hat{N}_\mathrm{PE}$ and $\hat{N}_\mathrm{PE}$ is an estimator of $N_\mathrm{PE}$ in eq.~\eqref{eq:lc-sample}. Figure~\ref{fig:io} illustrates the input $w(t)$ and the outputs $\bm{\hat{t}}, \hat{\bm{q}}$, where boldface $\hat{\bm{t}}$ denotes the vector $\hat{t}_i$. 
-\begin{figure}[H]
-  \centering
-  \begin{subfigure}{.45\textwidth}
-    \resizebox{\textwidth}{!}{\input{figures/wave.pgf}}
-    \caption{\label{fig:input} Input $w(t)$ reproduced from figure~\ref{fig:pile}.}
-  \end{subfigure}
-  \begin{subfigure}{.45\textwidth}
-    \resizebox{\textwidth}{!}{\input{figures/charge.pgf}}
-    \caption{\label{fig:output} Output $\hat{\bm{t}}, \hat{\bm{q}}$ obtained from \subref{fig:input}.}
-  \end{subfigure}
-  \caption{\label{fig:io} Waveform analysis takes PMT waveform as input in~\subref{fig:input} and outputs times $\hat{\bm{t}}$ and charges $\hat{\bm{q}}$ of the PEs in~\subref{fig:output}. }
-\end{figure}
+Waveform analysis is to obtain $t_i$ and $q_i$ estimators $\hat{t}_i$ and $\hat{q}_i$ from waveform $w(t)$, where the output indices $i$ are from 1 to $\hat{N}_\mathrm{PE}$ and $\hat{N}_\mathrm{PE}$ is an estimator of $N_\mathrm{PE}$ in eq.~\eqref{eq:lc-sample}. Figure~\ref{fig:pile} illustrates the input waveform $w(t)$ and the outputs charge $\bm{\hat{t}}, \hat{\bm{q}}$ obtained from $w(t)$, where boldface $\hat{\bm{t}}$ denotes the vector $\hat{t}_i$. 
 
 The fluctuation of $q_i$ makes $\hat{t}_i$ ambiguous and $\hat{N}_\mathrm{PE}$ fail to estimate $N_\mathrm{PE}$. For example, 1, 2 and even 3~PEs can generate exactly the same charge as $1.6$ units.  A single PE charged $1$ may be mis-interpreted as 2~PEs at consecutive $\hat{t}_i$ and $\hat{t}_{i+1}$ with $\hat{q}_i=\hat{q}_{i+1}=0.5$.
 
