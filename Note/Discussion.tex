@@ -1,27 +1,25 @@
 \section{Summary and discussion}
 \label{sec:discussion}
 
-In this section, we shall address the burning question: which waveform analysis method should my experiment use?  We surveyed 8 methods, heuristics~(figure~\ref{fig:method}), deconvolution~(figure~\ref{fig:deconv}), neuron network~(figure~\ref{fig:cnn-performance}) and regressions(figures~\ref{fig:dcf}--\ref{fig:fbmp-performance}), from the simplest to the most dedicated.  To make a choice, we shall investigate the waveform reconstruction precisions under different light intensities $\mu$.
+In this section, we shall address the burning question: which waveform analysis method should my experiment use?  We surveyed 8 methods, heuristics~(figure~\ref{fig:method}), deconvolution~(figure~\ref{fig:deconv}), neuron network~(figure~\ref{fig:cnn-performance}) and regressions(figures~\ref{fig:dcf}--\ref{fig:fbmp-performance}), from the simplest to the most dedicated.  To make a choice, we shall investigate the light curve reconstruction precisions under different light intensities $\mu$.
 
 \subsection{Performance}
 
-First, we constrain the candidates by time consumption, algorithm category and $D_\mathrm{w}$.  Figure~\ref{fig:chargesummary} shows the $D_w$ and time consumption summary of all 8 methods with the same sample as figure~\ref{fig:method}.
+First, we constrain the candidates by time consumption, algorithm category and $D_\mathrm{w}$.  Figure~\ref{fig:chargesummary} shows the $D_w$ and time consumption summary of all 8 methods with the same waveform sample as figure~\ref{fig:method}.
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/summarycharge.pgf}}
-    \caption{\label{fig:chargesummary} $D_\mathrm{w}$ for all the methods with the same dataset as figure~\ref{fig:method}. The error bars are 5 to 95 percentiles. Time consumption of CNN is in two conditions: GPU\protect\footnotemark~(dashed error bars) and CPU\protect\footnotemark~(solid error bars). }
+    \caption{\label{fig:chargesummary} Performance of algorithms in terms of $D_\mathrm{w}$ and time consumption, evaluated on the same dataset as figure~\ref{fig:method}. Central points are the average results of $\num[retain-unity-mantissa=false]{1e4}$ waveforms from specific $\mu$ values.  Error bars are 5--95 percentiles.  Fitting stands for direct charge fitting. The time consumed by fitting, MCMC and FBMP include the initialization time of a LucyDDM pre-conditioner.  Time consumption of CNN is measured for inference in two conditions: GPU\protect\footnotemark~(dashed error bars) and CPU\protect\footnotemark~(solid error bars).  Training a CNN is a one-time job, and its cost is not included in the plot.}
 \end{figure}
 \addtocounter{footnote}{-2}
-\stepcounter{footnote}\footnotetext{Graphics card of NVIDIA\textsuperscript{\textregistered} A100. }
-\stepcounter{footnote}\footnotetext{CPU core of AMD EYPC\texttrademark\ 7742. }
+\stepcounter{footnote}\footnotetext{Graphics card of NVIDIA\textsuperscript{\textregistered} Tesla A100. }
+\stepcounter{footnote}\footnotetext{One CPU core of AMD EYPC\texttrademark\ 7742. }
 
-The $D_\mathrm{w}$ performance of Waveform shifting, peak finding and Fourier deconvolution are suboptimal.  MCMC is too time consuming and the principle is not too different from FBMP.  We therefore leave out those in the following discussion.
-
-The number of iteration for LucyDDM and gradient descent, as well as $t'_i$ sampling frequency of FBMP can be decreased to trade for speed. The time consumed by FBMP contains the initialization time of a LucyDDM pre-conditioner. 
+The $D_\mathrm{w}$ performance of waveform shifting, peak finding and Fourier deconvolution are suboptimal.  But together with CNN, they are the fastest, because no iteration is involved.  LucyDDM, Fitting and FBMP have $\num{\sim 100}$ iterations and are 2 orders of magnitudes slower.  The number of iterations and samples $N_s$ can be decreased to trade for speed.  MCMC is too expansive and its principle is not too different from FBMP.  We shall focus on CNN, LucyDDM, fitting and FBMP in the following.
 
 % Figure of Merits
 
-The $D_\mathrm{w}$ and RSS dependence on $\mu$ of four remaining methods, LucyDDM, Fitting, CNN and FBMP, are plotted in figure~\ref{fig:wdistsummary} and \ref{fig:rsssummary}.  When $\mu$ increases $D_\mathrm{w}$ approach each other, while RSS diverges.  The $D_\mathrm{w}$ behavior is observed in section~\ref{sec:cnn} that with large $N_\mathrm{PE}$ the overall PE times dominate.  It is harder to balance $D_\mathrm{w}$ and RSS with large $N_\mathrm{PE}$.  Notice that in qualitative discussion, large $N_\mathrm{PE}$, large light intensity $\mu$ and large pile-ups are used interchangably.
+The $D_\mathrm{w}$ and RSS dependence on $\mu$ of LucyDDM, Fitting, CNN and FBMP, are plotted in figure~\ref{fig:wdistsummary} and \ref{fig:rsssummary}.  When $\mu$ increases $D_\mathrm{w}$ approach each other, while RSS diverges.  The $D_\mathrm{w}$ decrease-before-increase behavior is observed in section~\ref{sec:cnn} that with large $N_\mathrm{PE}$ the overall PE times dominate.  It is harder to balance $D_\mathrm{w}$ and RSS with larger $N_\mathrm{PE}$, but FBMP achieves the best balance.  It is a interesting question whether FBMP can be approximated by a neuron network for a speed boost.  Notice that in qualitative discussion, large $N_\mathrm{PE}$, large light intensity $\mu$ and large pile-ups are used interchangably.
 \begin{figure}[H]
   \begin{subfigure}[b]{\textwidth}
     \resizebox{\textwidth}{!}{\input{figures/vs-wdist.pgf}}
@@ -33,7 +31,7 @@ The $D_\mathrm{w}$ and RSS dependence on $\mu$ of four remaining methods, LucyDD
     \resizebox{\textwidth}{!}{\input{figures/vs-rss.pgf}}
     \caption{\label{fig:rsssummary}Dependence of residual sum of squares on light intensity.}
   \end{subfigure}
-  \caption{\label{fig:summary}The dependence of $D_\mathrm{w}$~\subref{fig:wdistsummary} and RSS~\subref{fig:rsssummary} on light intensity $\mu$ for typical Cherenkov (left) and scintillation (right) configurations.  Central points are the average results of $\num[retain-unity-mantissa=false]{1e4}$ waveforms from specific $\mu$ values.  Error bars are 5--95 percentiles.  Method abbreviations are the same as figure~\ref{fig:chargesummary}.  With more pile-ups, $D_\mathrm{w}$ tends to converge while RSS diverges.  The pile-up effect is more significant for Cherenkov case because the time scale of light curve is narrower. }
+  \caption{\label{fig:summary}The dependence of $D_\mathrm{w}$~\subref{fig:wdistsummary} and RSS~\subref{fig:rsssummary} on light intensity $\mu$ for typical Cherenkov (left) and scintillation (right) configurations.  Central points, error bars and method abbreviations have the same meaning as figure~\ref{fig:chargesummary}.  With more pile-ups, $D_\mathrm{w}$ tends to converge while RSS diverges.  The pile-up effect is more significant for Cherenkov case because the time scale of light curve is narrower. }
 \end{figure}
 
 CNN and FBMP are the kings of $D_\mathrm{w}$ and RSS.  Because their loss functions are chosen accordingly.  It is therefore informative to study the posterior charge distribution which is not related to the loss function of any method.
@@ -42,7 +40,7 @@ CNN and FBMP are the kings of $D_\mathrm{w}$ and RSS.  Because their loss functi
 
 All the discussed mothods output $\hat{q}_i$ as the inferred charge of the PE at $t_i'$.  Evident in figure~\ref{fig:recchargehist}, FBMP considers and almost retains the true charge distribution.  It is the only method modeling PE correctly.
 
-In contrast, the distributions of LucyDDM, Fitting, and CNN are severely distorted.  During the optimization process of $D_\mathrm{w}$ or RSS, the number of $q_i$ is a constant. Many $\hat{q}_i$ are inferred to be fragmented values.  In this view, retaining charge distribution is a manifestation of sparsity.  FBMP has the best sparsity because it chooses a PE configuration $\bm{z}$ before fitting $\hat{q}_i$.  CNN somehow learns the sparsity better than Fitting, although the latter in theory has self-regulated sparsity.  It is interesting to notice, but we are ignorant of the mechanism.
+In contrast, the distributions of LucyDDM, Fitting, and CNN are severely distorted.  During the optimization process of $D_\mathrm{w}$ or RSS, the number of $q_i$ is a constant. Many $\hat{q}_i$ are inferred to be fragmented values.  In this view, retaining charge distribution is a manifestation of sparsity.  FBMP has the best sparsity because it chooses a PE configuration $\bm{z}$ before fitting $\hat{q}_i$.  CNN somehow learns the sparsity better than Fitting, although the latter in theory has self-regulated sparsity.  It is interesting to notice, but the mechanism is unknown to us.
 
 \begin{figure}[H]
   \centering
@@ -52,54 +50,48 @@ In contrast, the distributions of LucyDDM, Fitting, and CNN are severely distort
 
 For large $N_\mathrm{PE}$ waveforms the sparsity condition is by definition lost.  The equivalence of charge fidelity and sparity implies that FBMP breaks for large $N_\mathrm{PE}$ cases where PMTs operates in current mode, as we shall see in the next sections.
 
-\subsection{Time resolution}
+\subsection{Inference of incident light}
 \label{subsec:timeresolution}
 
-Like figure~\ref{fig:summary}, we show the dependence on $\mu$ of bias~(figure~\ref{fig:biasmethods}) and resolution~(figure~\ref{fig:deltamethods}) for different time estimators in two typical experimental setups.  Comparing with figure~\ref{fig:reso-diff}, In figure~\ref{fig:deltamethods}, all 4 methods (LucyDDM, Fitting, CNN, FBMP) provide better time resolution than only using the first PE during construction.
+Like figure~\ref{fig:summary}, we show the dependence on $\mu$ of bias~(figure~\ref{fig:biasmethods}) and resolution~(figure~\ref{fig:deltamethods}) for different time estimators in two typical experimental setups.  Comparing with figure~\ref{fig:reso-diff}, In figure~\ref{fig:deltamethods}, all 4 methods provide better time resolution than $\hat{t}_\mathrm{1st}$.
+
+From figure~\ref{fig:biasmethods}, we see that the $t_0$ estimation biases for the four methods are all similar to those based on all PEs. The considerable bias for the datasets with $\tau_l=\SI{20}{ns}$, and $\sigma_l=\SI{5}{ns}$ when $\mu$ is small is intrinsic. 
 
 \begin{figure}[H]
   \begin{subfigure}[b]{\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/vs-bias.pgf}}
-    \caption{\label{fig:biasmethods} Time reconstruction bias of methods}
+    \caption{\label{fig:biasmethods} Time reconstruction biases.}
   \end{subfigure}
   \begin{subfigure}[b]{\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/vs-deltamethodsdiv.pgf}}
-    \caption{\label{fig:deltamethods} Time reconstruction ratio of resolution $\sigma/\sigma_{\mathrm{ALL}}$ of methods}
+    \caption{\label{fig:deltamethods} Time reconstruction ratios of resolution $\sigma/\sigma_{\mathrm{ALL}}$.}
   \end{subfigure}
-  \caption{ALL is the $\hat{t}_\mathrm{ALL}$ estimator defined in eq.~\eqref{eq:2}. LucyDDM, Fitting, CNN use eq.~\eqref{eq:pseudo}.  FBMP has its own natural $\hat{t}_0$ estimator in eq.~\eqref{eq:bayesianinter}. Error bars are 5--95 percentiles.}
-\end{figure}
-
-From figure~\ref{fig:biasmethods}, we can see that the $t_0$ estimation biases for the four methods are all similar to those based on all PEs. The considerable bias for the datasets with $\tau_l=\SI{20}{ns}$, and $\sigma_l=\SI{5}{ns}$ when $\mu$ is small is intrinsic. 
-
-\subsection{Intensity resolution}
-\label{subsec:chargereconstruction}
-
-Integration estimation (footnoted as $\mathrm{int}$) with $\hat{\mu}=\int w(t)\mathrm{d}t$ is deteriorated by the randomization process, such as charge distribution and Gaussian white noise in section~\ref{subsec:spe}. 
-
-Considering that the energy response is a multiplier in the detector and the existing $\hat{\mu}$ bias, which we discuss below, the charge resolution is defined on $\log{\hat{\mu}}$. A perfect $\mu$ estimation of a waveform is that $\hat{\mu}_\mathrm{ALL}=N_\mathrm{PE}$. The corresponding resolution $\sigma_{\log\mu}$ is the lower limit of charge reconstruction. 
-
-Figure~\ref{fig:biasmu} shows the bias of $\log\hat{\mu}$ of all four methods, where $\mathrm{FBMP}$ corresponds to $\hat{\mu}$ defined in equation~\eqref{eq:bayesianinter}, and for the other three methods (LucyDDM, Fitting, CNN), $\hat{\mu}$ is the sum of $\hat{\bm{q}}$. As $\log\hat{\mu}$ is unfavorably low when $\hat{\mu}$ is near 0 due to the lower long tail of charge distribution, the bias of integration is less than zero if $\mu$ is small. A detailed explanation for the bias of FBMP is in appendix~\ref{sec:mubias}, and briefly it comes from the degeneracy of reconstruction results and the non-ergodic approximation of FBMP. 
-
-\begin{figure}[H]
   \begin{subfigure}[b]{\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/vs-biasmut.pgf}}
-    \caption{\label{fig:biasmu} intensity reconstruction bias of methods}
+    \caption{\label{fig:biasmu} Intensity reconstruction biases.}
   \end{subfigure}
   \begin{subfigure}[b]{\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/vs-deltamethodsdivmu.pgf}}
-    \caption{\label{fig:deltamu} Intensity reconstruction ratio of resolution $\sigma/\sigma_{\log\mu}$ of methods. }
+    \caption{\label{fig:deltamu} Intensity reconstruction ratios of resolution $\sigma/\sigma_{\log\mu}$. }
   \end{subfigure}
-  \caption{intensity reconstruction performance}
+  \caption{ALL is the $\hat{t}_\mathrm{ALL}$ estimator defined in eq.~\eqref{eq:2}. LucyDDM, Fitting, CNN use eq.~\eqref{eq:pseudo}.  FBMP has its own natural $\hat{t}_0$ estimator in eq.~\eqref{eq:bayesianinter}. Error bars are 5--95 percentiles.}
 \end{figure}
 
-Figure~\ref{fig:deltamu} shows the charge resolution of both integration and the four methods. While estimating the PE number $\hat{\bm{z}}$ in each time bin $\hat{\bm{t}}$ with model selection, $\hat{\mu}$ of FBMP is not critically affected by the charge distribution, which gives a better charge resolution especially when $\mu$ is small. 
+$\hat{\mu}_Q$ is deteriorated by the randomization process, such as charge distribution and Gaussian white noise in section~\ref{subsec:spe}. 
 
-In figure~\ref{fig:deltamethods}, FBMP shows convincing resolution as expected. The other three methods (LucyDDM, Fitting, CNN) shows charge resolution between integration. 
+Considering that the energy response is a multiplier in the detector and the existing $\hat{\mu}$ bias, which we discuss below, the charge resolution is defined on $\log{\hat{\mu}}$.
+
+Figure~\ref{fig:biasmu} shows the bias of $\log\hat{\mu}$ of all four methods. As $\log\hat{\mu}$ is unfavorably low when $\hat{\mu}$ is near 0 due to the lower long tail of charge distribution, the bias of integration is less than zero if $\mu$ is small. A detailed explanation for the bias of FBMP is in appendix~\ref{sec:mubias}, and briefly it comes from the degeneracy of reconstruction results and the non-ergodic approximation of FBMP. 
+
+Figure~\ref{fig:deltamu} shows the intensity resolutions.  For small $\mu$ FBMP gives a much better resolution by correctly modeling charge distributions, see also figure~\ref{fig:recchargehist}.  For larger $\mu$, LucyDDM, Fitting and CNN are similar to $\hat{\mu}_Q$.
 
 % Pedestal & Hardware
 
-We do not evaluate the pedestal of waveforms in this work, which is a potential future work to do. Additionally, widely equipped PMTs bring the data storage pressure. A voltage data pre-process hardware can solve this problem with waveform analysis, equivalent to or even more effective than data compression, which is also a prospective work. 
+\subsection{Prospects}
+\label{sec:prospects}
+
+We can implement the algorithms in field programmable gate array~(FPGA) commonly found in front-end electronics.  That will not only accelerate waveform analysis, but also perform it online to reduce the volume of data needed for data acquisition.  Waveform analysis inspired data compression will potentially outperform general-purposed algorithms.
