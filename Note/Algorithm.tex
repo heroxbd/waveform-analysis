@@ -1,7 +1,7 @@
-  \section{Algorithms and their performance}
+\section{Algorithms and their performance}
 \label{sec:algorithm}
 
-Waveform analysis is to obtain $t_i$ and $q_i$ estimators $\hat{t}_i$ and $\hat{q}_i$ from waveform $w(t)$, where the output indices $i$ are from 1 to $\hat{N}$ and $\hat{N}$ is an estimator of $N_\mathrm{PE}$ in eq.~\eqref{eq:lc-sample}. Figure~\ref{fig:io} illustrates the input $w(t)$ and the outputs $\bm{\hat{t}}, \hat{\bm{q}}$, where boldface $\hat{\bm{t}}$ denotes the vector $\hat{t}_i$. 
+Waveform analysis is to obtain $t_i$ and $q_i$ estimators $\hat{t}_i$ and $\hat{q}_i$ from waveform $w(t)$, where the output indices $i$ are from 1 to $\hat{N}_\mathrm{PE}$ and $\hat{N}_\mathrm{PE}$ is an estimator of $N_\mathrm{PE}$ in eq.~\eqref{eq:lc-sample}. Figure~\ref{fig:io} illustrates the input $w(t)$ and the outputs $\bm{\hat{t}}, \hat{\bm{q}}$, where boldface $\hat{\bm{t}}$ denotes the vector $\hat{t}_i$. 
 \begin{figure}[H]
   \centering
   \begin{subfigure}{.45\textwidth}
@@ -15,7 +15,7 @@ Waveform analysis is to obtain $t_i$ and $q_i$ estimators $\hat{t}_i$ and $\hat{
   \caption{\label{fig:io} Waveform analysis takes PMT waveform as input in~\subref{fig:input} and outputs times $\hat{\bm{t}}$ and charges $\hat{\bm{q}}$ of the PEs in~\subref{fig:output}. }
 \end{figure}
 
-The fluctuation of $q_i$ makes $\hat{t}_i$ ambiguous and $\hat{N}$ fail to estimate $N_\mathrm{PE}$. For example, 1, 2 and even 3~PEs can generate exactly the same charge as $1.6$ units.  A single PE charged $1$ may be mis-interpreted as 2~PEs at consecutive $\hat{t}_i$ and $\hat{t}_{i+1}$ with $\hat{q}_i=\hat{q}_{i+1}=0.5$.
+The fluctuation of $q_i$ makes $\hat{t}_i$ ambiguous and $\hat{N}_\mathrm{PE}$ fail to estimate $N_\mathrm{PE}$. For example, 1, 2 and even 3~PEs can generate exactly the same charge as $1.6$ units.  A single PE charged $1$ may be mis-interpreted as 2~PEs at consecutive $\hat{t}_i$ and $\hat{t}_{i+1}$ with $\hat{q}_i=\hat{q}_{i+1}=0.5$.
 
 \subsection{Evaluation criteria}
 \label{sec:criteria}
@@ -24,10 +24,10 @@ Subject to such ambiguity of $t_i/q_i$, we introduce a set of evaluation criteri
 \subsubsection{Kullback-Leibler divergence}
 \label{sec:pseudo}
 
-We construct a light curve estimator $\hat{\phi}(t)$ from $\bm{\hat{t}}$, $\bm{\hat{q}}$ and $\hat{N}$,
+We construct a light curve estimator $\hat{\phi}(t)$ from $\bm{\hat{t}}$, $\bm{\hat{q}}$ and $\hat{N}_\mathrm{PE}$,
 \begin{equation}
   \label{eq:lc}
-  \hat{\phi}(t) = \sum_{i=1}^{\hat{N}} \hat{q}_i\delta(t-\hat{t}_i),
+  \hat{\phi}(t) = \sum_{i=1}^{\hat{N}_\mathrm{PE}} \hat{q}_i\delta(t-\hat{t}_i),
 \end{equation}
 which resembles eq.~\eqref{eq:lc-sample}.
 Consider the non-normalized Kullback-Leibler~(KL) divergence~\cite{mihoko_robust_2002} between $\hat{\phi}(t)$ and $\mu \phi(t-t_{0})$,
@@ -35,8 +35,8 @@ Consider the non-normalized Kullback-Leibler~(KL) divergence~\cite{mihoko_robust
   \begin{aligned}
     D_\mathrm{KL}\left[\hat{\phi}(t) \parallel \mu\phi(t-t_0)\right] & =\int \left[\hat{\phi}(t) \log\frac{\hat{\phi}(t)}{\mu\phi(t-t_0)} + \mu\phi(t-t_0) - \hat{\phi}(t) \right]\mathrm{d}t \\
     & = - \int \hat{\phi}(t) \log\phi(t-t_0)\mathrm{d}t - \log\mu\int\hat{\phi}(t)\mathrm{d}t + \mu + \int \left[\hat{\phi}(t) \log\hat{\phi}(t) - \hat{\phi}(t) \right]\mathrm{d}t \\
-    & = - \sum_{i=1}^{\hat{N}}\int \hat{q}_i\delta(t-\hat{t_i}) \log\phi(t-t_0)\mathrm{d}t - \log\mu\int\hat{q}_i\delta(t-\hat{t_i})\mathrm{d}t + \mu +  C \\
-    & = -\log \prod_{i=1}^{\hat{N}} \left[\phi(\hat{t}_i-t_0)\right]^{\hat{q}_i} - \log\mu\sum_{i=1}^{\hat{N}} \hat{q}_i + \mu + C
+    & = - \sum_{i=1}^{\hat{N}_\mathrm{PE}}\int \hat{q}_i\delta(t-\hat{t_i}) \log\phi(t-t_0)\mathrm{d}t - \log\mu\int\hat{q}_i\delta(t-\hat{t_i})\mathrm{d}t + \mu +  C \\
+    & = -\log \prod_{i=1}^{\hat{N}_\mathrm{PE}} \left[\phi(\hat{t}_i-t_0)\right]^{\hat{q}_i} - \log\mu\sum_{i=1}^{\hat{N}_\mathrm{PE}} \hat{q}_i + \mu + C
   \label{eq:kl}
   \end{aligned}
 \end{equation}
@@ -45,7 +45,7 @@ where $C$ is a constant regarding $t_0$ and $\mu$.  Define the time KL estimator
   \begin{aligned}
   \label{eq:pseudo}
   \hat{t}_\mathrm{KL} &= \arg\underset{t_0}{\min}~D_\mathrm{KL}\left[\hat{\phi}(t) \parallel \mu\phi(t-t_0)\right] \\
-  &= \arg\underset{t_0}{\max} \prod_{i=1}^{\hat{N}} \left[\phi(\hat{t}_i-t_0)\right]^{\hat{q}_i},
+  &= \arg\underset{t_0}{\max} \prod_{i=1}^{\hat{N}_\mathrm{PE}} \left[\phi(\hat{t}_i-t_0)\right]^{\hat{q}_i},
   \end{aligned}
 \end{equation}
 which reduces to an MLE like eq.~\eqref{eq:2} if $\hat{q}_i\equiv 1$.  $\hat{t}_\mathrm{KL}$ estimates $t_0$ when $t_i, q_i, N_\mathrm{PE}$ are all uncertain.
@@ -54,7 +54,7 @@ Denoting $\Delta t_0$ as $\hat{t}_\mathrm{KL} - t_0$, the standard deviation $\s
 The intensity KL estimator is,
 \begin{equation}
   \label{eq:pseudo-mu}
-  \hat{\mu}_\mathrm{KL} = \arg\underset{\mu}{\min}~D_\mathrm{KL}\left[\hat{\phi}(t) \parallel \mu\phi(t-t_0)\right] = \sum_{i=1}^{\hat{N}} \hat{q}_i.
+  \hat{\mu}_\mathrm{KL} = \arg\underset{\mu}{\min}~D_\mathrm{KL}\left[\hat{\phi}(t) \parallel \mu\phi(t-t_0)\right] = \sum_{i=1}^{\hat{N}_\mathrm{PE}} \hat{q}_i.
 \end{equation}
 
 
@@ -64,7 +64,7 @@ The intensity KL estimator is,
 Following eqs.~\eqref{eq:1} and~\eqref{eq:lc}, we construct an estimator of a waveform,
 \begin{equation}
   \label{eq:w-hat}
-  \hat{w}(t) = \sum_{i=1}^{\hat{N}}\hat{q}_i V_\mathrm{PE}(t-\hat{t}_i) = \hat{\phi}(t) \otimes V_\mathrm{PE}(t).
+  \hat{w}(t) = \sum_{i=1}^{\hat{N}_\mathrm{PE}}\hat{q}_i V_\mathrm{PE}(t-\hat{t}_i) = \hat{\phi}(t) \otimes V_\mathrm{PE}(t).
 \end{equation}
 
 For a noise-free evaluation of $\hat{w}(t)$, residual sum of squares~(RSS) is a $\ell_2$-distance of it to $\tilde{w}(t)$,
@@ -106,7 +106,7 @@ By \textit{waveform shifting}, we extract more time information than TDC in a si
     \resizebox{\textwidth}{!}{\input{figures/findpeak.pgf}}
     \caption{\label{fig:peak} A peak finding example gives \\ $\Delta t_0=\SI{-1.93}{ns}$, $\mathrm{RSS}=\SI{266.9}{mV^2}$, $D_\mathrm{w}=\SI{2.40}{ns}$.}
   \end{subfigure}
-  \caption{\label{fig:method}Demonstrations of heuristic methods on a waveform sampled from $\mu=4$, $\tau_\mathrm{l}=\SI{20}{ns}$, $\sigma_\mathrm{l}=\SI{5}{ns}$ light curve conditions.  Peak finding in~\subref{fig:peak} handles charges more realistically than waveform shifting in~\subref{fig:shifting}, giving better numbers by the $\mathrm{RSS}$ and $D_\mathrm{w}$ criteria in section \ref{sec:criteria}.}
+  \caption{\label{fig:method}Demonstrations of heuristic methods on a waveform sampled from $\mu=4$, $\tau_\ell=\SI{20}{ns}$, $\sigma_\ell=\SI{5}{ns}$ light curve conditions.  Peak finding in~\subref{fig:peak} handles charges more realistically than waveform shifting in~\subref{fig:shifting}, giving better numbers by the $\mathrm{RSS}$ and $D_\mathrm{w}$ criteria in section \ref{sec:criteria}.}
 \end{figure}
 
 \subsubsection{Peak finding}
@@ -240,7 +240,7 @@ Such small $D_\mathrm{w}$ in figure~\ref{fig:cnn-npe} provides a precise matchin
 \label{sec:regression}
 With the generative waveform model in eq.~\eqref{eq:1}, regression is ideal for analysis. Although computational complexity hinders the applications of regression by the vast volumes of raw data, the advancement of sparse models and big data infrastructures strengthens the advantage of regression.
 
-We replace $\hat{N}$ with a fixed sample size $N_\mathrm{s}$ and $\hat{t}_i$ with a fixed grid of times $t'_i$ in eq.~\eqref{eq:w-hat}, 
+We replace $\hat{N}_\mathrm{PE}$ with a fixed sample size $N_\mathrm{s}$ and $\hat{t}_i$ with a fixed grid of times $t'_i$ in eq.~\eqref{eq:w-hat}, 
 \begin{equation}
   \label{eq:gd}
   w'(t) = \sum_{i=1}^{N_\mathrm{s}}q'_iV_\mathrm{PE}(t-t'_i).
