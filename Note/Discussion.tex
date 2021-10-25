@@ -9,11 +9,11 @@ First, we constrain the candidates by time consumption, algorithm category and $
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/summarycharge.pgf}}
-    \caption{\label{fig:chargesummary} $D_\mathrm{w}$ for all the methods with the same dataset as figure~\ref{fig:method}. The error bars are 5 to 95 percentiles. Time consumption of CNN is in two conditions: GPU\protect\footnotemark~(left) and CPU\protect\footnotemark~(right). }
+    \caption{\label{fig:chargesummary} $D_\mathrm{w}$ for all the methods with the same dataset as figure~\ref{fig:method}. The error bars are 5 to 95 percentiles. Time consumption of CNN is in two conditions: GPU\protect\footnotemark~(dashed error bars) and CPU\protect\footnotemark~(solid error bars). }
 \end{figure}
 \addtocounter{footnote}{-2}
-\stepcounter{footnote}\footnotetext{One graphics card of NVIDIA\textsuperscript{\textregistered} A100. }
-\stepcounter{footnote}\footnotetext{100 CPU cores of AMD EYPC\texttrademark\ 7742. }
+\stepcounter{footnote}\footnotetext{Graphics card of NVIDIA\textsuperscript{\textregistered} A100. }
+\stepcounter{footnote}\footnotetext{CPU core of AMD EYPC\texttrademark\ 7742. }
 
 The $D_\mathrm{w}$ performance of Waveform shifting, peak finding and Fourier deconvolution are suboptimal.  MCMC is too time consuming and the principle is not too different from FBMP.  We therefore leave out those in the following discussion.
 
