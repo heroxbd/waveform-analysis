@@ -53,9 +53,9 @@ For large $N_\mathrm{PE}$ waveforms the sparsity condition is by definition lost
 \subsection{Inference of incident light}
 \label{subsec:timeresolution}
 
-Like figure~\ref{fig:summary}, we show the dependence on $\mu$ of bias~(figure~\ref{fig:biasmethods}) and resolution~(figure~\ref{fig:deltamethods}) for different time estimators in two typical experimental setups.  Comparing with figure~\ref{fig:reso-diff}, In figure~\ref{fig:deltamethods}, all 4 methods provide better time resolution than $\hat{t}_\mathrm{1st}$.
+Like figure~\ref{fig:summary}, we show the dependence on $\mu$ of bias~(figure~\ref{fig:biasmethods}) and resolution~(figure~\ref{fig:deltamethods}) for different time estimators in two typical experimental setups.  From figure~\ref{fig:biasmethods}, we see that the $t_0$ estimation biases are all similar to that of $\hat{t}_\mathrm{ALL}$. The considerable bias for the scintillation configureation~(right of figure~\ref{fig:biasmethods}) for small $\mu$ is intrinsic for exponential distributions.
 
-From figure~\ref{fig:biasmethods}, we see that the $t_0$ estimation biases for the four methods are all similar to those based on all PEs. The considerable bias for the datasets with $\tau_l=\SI{20}{ns}$, and $\sigma_l=\SI{5}{ns}$ when $\mu$ is small is intrinsic. 
+Large light intensity improves the resolution of $\hat{t}_\mathrm{1st}$, as evident in the left of figure~\ref{fig:reso-diff}.  People often argue from such an observation and the difficulties for large pile-ups that it is unnecessary to do waveform analysis when $\mu$ is large.  Comparing figure~\ref{fig:reso-diff} and \ref{fig:deltamethods}, we see it is a myth: all the methods provide magnificently better time resolutions than $\hat{t}_\mathrm{1st}$. For $\mu=30$ the improvement in time resolutions for Cherenkov and scintillation configurations are $2.7$ and $1.5$ times!
 
 \begin{figure}[H]
   \begin{subfigure}[b]{\textwidth}
@@ -78,7 +78,7 @@ From figure~\ref{fig:biasmethods}, we see that the $t_0$ estimation biases for t
     \resizebox{\textwidth}{!}{\input{figures/vs-deltamethodsdivmu.pgf}}
     \caption{\label{fig:deltamu} Intensity reconstruction ratios of resolution $\sigma/\sigma_{\log\mu}$. }
   \end{subfigure}
-  \caption{ALL is the $\hat{t}_\mathrm{ALL}$ estimator defined in eq.~\eqref{eq:2}. LucyDDM, Fitting, CNN use eq.~\eqref{eq:pseudo}.  FBMP has its own natural $\hat{t}_0$ estimator in eq.~\eqref{eq:bayesianinter}. Error bars are 5--95 percentiles.}
+  \caption{ALL is the $\hat{t}_\mathrm{ALL}$ estimator defined in eq.~\eqref{eq:2}. LucyDDM, Fitting, CNN use eqs.~\eqref{eq:pseudo} and \eqref{eq:pseudo-mu}.  FBMP has its own natural $\hat{t}_0$ estimator in eq.~\eqref{eq:fbmpcharge}. Error bars are 5--95 percentiles.}
 \end{figure}
 
 $\hat{\mu}_Q$ is deteriorated by the randomization process, such as charge distribution and Gaussian white noise in section~\ref{subsec:spe}. 
