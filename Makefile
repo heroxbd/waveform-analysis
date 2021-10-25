@@ -1,6 +1,6 @@
 SHELL:=bash
 channelN:=$(shell seq -f '%02g' 0 0)
-mu:=$(shell seq -f '%0.1f' 0.5 0.5 3.5 && seq -f '%0.1f' 4 2 10 && seq -f '%0.1f' 15 5 30)
+mu:=$(shell seq -f '%0.1f' 0.5 0.5 3.5 && seq -f '%0.1f' 4 2 10 && seq -f '%0.1f' 15 5 60)
 
 tau:=$(shell awk -F',' 'NR == 1 { print $1 }' rc.csv)
 sigma:=$(shell awk -F',' 'NR == 2 { print $1 }' rc.csv)
@@ -10,7 +10,9 @@ sim:=$(erg:%=waveform/%.h5)
 char:=$(patsubst waveform/%.h5,result/$(method)/char/%.h5,$(sim))
 solu:=$(patsubst waveform/%.h5,result/$(method)/solu/%.h5,$(sim))
 dist:=$(patsubst waveform/%.h5,result/$(method)/dist/%.h5,$(sim))
-hist:=$(patsubst waveform/%.h5,result/$(method)/hist/%.pdf,$(sim))
+hist:=$(patsubst waveform/%.h5,result/$(method)/prior/hist/%.pdf,$(sim)) $(patsubst waveform/%.h5,result/$(method)/nopri/hist/%.pdf,$(sim))
+
+#$(patsubst waveform/%.h5,result/$(method)/nopri/hist/%.pdf,$(sim))
 ifeq ($(method), takara)
     predict:=nn
 else
@@ -20,7 +22,11 @@ else
 ifeq ($(method), fbmp)
 	predict:=bayesian
 else
+ifeq ($(method), fbmpZ)
+	predict:=fbmpZ
+else
     predict:=fit
+endif
 endif
 endif
 endif
@@ -28,7 +34,7 @@ endif
 PreData:=$(channelN:%=result/takara/PreProcess/Pre_Channel%.h5)
 Nets:=$(channelN:%=result/takara/char/Nets/Channel%.torch_net)
 
-.PHONY : all
+.PHONY : all tests
 
 all : test
 
@@ -38,10 +44,33 @@ solu : $(solu)
 
 sim : $(sim)
 
+# tests: $(patsubst waveform/%.h5,result/$(method)/prior/test/%.pdf,$(sim)) $(patsubst waveform/%.h5,result/$(method)/nopri/test/%.pdf,$(sim))
+tests: $(patsubst waveform/%.h5,result/$(method)/nopri/test/%.pdf,$(sim))
 define bayesian
-result/$(method)/char/%.h5 : waveform/%.h5 spe.h5
+result/$(method)/prior/char/%.h5 : waveform/%.h5 spe.h5
 	@mkdir -p $$(dir $$@)
-	OMP_NUM_THREADS=2 python3 bayesian.py $$< --met $(method) -N 100 --ref $$(word 2,$$^) -o $$@ > $$@.log 2>&1
+	OMP_NUM_THREADS=2 python3 bayesian.py $$< --met $(method) -N 100 --ref $$(word 2,$$^) -o $$@  > $$@.log 2>&1
+result/$(method)/nopri/test/%.pdf: waveform/%.h5
+	mkdir -p $$(dir $$@)
+	python3 bayesiantest.py $$<  -o $$@ --ref spe.h5  > $$@.log 2>&1
+
+endef
+
+define fbmpZ
+result/$(method)/prior/char/%.h5 : waveform/%.h5 spe.h5
+	@mkdir -p $$(dir $$@)
+	OMP_NUM_THREADS=2 python3 fbmp.py $$< --met $(method) -N 100 --ref $$(word 2,$$^) -o $$@ --prior > $$@.log 2>&1
+result/$(method)/nopri/char/%.h5 : waveform/%.h5 spe.h5
+	@mkdir -p $$(dir $$@)
+	OMP_NUM_THREADS=2 python3 fbmp.py $$< --met $(method) -N 100 --ref $$(word 2,$$^) -o $$@ > $$@.log 2>&1
+result/$(method)/prior/test/%.pdf: waveform/%.h5
+	mkdir -p $$(dir $$@)
+	python3 fbmptest.py $$<  -o $$@ --ref spe.h5 --prior > $$@.log 2>&1
+result/$(method)/nopri/test/%.pdf: waveform/%.h5
+	mkdir -p $$(dir $$@)
+	python3 fbmptest.py $$<  -o $$@ --ref spe.h5 > $$@.log 2>&1
+
+
 endef
 
 define fit
@@ -57,18 +86,29 @@ result/takara/char/%.h5 : waveform/%.h5 spe.h5 $(Nets)
 endef
 $(eval $(call $(predict)))
 
-result/$(method)/hist/%.pdf : result/$(method)/dist/%.h5 waveform/%.h5 result/$(method)/solu/%.h5 result/$(method)/char/%.h5
+result/$(method)/prior/hist/%.pdf : result/$(method)/prior/dist/%.h5 waveform/%.h5 result/$(method)/prior/solu/%.h5 result/$(method)/prior/char/%.h5
 	@mkdir -p $(dir $@)
 	python3 draw_dist.py $< --ref $(wordlist 2,4,$^) -o $@ > $@.log 2>&1
-result/$(method)/dist/%.h5 : waveform/%.h5 result/$(method)/char/%.h5 spe.h5
+result/$(method)/prior/dist/%.h5 : waveform/%.h5 result/$(method)/prior/char/%.h5 spe.h5
 	@mkdir -p $(dir $@)
 	OMP_NUM_THREADS=2 python3 test_dist.py $(word 2,$^) --ref $< $(word 3,$^) -o $@ > $@.log 2>&1
-result/$(method)/solu/%.h5 : result/$(method)/char/%.h5 waveform/%.h5 spe.h5
+result/$(method)/prior/solu/%.h5 : result/$(method)/prior/char/%.h5 waveform/%.h5 spe.h5
+	@mkdir -p $(dir $@)
+	OMP_NUM_THREADS=2 python3 toyRec.py $< --ref $(wordlist 2,3,$^) -o $@ > $@.log 2>&1
+result/$(method)/nopri/hist/%.pdf : result/$(method)/nopri/dist/%.h5 waveform/%.h5 result/$(method)/nopri/solu/%.h5 result/$(method)/nopri/char/%.h5
+	@mkdir -p $(dir $@)
+	python3 draw_dist.py $< --ref $(wordlist 2,4,$^) -o $@ > $@.log 2>&1
+result/$(method)/nopri/dist/%.h5 : waveform/%.h5 result/$(method)/nopri/char/%.h5 spe.h5
+	@mkdir -p $(dir $@)
+	OMP_NUM_THREADS=2 python3 test_dist.py $(word 2,$^) --ref $< $(word 3,$^) -o $@ > $@.log 2>&1
+result/$(method)/nopri/solu/%.h5 : result/$(method)/nopri/char/%.h5 waveform/%.h5 spe.h5
 	@mkdir -p $(dir $@)
 	OMP_NUM_THREADS=2 python3 toyRec.py $< --ref $(wordlist 2,3,$^) -o $@ > $@.log 2>&1
 
-vs : rc.csv
-	python3 vs.py --conf $^
+vsprior : rc.csv
+	python3 vs.py --conf $^ --prior
+vsnopri : rc.csv
+	python3 vs.py --conf $^ 
 
 model : $(Nets)
 
