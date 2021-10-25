@@ -71,7 +71,7 @@ We see in figure~\ref{fig:pile} that pile-ups and noises hinder the time $t_i$ a
 \subsubsection{Time $t_0$}
 \label{sec:time-shift-t_0}
 
-$\hat{t}_\mathrm{1st}$ is a biased $t_0$ estimator affected by the light intensity $\mu$, as will be shown in figure~\ref{fig:biasmethods} and discussed in section~\ref{subsec:timeresolution}. We define the resolution $\sigma_\mathrm{1st}$ for a batch of waveforms as the standard deviation of $\Delta t_0 = \hat{t}_\mathrm{1st} - t_0$. From a hypothetical perfect measurement of $t_i$, we define an ideal maximum likelihood estimator~(MLE) $\hat{t}_\mathrm{ALL}$ to capture time information of all the PEs,
+$\hat{t}_\mathrm{1st}$ is a biased estimator of $t_0$.  It is affected by the light intensity $\mu$, as will be shown in figure~\ref{fig:biasmethods} and discussed in section~\ref{subsec:timeresolution}. We define the resolution $\sigma_\mathrm{1st}$ for a batch of waveforms as the standard deviation of $\Delta t_0 = \hat{t}_\mathrm{1st} - t_0$. From a hypothetical perfect measurement of $t_i$, we define an ideal maximum likelihood estimator~(MLE) $\hat{t}_\mathrm{ALL}$ to capture time information of all the PEs,
 \begin{equation}
   \label{eq:2}
   \hat{t}_\mathrm{ALL} = \arg\underset{t_0}{\max} \prod_{i=1}^{N_\mathrm{PE}} \phi(t_i-t_0).
