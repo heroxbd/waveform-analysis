@@ -68,7 +68,7 @@ See figure~\ref{fig:pile} for an example.
 \label{sec:time}
 We see in figure~\ref{fig:pile} that pile-ups and noises hinder the time $t_i$ and charge $q_i$ of the PEs. Fortunately event reconstruction only takes the time shift $t_0$ and the intensity $\mu$ in eq.~\eqref{eq:light-curve} as inputs.  All the uncertainties of $\hat{t}_i$, $\hat{q}_i$ and $\hat{N}_\mathrm{PE}$ are reflected in $\hat{t}_0$ and $\hat{\mu}$. In this article, we denote $\hat{x}$ as an estimator for the corresponding variable $x$ if not otherwise specified.  Classical TDC extracts the waveform's threshold crossing time $\hat{t}_\mathrm{1st}$ to approximate hit time of the first PE, while QDC extracts total charge $Q$ from waveform integration to estimate $\mu$ by $\hat{\mu}_Q$.
 
-\subsubsection{Time shift $t_0$}
+\subsubsection{Time $t_0$}
 \label{sec:time-shift-t_0}
 
 $\hat{t}_\mathrm{1st}$ is a biased $t_0$ estimator affected by the light intensity $\mu$, as will be shown in figure~\ref{fig:biasmethods} and discussed in section~\ref{subsec:timeresolution}. We define the resolution $\sigma_\mathrm{1st}$ for a batch of waveforms as the standard deviation of $\Delta t_0 = \hat{t}_\mathrm{1st} - t_0$. From a hypothetical perfect measurement of $t_i$, we define an ideal maximum likelihood estimator~(MLE) $\hat{t}_\mathrm{ALL}$ to capture time information of all the PEs,
