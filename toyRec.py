@@ -8,6 +8,7 @@ import numpy as np
 from numpy.lib import recfunctions
 import scipy.optimize as opti
 from scipy.interpolate import interp1d
+from scipy.stats import poisson
 
 import wf_func as wff
 
@@ -78,6 +79,14 @@ with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as ipt, h5py.File(args
         ts['tscharge'] = np.hstack(result)
         ts['tswave'] = np.full(N, np.nan)
         ts['mucharge'] = np.full(N, np.nan)
+    if method == 'fbmp':
+        mu = ipt['starttime'].attrs['mu']
+        sigmamu = ipt['starttime'].attrs['sigmamu']
+    else:
+        N_tot = N / (1 - poisson.cdf(0, Mu))
+        mu = charge['Charge'].sum() / gmu / N_tot
+        sigmamu = np.sqrt(charge['Charge'].sum() / gmu / N_tot)
+print('mu is {0:.3f}, sigma_mu is {1:.3f}'.format(mu.item(), sigmamu.item()))
 
 with h5py.File(args.opt, 'w') as opt:
     dset = opt.create_dataset('starttime', data=ts, compression='gzip')
@@ -85,6 +94,8 @@ with h5py.File(args.opt, 'w') as opt:
     dset.attrs['mu'] = Mu
     dset.attrs['tau'] = Tau
     dset.attrs['sigma'] = Sigma
+    dset.attrs['mu'] = mu
+    dset.attrs['sigmamu'] = sigmamu
     if method == 'takara':
         dset = opt.create_dataset('starttime_cpu', data=ts_cpu, compression='gzip')
     print('The output file path is {}'.format(args.opt))

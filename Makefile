@@ -32,6 +32,8 @@ Nets:=$(channelN:%=result/takara/char/Nets/Channel%.torch_net)
 
 all : test
 
+char : $(char)
+
 test : $(hist)
 
 solu : $(solu)

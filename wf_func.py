@@ -190,7 +190,7 @@ def findpeak(wave, spe_pre):
         cha = np.array([1])
     return pet, cha
 
-def fbmpr_fxn_reduced(y, A, sig2w, sig2s, mus, D, p1, stop=0, truth=None, i=None, left=None, right=None, tlist=None, gmu=None, para=None, prior=False, space=True, plot=False):
+def fbmpr_fxn_reduced(y, A, sig2w, sig2s, mus, D, p1, truth=None, i=None, left=None, right=None, tlist=None, gmu=None, para=None, prior=False, space=True, plot=False):
     '''
     p1: prior probability for each bin.
     sig2w: variance of white noise.
@@ -200,7 +200,7 @@ def fbmpr_fxn_reduced(y, A, sig2w, sig2s, mus, D, p1, stop=0, truth=None, i=None
     # Only for multi-gaussian with arithmetic sequence of mu and sigma
     M, N = A.shape
 
-    psy_thresh = 0.1
+    psy_thresh = 1e-2
     # upper limit of number of PEs.
     P = max(math.ceil(min(M, p1.sum() + 3 * np.sqrt(p1.sum()))), 1)
 
@@ -210,23 +210,23 @@ def fbmpr_fxn_reduced(y, A, sig2w, sig2s, mus, D, p1, stop=0, truth=None, i=None
     cc = np.zeros((P, D, N))
 
     # nu_root: nu for all s_n=0.
+    # no Gaussian space factor
+    nu_root = -0.5 * np.linalg.norm(y) ** 2 / sig2w - 0.5 * M * np.log(2 * np.pi)
     if space:
-        nu_root = -0.5 * np.linalg.norm(y) ** 2 / sig2w - 0.5 * M * np.log(2 * np.pi) - 0.5 * M * np.log(sig2w)
-    else:
-        nu_root = -0.5 * np.linalg.norm(y) ** 2 / sig2w - 0.5 * M * np.log(2 * np.pi)  # no Gaussian space factor
+        nu_root -= 0.5 * M * np.log(sig2w)
     if prior:
-        nu_root = nu_root + poisson.logpmf(0, p1).sum()
+        nu_root += poisson.logpmf(0, p1).sum()
     # Eq. (29)
     cx_root = A / sig2w
     # Eq. (30) sig2s = 1 sigma^2 - 0 sigma^2
     betaxt_root = sig2s / (1 + sig2s * np.einsum('ij,ij->j', A, cx_root, optimize=True))
     # Eq. (31)
+    # no Gaussian space factor
+    nuxt_root = nu_root + 0.5 * (betaxt_root * (y @ cx_root + mus / sig2s) ** 2 - mus ** 2 / sig2s)
     if space:
-        nuxt_root = nu_root + 0.5 * (betaxt_root * (y @ cx_root + mus / sig2s) ** 2  - mus ** 2 / sig2s) + 0.5 * np.log(betaxt_root / sig2s)
-    else:
-        nuxt_root = nu_root + 0.5 * (betaxt_root * (y @ cx_root + mus / sig2s) ** 2  - mus ** 2 / sig2s)  # no Gaussian space factor
+        nuxt_root += 0.5 * np.log(betaxt_root / sig2s)
     if prior:
-        nuxt_root = nuxt_root + poisson.logpmf(1, p1) - poisson.logpmf(0, p1)
+        nuxt_root += poisson.logpmf(1, p1) - poisson.logpmf(0, p1)
     pan_root = np.zeros(N)
 
     # Repeated Greedy Search
@@ -259,32 +259,29 @@ def fbmpr_fxn_reduced(y, A, sig2w, sig2s, mus, D, p1, stop=0, truth=None, i=None
             # Eq. (30)
             betaxt = sig2s / (1 + sig2s * np.sum(A * cx, axis=0))
             # Eq. (31)
+            # no Gaussian space factor
+            nuxt = nustar + 0.5 * (betaxt * (z @ cx + mus / sig2s) ** 2 - mus ** 2 / sig2s)
             if space:
-                nuxt = nustar + 0.5 * (betaxt * (z @ cx + mus / sig2s) ** 2 - mus ** 2 / sig2s) + 0.5 * np.log(betaxt / sig2s)
-            else:
-                nuxt = nustar + 0.5 * (betaxt * (z @ cx + mus / sig2s) ** 2 - mus ** 2 / sig2s)  # no Gaussian space factor
+                nuxt += 0.5 * np.log(betaxt / sig2s)
             if prior:
-                nuxt = nuxt + poisson.logpmf(pan + 1, mu=p1) - poisson.logpmf(pan, mu=p1)
+                nuxt += poisson.logpmf(pan + 1, mu=p1) - poisson.logpmf(pan, mu=p1)
             nuxt[np.isnan(nuxt)] = -np.inf
             # nuxt[t] = -np.inf
-    nu_bk = nu.copy()
     nu = nu.T.flatten()
 
     indx = np.argsort(nu)[::-1]
     d_max = math.floor(indx[0] // P) + 1
-    # num = min(math.ceil(np.sum(nu > nu.max() + np.log(psy_thresh))), D * P)
-    num = min(30, D * P)
+    num = min(math.ceil(np.sum(nu > nu.max() + np.log(psy_thresh))), D * P)
     nu_star = nu[indx[:num]]
-    nu_star_bk = nu_bk.T.flatten()[indx[:num]]
-    psy_star = np.exp(nu_star - nu.max()) / np.sum(np.exp(nu_star - nu.max()))
+    psy_star = np.exp(nu_star - nu_star.max()) / np.sum(np.exp(nu_star - nu_star.max()))
     T_star = [np.sort(T[:(indx[k] % P) + 1, indx[k] // P]) for k in range(num)]
     xmmse_star = np.empty((num, N))
     for k in range(num):
         xmmse_star[k] = xmmse[indx[k] % P, indx[k] // P]
     
-    c_star = np.zeros_like(xmmse_star).astype(int)
+    c_star = np.zeros_like(xmmse_star, dtype=int)
     for k in range(num):
-        t, c = np.unique(T_star[k][xmmse_star[k][T_star[k]] != 0], return_counts=True)
+        t, c = np.unique(T_star[k], return_counts=True)
         c_star[k, t] = c
 
     if plot:
@@ -296,8 +293,8 @@ def fbmpr_fxn_reduced(y, A, sig2w, sig2s, mus, D, p1, stop=0, truth=None, i=None
         fig.tight_layout()
         gs = gridspec.GridSpec(3, 2, figure=fig, left=0.1, right=0.9, top=0.95, bottom=0.1, wspace=0.2, hspace=0.2)
         ax = fig.add_subplot(gs[0, :])
-        # cp = ax.imshow(nu_bk - nu_bk.min() + 1, aspect='auto', norm=colors.LogNorm())
-        cp = ax.imshow(nu_bk, aspect='auto')
+        # cp = ax.imshow(nu - nu.min() + 1, aspect='auto', norm=colors.LogNorm())
+        cp = ax.imshow(nu, aspect='auto')
         fig.colorbar(cp, ax=ax)
         ax.set_xticks(np.arange(D))
         ax.set_xticklabels(np.arange(1, D + 1).astype(str))
@@ -360,23 +357,30 @@ def fbmpr_fxn_reduced(y, A, sig2w, sig2s, mus, D, p1, stop=0, truth=None, i=None
         fig.savefig('t/' + str(i) + '.png')
         plt.close()
 
-    xmmse = np.average(xmmse_star, weights=psy_star, axis=0)
+    # num += 1
+    # nu_star = np.append(nu_star, nu_root)
+    # T_star += [np.empty(0)]
+    # xmmse_star = np.append(xmmse_star, np.zeros(N))
+    # c_star = np.append(c_star, np.zeros(N, dtype=int))
 
-    return xmmse, xmmse_star, psy_star, nu_star, nu_star_bk, T_star, d_max, num
+    return xmmse_star, nu_star, T_star, c_star, d_max, num
 
 def nu_direct(y, A, nx, mus, sig2s, sig2w, la, prior=True, space=True):
     M, N = A.shape
-    Phi = np.matmul(np.matmul(A, np.diagflat(sig2s * nx)), A.T) + np.eye(M) * sig2w
+    Phi_s = Phi(y, A, nx, mus, sig2s, sig2w, la)
     z = y - np.dot(A, (mus * nx))
-    invPhi = np.linalg.inv(Phi)
-    detPhi = np.linalg.det(Phi)
+    invPhi = np.linalg.inv(Phi_s)
+    # no Gaussian space factor
+    nu = -0.5 * np.matmul(np.matmul(z, invPhi), z) - 0.5 * M * np.log(2 * np.pi)
     if space:
-        nu = -0.5 * np.matmul(np.matmul(z, invPhi), z) - 0.5 * M * np.log(2 * np.pi) - 0.5 * np.log(detPhi)
-    else:
-        nu = -0.5 * np.matmul(np.matmul(z, invPhi), z) - 0.5 * M * np.log(2 * np.pi)  # no Gaussian space factor
+        nu -= 0.5 * np.log(np.linalg.det(Phi_s))
     if prior:
         nu = nu + poisson.logpmf(nx, mu=la).sum()
     return nu
+
+def Phi(y, A, nx, mus, sig2s, sig2w, la):
+    M, N = A.shape
+    return np.matmul(np.matmul(A, np.diagflat(sig2s * nx)), A.T) + np.eye(M) * sig2w
 
 def elbo(nu_star_prior):
     q = np.exp(nu_star_prior - nu_star_prior.max()) / np.sum(np.exp(nu_star_prior - nu_star_prior.max()))
