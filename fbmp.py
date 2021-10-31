@@ -260,9 +260,10 @@ def fbmp_inference(a0, a1):
         #     t, c = np.unique(T_star[k], return_counts=True)
         #     c_star[k, t] = c
         la_truth = len(truth) * wff.convolve_exp_norm(tlist - t0_truth[i]['T0'], Tau, Sigma) / n + 1e-8
-        if prior:
-            nu_star_prior = nu_star - poisson.logpmf(c_star, mu=la).sum(axis=1)
-        nu_star_prior = nu_star + poisson.logpmf(c_star, mu=la_truth).sum(axis=1)
+        # if prior:
+        #     nu_star_prior = nu_star - poisson.logpmf(c_star, mu=la).sum(axis=1)
+        # nu_star_prior = nu_star + poisson.logpmf(c_star, mu=la_truth).sum(axis=1)
+        nu_space_prior = np.array([wff.nu_direct(wave_r, A, c_star[j], factor, (gsigma * factor / gmu) ** 2, spe_pre[cid]['std'] ** 2, la_truth, prior=True, space=True) for j in range(len(psy_star))])
 
         nx = np.sum([(tlist - 0.5 / n <= truth['HitPosInWindow'][j]) * (tlist + 0.5 / n > truth['HitPosInWindow'][j]) for j in range(len(truth))], axis=0)
         cc = np.sum([np.where(tlist - 0.5 / n < truth['HitPosInWindow'][j], np.sqrt(truth['Charge'][j]), 0) * np.where(tlist + 0.5 / n > truth['HitPosInWindow'][j], np.sqrt(truth['Charge'][j]), 0) for j in range(len(truth))], axis=0)
@@ -300,7 +301,7 @@ def fbmp_inference(a0, a1):
 
         d_tot[i - a0] = len(la)
         d_max[i - a0] = d_max_i
-        elbo[i - a0] = wff.elbo(nu_star_prior)
+        elbo[i - a0] = wff.elbo(nu_space_prior)
         pet, cha = wff.clip(pet, cha, Thres[method])
         cha = cha * gmu
         t0_wav[i - a0] = t0
@@ -469,6 +470,7 @@ with h5py.File(fopt, 'w') as opt:
     pedset.attrs['tau'] = Tau
     pedset.attrs['sigma'] = Sigma
     tsdset = opt.create_dataset('starttime', data=ts, compression='gzip')
+    opt.create_dataset('elbo', data=elbo, compression='gzip')
     print('The output file path is {}'.format(fopt))
 
 print('Finished! Consuming {0:.02f}s in total, cpu time {1:.02f}s.'.format(time.time() - global_start, time.process_time() - cpu_global_start))

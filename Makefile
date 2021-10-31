@@ -1,16 +1,17 @@
 SHELL:=bash
 channelN:=$(shell seq -f '%02g' 0 0)
-mu:=$(shell seq -f '%0.1f' 0.5 0.5 3.5 && seq -f '%0.1f' 4 2 10 && seq -f '%0.1f' 15 5 60)
+mu:=$(shell seq -f '%0.1f' 0.5 0.5 3.5 && seq -f '%0.1f' 4 2 10 && seq -f '%0.1f' 15 5 30)
 
 tau:=$(shell awk -F',' 'NR == 1 { print $1 }' rc.csv)
 sigma:=$(shell awk -F',' 'NR == 2 { print $1 }' rc.csv)
 
 erg:=$(filter-out %-00-00,$(shell for i in $(mu); do for j in $(tau); do for k in $(sigma); do echo $${i}-$${j}-$${k}; done; done; done))
 sim:=$(erg:%=waveform/%.h5)
-char:=$(patsubst waveform/%.h5,result/$(method)/char/%.h5,$(sim))
+char:=$(patsubst waveform/%.h5,result/$(method)/nopri/char/%.h5,$(sim))
 solu:=$(patsubst waveform/%.h5,result/$(method)/solu/%.h5,$(sim))
 dist:=$(patsubst waveform/%.h5,result/$(method)/dist/%.h5,$(sim))
-hist:=$(patsubst waveform/%.h5,result/$(method)/prior/hist/%.pdf,$(sim)) $(patsubst waveform/%.h5,result/$(method)/nopri/hist/%.pdf,$(sim))
+# hist:=$(patsubst waveform/%.h5,result/$(method)/prior/hist/%.pdf,$(sim)) $(patsubst waveform/%.h5,result/$(method)/nopri/hist/%.pdf,$(sim))
+hist:=$(patsubst waveform/%.h5,result/$(method)/nopri/hist/%.pdf,$(sim))
 
 #$(patsubst waveform/%.h5,result/$(method)/nopri/hist/%.pdf,$(sim))
 ifeq ($(method), takara)
@@ -34,9 +35,12 @@ endif
 PreData:=$(channelN:%=result/takara/PreProcess/Pre_Channel%.h5)
 Nets:=$(channelN:%=result/takara/char/Nets/Channel%.torch_net)
 
-.PHONY : all tests
+.PHONY : all 
+#tests
 
 all : test
+
+chars: $(char)
 
 test : $(hist)
 
@@ -47,7 +51,7 @@ sim : $(sim)
 # tests: $(patsubst waveform/%.h5,result/$(method)/prior/test/%.pdf,$(sim)) $(patsubst waveform/%.h5,result/$(method)/nopri/test/%.pdf,$(sim))
 tests: $(patsubst waveform/%.h5,result/$(method)/nopri/test/%.pdf,$(sim))
 define bayesian
-result/$(method)/prior/char/%.h5 : waveform/%.h5 spe.h5
+result/$(method)/nopri/char/%.h5 : waveform/%.h5 spe.h5
 	@mkdir -p $$(dir $$@)
 	OMP_NUM_THREADS=2 python3 bayesian.py $$< --met $(method) -N 100 --ref $$(word 2,$$^) -o $$@  > $$@.log 2>&1
 result/$(method)/nopri/test/%.pdf: waveform/%.h5

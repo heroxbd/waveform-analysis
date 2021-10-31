@@ -446,6 +446,7 @@ with h5py.File(fopt, 'w') as opt:
     pedset.attrs['tau'] = Tau
     pedset.attrs['sigma'] = Sigma
     tsdset = opt.create_dataset('starttime', data=ts, compression='gzip')
+    opt.create_dataset('elbo', data=elbo, compression='gzip')
     print('The output file path is {}'.format(fopt))
 
 print('Finished! Consuming {0:.02f}s in total, cpu time {1:.02f}s.'.format(time.time() - global_start, time.process_time() - cpu_global_start))
