@@ -185,11 +185,11 @@ n = 2
 tlist_pan = np.sort(np.unique(np.hstack(np.arange(0, window)[:, None] + np.linspace(0, 1, n, endpoint=False) - (n // 2) / n)))
 b_t0 = [0., 600.]
 
-def likelihood(mu, t0, As_k, psy_star_k):
+def likelihood(mu, t0, As_k, nu_star_k):
     a = wff.convolve_exp_norm(tlist_pan - t0, Tau, Sigma) / n + 1e-8 # use tlist_pan not tlist
     # a *= mu / a.sum()
     a *= mu
-    li = -special.logsumexp(np.log(poisson.pmf(As_k, a)).sum(axis=1), b=psy_star_k)
+    li = -special.logsumexp(np.log(poisson.pmf(As_k, mu=a)).sum(axis=1) + nu_star_k)
     return li
 
 def sum_mu_likelihood(mu, t0_list, As_list, psy_star_list):
@@ -199,28 +199,28 @@ def optit0mu(mu, t0, nu_star, As, mu_init=None):
     l = len(t0)
     mulist = np.arange(max(1e-8, mu - 2 * np.sqrt(mu)), mu + 2 * np.sqrt(mu), 1e-1)
     b_mu = [max(1e-8, mu - 5 * np.sqrt(mu)), mu + 5 * np.sqrt(mu)]
-    psy_star = [np.exp(nu_star[k] - nu_star[k].max()) / np.sum(np.exp(nu_star[k] - nu_star[k].max())) for k in range(l)]
+    # psy_star = [np.exp(nu_star[k] - nu_star[k].max()) / np.sum(np.exp(nu_star[k] - nu_star[k].max())) for k in range(l)]
     t0list = [np.arange(t0[k] - 3 * Sigma, t0[k] + 3 * Sigma + 1e-6, 0.2) for k in range(l)]
     sigmamu = None
     logLv_mu = None
     if mu_init is None:
         mu_init = np.empty(l)
         for k in range(l):
-            mu_init[k] = mulist[np.array([likelihood(mulist[j], t0[k], As[k], psy_star[k]) for j in range(len(mulist))]).argmin()]
-            t0_init = t0list[k][np.array([likelihood(mu_init[k], t0list[k][j], As[k], psy_star[k]) for j in range(len(t0list[k]))]).argmin()]
-            likelihood_x = lambda x, As, psy_star: likelihood(x[0], x[1], As, psy_star)
-            t0[k] = opti.fmin_l_bfgs_b(likelihood_x, args=(As[k], psy_star[k]), x0=[mu_init[k], t0_init], approx_grad=True, bounds=[b_mu, b_t0], maxfun=50000)[0][1]
-        Likelihood = lambda mu: np.sum([likelihood(mu, t0[k], As[k], psy_star[k]) for k in range(l)])
+            mu_init[k] = mulist[np.array([likelihood(mulist[j], t0[k], As[k], nu_star[k]) for j in range(len(mulist))]).argmin()]
+            t0_init = t0list[k][np.array([likelihood(mu_init[k], t0list[k][j], As[k], nu_star[k]) for j in range(len(t0list[k]))]).argmin()]
+            likelihood_x = lambda x, As, nu_star: likelihood(x[0], x[1], As, nu_star)
+            t0[k] = opti.fmin_l_bfgs_b(likelihood_x, args=(As[k], nu_star[k]), x0=[mu_init[k], t0_init], approx_grad=True, bounds=[b_mu, b_t0], maxfun=50000)[0][1]
+        Likelihood = lambda mu: np.sum([likelihood(mu, t0[k], As[k], nu_star[k]) for k in range(l)])
         mu, fval, _ = opti.fmin_l_bfgs_b(Likelihood, x0=[np.mean(mu_init)], approx_grad=True, bounds=[b_mu], maxfun=50000)
     else:
         def Likelihood(mu, t0_list, As_list, psy_star_list):
             with Pool(min(args.Ncpu // 3, cpu_count())) as pool:
                 result = np.sum(pool.starmap(likelihood, zip([mu] * l, t0_list, As_list, psy_star_list)))
             return result
-        mu, fval, _ = opti.fmin_l_bfgs_b(Likelihood, args=[t0, As, psy_star], x0=[np.mean(mu_init)], approx_grad=True, bounds=[b_mu], maxfun=50000)
+        mu, fval, _ = opti.fmin_l_bfgs_b(Likelihood, args=[t0, As, nu_star], x0=[np.mean(mu_init)], approx_grad=True, bounds=[b_mu], maxfun=50000)
         sigmamu_est = np.sqrt(mu / N)
         mulist = np.sort(np.append(np.arange(max(1e-8, mu - 2 * sigmamu_est), mu + 2 * sigmamu_est, sigmamu_est / 50), mu))
-        partial_sum_mu_likelihood = partial(sum_mu_likelihood, t0_list=t0, As_list=As, psy_star_list=psy_star)
+        partial_sum_mu_likelihood = partial(sum_mu_likelihood, t0_list=t0, As_list=As, psy_star_list=nu_star)
         with Pool(min(args.Ncpu // 3, cpu_count())) as pool:
             logLv_mu = np.array(pool.starmap(partial_sum_mu_likelihood, zip(mulist)))
         mu_func = interp1d(mulist, logLv_mu, bounds_error=False, fill_value='extrapolate')

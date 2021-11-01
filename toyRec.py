@@ -1,3 +1,4 @@
+import os
 import time
 import argparse
 from functools import partial
@@ -9,6 +10,8 @@ from numpy.lib import recfunctions
 import scipy.optimize as opti
 from scipy.interpolate import interp1d
 from scipy.stats import poisson
+import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 
 import wf_func as wff
 
@@ -25,8 +28,8 @@ cpu_global_start = time.process_time()
 def start_time(a0, a1):
     stime = np.empty(a1 - a0)
     for i in range(a0, a1):
-        hitt = charge[i_cha[i]:i_cha[i+1]]['HitPosInWindow'].astype(np.float64)
-        char = charge[i_cha[i]:i_cha[i+1]]['Charge']
+        hitt = photoelectron[i_cha[i]:i_cha[i+1]]['HitPosInWindow'].astype(np.float64)
+        char = photoelectron[i_cha[i]:i_cha[i+1]]['Charge']
         t0, _ = wff.likelihoodt0(hitt, char=char, gmu=gmu, Tau=Tau, Sigma=Sigma, mode='charge')
         stime[i - a0] = t0
     return stime
@@ -41,20 +44,20 @@ with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as ipt, h5py.File(args
     Mu = ipt['photoelectron'].attrs['mu']
     Tau = ipt['photoelectron'].attrs['tau']
     Sigma = ipt['photoelectron'].attrs['sigma']
-    charge = ipt['photoelectron'][:]
+    photoelectron = ipt['photoelectron'][:]
     window = len(ref['Readout/Waveform'][:][0]['Waveform'][::wff.nshannon])
-    n = 1 if min(charge['HitPosInWindow'] % 1) == 0 else min(charge['HitPosInWindow'] % 1)
+    n = 1 if min(photoelectron['HitPosInWindow'] % 1) == 0 else min(photoelectron['HitPosInWindow'] % 1)
     tlist_pan = np.sort(np.unique(np.hstack(np.arange(0, window)[:, None] + np.arange(0, 1, 1 / n))))
-    Chnum = len(np.unique(charge['ChannelID']))
-    charge = np.sort(charge, kind='stable', order=['TriggerNo', 'ChannelID', 'HitPosInWindow'])
-    e_cha = charge['TriggerNo'] * Chnum + charge['ChannelID']
+    Chnum = len(np.unique(photoelectron['ChannelID']))
+    photoelectron = np.sort(photoelectron, kind='stable', order=['TriggerNo', 'ChannelID', 'HitPosInWindow'])
+    e_cha = photoelectron['TriggerNo'] * Chnum + photoelectron['ChannelID']
     e_cha, i_cha = np.unique(e_cha, return_index=True)
-    i_cha = np.append(i_cha, len(charge))
+    i_cha = np.append(i_cha, len(photoelectron))
     N = len(e_cha)
     tcdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32)])
-    tc = np.zeros(len(charge), dtype=tcdtp)
-    tc['TriggerNo'] = charge['TriggerNo']
-    tc['ChannelID'] = charge['ChannelID']
+    tc = np.zeros(len(photoelectron), dtype=tcdtp)
+    tc['TriggerNo'] = photoelectron['TriggerNo']
+    tc['ChannelID'] = photoelectron['ChannelID']
     tc = np.unique(tc)
     if method in ['fbmp', 'mcmc']:
     # if 'starttime' in ipt:
@@ -67,9 +70,9 @@ with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as ipt, h5py.File(args
         ts = np.zeros(N, dtype=sdtp)
         ts['TriggerNo'] = tc['TriggerNo']
         ts['ChannelID'] = tc['ChannelID']
-        e_ans, i_ans = np.unique(charge['TriggerNo'] * Chnum + charge['ChannelID'], return_index=True)
-        i_ans = np.append(i_ans, len(charge))
-        cha_sum = np.array([charge[i_ans[i]:i_ans[i+1]]['Charge'].sum() for i in range(len(e_ans))]) / gmu
+        e_ans, i_ans = np.unique(photoelectron['TriggerNo'] * Chnum + photoelectron['ChannelID'], return_index=True)
+        i_ans = np.append(i_ans, len(photoelectron))
+        cha_sum = np.array([photoelectron[i_ans[i]:i_ans[i+1]]['Charge'].sum() for i in range(len(e_ans))]) / gmu
         ts['muwave'] = cha_sum
         ts['consumption'] = ipt['starttime']['consumption'][:]
         chunk = N // args.Ncpu + 1
@@ -83,9 +86,37 @@ with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as ipt, h5py.File(args
         mu = ipt['starttime'].attrs['mu']
         sigmamu = ipt['starttime'].attrs['sigmamu']
     else:
-        N_tot = N / (1 - poisson.cdf(0, Mu))
-        mu = charge['Charge'].sum() / gmu / N_tot
-        sigmamu = np.sqrt(charge['Charge'].sum() / gmu / N_tot)
+        N_tot = round(N / (1 - poisson.cdf(0, Mu)))
+        charge = photoelectron['Charge'] / gmu
+        N_add = N_tot - N
+        dkl = lambda mu: -np.log(mu) * charge.sum() + mu * N_tot
+        # mu, fval, _ = opti.fmin_l_bfgs_b(dkl, x0=[Mu * 1.05], approx_grad=True, bounds=[[mulist[0], mulist[-1]]], maxfun=500000)
+        mulist = np.arange(max(1e-8, Mu - 2 * np.sqrt(Mu)), Mu + 2 * np.sqrt(Mu), 0.1)
+        mu = charge.sum() / N_tot
+        fval = dkl(mu)
+        sigmamu_est = np.sqrt(mu / N_tot)
+        mulist = np.sort(np.append(np.arange(max(1e-8, mu - 3 * sigmamu_est), mu + 3 * sigmamu_est, sigmamu_est / 50), mu))
+        dkl_mu = np.vectorize(dkl)(mulist)
+        # mu_func = interp1d(mulist, dkl_mu, bounds_error=False, fill_value='extrapolate')
+        # logLvdelta = np.vectorize(lambda mu_t: np.abs(mu_func(mu_t) - fval - 0.5))
+        # sigmamu = abs(opti.fmin_l_bfgs_b(logLvdelta, x0=[mulist[np.abs(dkl_mu - fval - 0.5).argmin()]], approx_grad=True, bounds=[[mulist[0], mulist[-1]]], maxfun=500000)[0] - mu) * np.sqrt(N_tot)
+
+        fig = plt.figure(figsize=(8, 6))
+        gs = gridspec.GridSpec(1, 1, figure=fig, left=0.15, right=0.95, top=0.95, bottom=0.1, wspace=0.3, hspace=0.3)
+        # fig.tight_layout()
+        ax = fig.add_subplot(gs[0, 0])
+        ax.plot(mulist, dkl_mu - fval, label=r'$D_{KL}$')
+        ax.axvline(x=mu, color='r')
+        ax.axhline(y=0.5, color='k', linestyle='dashed', alpha=0.5)
+        ax.axhline(y=0, color='k')
+        ax.grid()
+        ax.set_xlabel('mu')
+        ax.set_ylim(-0.1, 2)
+        ax.set_ylabel(r'$D_{KL}$')
+        ax.legend(loc='upper right')
+        fig.savefig(os.path.splitext(args.opt)[0] + '.png')
+
+        sigmamu = np.sqrt(charge.sum() / N_tot)
 print('mu is {0:.3f}, sigma_mu is {1:.3f}'.format(mu.item(), sigmamu.item()))
 
 with h5py.File(args.opt, 'w') as opt:
