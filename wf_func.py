@@ -70,6 +70,9 @@ def xiaopeip_old(wave, spe_pre, eta=0):
     return pet, cha
 
 def xiaopeip(wave, spe_pre, Tau, Sigma, Thres, p, eta=0):
+    '''
+    eta is the hyperparameter level of LASSO passed to xiaopeip_core.
+    '''
     _, wave_r, tlist, _, _, _, left_wave, right_wave = initial_params(wave, spe_pre, Tau, Sigma, gmu, Thres, p, is_t0=False, is_delta=False, n=1)
     fitp = np.arange(left_wave, right_wave)
     # cha, ped = xiaopeip_core(wave_r, spe_pre['spe'], fitp, tlist.astype(int), eta=eta)
