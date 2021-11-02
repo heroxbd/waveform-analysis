@@ -223,8 +223,8 @@ def fbmpr_fxn_reduced(y, A, sig2w, sig2s, mus, D, p1, truth=None, i=None, left=N
     cx_root = A / sig2w
     # Eq. (30) sig2s = 1 sigma^2 - 0 sigma^2
     betaxt_root = sig2s / (1 + sig2s * np.einsum('ij,ij->j', A, cx_root, optimize=True))
-    # Eq. (31)
-    # no Gaussian space factor
+    # Eq. (31) without Gaussian space factor
+    # mu = 0 => (cx_root - A * mu -> cx_root)
     nuxt_root = nu_root + 0.5 * (betaxt_root * (y @ cx_root + mus / sig2s) ** 2 - mus ** 2 / sig2s)
     if space:
         nuxt_root += 0.5 * np.log(betaxt_root / sig2s)
@@ -261,8 +261,7 @@ def fbmpr_fxn_reduced(y, A, sig2w, sig2s, mus, D, p1, truth=None, i=None, left=N
 
             # Eq. (30)
             betaxt = sig2s / (1 + sig2s * np.sum(A * cx, axis=0))
-            # Eq. (31)
-            # no Gaussian space factor
+            # Eq. (31) no Gaussian space factor
             nuxt = nustar + 0.5 * (betaxt * (z @ cx + mus / sig2s) ** 2 - mus ** 2 / sig2s)
             if space:
                 nuxt += 0.5 * np.log(betaxt / sig2s)

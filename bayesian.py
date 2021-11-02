@@ -75,7 +75,7 @@ n0 = np.array([n_t[p_t[i] < max(1e-1, np.sort(p_t[i])[1])].min() for i in range(
 ndict = dict(zip(mu0, n0))
 
 prior = True
-space = False
+space = True
 n = 2
 tlist_pan = np.sort(np.unique(np.hstack(np.arange(0, window)[:, None] + np.linspace(0, 1, n, endpoint=False) - (n // 2) / n)))
 b_t0 = [0., 600.]
@@ -109,15 +109,13 @@ def optit0mu(mu, t0, nu_star, As, mu_init=None):
         mu, fval, _ = opti.fmin_l_bfgs_b(Likelihood, x0=[np.mean(mu_init)], approx_grad=True, bounds=[b_mu], maxfun=50000)
     else:
         def Likelihood(mu, t0_list, As_list, psy_star_list):
-            with Pool(min(args.Ncpu // 3, cpu_count())) as pool:
-                result = np.sum(pool.starmap(likelihood, zip([mu] * l, t0_list, As_list, psy_star_list)))
+            result = np.sum(it.starmap(likelihood, zip([mu] * l, t0_list, As_list, psy_star_list)))
             return result
         mu, fval, _ = opti.fmin_l_bfgs_b(Likelihood, args=[t0, As, nu_star], x0=[np.mean(mu_init)], approx_grad=True, bounds=[b_mu], maxfun=50000)
         sigmamu_est = np.sqrt(mu / N)
         mulist = np.sort(np.append(np.arange(max(1e-8, mu - 2 * sigmamu_est), mu + 2 * sigmamu_est, sigmamu_est / 50), mu))
         partial_sum_mu_likelihood = partial(sum_mu_likelihood, t0_list=t0, As_list=As, psy_star_list=nu_star)
-        with Pool(min(args.Ncpu // 3, cpu_count())) as pool:
-            logLv_mu = np.array(pool.starmap(partial_sum_mu_likelihood, zip(mulist)))
+        logLv_mu = np.array(it.starmap(partial_sum_mu_likelihood, zip(mulist)))
         mu_func = interp1d(mulist, logLv_mu, bounds_error=False, fill_value='extrapolate')
         logLvdelta = np.vectorize(lambda mu_t: np.abs(mu_func(mu_t) - fval - 0.5))
         sigmamu = abs(opti.fmin_l_bfgs_b(logLvdelta, x0=[mulist[np.abs(logLv_mu - fval - 0.5).argmin()]], approx_grad=True, bounds=[[mulist[0], mulist[-1]]], maxfun=500000)[0] - mu) * np.sqrt(l)
@@ -148,22 +146,18 @@ def fbmp_inference(a0, a1):
         wave = ent[i]['Waveform'].astype(np.float64) * spe_pre[cid]['epulse']
 
         # initialization
-        mu_t = abs(wave.sum() / gmu)
         A, y, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, Thres['lucyddm'], p, is_t0=True, is_delta=False, n=n, nshannon=1)
         mu_t = abs(y.sum() / gmu)
-
-        truth = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
-
-        # tlist = truth['HitPosInWindow'][truth['HitPosInWindow'] < right_wave - 1]
-        # t_auto = (np.arange(left_wave, right_wave) / wff.nshannon)[:, None] - tlist
-        # A = wff.spe((t_auto + np.abs(t_auto)) / 2, p[0], p[1], p[2])
-
         # Eq. (9) where the columns of A are taken to be unit-norm.
         mus = np.sqrt(np.diag(np.matmul(A.T, A)))
         A = A / mus
-        p1 = mu_t * wff.convolve_exp_norm(tlist - t0_t, Tau, Sigma) / n + 1e-8
-        # p1 = cha / cha.sum() * mu_t + 1e-8
-        p1 = p1 / p1.sum() * mu_t
+
+        truth = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
+        Nb = len(tlist) # = A.shape[1], number of bins
+        sel = np.random.choice((False, True), Nb)
+
+        p1 = mu_t * wff.convolve_exp_norm(tlist - t0_t, Tau, Sigma) / n
+
         sig2w = spe_pre[cid]['std'] ** 2
         sig2s = (gsigma * mus / gmu) ** 2
         xmmse_star, nu_star, T_star, c_star, d_max_i, num_i = wff.fbmpr_fxn_reduced(y, A, sig2w, sig2s, mus, len(p1), p1=p1, truth=truth, i=i, left=left_wave, right=right_wave, tlist=tlist, gmu=gmu, para=p, prior=prior, space=space)
@@ -258,8 +252,7 @@ if method == 'fbmp':
     ts['TriggerNo'] = ent['TriggerNo'][:N]
     ts['ChannelID'] = ent['ChannelID'][:N]
     # fbmp_inference(0, 100)
-    with Pool(min(args.Ncpu, cpu_count())) as pool:
-        result = list(it.starmap(partial(fbmp_inference), slices))
+    result = list(it.starmap(partial(fbmp_inference), slices))
     ts['tswave'] = np.hstack([result[i][0] for i in range(len(slices))])
     ts['tscharge'] = np.hstack([result[i][1] for i in range(len(slices))])
     dt = np.hstack([result[i][2] for i in range(len(slices))])
@@ -294,7 +287,6 @@ if method == 'fbmp':
     print('mu is {0:.3f}, sigma_mu is {1:.3f}'.format(mu.item(), sigmamu.item()))
     print('nu max larger than nu truth fraction is {0:.02%}'.format((nu_max > nu_truth).sum() / len(nu_truth)))
 
-    matplotlib.use('Agg')
     matplotlib.rcParams.update(matplotlib.rcParamsDefault)
     ff = plt.figure(figsize=(16, 18))
     gs = gridspec.GridSpec(3, 2, figure=ff, left=0.1, right=0.95, top=0.95, bottom=0.1, wspace=0.3, hspace=0.3)
