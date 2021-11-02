@@ -9,6 +9,7 @@ erg:=20.0-0-5
 # $(filter-out %-00-00,$(shell for i in $(mu); do for j in $(tau); do for k in $(sigma); do echo $${i}-$${j}-$${k}; done; done; done))
 # $(info $(erg))
 
+method:=fbmp
 sim:=$(erg:%=waveform/%.h5)
 char:=$(patsubst waveform/%.h5,result/$(method)/char/%.h5,$(sim))
 solu:=$(patsubst waveform/%.h5,result/$(method)/solu/%.h5,$(sim))
