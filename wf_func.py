@@ -193,7 +193,7 @@ def findpeak(wave, spe_pre):
         cha = np.array([1])
     return pet, cha
 
-def fbmpr_fxn_reduced(y, A, sig2w, sig2s, mus, D, p1, truth=None, i=None, left=None, right=None, tlist=None, gmu=None, para=None, prior=False, space=True, plot=False):
+def fbmpr_fxn_reduced(y, A, sig2w, sig2s, mus, p1):
     '''
     p1: prior probability for each bin.
     sig2w: variance of white noise.
@@ -201,171 +201,72 @@ def fbmpr_fxn_reduced(y, A, sig2w, sig2s, mus, D, p1, truth=None, i=None, left=N
     mus: mean of signal x_i.
     '''
     # Only for multi-gaussian with arithmetic sequence of mu and sigma
+    # N: number of t bins
+    # M: length of the waveform clip
     M, N = A.shape
 
-    psy_thresh = 1e-2
-    # upper limit of number of PEs.
-    P = max(math.ceil(min(M, p1.sum() + 3 * np.sqrt(p1.sum()))), 1)
+    # nu: nu for all s_n=0.
+    ν = -0.5 * np.linalg.norm(y) ** 2 / sig2w - 0.5 * M * np.log(2 * np.pi)
+    ν -= 0.5 * M * np.log(sig2w)
+    ν += poisson.logpmf(0, p1).sum()
 
-    T = np.full((P, D), 0)
-    nu = np.full((P, D), -np.inf)
-    xmmse = np.zeros((P, D, N))
-    cc = np.zeros((P, D, N))
-
-    # nu_root: nu for all s_n=0.
-    # no Gaussian space factor
-    nu_root = -0.5 * np.linalg.norm(y) ** 2 / sig2w - 0.5 * M * np.log(2 * np.pi)
-    if space:
-        nu_root -= 0.5 * M * np.log(sig2w)
-    if prior:
-        nu_root += poisson.logpmf(0, p1).sum()
     # Eq. (29)
-    cx_root = A / sig2w
-    # Eq. (30) sig2s = 1 sigma^2 - 0 sigma^2
-    betaxt_root = sig2s / (1 + sig2s * np.einsum('ij,ij->j', A, cx_root, optimize=True))
-    # Eq. (31) without Gaussian space factor
-    # mu = 0 => (cx_root - A * mu -> cx_root)
-    nuxt_root = nu_root + 0.5 * (betaxt_root * (y @ cx_root + mus / sig2s) ** 2 - mus ** 2 / sig2s)
-    if space:
-        nuxt_root += 0.5 * np.log(betaxt_root / sig2s)
-    if prior:
-        nuxt_root += poisson.logpmf(1, p1) - poisson.logpmf(0, p1)
-    pan_root = np.zeros(N)
+    cx = A / sig2w
+    # mu = 0 => (y - A * mu -> z)
+    z = y
+    # model selection vector
+    s = np.zeros(N)
 
-    # Repeated Greedy Search
-    for d in range(D):
-        nuxt = nuxt_root.copy()
-        z = y.copy()
-        cx = cx_root.copy()
-        betaxt = betaxt_root.copy()
-        pan = pan_root.copy()
-        for p in range(P):
-            # look for duplicates of nu and nuxt, set to -inf.
-            # only inspect the same number of PEs in Row p.
-            nuxtshadow = np.where(np.sum(np.abs(nuxt - nu[p:(p+1), :d].T) < 1e-4, axis=0), -np.inf, nuxt)
-            nustar = max(nuxtshadow)
-            istar = np.argmax(nuxtshadow)
-            nu[p, d] = nustar
-            T[p, d] = istar
-            pan[istar] += 1
-            # Eq. (33)
-            cx -= np.einsum('n,m,mp->np', betaxt[istar] * cx[:, istar], cx[:, istar], A, optimize=True)
+    # Metropolis
+    TRIALS = 10000
+    istar = np.random.choice(range(N), TRIALS)
+    flip = np.random.choice((-1, 1), TRIALS)
+    Δν_history = np.zeros(TRIALS) # list of Δν's
+    for i, accept in enumerate(np.log(np.random.uniform(size=TRIALS))):
+        t = istar[i] # the time bin
+        if s[t] == 0:
+            # Q(1->0) / Q(0->1) = 1 / 2
+            # 从 0 开始只有一种跳跃可能到 1，因此需要惩罚
+            flip[i] = 1
+            accept += np.log(2)
+        elif s[t] == 1 and flip[i] == -1:
+            # 1 -> 0: 与上一种情况相反，去 0 的路径较少，需要鼓励
+            accept -= np.log(2)
 
+        fsig2s = flip[i] * sig2s[t]
+        # Eq. (30) sig2s = 1 sigma^2 - 0 sigma^2
+        beta_under = (1 + fsig2s * np.dot(A[:, t], cx[:, t]))
+        beta = fsig2s / beta_under
+
+        # Eq. (31) # sign of mus[t] and sig2s[t] cancels
+        Δν = 0.5 * (beta * (z @ cx[:, t] + mus[t] / sig2s[t]) ** 2 - mus[t] ** 2 / fsig2s)
+        Δν -= 0.5 * np.log(beta_under)
+        Δν += flip[i] * np.log(p1[t])
+        if flip[i] == 1:
+            Δν -= np.log(s[t] + 1)
+        else: # flip == -1
+            Δν += np.log(s[t])
+
+        if Δν >= accept:
+            # accept, prepare for the next
+            # Eq. (33) istar is now n_pre.  It crosses n_pre and n, thus is in vector form.
+            cx -= np.einsum('n,m,mp->np', beta * cx[:, t], cx[:, t], A, optimize=True)
             # Eq. (34)
-            z -= A[:, istar] * mus[istar]
-            assist = np.zeros(N)
-            t, c = np.unique(T[:p+1, d], return_counts=True)
-            assist[t] = mus[t] * c + sig2s[t] * c * np.dot(z, cx[:, t])
-            cc[p, d][t] = c
-            xmmse[p, d] = assist
+            z -= flip[i] * A[:, t] * mus[t]
+            Δν_history[i] = Δν
 
-            # Eq. (30)
-            betaxt = sig2s / (1 + sig2s * np.sum(A * cx, axis=0))
-            # Eq. (31) no Gaussian space factor
-            nuxt = nustar + 0.5 * (betaxt * (z @ cx + mus / sig2s) ** 2 - mus ** 2 / sig2s)
-            if space:
-                nuxt += 0.5 * np.log(betaxt / sig2s)
-            if prior:
-                nuxt += poisson.logpmf(pan + 1, mu=p1) - poisson.logpmf(pan, mu=p1)
-            nuxt[np.isnan(nuxt)] = -np.inf
-            # nuxt[t] = -np.inf
-    nu = nu.T.flatten()
+            s[t] += flip[i] # update state
+        else:
+            # reject proposal
+            flip[i] = 0
+            Δν_history[i] = 0
 
-    indx = np.argsort(nu)[::-1]
-    d_max = math.floor(indx[0] // P) + 1
-    num = min(math.ceil(np.sum(nu > nu.max() + np.log(psy_thresh))), D * P)
-    nu_star = nu[indx[:num]]
-    psy_star = np.exp(nu_star - nu_star.max()) / np.sum(np.exp(nu_star - nu_star.max()))
-    T_star = [np.sort(T[:(indx[k] % P) + 1, indx[k] // P]) for k in range(num)]
-    xmmse_star = np.empty((num, N))
-    for k in range(num):
-        xmmse_star[k] = xmmse[indx[k] % P, indx[k] // P]
+    burn = TRIALS // 100
+    # NPE = \sum_i z_i
+    NPE, counts = np.unique(np.cumsum(flip)[burn:], return_counts=True)
+    freq = counts / (TRIALS - burn)
     
-    c_star = np.zeros_like(xmmse_star, dtype=int)
-    for k in range(num):
-        t, c = np.unique(T_star[k], return_counts=True)
-        c_star[k, t] = c
-
-    if plot:
-        cnorm = colors.Normalize(vmin=0, vmax=psy_star[0])
-        cmap = cm.ScalarMappable(norm=cnorm, cmap=cm.Blues)
-        cmap.set_array([])
-
-        fig = plt.figure(figsize=(16, 16))
-        fig.tight_layout()
-        gs = gridspec.GridSpec(3, 2, figure=fig, left=0.1, right=0.9, top=0.95, bottom=0.1, wspace=0.2, hspace=0.2)
-        ax = fig.add_subplot(gs[0, :])
-        # cp = ax.imshow(nu - nu.min() + 1, aspect='auto', norm=colors.LogNorm())
-        cp = ax.imshow(nu, aspect='auto')
-        fig.colorbar(cp, ax=ax)
-        ax.set_xticks(np.arange(D))
-        ax.set_xticklabels(np.arange(1, D + 1).astype(str))
-        ax.set_yticks(np.arange(P))
-        ax.set_yticklabels(np.arange(1, P + 1).astype(str))
-        ax.set_xlabel('D')
-        ax.set_ylabel('P')
-        ax.scatter([ind // P for ind in indx[:num]], [ind % P for ind in indx[:num]], c=psy_star)
-        ax.scatter(indx[0] // P, indx[0] % P, s=36.0, marker='o', facecolors='none', edgecolors='r')
-        ax.hlines(len(truth) - 1, -0.5, D - 0.5, color='g')
-
-        ax = fig.add_subplot(gs[1, 0])
-        for k in range(1, num + 1):
-            ax.plot(np.arange(1, P + 1), tlist[T[:, indx[num - k] // P]], c=cmap.to_rgba(psy_star[num - k]))
-        fig.colorbar(cmap, ticks=np.arange(0, 1, 0.1))
-        ax.scatter([ind % P + 1 for ind in indx[:num]], [tlist[T[indx[k] % P, indx[k] // P]] for k in range(num)], s=psy_star / psy_star[0] * 1000, marker='o', facecolors='none', edgecolors='r')
-        ax.set_xticks(np.arange(1, P + 1))
-        ax.set_xticklabels(np.arange(1, P + 1).astype(str))
-        ax.set_xlabel('P')
-        ax.set_ylabel('t/ns')
-
-        ax = fig.add_subplot(gs[1, 1])
-        ax.plot(np.arange(left, right), y, c='k')
-        ax2 = ax.twinx()
-        ax2.vlines(tlist, 0, xmmse[indx[0] % P, indx[0] // P] / mus, color='r')
-        ax2.scatter(tlist, np.zeros_like(tlist), color='r')
-        for t in T[:(indx[0] % P) + 1, indx[0] // P]:
-            xx = np.zeros_like(xmmse[0, 0])
-            xx[t] = xmmse[indx[0] % P, indx[0] // P][t]
-            ax.plot(np.arange(left, right), np.dot(A, xx), 'r')
-        for k in range(1, num + 1):
-            ax.plot(np.arange(left, right), np.dot(A, xmmse[indx[num - k] % P, indx[num - k] // P]), c=cmap.to_rgba(psy_star[num - k]))
-        ax2.plot(tlist, p1 / p1.max(), 'k--', alpha=0.5)
-        ax.set_xlabel('t/ns')
-        ax.set_ylabel('Voltage/V')
-        ax2.set_ylabel('Charge/nsmV')
-        xmin, xmax = ax.get_xlim()
-        align.yaxes(ax, 0, ax2, 0)
-
-        ax = fig.add_subplot(gs[2, 0])
-        for k in range(1, num + 1):
-            ax.vlines(tlist, 0, xmmse[indx[num - k] % P, indx[num - k] // P] / mus, color=cmap.to_rgba(psy_star[num - k]))
-        fig.colorbar(cmap, ticks=np.arange(0, 1, 0.1))
-        ax.set_xlim(xmin, xmax)
-        ax.set_xlabel('t/ns')
-        ax.set_ylabel('Charge/nsmV')
-
-        ax = fig.add_subplot(gs[2, 1])
-        ax.plot(np.arange(left, right), y, c='b')
-        ax2 = ax.twinx()
-        ax2.vlines(truth['HitPosInWindow'], 0, truth['Charge'] / gmu, color='k')
-        ax2.scatter(tlist, np.zeros_like(tlist), color='r')
-        for t, c in zip(truth['HitPosInWindow'], truth['Charge']):
-            ax.plot(t + np.arange(80), spe(np.arange(80), para[0], para[1], para[2]) * c / gmu, c='g')
-        ax2.plot(tlist, p1 / p1.max(), 'k--', alpha=0.5)
-        ax.set_xlabel('t/ns')
-        ax.set_ylabel('Voltage/V')
-        ax2.set_ylabel('Charge/nsmV')
-        align.yaxes(ax, 0, ax2, 0)
-        fig.savefig('t/' + str(i) + '.png')
-        plt.close()
-
-    # num += 1
-    # nu_star = np.append(nu_star, nu_root)
-    # T_star += [np.empty(0)]
-    # xmmse_star = np.append(xmmse_star, np.zeros(N))
-    # c_star = np.append(c_star, np.zeros(N, dtype=int))
-
-    return xmmse_star, nu_star, T_star, c_star, d_max, num
+    return freq, NPE
 
 def nu_direct(y, A, nx, mus, sig2s, sig2w, la, prior=True, space=True):
     M, N = A.shape

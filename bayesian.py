@@ -147,6 +147,7 @@ def fbmp_inference(a0, a1):
 
         # initialization
         A, y, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, Thres['lucyddm'], p, is_t0=True, is_delta=False, n=n, nshannon=1)
+        t0_t = t0_truth['T0'][i] # override with truth to debug mu
         mu_t = abs(y.sum() / gmu)
         # Eq. (9) where the columns of A are taken to be unit-norm.
         mus = np.sqrt(np.diag(np.matmul(A.T, A)))
@@ -160,71 +161,16 @@ def fbmp_inference(a0, a1):
 
         sig2w = spe_pre[cid]['std'] ** 2
         sig2s = (gsigma * mus / gmu) ** 2
-        xmmse_star, nu_star, T_star, c_star, d_max_i, num_i = wff.fbmpr_fxn_reduced(y, A, sig2w, sig2s, mus, len(p1), p1=p1, truth=truth, i=i, left=left_wave, right=right_wave, tlist=tlist, gmu=gmu, para=p, prior=prior, space=space)
-        time_fbmp[i - a0] = time.time() - time_fbmp_start
+        freq, NPE = wff.fbmpr_fxn_reduced(y, A, sig2w, sig2s, mus, p1)
 
-        la_truth = Mu * wff.convolve_exp_norm(tlist - t0_truth[i]['T0'], Tau, Sigma) / n + 1e-8
-        nu_space_prior = np.array([wff.nu_direct(y, A, c_star[j], mus, sig2s, sig2w, la_truth, prior=True, space=True) for j in range(num_i)])
+        loggN = -NPE * np.log(mu_t) + np.log(freq)
+        rst = opti.minimize_scalar(lambda μ: μ - special.logsumexp(loggN + NPE * np.log(μ)),
+                                   bracket=(NPE[0], mu_t, NPE[-1]))
+        
+        assert rst.success
+        As_list.append(rst.x)
 
-        nx = np.sum([(tlist - 0.5 / n <= truth['HitPosInWindow'][j]) * (tlist + 0.5 / n > truth['HitPosInWindow'][j]) for j in range(len(truth))], axis=0)
-        cc = np.sum([np.where(tlist - 0.5 / n < truth['HitPosInWindow'][j], np.sqrt(truth['Charge'][j]), 0) * np.where(tlist + 0.5 / n > truth['HitPosInWindow'][j], np.sqrt(truth['Charge'][j]), 0) for j in range(len(truth))], axis=0)
-        pp = np.arange(left_wave, right_wave)
-        wav_ans = np.sum([np.where(pp > truth['HitPosInWindow'][j], wff.spe(pp - truth['HitPosInWindow'][j], tau=p[0], sigma=p[1], A=p[2]) * truth['Charge'][j] / gmu, 0) for j in range(len(truth))], axis=0)
-        nu_truth[i - a0] = wff.nu_direct(y, A, nx, mus, sig2s, sig2w, p1, prior=prior, space=space)
-        nu = np.array([wff.nu_direct(y, A, c_star[j], mus, sig2s, sig2w, p1, prior=prior, space=space) for j in range(num_i)])
-        assert abs(nu - nu_star).max() < 1e-6
-        nu_max[i - a0] = nu[0]
-        rss_truth = np.power(wav_ans - np.matmul(A, cc / gmu * mus), 2).sum()
-        rss = np.array([np.power(wav_ans - np.matmul(A, xmmse_star[j]), 2).sum() for j in range(num_i)])
-
-        maxindex = nu_star.argmax()
-        xmmse_most = np.clip(xmmse_star[maxindex], 0, np.inf)
-        pet = np.repeat(tlist[xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
-        cha = np.repeat(xmmse_most[xmmse_most > 0] / mus[xmmse_most > 0] / c_star[maxindex][xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
-
-        # c_star_truth = np.sum([np.where(tlist - 0.5 / n < truth['HitPosInWindow'][j], 1, 0) * np.where(tlist + 0.5 / n > truth['HitPosInWindow'][j], 1, 0) for j in range(len(truth))], axis=0)
-        # if c_star_truth.sum() == 0:
-        #     c_star_truth[0] = 1
-        # As_truth = np.zeros((1, len(tlist_pan)))
-        # As_truth[:, np.isin(tlist_pan, tlist)] = c_star_truth[None, :]
-        # assert sum(np.sum(As_truth, axis=0) > 0) > 0
-        # mu, t0, _ = optit0mu(len(truth), [t0_truth[i]['T0']], [np.array([0.])], [As_truth], [p1])
-        As = np.zeros((num_i, len(tlist_pan)))
-        As[:, np.isin(tlist_pan, tlist)] = c_star
-        assert sum(np.sum(As, axis=0) > 0) > 0
-
-        spacefactor = 0
-        priorfactor = 0
-        if not space:
-            spacefactor = np.array([-0.5 * np.log(np.linalg.det(wff.Phi(y, A, c_star[j], mus, sig2s, sig2w, p1))) for j in range(num_i)])
-        if prior:
-            priorfactor = -poisson.logpmf(c_star, p1).sum(axis=1)
-        nu_star = nu_star + priorfactor + spacefactor
-        # nu_star = np.log(np.exp(nu_star - nu_star.max()) / np.sum(np.exp(nu_star - nu_star.max())))
-        mu, t0, _ = optit0mu(mu_t, [t0_t], [nu_star], [As])
-        mu_i, t0_i, _ = optit0mu(mu_t, [t0_t], [np.array([0.])], [As[maxindex][None, :]])
-
-        d_tot[i - a0] = len(p1)
-        d_max[i - a0] = d_max_i
-        elbo[i - a0] = wff.elbo(nu_space_prior)
-        pet, cha = wff.clip(pet, cha, Thres[method])
-        cha = cha * gmu
-        t0_wav[i - a0] = t0[0]
-        t0_cha[i - a0] = t0_i[0]
-        mu_wav[i - a0] = mu
-        mu_cha[i - a0] = mu_i
-        mu_kl[i - a0] = cha.sum()
-        num[i - a0] = num_i
-        end = start + len(cha)
-        dt['HitPosInWindow'][start:end] = pet
-        dt['Charge'][start:end] = cha
-        dt['TriggerNo'][start:end] = ent[i]['TriggerNo']
-        dt['ChannelID'][start:end] = ent[i]['ChannelID']
-        start = end
-        nu_star_list.append(nu_star)
-        As_list.append(As)
-    dt = dt[:end]
-    dt = np.sort(dt, kind='stable', order=['TriggerNo', 'ChannelID'])
+    breakpoint()
     return t0_wav, t0_cha, dt, mu_wav, mu_cha, mu_kl, time_fbmp, d_tot, d_max, nu_truth, nu_max, num, elbo, nu_star_list, As_list
 
 print('Initialization finished, real time {0:.02f}s, cpu time {1:.02f}s'.format(time.time() - global_start, time.process_time() - cpu_global_start))
