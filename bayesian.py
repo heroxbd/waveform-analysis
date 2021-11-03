@@ -200,7 +200,7 @@ else:
     slices = np.vstack((np.arange(0, N, chunk), np.append(np.arange(chunk, N, chunk), N))).T.astype(int).tolist()
 
 if method == 'fbmp':
-    sdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('mucharge', np.float64), ('muwave', np.float64), ('avrNPE', np.float64)])
+    sdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('mucharge', np.float64), ('muwave', np.float64), ('avrNPE', np.float64), ("NPE_t", np.float64)])
     ts = np.zeros(N, dtype=sdtp)
     ts['TriggerNo'] = ent['TriggerNo'][:N]
     ts['ChannelID'] = ent['ChannelID'][:N]
