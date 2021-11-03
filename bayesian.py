@@ -134,8 +134,8 @@ def fbmp_inference(a0, a1):
     elbo = np.zeros(a1 - a0).astype(int)
     nu_truth = np.empty(a1 - a0)
     nu_max = np.empty(a1 - a0)
-    num = np.zeros(a1 - a0).astype(int)
-    nu_star_list = []
+    NPE_list = []
+    mu_t_list = []
     As_list = []
     start = 0
     end = 0
@@ -154,8 +154,6 @@ def fbmp_inference(a0, a1):
         A = A / mus
 
         truth = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
-        Nb = len(tlist) # = A.shape[1], number of bins
-        sel = np.random.choice((False, True), Nb)
 
         p1 = mu_t * wff.convolve_exp_norm(tlist - t0_t, Tau, Sigma) / n
 
@@ -165,13 +163,15 @@ def fbmp_inference(a0, a1):
 
         loggN = -NPE * np.log(mu_t) + np.log(freq)
         rst = opti.minimize_scalar(lambda μ: μ - special.logsumexp(loggN + NPE * np.log(μ)),
-                                   bracket=(NPE[0], mu_t, NPE[-1]))
+                                   bounds=(NPE[0], NPE[-1]))
+        
         
         assert rst.success
         As_list.append(rst.x)
+        mu_t_list.append(mu_t)
+        NPE_list.append(np.average(NPE, weights=freq))
 
-    breakpoint()
-    return t0_wav, t0_cha, dt, mu_wav, mu_cha, mu_kl, time_fbmp, d_tot, d_max, nu_truth, nu_max, num, elbo, nu_star_list, As_list
+    return NPE_list, mu_t_list, As_list
 
 print('Initialization finished, real time {0:.02f}s, cpu time {1:.02f}s'.format(time.time() - global_start, time.process_time() - cpu_global_start))
 tic = time.time()
@@ -193,100 +193,15 @@ else:
     slices = np.vstack((np.arange(0, N, chunk), np.append(np.arange(chunk, N, chunk), N))).T.astype(int).tolist()
 
 if method == 'fbmp':
-    sdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('tscharge', np.float64), ('tswave', np.float64), ('mucharge', np.float64), ('muwave', np.float64), ('mukl', np.float64), ('elbo', np.float64), ('consumption', np.float64)])
+    sdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('mucharge', np.float64), ('muwave', np.float64), ('avrNPE', np.float64)])
     ts = np.zeros(N, dtype=sdtp)
     ts['TriggerNo'] = ent['TriggerNo'][:N]
     ts['ChannelID'] = ent['ChannelID'][:N]
-    # fbmp_inference(0, 100)
-    result = list(it.starmap(partial(fbmp_inference), slices))
-    ts['tswave'] = np.hstack([result[i][0] for i in range(len(slices))])
-    ts['tscharge'] = np.hstack([result[i][1] for i in range(len(slices))])
-    dt = np.hstack([result[i][2] for i in range(len(slices))])
-    ts['muwave'] = np.hstack([result[i][3] for i in range(len(slices))])
-    ts['mucharge'] = np.hstack([result[i][4] for i in range(len(slices))])
-    ts['mukl'] = np.hstack([result[i][5] for i in range(len(slices))])
-    ts['consumption'] = np.hstack([result[i][6] for i in range(len(slices))])
-    print('FBMP finished, real time {0:.02f}s'.format(ts['consumption'].sum()))
-    d_tot = np.hstack([result[i][7] for i in range(len(slices))])
-    d_max = np.hstack([result[i][8] for i in range(len(slices))])
-    nu_truth = np.hstack([result[i][9] for i in range(len(slices))])
-    nu_max = np.hstack([result[i][10] for i in range(len(slices))])
-    num = np.hstack([result[i][11] for i in range(len(slices))])
-    ts['elbo'] = np.hstack([result[i][12] for i in range(len(slices))])
-    nu_star_list = []
-    for i in range(len(slices)):
-        nu_star_list += result[i][13]
-    As_list = []
-    for i in range(len(slices)):
-        As_list += result[i][14]
-    N_add = round(N / (1 - poisson.cdf(0, Mu)) * poisson.cdf(0, Mu))
-    nu_star_list_add = [np.array([0.])] * N_add
-    nu_star_list += nu_star_list_add
-    As_list_add = [np.zeros((1, len(tlist_pan)))] * N_add
-    As_list += As_list_add
-    t0_init = np.append(ts['tswave'], np.ones(N_add) * 100)
-    assert np.all(np.array([len(t0_init), len(nu_star_list), len(As_list)]) == N + N_add)
-
-    mu, t0, sigmamu_list = optit0mu(Mu, t0_init, nu_star_list, As_list, mu_init=ts['muwave'])
-    sigmamu = sigmamu_list[0]
-
-    print('mu is {0:.3f}, sigma_mu is {1:.3f}'.format(mu.item(), sigmamu.item()))
-    print('nu max larger than nu truth fraction is {0:.02%}'.format((nu_max > nu_truth).sum() / len(nu_truth)))
-
-    matplotlib.rcParams.update(matplotlib.rcParamsDefault)
-    ff = plt.figure(figsize=(16, 18))
-    gs = gridspec.GridSpec(3, 2, figure=ff, left=0.1, right=0.95, top=0.95, bottom=0.1, wspace=0.3, hspace=0.3)
-    # ff.tight_layout()
-    ax = ff.add_subplot(gs[0, 0])
-    h = ax.hist2d(d_tot, d_max, bins=(np.linspace(0, d_tot.max(), 51), np.linspace(0, d_tot.max(), 51)), norm=LogNorm())
-    ff.colorbar(h[3], ax=ax, aspect=50)
-    ax.set_xlabel('d_tot')
-    ax.set_ylabel('d_max')
-    ax = ff.add_subplot(gs[0, 1])
-    ax.plot(sigmamu_list[1], 2 * (sigmamu_list[2] - sigmamu_list[3]), label=r'$-2\Delta\log L$')
-    ax.axvline(x=mu, color='r')
-    ax.axhline(y=1, color='k', linestyle='dashed', alpha=0.5)
-    ax.axhline(y=0, color='k')
-    ax.grid()
-    ax.set_xlabel('mu')
-    ax.set_ylim(-0.1, 4)
-    ax.set_ylabel(r'$-2\Delta\log L$')
-    ax.legend(loc='upper right')
-    ax = ff.add_subplot(gs[1, 0])
-    ax.hist(d_max / d_tot, label='frac', range=(0, 1), bins=100)
-    ax.set_xlabel('d_max / d_tot')
-    ax.set_ylabel('Count')
-    ax.set_xlim(0, 1)
-    ax.set_ylim(0.5, N)
-    ax.set_yscale('log')
-    ax.legend(loc='upper right')
-    ax = ff.add_subplot(gs[1, 1])
-    ax.hist(nu_max - nu_truth, label=r'$\nu_{max}-\nu_{tru}$', bins=np.linspace((nu_max - nu_truth).min(), (nu_max - nu_truth).max(), 51))
-    ax.set_xlabel(r'$\Delta\nu$')
-    ax.set_ylabel('Count')
-    ax.set_ylim(0.5, N)
-    ax.set_yscale('log')
-    ax.legend(loc='upper right')
-    ax = ff.add_subplot(gs[2, 0])
-    ax.hist(num, bins=np.linspace(0, num.max(), 51), label=r'$N_{sam}$')
-    ax.set_xlabel(r'$N_{sam}$')
-    ax.set_ylabel('Count')
-    ax.set_ylim(0.5, N)
-    ax.set_yscale('log')
-    m = num.mean()
-    ax.legend(loc='upper right', title=fr'$E[N_{{sam}}]={m:.02f}$')
-    ax = ff.add_subplot(gs[2, 1])
-    ax.hist(ts['elbo'], bins=np.linspace(ts['elbo'].min(), ts['elbo'].max(), 51), label=r'$\mathrm{ELBO}$')
-    ax.set_xlabel(r'$\mathrm{ELBO}$')
-    ax.set_ylabel('Count')
-    ax.set_ylim(0.5, N)
-    ax.set_yscale('log')
-    m = ts['elbo'].mean()
-    ax.legend(loc='upper right', title=fr'$E[\mathrm{{ELBO}}]={m:.02f}$')
-    ff.savefig(os.path.splitext(fopt)[0] + '.png')
-    plt.close()
-
-    dt = np.sort(dt, kind='stable', order=['TriggerNo', 'ChannelID'])
+    result = fbmp_inference(*slices[0])
+    ts['avrNPE'] = result[0]
+    ts['mucharge'] = result[1]
+    ts['muwave'] = result[2]
+    dt = ts
 
 print('Prediction generated, real time {0:.02f}s, cpu time {1:.02f}s'.format(time.time() - tic, time.process_time() - cpu_tic))
 
@@ -296,10 +211,6 @@ with h5py.File(fopt, 'w') as opt:
     pedset.attrs['mu'] = Mu
     pedset.attrs['tau'] = Tau
     pedset.attrs['sigma'] = Sigma
-    tsdset = opt.create_dataset('starttime', data=ts, compression='gzip')
-    if method == 'fbmp':
-        tsdset.attrs['mu'] = mu
-        tsdset.attrs['sigmamu'] = sigmamu
     print('The output file path is {}'.format(fopt))
 
 print('Finished! Consuming {0:.02f}s in total, cpu time {1:.02f}s.'.format(time.time() - global_start, time.process_time() - cpu_global_start))
