@@ -1,3 +1,9 @@
+#Introduction
+This branch is used for compare the zaq rgs and xdc rgs.
+
+result is in directory `compare`
+
+
 1. Create directory `result` and `waveform` in a rational place to store analysis results and simulated waveforms
 2. To test methods, in command line, run (take `fbmp` method as an example)
    ```
