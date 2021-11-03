@@ -59,6 +59,7 @@ with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
     Sigma = ipt['Readout/Waveform'].attrs['sigma'].item()
     gmu = ipt['SimTriggerInfo/PEList'].attrs['gmu'].item()
     gsigma = ipt['SimTriggerInfo/PEList'].attrs['gsigma'].item()
+    PEList = ipt['SimTriggerInfo/PEList'][:]
     s0 = spe_pre[0]['std'] / np.linalg.norm(spe_pre[0]['spe'])
 
 p = spe_pre[0]['parameters']
@@ -135,14 +136,19 @@ def fbmp_inference(a0, a1):
     nu_truth = np.empty(a1 - a0)
     nu_max = np.empty(a1 - a0)
     NPE_list = []
+    avrNPE_list = []
     mu_t_list = []
     As_list = []
     start = 0
     end = 0
     for i in range(a0, a1):
         time_fbmp_start = time.time()
+        eid = ent[i]["TriggerNo"]
         cid = ent[i]['ChannelID']
         assert cid == 0
+        PEs = PEList[np.logical_and(PEList["TriggerNo"] == eid, PEList["PMTId"] == cid)]
+        NPE_t = len(PEs)
+
         wave = ent[i]['Waveform'].astype(np.float64) * spe_pre[cid]['epulse']
 
         # initialization
@@ -169,9 +175,10 @@ def fbmp_inference(a0, a1):
         assert rst.success
         As_list.append(rst.x)
         mu_t_list.append(mu_t)
-        NPE_list.append(np.average(NPE, weights=freq))
+        NPE_list.append(NPE_t)
+        avrNPE_list.append(np.average(NPE, weights=freq))
 
-    return NPE_list, mu_t_list, As_list
+    return avrNPE_list, mu_t_list, As_list, NPE_list
 
 print('Initialization finished, real time {0:.02f}s, cpu time {1:.02f}s'.format(time.time() - global_start, time.process_time() - cpu_global_start))
 tic = time.time()
@@ -199,6 +206,7 @@ if method == 'fbmp':
     ts['ChannelID'] = ent['ChannelID'][:N]
     result = fbmp_inference(*slices[0])
     ts['avrNPE'] = result[0]
+    ts['NPE_t'] = result[3]
     ts['mucharge'] = result[1]
     ts['muwave'] = result[2]
     dt = ts
