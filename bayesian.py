@@ -31,6 +31,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.colors import LogNorm
+import numdifftools as nd
 
 import wf_func as wff
 
@@ -180,7 +181,7 @@ def time_numpyro(a0, a1):
     return stime_t0, stime_cha, time_mcmc, dt, count, accep, mix0ratio
 
 prior = True
-space = False
+space = True
 n = 2
 tlist_pan = np.sort(np.unique(np.hstack(np.arange(0, window)[:, None] + np.linspace(0, 1, n, endpoint=False) - (n // 2) / n)))
 b_t0 = [0., 600.]
@@ -192,8 +193,8 @@ def likelihood(mu, t0, As_k, nu_star_k):
     li = -special.logsumexp(np.log(poisson.pmf(As_k, mu=a)).sum(axis=1) + nu_star_k)
     return li
 
-def sum_mu_likelihood(mu, t0_list, As_list, psy_star_list):
-    return np.sum([likelihood(mu, t0_list[k], As_list[k], psy_star_list[k]) for k in range(len(t0_list))])
+def sum_mu_likelihood(mu, t0_list, As_list, nu_star_list):
+    return np.sum([likelihood(mu, t0_list[k], As_list[k], nu_star_list[k]) for k in range(len(t0_list))])
 
 def optit0mu(mu, t0, nu_star, As, mu_init=None):
     l = len(t0)
@@ -213,19 +214,30 @@ def optit0mu(mu, t0, nu_star, As, mu_init=None):
         Likelihood = lambda mu: np.sum([likelihood(mu, t0[k], As[k], nu_star[k]) for k in range(l)])
         mu, fval, _ = opti.fmin_l_bfgs_b(Likelihood, x0=[np.mean(mu_init)], approx_grad=True, bounds=[b_mu], maxfun=50000)
     else:
-        def Likelihood(mu, t0_list, As_list, psy_star_list):
+        def Likelihood(mu, t0_list, As_list, nu_star_list):
             with Pool(min(args.Ncpu // 3, cpu_count())) as pool:
-                result = np.sum(pool.starmap(likelihood, zip([mu] * l, t0_list, As_list, psy_star_list)))
+                result = np.sum(pool.starmap(likelihood, zip([mu] * l, t0_list, As_list, nu_star_list)))
             return result
-        mu, fval, _ = opti.fmin_l_bfgs_b(Likelihood, args=[t0, As, nu_star], x0=[np.mean(mu_init)], approx_grad=True, bounds=[b_mu], maxfun=50000)
+        mu, fval, _ = opti.fmin_l_bfgs_b(Likelihood, args=[t0, As, nu_star], x0=[np.mean(mu_init)], approx_grad=True, bounds=[b_mu], maxfun=50000, factr=100.0, pgtol=1e-10)
+        print('Mu fitting info is', _)
         sigmamu_est = np.sqrt(mu / N)
         mulist = np.sort(np.append(np.arange(max(1e-8, mu - 2 * sigmamu_est), mu + 2 * sigmamu_est, sigmamu_est / 50), mu))
-        partial_sum_mu_likelihood = partial(sum_mu_likelihood, t0_list=t0, As_list=As, psy_star_list=nu_star)
+        partial_sum_mu_likelihood = partial(sum_mu_likelihood, t0_list=t0, As_list=As, nu_star_list=nu_star)
         with Pool(min(args.Ncpu // 3, cpu_count())) as pool:
             logLv_mu = np.array(pool.starmap(partial_sum_mu_likelihood, zip(mulist)))
+
         mu_func = interp1d(mulist, logLv_mu, bounds_error=False, fill_value='extrapolate')
         logLvdelta = np.vectorize(lambda mu_t: np.abs(mu_func(mu_t) - fval - 0.5))
-        sigmamu = abs(opti.fmin_l_bfgs_b(logLvdelta, x0=[mulist[np.abs(logLv_mu - fval - 0.5).argmin()]], approx_grad=True, bounds=[[mulist[0], mulist[-1]]], maxfun=500000)[0] - mu) * np.sqrt(l)
+        # sigmamu = abs(opti.fmin_l_bfgs_b(logLvdelta, x0=[mulist[np.abs(logLv_mu - fval - 0.5).argmin()]], approx_grad=True, bounds=[[mulist[0], mulist[-1]]], maxfun=500000)[0] - mu) * np.sqrt(l)
+        sigmamu_l = abs(opti.fmin_l_bfgs_b(logLvdelta, x0=[mulist[mulist <= mu][np.abs(logLv_mu[mulist <= mu] - fval - 0.5).argmin()]], approx_grad=True, bounds=[[mulist[0], mulist[-1]]], maxfun=500000)[0] - mu) * np.sqrt(l)
+        sigmamu_r = abs(opti.fmin_l_bfgs_b(logLvdelta, x0=[mulist[mulist > mu][np.abs(logLv_mu[mulist > mu] - fval - 0.5).argmin()]], approx_grad=True, bounds=[[mulist[0], mulist[-1]]], maxfun=500000)[0] - mu) * np.sqrt(l)
+        sigmamu = (sigmamu_l + sigmamu_r) / 2
+        print('Finite difference sigmamu is {:.4}'.format(sigmamu.item()))
+
+        # derivative_mu2 = nd.Derivative(Likelihood, step=1e-10, n=2, full_output=True)
+        # s, info = derivative_mu2(mu, t0_list=t0, As_list=As, nu_star_list=nu_star)
+        # print('Mu derivative info is', info)
+        # sigmamu = 1 / np.sqrt(s) * np.sqrt(l)
     return mu, t0, [sigmamu, mulist, logLv_mu, fval]
 
 def fbmp_inference(a0, a1):
@@ -427,10 +439,12 @@ elif method == 'fbmp':
     t0_init = np.append(ts['tswave'], np.ones(N_add) * 100)
     assert np.all(np.array([len(t0_init), len(nu_star_list), len(As_list)]) == N + N_add)
 
-    mu, t0, sigmamu_list = optit0mu(Mu, t0_init, nu_star_list, As_list, mu_init=ts['muwave'])
+    # mu, t0, sigmamu_list = optit0mu(Mu, t0_init, nu_star_list, As_list, mu_init=ts['muwave'])
+    mu = np.array([np.nan])
+    sigmamu_list = [np.array([np.nan]), np.nan, np.nan, np.nan]
     sigmamu = sigmamu_list[0]
 
-    print('mu is {0:.3f}, sigma_mu is {1:.3f}'.format(mu.item(), sigmamu.item()))
+    print('mu is {0:.4f}, sigma_mu is {1:.4f}'.format(mu.item(), sigmamu.item()))
     print('nu max larger than nu truth fraction is {0:.02%}'.format((nu_max > nu_truth).sum() / len(nu_truth)))
 
     matplotlib.use('Agg')

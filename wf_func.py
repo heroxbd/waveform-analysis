@@ -203,7 +203,7 @@ def fbmpr_fxn_reduced(y, A, sig2w, sig2s, mus, D, p1, truth=None, i=None, left=N
     # Only for multi-gaussian with arithmetic sequence of mu and sigma
     M, N = A.shape
 
-    psy_thresh = 1e-2
+    psy_thresh = 1e-1
     # upper limit of number of PEs.
     P = max(math.ceil(min(M, p1.sum() + 3 * np.sqrt(p1.sum()))), 1)
 

@@ -406,15 +406,11 @@ mtsi['biasmumax'] = np.nan
 mtsi['biasmu'] = np.nan
 mtsi = np.sort(mtsi, kind='stable', order=['mu', 'tau', 'sigma'])
 
-def gauss_poisson_pdf_(x, mu, gstd):
-    pdf = np.sum([norm.pdf(x, loc=n, scale=gstd * np.sqrt(n)) * poisson.pmf(n, mu=mu) for n in range(1, round(np.sqrt(mu) * 10))])
-    return pdf
-
 mu_list = np.unique(mts['fbmp']['mu'])
 mu_std_tru_list = np.sqrt(mu_list)
 
-# mts = {'lucyddm':mtsi.copy(), 'takara':mtsi.copy(), 'xiaopeip':mtsi.copy(), 'fbmp':mtsi.copy()}
-mts = {'lucyddm':mtsi.copy(), 'fbmp':mtsi.copy()}
+mts = {'lucyddm':mtsi.copy(), 'takara':mtsi.copy(), 'xiaopeip':mtsi.copy(), 'fbmp':mtsi.copy()}
+# mts = {'lucyddm':mtsi.copy(), 'fbmp':mtsi.copy()}
 
 use_log = False
 for key in tqdm(mts.keys()):
@@ -456,15 +452,16 @@ for key in tqdm(mts.keys()):
             bias_wave_sum = np.mean(np.append(wave_sum[vali], np.zeros(round(N_add)))) - mu
             s_pe_sum = np.std(np.append(pe_sum[vali], np.zeros(round(N_add))), ddof=-1)
             bias_pe_sum = np.mean(np.append(pe_sum[vali], np.zeros(round(N_add)))) - mu
-            # s_mucharge = np.std(time['mucharge'][vali], ddof=-1)
-            # bias_mucharge = np.mean(time['mucharge'][vali]) - mu
-            s_mucharge = np.nan
-            bias_mucharge = np.nan
-            # s_muwave = np.std(time['muwave'][vali], ddof=-1)
-            # bias_muwave = np.mean(time['muwave'][vali]) - mu
-            s_muwave = starttime_attrs['sigmamu']
-            # s_muwave = s_muwave / starttime_attrs['mu'] * mu
-            bias_muwave = starttime_attrs['mu'] - mu
+            # Use sample STD to estimate STD
+            s_mucharge = np.std(time['mucharge'][vali], ddof=-1)
+            bias_mucharge = np.mean(time['mucharge'][vali]) - mu
+            s_muwave = np.std(np.append(time['muwave'][vali], np.zeros(round(N_add))), ddof=-1)
+            bias_muwave = np.mean(np.append(time['muwave'][vali], np.zeros(round(N_add)))) - mu
+            # Global fit STD
+            # s_mucharge = np.nan
+            # bias_mucharge = np.nan
+            # s_muwave = starttime_attrs['sigmamu']
+            # bias_muwave = starttime_attrs['mu'] - mu
 
             mts[key][i]['stdmutru'] = s_npe
             mts[key][i]['meanmutru'] = mu

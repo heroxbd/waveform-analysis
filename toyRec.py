@@ -117,7 +117,7 @@ with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as ipt, h5py.File(args
         fig.savefig(os.path.splitext(args.opt)[0] + '.png')
 
         sigmamu = np.sqrt(charge.sum() / N_tot)
-print('mu is {0:.3f}, sigma_mu is {1:.3f}'.format(mu.item(), sigmamu.item()))
+print('mu is {0:.4f}, sigma_mu is {1:.4f}'.format(mu.item(), sigmamu.item()))
 
 with h5py.File(args.opt, 'w') as opt:
     dset = opt.create_dataset('starttime', data=ts, compression='gzip')
