@@ -70,24 +70,22 @@ Large light intensity improves the resolution of $\hat{t}_\mathrm{1st}$, as evid
   \end{subfigure}
   \begin{subfigure}[b]{\textwidth}
     \centering
-    \resizebox{\textwidth}{!}{\input{figures/vs-biasmut.pgf}}
-    \caption{\label{fig:biasmu} Intensity reconstruction biases.}
+    \resizebox{\textwidth}{!}{\input{figures/vs-biasmu.pgf}}
+    \caption{\label{fig:biasmu} Intensity reconstruction biases $\hat{\mu}-\mu$.}
   \end{subfigure}
   \begin{subfigure}[b]{\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/vs-deltamethodsdivmu.pgf}}
-    \caption{\label{fig:deltamu} Intensity reconstruction ratios of resolution $\sigma/\sigma_{\log\mu}$. }
+    \caption{\label{fig:deltamu} Intensity reconstruction ratios of relative resolution $\frac{\sigma_{\hat{\mu}}}{\sqrt{\hat{\mu}}}/\frac{\sigma_\mu}{\sqrt{\mu}}$. }
   \end{subfigure}
   \caption{ALL is the $\hat{t}_\mathrm{ALL}$ estimator defined in eq.~\eqref{eq:2}. LucyDDM, Fitting, CNN use eqs.~\eqref{eq:pseudo} and \eqref{eq:pseudo-mu}.  FBMP has its own natural $\hat{t}_0$ estimator in eq.~\eqref{eq:fbmpcharge}. Error bars are 5--95 percentiles.}
 \end{figure}
 
 $\hat{\mu}_Q$ is deteriorated by the randomization process, such as charge distribution and Gaussian white noise in section~\ref{subsec:spe}. 
 
-Considering that the energy response is a multiplier in the detector and the existing $\hat{\mu}$ bias, which we discuss below, the charge resolution is defined on $\log{\hat{\mu}}$.
+Figure~\ref{fig:biasmu} shows the bias of $\hat{\mu}$ of all four methods. A detailed explanation for the bias of FBMP is in appendix~\ref{sec:mubias}, and briefly it comes from the degeneracy of reconstruction results and the non-ergodic approximation of FBMP. 
 
-Figure~\ref{fig:biasmu} shows the bias of $\log\hat{\mu}$ of all four methods. As $\log\hat{\mu}$ is unfavorably low when $\hat{\mu}$ is near 0 due to the lower long tail of charge distribution, the bias of integration is less than zero if $\mu$ is small. A detailed explanation for the bias of FBMP is in appendix~\ref{sec:mubias}, and briefly it comes from the degeneracy of reconstruction results and the non-ergodic approximation of FBMP. 
-
-Figure~\ref{fig:deltamu} shows the intensity resolutions.  For small $\mu$ FBMP gives a much better resolution by correctly modeling charge distributions, see also figure~\ref{fig:recchargehist}.  For larger $\mu$, LucyDDM, Fitting and CNN are similar to $\hat{\mu}_Q$.
+Figure~\ref{fig:deltamu} shows the intensity relative resolutions.  For small $\mu$ FBMP gives a much better resolution by correctly modeling charge distributions, see also figure~\ref{fig:recchargehist}.  For larger $\mu$, LucyDDM, Fitting and CNN are similar to $\hat{\mu}_Q$.
 
 % Pedestal & Hardware
 
