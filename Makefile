@@ -33,7 +33,7 @@ Nets:=$(channelN:%=result/takara/char/Nets/Channel%.torch_net)
 
 .PHONY : all
 
-all : $(char)
+all : $(patsubst waveform/%.h5,mu/%.h5,$(sim))
 
 char : $(char)
 
@@ -42,6 +42,14 @@ test : $(hist)
 solu : $(solu)
 
 sim : $(sim)
+
+metropolis/%.h5: waveform/%.h5 spe.h5
+	mkdir -p $(dir $@)
+	python3 metropolis.py $< --ref $(word 2,$^) -o $@
+
+mu/%.h5: metropolis/%.h5 waveform/%.h5 
+	mkdir -p $(dir $@)
+	python3 mu.py $< --ref $(word 2,$^) -o $@
 
 define bayesian
 result/$(method)/char/%.h5 : waveform/%.h5 spe.h5

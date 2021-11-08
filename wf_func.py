@@ -261,7 +261,7 @@ def fbmpr_fxn_reduced(y, A, sig2w, sig2s, mus, p1):
             flip[i] = 0
             Δν_history[i] = 0
 
-    burn = TRIALS // 100
+    burn = TRIALS // 10
     # NPE = \sum_i z_i
     NPE, counts = np.unique(np.cumsum(flip)[burn:], return_counts=True)
     freq = counts / (TRIALS - burn)
