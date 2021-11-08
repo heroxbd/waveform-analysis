@@ -140,6 +140,16 @@ with h5py.File(fopt, 'w') as opt:
         Δν_history = np.zeros(TRIALS) # list of Δν's
         for i, accept in enumerate(np.log(np.random.uniform(size=TRIALS))):
             t = istar[i] # the time bin
+
+            if s[t] == 0: # 下边界
+                flip[i] = 1 # 不论是 -1 还是 +-2，都转换成 +1
+                # Q(1->0) / Q(0->1) = 1 / 4
+                # 从 0 开始只有一种跳跃可能到 1，因此需要惩罚
+                accept += np.log(4)
+            elif s[t] == 1 and flip[i] == -1:
+                # 1 -> 0: 行动后从 0 脱出的几率大，需要鼓励
+                accept -= np.log(4)
+
             if abs(flip[i]) == 2:
                 if t == 0: # 左边界
                     if flip[i] == -2: # 在最左边，不能有 -2 向左移动
@@ -164,17 +174,6 @@ with h5py.File(fopt, 'w') as opt:
                 # Q(移 t_next -> t) / Q(移 t -> t_next)
                 # 若 p(t_next) 很大，则应鼓励
                 accept -= np.log(cha[t_next] / cha[t])
-
-            if s[t] == 0: # 下边界
-                if flip[i] == -1:
-                    flip[i] = 1
-                elif flip[i] == 1:
-                    # Q(1->0) / Q(0->1) = 1 / 2
-                    # 从 0 开始只有一种跳跃可能到 1，因此需要惩罚
-                    accept += np.log(2)
-            elif s[t] == 1 and flip[i] == -1:
-                # 1 -> 0: 行动后从 0 脱出的几率大，需要鼓励
-                accept -= np.log(2)
 
             def move(cx, z, t, step):
                 '''
