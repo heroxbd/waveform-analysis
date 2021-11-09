@@ -31,6 +31,9 @@ for i,id in enumerate(args.idir):
                     elif args.field =='wdist':
                         with h5py.File(id+'/'+t+'/dist/'+'{:.1f}-{}-{}.h5'.format(mu,ta,s),'r') as ipt:
                             elbo = ipt['Record'][args.field][:]
+                    elif args.field == 'mu':
+                        with h5py.File(id+'/'+t+'/char/'+'{:.1f}-{}-{}.h5'.format(mu,ta,s),'r') as ipt:
+                            elbo = ipt['Record'][args.field][:]
                     elbos[i*typelen+j,k,l,m] = np.average(elbo)
                     elboSigmas[i*typelen+j,k,l,m] = np.std(elbo)
 fig, axs = plt.subplots(1,2,figsize=(16,6))
