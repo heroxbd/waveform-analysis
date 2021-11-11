@@ -406,13 +406,13 @@ def likelihoodt0(hitt, char, gmu, Tau, Sigma, mode='charge', is_delta=False):
         t0delta = abs(opti.fmin_l_bfgs_b(logLvdelta, x0=[tlist[np.argmin(np.abs(logLv_tlist - logL(t0) - 0.5))]], approx_grad=True, bounds=[b], maxfun=500000)[0] - t0)
     return t0, t0delta
 
-def initial_params(wave, spe_pre, Tau, Sigma, gmu, Thres, p, nsp=4, nstd=3, is_t0=False, is_delta=False, n=1, nshannon=1):
-    hitt, char = lucyddm(wave[::nshannon], spe_pre['spe'][::nshannon])
+def initial_params(wave, spe_pre, Tau, Sigma, gmu, Thres, p, nsp=4, nstd=3, is_t0=False, is_delta=False, n=1):
+    hitt, char = lucyddm(wave, spe_pre['spe'])
     hitt, char = clip(hitt, char, Thres)
-    char = char / char.sum() * np.clip(np.abs(wave[::nshannon].sum()), 1e-6, np.inf)
-    tlist = np.unique(np.clip(np.hstack(hitt[:, None] + np.arange(-nsp, nsp+1)), 0, len(wave[::nshannon]) - 1))
+    char = char / char.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
+    tlist = np.unique(np.clip(np.hstack(hitt[:, None] + np.arange(-nsp, nsp+1)), 0, len(wave) - 1))
 
-    index_prom = np.hstack([np.argwhere(savgol_filter(wave, 11 * (nshannon if nshannon % 2 == 1 else nshannon + 1), 4) > nstd * spe_pre['std']).flatten(), hitt * nshannon])
+    index_prom = np.hstack([np.argwhere(savgol_filter(wave, 11, 4) > nstd * spe_pre['std']).flatten(), hitt])
     left_wave = round(np.clip(index_prom.min() - 3 * spe_pre['mar_l'], 0, len(wave) - 1))
     right_wave = round(np.clip(index_prom.max() + 3 * spe_pre['mar_r'], 0, len(wave) - 1))
     wave = wave[left_wave:right_wave]
@@ -423,7 +423,7 @@ def initial_params(wave, spe_pre, Tau, Sigma, gmu, Thres, p, nsp=4, nstd=3, is_t
     tlist = np.unique(np.sort(np.hstack(tlist[:, None] + np.linspace(0, 1, n, endpoint=False) - (n // 2) / n)))
     if len(tlist) != 1:
         assert abs(np.diff(tlist).min() - 1 / n) < 1e-3, 'tlist anomalous'
-    t_auto = (np.arange(left_wave, right_wave) / nshannon)[:, None] - tlist
+    t_auto = np.arange(left_wave, right_wave)[:, None] - tlist
     A = spe((t_auto + np.abs(t_auto)) / 2, p[0], p[1], p[2])
 
     t0_init = None
