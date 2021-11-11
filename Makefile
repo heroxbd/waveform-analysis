@@ -5,8 +5,7 @@ mu:=$(shell seq -f '%0.1f' 0.5 0.5 3.5 && seq -f '%0.1f' 4 2 10 && seq -f '%0.1f
 tau:=$(shell awk -F',' 'NR == 1 { print $1 }' rc.csv)
 sigma:=$(shell awk -F',' 'NR == 2 { print $1 }' rc.csv)
 
-erg:=$(filter-out %-00-00,$(shell for i in $(mu); do for j in $(tau); do for k in $(sigma); do echo $${i}-$${j}-$${k}; done; done; done))
-# $(info $(erg))
+config:=$(foreach j,$(tau),$(foreach k,$(sigma),$(j)-$(k)))
 
 method:=fbmp
 sim:=$(erg:%=waveform/%.h5)
@@ -33,7 +32,7 @@ Nets:=$(channelN:%=result/takara/char/Nets/Channel%.torch_net)
 
 .PHONY : all
 
-all : $(patsubst waveform/%.h5,mu/%.h5,$(sim))
+all : $(config:%=bias/%.pdf)
 
 char : $(char)
 
@@ -104,9 +103,14 @@ result/takara/.PreProcess : $(sim) spe.h5
 waveform/%.h5 :
 	@rm -f spe.h5
 	@mkdir -p $(dir $@)
-	python3 toySim.py --mts $* --noi -N 1000 -o $@ > $@.log 2>&1
+	python3 toySim.py --mts $* --noi -N 10000 -o $@ > $@.log 2>&1
 
 spe.h5 : $(sim) ;
+
+.SECONDEXPANSION:
+bias/%.pdf: $$(foreach i,$(mu),mu/$$(i)-%.h5)
+	mkdir -p $(dir $@)
+	./bias.R $^ -o $@
 
 .DELETE_ON_ERROR: 
 
