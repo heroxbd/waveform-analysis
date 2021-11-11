@@ -1,23 +1,10 @@
-import os
-import sys
-import re
 import time
-import math
 import argparse
-import pickle
-import itertools as it
 
 import h5py
 import numpy as np
 # np.seterr(all='raise')
-import scipy
-import scipy.stats
-from scipy.stats import poisson, uniform, norm
-import scipy.integrate as integrate
-from scipy.interpolate import interp1d
-from scipy import optimize as opti
-import scipy.special as special
-from tqdm import tqdm
+from scipy.stats import poisson
 
 import wf_func as wff
 
@@ -41,7 +28,7 @@ with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
     t0_truth = ipt['SimTruth/T'][:]
     N = len(ent)
     print('{} waveforms will be computed'.format(N))
-    window = len(ent[0]['Waveform'][::wff.nshannon])
+    window = len(ent[0]['Waveform'])
     assert window >= len(spe_pre[0]['spe']), 'Single PE too long which is {}'.format(len(spe_pre[0]['spe']))
     Mu = ipt['Readout/Waveform'].attrs['mu'].item()
     Tau = ipt['Readout/Waveform'].attrs['tau'].item()
@@ -59,11 +46,8 @@ Thres = wff.Thres
 mix0sigma = 1e-3
 mu0 = np.arange(1, int(Mu + 5 * np.sqrt(Mu)))
 n_t = np.arange(1, 20)
-p_t = special.comb(mu0, 2)[:, None] * np.power(wff.convolve_exp_norm(np.arange(1029) - 200, Tau, Sigma) / n_t[:, None], 2).sum(axis=1)
-n0 = np.array([n_t[p_t[i] < max(1e-1, np.sort(p_t[i])[1])].min() for i in range(len(mu0))])
-ndict = dict(zip(mu0, n0))
 
-n = 2
+n = 1
 b_t0 = [0., 600.]
 
 print('Initialization finished, real time {0:.02f}s, cpu time {1:.02f}s'.format(time.time() - global_start, time.process_time() - cpu_global_start))
@@ -77,12 +61,8 @@ dt = [('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('istar', np.uint16), 
 mu0_dt = [('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('mu_t', np.float64)]
 TRIALS = 10000
 
-with h5py.File(fopt, 'w') as opt:
-    sample = opt.create_dataset('sample', shape=(N*TRIALS,), dtype=dt)
-    mu0 = opt.create_dataset('mu0', shape=(N,), dtype=mu0_dt)
-    
-    print('The output file path is {}'.format(fopt))
-
+def metropolis(ent, sample, mu0, d_tlist):
+    i_tlist = 0
     for ie, e in enumerate(ent):
         time_fbmp_start = time.time()
         eid = e["TriggerNo"]
@@ -94,8 +74,16 @@ with h5py.File(fopt, 'w') as opt:
         wave = e['Waveform'].astype(np.float64) * spe_pre[cid]['epulse']
 
         # initialization
-        A, y, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[e['ChannelID']], Tau, Sigma, gmu, Thres['lucyddm'], p, is_t0=True, is_delta=False, n=n, nshannon=1)
+        A, y, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave, spe_pre[e['ChannelID']], Tau, Sigma, gmu, Thres['lucyddm'], p, is_t0=False, is_delta=False, n=n)
+        s_cha = np.cumsum(cha)
+        # moving average filter of size 2*n+1
+        cha = np.pad(s_cha[2*n+1:], (n+1, n), 'edge') - np.pad(s_cha[:-(2*n+1)], (n+1, n), 'edge')
         cha += 1e-8 # for completeness of the random walk.
+        o_tlist = i_tlist + len(tlist)
+        d_tlist[i_tlist:o_tlist] = list(zip(np.repeat(eid, o_tlist - i_tlist),
+                                            np.repeat(cid, o_tlist - i_tlist),
+                                            tlist, cha))
+        i_tlist = o_tlist
         t0_t = t0_truth['T0'][ie] # override with truth to debug mu
         mu_t = abs(y.sum() / gmu)
         mu0[ie] = (eid, cid, mu_t)
@@ -110,7 +98,7 @@ with h5py.File(fopt, 'w') as opt:
         mus: mean of signal x_i.
         TRIALS: number of Metropolis steps.
         '''
-        
+
         p1 = mu_t * wff.convolve_exp_norm(tlist - t0_t, Tau, Sigma) / n
 
         sig2w = spe_pre[cid]['std'] ** 2
@@ -232,6 +220,16 @@ with h5py.File(fopt, 'w') as opt:
         sample[ie*TRIALS:(ie+1)*TRIALS] = list(zip(np.repeat(eid, TRIALS), 
                                                    np.repeat(cid, TRIALS), 
                                                    istar, flip, Δν_history))
+    d_tlist.resize((o_tlist,))
+
+with h5py.File(fopt, 'w') as opt:
+    sample = opt.create_dataset('sample', shape=(N*TRIALS,), dtype=dt)
+    mu0 = opt.create_dataset('mu0', shape=(N,), dtype=mu0_dt)
+    d_tlist = opt.create_dataset('tlist', shape=(N*1024,), 
+                                 dtype=[('TriggerNo', np.uint32), ('ChannelID', np.uint32), 
+                                        ('t_s', np.float16), ('q_s', np.float32)], chunks=True)
+    metropolis(ent, sample, mu0, d_tlist)
+    print('The output file path is {}'.format(fopt))
 
 print('Prediction generated, real time {0:.02f}s, cpu time {1:.02f}s'.format(time.time() - tic, time.process_time() - cpu_tic))
 
