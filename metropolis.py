@@ -61,6 +61,104 @@ dt = [('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('istar', np.uint16), 
 mu0_dt = [('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('mu_t', np.float64)]
 TRIALS = 10000
 
+def grid(cx, p1, z, t, N, sig2s, mus, step, accept, A):
+    '''
+    step: +1 加一个 PE, -1 减一个 PE, +2 PE 右移, -2 PE 左移
+    Δν: 迈出这一步 ν 的变化
+    '''
+    # model selection vector
+    s = np.zeros(N)
+
+    if s[t] == 0: # 下边界
+        step = 1 # 不论是 -1 还是 +-2，都转换成 +1
+        # Q(1->0) / Q(0->1) = 1 / 4
+        # 从 0 开始只有一种跳跃可能到 1，因此需要惩罚
+        accept += np.log(4)
+    elif s[t] == 1 and step == -1:
+        # 1 -> 0: 行动后从 0 脱出的几率大，需要鼓励
+        accept -= np.log(4)
+
+    if abs(step) == 2:
+        if t == 0: # 左边界
+            if step == -2: # 在最左边，不能有 -2 向左移动
+                step = 2
+            if step == 2:
+                # Q(移 1->0) / Q(移 0->1) = 1 / 2
+                # 从 0 移动只能到 1，因此需要惩罚
+                accept += np.log(2)
+        elif t == 1 and step == -2:
+            accept -= np.log(2)
+
+        if t == N-1: # 右边界
+            if step == 2: # 在最右边，不能有 2 向右移动
+                step = -2
+            if step == -2:
+                # 从 N-1 只能到 N-2，惩罚
+                accept += np.log(2)
+        elif t == N-2 and step == 2:
+            accept -= np.log(2)
+
+        t_next = t + 1 if step == 2 else t - 1
+        # Q(移 t_next -> t) / Q(移 t -> t_next)
+        # 若 p(t_next) 很大，则应鼓励
+        accept -= np.log(cha[t_next] / cha[t])
+
+    def move(cx, z, t, step):
+        '''
+        step
+        ====
+        1: 在 t 加一个 PE
+        -1: 在 t 减一个 PE
+        '''
+        fsig2s = step * sig2s[t]
+        # Eq. (30) sig2s = 1 sigma^2 - 0 sigma^2
+        beta_under = (1 + fsig2s * np.dot(A[:, t], cx[:, t]))
+        beta = fsig2s / beta_under
+
+        # Eq. (31) # sign of mus[t] and sig2s[t] cancels
+        Δν = 0.5 * (beta * (z @ cx[:, t] + mus[t] / sig2s[t]) ** 2 - mus[t] ** 2 / fsig2s)
+        # sign of space factor in Eq. (31) is reversed.  Because Eq. (82) is in the denominator.
+        Δν -= 0.5 * np.log(beta_under) # space
+        # poisson
+        Δν += step * np.log(p1[t])
+        if step == 1:
+            Δν -= np.log(s[t] + 1)
+        else: # step == -1
+            Δν += np.log(s[t])
+
+        # accept, prepare for the next
+        # Eq. (33) istar is now n_pre.  It crosses n_pre and n, thus is in vector form.
+        Δcx = -np.einsum('n,m,mp->np', beta * cx[:, t], cx[:, t], A, optimize=True)
+
+        # Eq. (34)
+        Δz = -step * A[:, t] * mus[t]
+        return Δν, Δcx, Δz
+
+    if abs(step) == 2:
+        Δν0, Δcx0, Δz0 = move(cx, z, t, -1)
+        Δν1, Δcx1, Δz1 = move(cx + Δcx0, z + Δz0, t_next, 1)
+        Δν = Δν0 + Δν1
+        Δcx = Δcx0 + Δcx1
+        Δz = Δz0 + Δz1
+    elif abs(step) == 1:
+        Δν, Δcx, Δz = move(cx, z, t, step)
+
+    if Δν >= accept:
+        cx += Δcx
+        z += Δz
+
+        if abs(step) == 2:
+            s[t] -= 1
+            s[t_next] += 1
+        elif abs(step) == 1:
+            s[t] += step # update state
+    else:
+        # reject proposal
+        step = 0
+        Δν = 0
+
+    return step, Δν
+
 def metropolis(ent, sample, mu0, d_tlist):
     i_tlist = 0
     for ie, e in enumerate(ent):
@@ -92,6 +190,7 @@ def metropolis(ent, sample, mu0, d_tlist):
         A = A / mus
 
         '''
+        A: basis dictionary
         p1: prior probability for each bin.
         sig2w: variance of white noise.
         sig2s: variance of signal x_i.
@@ -118,104 +217,16 @@ def metropolis(ent, sample, mu0, d_tlist):
         cx = A / sig2w
         # mu = 0 => (y - A * mu -> z)
         z = y
-        # model selection vector
-        s = np.zeros(N)
 
-        # Metropolis
+        # Metropolis on a grid
         istar = np.random.choice(range(N), TRIALS, p=cha/np.sum(cha))
         # -1 PE, +1 PE, 左移 PE, 右移 PE
         flip = np.random.choice((-1, 1, -2, 2), TRIALS)
         Δν_history = np.zeros(TRIALS) # list of Δν's
         for i, accept in enumerate(np.log(np.random.uniform(size=TRIALS))):
-            t = istar[i] # the time bin
-
-            if s[t] == 0: # 下边界
-                flip[i] = 1 # 不论是 -1 还是 +-2，都转换成 +1
-                # Q(1->0) / Q(0->1) = 1 / 4
-                # 从 0 开始只有一种跳跃可能到 1，因此需要惩罚
-                accept += np.log(4)
-            elif s[t] == 1 and flip[i] == -1:
-                # 1 -> 0: 行动后从 0 脱出的几率大，需要鼓励
-                accept -= np.log(4)
-
-            if abs(flip[i]) == 2:
-                if t == 0: # 左边界
-                    if flip[i] == -2: # 在最左边，不能有 -2 向左移动
-                        flip[i] = 2
-                    if flip[i] == 2:
-                        # Q(移 1->0) / Q(移 0->1) = 1 / 2
-                        # 从 0 移动只能到 1，因此需要惩罚
-                        accept += np.log(2)
-                elif t == 1 and flip[i] == -2:
-                    accept -= np.log(2)
-
-                if t == N-1: # 右边界
-                    if flip[i] == 2: # 在最右边，不能有 2 向右移动
-                        flip[i] = -2
-                    if flip[i] == -2:
-                        # 从 N-1 只能到 N-2，惩罚
-                        accept += np.log(2)
-                elif t == N-2 and flip[i] == 2:
-                    accept -= np.log(2)
-
-                t_next = t + 1 if flip[i] == 2 else t - 1
-                # Q(移 t_next -> t) / Q(移 t -> t_next)
-                # 若 p(t_next) 很大，则应鼓励
-                accept -= np.log(cha[t_next] / cha[t])
-
-            def move(cx, z, t, step):
-                '''
-                step
-                ====
-                1: 在 t 加一个 PE
-                -1: 在 t 减一个 PE
-                '''
-                fsig2s = step * sig2s[t]
-                # Eq. (30) sig2s = 1 sigma^2 - 0 sigma^2
-                beta_under = (1 + fsig2s * np.dot(A[:, t], cx[:, t]))
-                beta = fsig2s / beta_under
-
-                # Eq. (31) # sign of mus[t] and sig2s[t] cancels
-                Δν = 0.5 * (beta * (z @ cx[:, t] + mus[t] / sig2s[t]) ** 2 - mus[t] ** 2 / fsig2s)
-                # sign of space factor in Eq. (31) is reversed.  Because Eq. (82) is in the denominator.
-                Δν -= 0.5 * np.log(beta_under) # space
-                # poisson
-                Δν += step * np.log(p1[t])
-                if step == 1:
-                    Δν -= np.log(s[t] + 1)
-                else: # step == -1
-                    Δν += np.log(s[t])
-
-                # accept, prepare for the next
-                # Eq. (33) istar is now n_pre.  It crosses n_pre and n, thus is in vector form.
-                Δcx = -np.einsum('n,m,mp->np', beta * cx[:, t], cx[:, t], A, optimize=True)
-                # Eq. (34)
-                Δz = -step * A[:, t] * mus[t]
-                return Δν, Δcx, Δz
-
-            if abs(flip[i]) == 2:
-                Δν0, Δcx0, Δz0 = move(cx, z, t, -1)
-                Δν1, Δcx1, Δz1 = move(cx + Δcx0, z + Δz0, t_next, 1)
-                Δν = Δν0 + Δν1
-                Δcx = Δcx0 + Δcx1
-                Δz = Δz0 + Δz1
-            elif abs(flip[i]) == 1:
-                Δν, Δcx, Δz = move(cx, z, t, flip[i])
-
-            if Δν >= accept:
-                cx += Δcx
-                z += Δz
-                Δν_history[i] = Δν
-
-                if abs(flip[i]) == 2:
-                    s[t] -= 1
-                    s[t_next] += 1
-                elif abs(flip[i]) == 1:
-                    s[t] += flip[i] # update state
-            else:
-                # reject proposal
-                flip[i] = 0
-                Δν_history[i] = 0
+            step, Δν = grid(cx, p1, z, istar[i], N, sig2s, mus, flip[i], accept, A)
+            Δν_history[i] = Δν
+            flip[i] = step
 
         sample[ie*TRIALS:(ie+1)*TRIALS] = list(zip(np.repeat(eid, TRIALS), 
                                                    np.repeat(cid, TRIALS), 
