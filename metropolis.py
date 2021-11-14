@@ -7,6 +7,7 @@ import numpy as np
 from scipy.stats import poisson
 
 import wf_func as wff
+from functools import partial
 
 global_start = time.time()
 cpu_global_start = time.process_time()
@@ -23,7 +24,7 @@ reference = args.ref
 
 spe_pre = wff.read_model(reference, 1)
 with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
-    ent = ipt['Readout/Waveform'][:]
+    ent = ipt['Readout/Waveform'][:10]
     pelist = ipt['SimTriggerInfo/PEList'][:]
     t0_truth = ipt['SimTruth/T'][:]
     N = len(ent)
@@ -57,110 +58,154 @@ cpu_tic = time.process_time()
 ent = np.sort(ent, kind='stable', order=['TriggerNo', 'ChannelID'])
 Chnum = len(np.unique(ent['ChannelID']))
 
-dt = [('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('istar', np.uint16), ('flip', np.int8), ('delta_nu', np.float64)]
+dt = [('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('flip', np.int8), ('delta_nu', np.float64)]
 mu0_dt = [('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('mu_t', np.float64)]
+
+d_history = [('TriggerNo', np.uint32), ('ChannelID', np.uint32), 
+             ('step', np.uint32), ('loc', np.float32)]
 TRIALS = 10000
 
-def grid(cx, p1, z, t, N, sig2s, mus, step, accept, A):
+def move2(A, cx, z, t, step):
     '''
-    step: +1 加一个 PE, -1 减一个 PE, +2 PE 右移, -2 PE 左移
-    Δν: 迈出这一步 ν 的变化
+    把 t 处加 (step==1) 或减 (step==-1) 一个 PE
+    t 在 [0.5, N-0.5) 之间，以便向内插值
     '''
-    # model selection vector
-    s = np.zeros(N)
+    mu2 = step * np.array((1-frac, frac))[:, np.newaxis] # mu_2 column vector
+    sig22 = step * mu2 @ mu2.T
+    sig22_inv = np.linalg.inv(sig22)
+    # Eq. (30) sig2s = 1 sigma^2 - 0 sigma^2
+    B_inv = sig22_inv + A[:, ti:(ti+2)].T @ cx[:, ti:(ti+2)]
+    B = np.linalg.inv(B_inv)
 
-    if s[t] == 0: # 下边界
-        step = 1 # 不论是 -1 还是 +-2，都转换成 +1
-        # Q(1->0) / Q(0->1) = 1 / 4
-        # 从 0 开始只有一种跳跃可能到 1，因此需要惩罚
-        accept += np.log(4)
-    elif s[t] == 1 and step == -1:
-        # 1 -> 0: 行动后从 0 脱出的几率大，需要鼓励
-        accept -= np.log(4)
+    # Eq. (31) # sign of mus[t] and sig2s[t] cancels
+    resid = cx[:, ti:(ti+2)].T @ z + sig22_inv @ mu2
+    Δν = 0.5 * (resid.T @ B @ resid - mu2.T @ sig22_inv @ mu2)
+    Δν += 0.5 * np.log(np.linalg.det(B) * np.linalg.det(sig22_inv)) # space
+    # accept, prepare for the next
+    # Eq. (33) istar is now n_pre.  It crosses n_pre and n, thus is in vector form.
+    Δcx = -np.einsum('ni,ij,mj,mp->np', cx[:, ti:(ti+2)], beta, cx[:, ti:(ti+2)], A, optimize=True)
 
-    if abs(step) == 2:
-        if t == 0: # 左边界
-            if step == -2: # 在最左边，不能有 -2 向左移动
-                step = 2
-            if step == 2:
-                # Q(移 1->0) / Q(移 0->1) = 1 / 2
-                # 从 0 移动只能到 1，因此需要惩罚
-                accept += np.log(2)
-        elif t == 1 and step == -2:
-            accept -= np.log(2)
+    # Eq. (34)
+    Δz = -(A[:, ti:(ti+2)]  * mus[t]) @ mu2
+    return Δν, Δcx, Δz
 
-        if t == N-1: # 右边界
-            if step == 2: # 在最右边，不能有 2 向右移动
-                step = -2
-            if step == -2:
-                # 从 N-1 只能到 N-2，惩罚
-                accept += np.log(2)
-        elif t == N-2 and step == 2:
-            accept -= np.log(2)
+def combine(A, cx, t):
+    '''
+    combine neighbouring dictionaries to represent sub-bin locations
+    '''
+    frac, ti = np.modf(t - 0.5)
+    ti = int(ti)
+    alpha = np.array((1 - frac, frac))
+    return alpha @ A[:, ti:(ti+2)].T, alpha @ cx[:, ti:(ti+2)].T
 
-        t_next = t + 1 if step == 2 else t - 1
-        # Q(移 t_next -> t) / Q(移 t -> t_next)
-        # 若 p(t_next) 很大，则应鼓励
-        accept -= np.log(cha[t_next] / cha[t])
+def flow(cx, p1, z, N, sig2s, mus, A, p_cha):
+    '''
+    flow
+    ====
+    连续时间游走
 
-    def move(cx, z, t, step):
-        '''
-        step
-        ====
-        1: 在 t 加一个 PE
-        -1: 在 t 减一个 PE
-        '''
-        fsig2s = step * sig2s[t]
-        # Eq. (30) sig2s = 1 sigma^2 - 0 sigma^2
-        beta_under = (1 + fsig2s * np.dot(A[:, t], cx[:, t]))
-        beta = fsig2s / beta_under
+    s: list of PE locations
+    '''
 
-        # Eq. (31) # sign of mus[t] and sig2s[t] cancels
-        Δν = 0.5 * (beta * (z @ cx[:, t] + mus[t] / sig2s[t]) ** 2 - mus[t] ** 2 / fsig2s)
-        # sign of space factor in Eq. (31) is reversed.  Because Eq. (82) is in the denominator.
-        Δν -= 0.5 * np.log(beta_under) # space
-        # poisson
-        Δν += step * np.log(p1[t])
-        if step == 1:
-            Δν -= np.log(s[t] + 1)
-        else: # step == -1
-            Δν += np.log(s[t])
+    # idx: [0, 1) 之间的随机数，用于标定哪个 PE 被点中
+    istar = np.random.rand(TRIALS)
+    # t 的位置，取值为 [0, N)
+    s = []
+    c_cha = np.cumsum(p_cha)
+    home_s = np.interp(istar, xp = np.insert(c_cha, 0, 0), fp = np.arange(N+1))
+    wander_s = np.random.normal(size=TRIALS)
 
-        # accept, prepare for the next
-        # Eq. (33) istar is now n_pre.  It crosses n_pre and n, thus is in vector form.
-        Δcx = -np.einsum('n,m,mp->np', beta * cx[:, t], cx[:, t], A, optimize=True)
+    # step: +1 创生一个 PE， -1 消灭一个 PE， +2 向左或向右移动
+    flip = np.random.choice((-1, 1, 2), TRIALS, p=np.array((1, 1, 2))/4)
+    Δν_history = np.zeros(TRIALS) # list of Δν's
 
-        # Eq. (34)
-        Δz = -step * A[:, t] * mus[t]
-        return Δν, Δcx, Δz
+    si = 0
+    s_history = np.zeros(TRIALS * N, dtype=d_history)
 
-    if abs(step) == 2:
-        Δν0, Δcx0, Δz0 = move(cx, z, t, -1)
-        Δν1, Δcx1, Δz1 = move(cx + Δcx0, z + Δz0, t_next, 1)
-        Δν = Δν0 + Δν1
-        Δcx = Δcx0 + Δcx1
-        Δz = Δz0 + Δz1
-    elif abs(step) == 1:
-        Δν, Δcx, Δz = move(cx, z, t, step)
+    for i, (t, step, home, wander, accept) in enumerate(zip(istar, flip, home_s, wander_s, 
+                                                           np.log(np.random.rand(TRIALS)))):
+        # 不设左右边界
+        NPE = len(s)
+        if NPE == 0:
+            step = 1 # 只能创生
+            accept += np.log(4) # 惩罚
+        elif NPE == 1 and step == -1:
+            # 1 -> 0: 行动后从 0 脱出的几率大，需要鼓励
+            accept -= np.log(4)
 
-    if Δν >= accept:
-        cx += Δcx
-        z += Δz
+        if step == 1: # 创生
+            if home >= 0.5 and home <= N - 0.5: # p(w|s) 无定义
+                Δν, Δcx, Δz = move(*combine(A, cx, home), z, 1, mus, sig2s, A)
+                Δν += np.log(p1[int(home)]) - np.log(c_cha[int(home)]) - np.log(NPE + 1)
+                if Δν >= accept:
+                    s.append(home)
+            else:
+                Δν = -np.inf
+        else:
+            op = int(t * NPE) # 操作的 PE 编号
+            loc = s[op] # 待操作 PE 的位置
+            Δν, Δcx, Δz = move(*combine(A, cx, loc), z, -1, mus, sig2s, A)
+            if step == -1: # 消灭
+                Δν -= np.log(p1[int(loc)]) - np.log(c_cha[int(loc)]) - np.log(NPE)
 
-        if abs(step) == 2:
-            s[t] -= 1
-            s[t_next] += 1
-        elif abs(step) == 1:
-            s[t] += step # update state
-    else:
-        # reject proposal
-        step = 0
-        Δν = 0
+                if Δν >= accept:
+                    del s[op]
+            elif step == 2: # 移动
+                nloc = loc + wander # 待操作 PE 的新位置
+                if nloc >= 0.5 and nloc <= N - 0.5: # p(w|s) 无定义
+                    Δν1, Δcx1, Δz1 = move(*combine(A, cx + Δcx, nloc), z + Δz, 1, mus, sig2s, A)
+                    Δν += Δν1
+                    Δν += np.log(p1[int(nloc)]) - np.log(p1[int(loc)])
+                    if Δν >= accept:
+                        s[op] = nloc
+                        Δcx += Δcx1
+                        Δz += Δz1
+                else:
+                    Δν = -np.inf
 
-    return step, Δν
+        if Δν >= accept:
+            cx += Δcx
+            z += Δz
+            si1 = si + len(s)
+            s_history[si:si1]['step'] = i
+            s_history[si:si1]['loc'] = s
+            si = si1
+        else: # reject proposal
+            Δν = 0
+            step = 0
+        Δν_history[i] = Δν
+        flip[i] = step
+    return flip, Δν_history, s_history[:si1]
 
-def metropolis(ent, sample, mu0, d_tlist):
+def move(A_vec, c_vec, z, step, mus, sig2s, A):
+    '''
+    step
+    ====
+    A_vec: 行向量
+    c_vec: 行向量
+    1: 在 t 加一个 PE
+    -1: 在 t 减一个 PE
+    '''
+    fsig2s = step * sig2s
+    # Eq. (30) sig2s = 1 sigma^2 - 0 sigma^2
+    beta_under = (1 + fsig2s * np.dot(A_vec, c_vec))
+    beta = fsig2s / beta_under
+
+    # Eq. (31) # sign of mus[t] and sig2s[t] cancels
+    Δν = 0.5 * (beta * (z @ c_vec + mus / sig2s) ** 2 - mus ** 2 / fsig2s)
+    # sign of space factor in Eq. (31) is reversed.  Because Eq. (82) is in the denominator.
+    Δν -= 0.5 * np.log(beta_under) # space
+    # accept, prepare for the next
+    # Eq. (33) istar is now n_pre.  It crosses n_pre and n, thus is in vector form.
+    Δcx = -np.einsum('n,m,mp->np', beta * c_vec, c_vec, A, optimize=True)
+
+    # Eq. (34)
+    Δz = -step * A_vec * mus
+    return Δν, Δcx, Δz
+
+def metropolis(ent, sample, mu0, d_tlist, s_history):
     i_tlist = 0
+    si = 0
     for ie, e in enumerate(ent):
         time_fbmp_start = time.time()
         eid = e["TriggerNo"]
@@ -186,7 +231,10 @@ def metropolis(ent, sample, mu0, d_tlist):
         mu_t = abs(y.sum() / gmu)
         mu0[ie] = (eid, cid, mu_t)
         # Eq. (9) where the columns of A are taken to be unit-norm.
-        mus = np.sqrt(np.diag(np.matmul(A.T, A)))
+        mus = np.sqrt(np.diag(np.matmul(A.T, A))) # ~39
+        # elements of mus must be equal for continuous metropolis to function
+        assert np.std(mus) < 1e-6, "mus must be equal"
+        mus = mus[0]
         A = A / mus
 
         '''
@@ -201,7 +249,7 @@ def metropolis(ent, sample, mu0, d_tlist):
         p1 = mu_t * wff.convolve_exp_norm(tlist - t0_t, Tau, Sigma) / n
 
         sig2w = spe_pre[cid]['std'] ** 2
-        sig2s = (gsigma * mus / gmu) ** 2
+        sig2s = (mus * (gsigma / gmu)) ** 2 # ~94
 
         # Only for multi-gaussian with arithmetic sequence of mu and sigma
         # N: number of t bins
@@ -218,20 +266,19 @@ def metropolis(ent, sample, mu0, d_tlist):
         # mu = 0 => (y - A * mu -> z)
         z = y
 
-        # Metropolis on a grid
-        istar = np.random.choice(range(N), TRIALS, p=cha/np.sum(cha))
-        # -1 PE, +1 PE, 左移 PE, 右移 PE
-        flip = np.random.choice((-1, 1, -2, 2), TRIALS)
-        Δν_history = np.zeros(TRIALS) # list of Δν's
-        for i, accept in enumerate(np.log(np.random.uniform(size=TRIALS))):
-            step, Δν = grid(cx, p1, z, istar[i], N, sig2s, mus, flip[i], accept, A)
-            Δν_history[i] = Δν
-            flip[i] = step
+        p_cha = cha/np.sum(cha)
+        # Metropolis flow
+        flip, Δν_history, es_history = flow(cx, p1, z, N, sig2s, mus, A, p_cha)
 
         sample[ie*TRIALS:(ie+1)*TRIALS] = list(zip(np.repeat(eid, TRIALS), 
                                                    np.repeat(cid, TRIALS), 
-                                                   istar, flip, Δν_history))
+                                                   flip, Δν_history))
+        so = si + len(es_history)
+        es_history['TriggerNo'] = eid
+        s_history[si:so]  = es_history
+        si = so
     d_tlist.resize((o_tlist,))
+    s_history.resize((so,))
 
 with h5py.File(fopt, 'w') as opt:
     sample = opt.create_dataset('sample', shape=(N*TRIALS,), dtype=dt)
@@ -239,7 +286,10 @@ with h5py.File(fopt, 'w') as opt:
     d_tlist = opt.create_dataset('tlist', shape=(N*1024,), 
                                  dtype=[('TriggerNo', np.uint32), ('ChannelID', np.uint32), 
                                         ('t_s', np.float16), ('q_s', np.float32)], chunks=True)
-    metropolis(ent, sample, mu0, d_tlist)
+    s_history = opt.create_dataset('s_history', shape=(N*TRIALS*100,), 
+                                   dtype=d_history, chunks=True)
+                                   
+    metropolis(ent, sample, mu0, d_tlist, s_history)
     print('The output file path is {}'.format(fopt))
 
 print('Prediction generated, real time {0:.02f}s, cpu time {1:.02f}s'.format(time.time() - tic, time.process_time() - cpu_tic))
