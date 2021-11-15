@@ -24,7 +24,7 @@ reference = args.ref
 
 spe_pre = wff.read_model(reference, 1)
 with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
-    ent = ipt['Readout/Waveform'][:10]
+    ent = ipt['Readout/Waveform'][:]
     pelist = ipt['SimTriggerInfo/PEList'][:]
     t0_truth = ipt['SimTruth/T'][:]
     N = len(ent)
@@ -63,31 +63,7 @@ mu0_dt = [('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('mu_t', np.float6
 
 d_history = [('TriggerNo', np.uint32), ('ChannelID', np.uint32), 
              ('step', np.uint32), ('loc', np.float32)]
-TRIALS = 10000
-
-def move2(A, cx, z, t, step):
-    '''
-    把 t 处加 (step==1) 或减 (step==-1) 一个 PE
-    t 在 [0.5, N-0.5) 之间，以便向内插值
-    '''
-    mu2 = step * np.array((1-frac, frac))[:, np.newaxis] # mu_2 column vector
-    sig22 = step * mu2 @ mu2.T
-    sig22_inv = np.linalg.inv(sig22)
-    # Eq. (30) sig2s = 1 sigma^2 - 0 sigma^2
-    B_inv = sig22_inv + A[:, ti:(ti+2)].T @ cx[:, ti:(ti+2)]
-    B = np.linalg.inv(B_inv)
-
-    # Eq. (31) # sign of mus[t] and sig2s[t] cancels
-    resid = cx[:, ti:(ti+2)].T @ z + sig22_inv @ mu2
-    Δν = 0.5 * (resid.T @ B @ resid - mu2.T @ sig22_inv @ mu2)
-    Δν += 0.5 * np.log(np.linalg.det(B) * np.linalg.det(sig22_inv)) # space
-    # accept, prepare for the next
-    # Eq. (33) istar is now n_pre.  It crosses n_pre and n, thus is in vector form.
-    Δcx = -np.einsum('ni,ij,mj,mp->np', cx[:, ti:(ti+2)], beta, cx[:, ti:(ti+2)], A, optimize=True)
-
-    # Eq. (34)
-    Δz = -(A[:, ti:(ti+2)]  * mus[t]) @ mu2
-    return Δν, Δcx, Δz
+TRIALS = 2000
 
 def combine(A, cx, t):
     '''
@@ -98,29 +74,38 @@ def combine(A, cx, t):
     alpha = np.array((1 - frac, frac))
     return alpha @ A[:, ti:(ti+2)].T, alpha @ cx[:, ti:(ti+2)].T
 
-def flow(cx, p1, z, N, sig2s, mus, A, p_cha):
+def flow(cx, p1, z, N, sig2s, mus, A, p_cha, mu_t):
     '''
     flow
     ====
     连续时间游走
 
     s: list of PE locations
+    mu_t: LucyDDM 的估算 PE 数
     '''
-
-    # idx: [0, 1) 之间的随机数，用于标定哪个 PE 被点中
+    # idx: [0, 1) 之间的随机数，用于点中 PE
     istar = np.random.rand(TRIALS)
-    # t 的位置，取值为 [0, N)
-    s = []
+    # 同时可用于创生位置的选取
     c_cha = np.cumsum(p_cha)
     home_s = np.interp(istar, xp = np.insert(c_cha, 0, 0), fp = np.arange(N+1))
+
+    NPE0 = int(mu_t + 0.5) # 取整
+    # t 的位置，取值为 [0, N)
+    s = list(np.interp((np.arange(NPE0) + 0.5) / NPE0, 
+                       xp = np.insert(c_cha, 0, 0), fp = np.arange(N+1)))
+    for t in s:
+        Δν, Δcx, Δz = move(*combine(A, cx, t), z, 1, mus, sig2s, A)
+        cx += Δcx
+        z += Δz
+
+    si = 0
+    es_history = np.zeros(TRIALS * (NPE0 + 5) * N, dtype=d_history)
+
     wander_s = np.random.normal(size=TRIALS)
 
     # step: +1 创生一个 PE， -1 消灭一个 PE， +2 向左或向右移动
-    flip = np.random.choice((-1, 1, 2), TRIALS, p=np.array((1, 1, 2))/4)
+    flip = np.random.choice((-1, 1, 2), TRIALS, p=np.array((7, 7, 2))/16)
     Δν_history = np.zeros(TRIALS) # list of Δν's
-
-    si = 0
-    s_history = np.zeros(TRIALS * N, dtype=d_history)
 
     for i, (t, step, home, wander, accept) in enumerate(zip(istar, flip, home_s, wander_s, 
                                                            np.log(np.random.rand(TRIALS)))):
@@ -128,25 +113,25 @@ def flow(cx, p1, z, N, sig2s, mus, A, p_cha):
         NPE = len(s)
         if NPE == 0:
             step = 1 # 只能创生
-            accept += np.log(4) # 惩罚
+            accept += np.log(16/7) # 惩罚
         elif NPE == 1 and step == -1:
             # 1 -> 0: 行动后从 0 脱出的几率大，需要鼓励
-            accept -= np.log(4)
+            accept -= np.log(16/7)
 
         if step == 1: # 创生
-            if home >= 0.5 and home <= N - 0.5: # p(w|s) 无定义
+            if home >= 0.5 and home <= N - 0.5: 
                 Δν, Δcx, Δz = move(*combine(A, cx, home), z, 1, mus, sig2s, A)
-                Δν += np.log(p1[int(home)]) - np.log(c_cha[int(home)]) - np.log(NPE + 1)
+                Δν += np.log(p1[int(home)]) - np.log(p_cha[int(home)]) - np.log(NPE + 1)
                 if Δν >= accept:
                     s.append(home)
-            else:
+            else: # p(w|s) 无定义
                 Δν = -np.inf
         else:
             op = int(t * NPE) # 操作的 PE 编号
             loc = s[op] # 待操作 PE 的位置
             Δν, Δcx, Δz = move(*combine(A, cx, loc), z, -1, mus, sig2s, A)
             if step == -1: # 消灭
-                Δν -= np.log(p1[int(loc)]) - np.log(c_cha[int(loc)]) - np.log(NPE)
+                Δν -= np.log(p1[int(loc)]) - np.log(p_cha[int(loc)]) - np.log(NPE)
 
                 if Δν >= accept:
                     del s[op]
@@ -160,22 +145,22 @@ def flow(cx, p1, z, N, sig2s, mus, A, p_cha):
                         s[op] = nloc
                         Δcx += Δcx1
                         Δz += Δz1
-                else:
+                else: # p(w|s) 无定义
                     Δν = -np.inf
 
         if Δν >= accept:
             cx += Δcx
             z += Δz
             si1 = si + len(s)
-            s_history[si:si1]['step'] = i
-            s_history[si:si1]['loc'] = s
+            es_history[si:si1]['step'] = i
+            es_history[si:si1]['loc'] = s
             si = si1
         else: # reject proposal
             Δν = 0
             step = 0
         Δν_history[i] = Δν
         flip[i] = step
-    return flip, Δν_history, s_history[:si1]
+    return flip, Δν_history, es_history[:si1]
 
 def move(A_vec, c_vec, z, step, mus, sig2s, A):
     '''
@@ -267,8 +252,9 @@ def metropolis(ent, sample, mu0, d_tlist, s_history):
         z = y
 
         p_cha = cha/np.sum(cha)
+
         # Metropolis flow
-        flip, Δν_history, es_history = flow(cx, p1, z, N, sig2s, mus, A, p_cha)
+        flip, Δν_history, es_history = flow(cx, p1, z, N, sig2s, mus, A, p_cha, mu_t)
 
         sample[ie*TRIALS:(ie+1)*TRIALS] = list(zip(np.repeat(eid, TRIALS), 
                                                    np.repeat(cid, TRIALS), 

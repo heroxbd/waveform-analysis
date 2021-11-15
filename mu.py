@@ -22,12 +22,13 @@ def rescale(ent):
     '''
     eid, cid = ent.index[0]
     mu_t = mu0.loc[(eid, cid)][0]
+    NPE0 = int(mu_t + 0.5)
     NPE_truth = pe_count.loc[(eid, cid)]
     size = len(ent)
-    burn = size // 10
+    burn = size // 5
     steps = ent['flip'].values
     steps[np.abs(steps) == 2] = 0
-    NPE_evo = np.cumsum(steps)[burn:]
+    NPE_evo = np.cumsum(np.insert(steps, 0, NPE0))[burn:]
     NPE, counts = np.unique(NPE_evo, return_counts=True)
 
     freq = counts / (size - burn)
