@@ -35,6 +35,8 @@ import numdifftools as nd
 
 import wf_func as wff
 
+np.random.seed(7)
+
 global_start = time.time()
 cpu_global_start = time.process_time()
 
@@ -182,7 +184,7 @@ def time_numpyro(a0, a1):
 
 prior = True
 space = True
-n = 2
+n = 1
 tlist_pan = np.sort(np.unique(np.hstack(np.arange(0, window)[:, None] + np.linspace(0, 1, n, endpoint=False) - (n // 2) / n)))
 b_t0 = [0., 600.]
 
@@ -250,7 +252,7 @@ def fbmp_inference(a0, a1):
     dt = np.zeros((a1 - a0) * window, dtype=opdt)
     d_tot = np.zeros(a1 - a0).astype(int)
     d_max = np.zeros(a1 - a0).astype(int)
-    elbo = np.zeros(a1 - a0).astype(int)
+    elbo = np.zeros(a1 - a0)
     nu_truth = np.empty(a1 - a0)
     nu_max = np.empty(a1 - a0)
     num = np.zeros(a1 - a0).astype(int)
@@ -266,8 +268,15 @@ def fbmp_inference(a0, a1):
 
         # initialization
         mu_t = abs(wave.sum() / gmu)
-        A, y, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, Thres['lucyddm'], p, is_t0=True, is_delta=False, n=n, nshannon=1)
+        A, y, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, Thres['lucyddm'], p, is_t0=True, is_delta=False, n=n)
+        # assert len(np.unique(np.diff(tlist))) == 1
+        s_cha = np.cumsum(cha)
+        # moving average filter of size 2*n+1
+        cha = np.pad(s_cha[2*n+1:], (n+1, n), 'edge') - np.pad(s_cha[:-(2*n+1)], (n+1, n), 'edge')
+        cha += 1e-8 # for completeness of the random walk.
         mu_t = abs(y.sum() / gmu)
+
+        t0_t = t0_truth['T0'][i] # override with truth to debug mu
 
         truth = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
 
@@ -277,41 +286,40 @@ def fbmp_inference(a0, a1):
 
         # Eq. (9) where the columns of A are taken to be unit-norm.
         mus = np.sqrt(np.diag(np.matmul(A.T, A)))
+        assert np.std(mus) < 1e-4, 'mus must be equal'
+        mus = mus[0]
         A = A / mus
+        '''
+        A: basis dictionary
+        p1: prior probability for each bin.
+        sig2w: variance of white noise.
+        sig2s: variance of signal x_i.
+        mus: mean of signal x_i.
+        TRIALS: number of Metropolis steps.
+        '''
         p1 = mu_t * wff.convolve_exp_norm(tlist - t0_t, Tau, Sigma) / n + 1e-8
         # p1 = cha / cha.sum() * mu_t + 1e-8
-        p1 = p1 / p1.sum() * mu_t
+        # p1 = p1 / p1.sum() * mu_t
         sig2w = spe_pre[cid]['std'] ** 2
         sig2s = (gsigma * mus / gmu) ** 2
-        xmmse_star, nu_star, T_star, c_star, d_max_i, num_i = wff.fbmpr_fxn_reduced(y, A, sig2w, sig2s, mus, len(p1), p1=p1, truth=truth, i=i, left=left_wave, right=right_wave, tlist=tlist, gmu=gmu, para=p, prior=prior, space=space)
+
+        xmmse_star, nu_star, T_star, c_star, flip, num_i = wff.metropolis_fbmp(y, A, sig2w, sig2s, mus, p1, cha, mu_t, prior=prior, space=space)
+
         time_fbmp[i - a0] = time.time() - time_fbmp_start
 
-        la_truth = Mu * wff.convolve_exp_norm(tlist - t0_truth[i]['T0'], Tau, Sigma) / n + 1e-8
-        nu_space_prior = np.array([wff.nu_direct(y, A, c_star[j], mus, sig2s, sig2w, la_truth, prior=True, space=True) for j in range(num_i)])
+        p1_truth = Mu * wff.convolve_exp_norm(tlist - t0_truth[i]['T0'], Tau, Sigma) / n + 1e-8
+        nu_space_prior = np.array([wff.nu_direct(y, A, c_star[j], mus, sig2s, sig2w, p1_truth, prior=True, space=True) for j in range(num_i)])
 
         nx = np.sum([(tlist - 0.5 / n <= truth['HitPosInWindow'][j]) * (tlist + 0.5 / n > truth['HitPosInWindow'][j]) for j in range(len(truth))], axis=0)
-        cc = np.sum([np.where(tlist - 0.5 / n < truth['HitPosInWindow'][j], np.sqrt(truth['Charge'][j]), 0) * np.where(tlist + 0.5 / n > truth['HitPosInWindow'][j], np.sqrt(truth['Charge'][j]), 0) for j in range(len(truth))], axis=0)
-        pp = np.arange(left_wave, right_wave)
-        wav_ans = np.sum([np.where(pp > truth['HitPosInWindow'][j], wff.spe(pp - truth['HitPosInWindow'][j], tau=p[0], sigma=p[1], A=p[2]) * truth['Charge'][j] / gmu, 0) for j in range(len(truth))], axis=0)
         nu_truth[i - a0] = wff.nu_direct(y, A, nx, mus, sig2s, sig2w, p1, prior=prior, space=space)
         nu = np.array([wff.nu_direct(y, A, c_star[j], mus, sig2s, sig2w, p1, prior=prior, space=space) for j in range(num_i)])
-        assert abs(nu - nu_star).max() < 1e-6
-        nu_max[i - a0] = nu[0]
-        rss_truth = np.power(wav_ans - np.matmul(A, cc / gmu * mus), 2).sum()
-        rss = np.array([np.power(wav_ans - np.matmul(A, xmmse_star[j]), 2).sum() for j in range(num_i)])
+        nu_max[i - a0] = nu.max()
 
         maxindex = nu_star.argmax()
         xmmse_most = np.clip(xmmse_star[maxindex], 0, np.inf)
         pet = np.repeat(tlist[xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
-        cha = np.repeat(xmmse_most[xmmse_most > 0] / mus[xmmse_most > 0] / c_star[maxindex][xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
+        cha = np.repeat(xmmse_most[xmmse_most > 0] / mus / c_star[maxindex][xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
 
-        # c_star_truth = np.sum([np.where(tlist - 0.5 / n < truth['HitPosInWindow'][j], 1, 0) * np.where(tlist + 0.5 / n > truth['HitPosInWindow'][j], 1, 0) for j in range(len(truth))], axis=0)
-        # if c_star_truth.sum() == 0:
-        #     c_star_truth[0] = 1
-        # As_truth = np.zeros((1, len(tlist_pan)))
-        # As_truth[:, np.isin(tlist_pan, tlist)] = c_star_truth[None, :]
-        # assert sum(np.sum(As_truth, axis=0) > 0) > 0
-        # mu, t0, _ = optit0mu(len(truth), [t0_truth[i]['T0']], [np.array([0.])], [As_truth], [p1])
         As = np.zeros((num_i, len(tlist_pan)))
         As[:, np.isin(tlist_pan, tlist)] = c_star
         assert sum(np.sum(As, axis=0) > 0) > 0
@@ -322,13 +330,12 @@ def fbmp_inference(a0, a1):
             spacefactor = np.array([-0.5 * np.log(np.linalg.det(wff.Phi(y, A, c_star[j], mus, sig2s, sig2w, p1))) for j in range(num_i)])
         if prior:
             priorfactor = -poisson.logpmf(c_star, p1).sum(axis=1)
-        nu_star = nu_star + priorfactor + spacefactor
-        # nu_star = np.log(np.exp(nu_star - nu_star.max()) / np.sum(np.exp(nu_star - nu_star.max())))
+        nu_star = priorfactor
         mu, t0, _ = optit0mu(mu_t, [t0_t], [nu_star], [As])
         mu_i, t0_i, _ = optit0mu(mu_t, [t0_t], [np.array([0.])], [As[maxindex][None, :]])
 
-        d_tot[i - a0] = len(p1)
-        d_max[i - a0] = d_max_i
+        d_tot[i - a0] = num_i
+        d_max[i - a0] = maxindex
         elbo[i - a0] = wff.elbo(nu_space_prior)
         pet, cha = wff.clip(pet, cha, Thres[method])
         cha = cha * gmu
@@ -453,7 +460,7 @@ elif method == 'fbmp':
     gs = gridspec.GridSpec(3, 2, figure=ff, left=0.1, right=0.95, top=0.95, bottom=0.1, wspace=0.3, hspace=0.3)
     # ff.tight_layout()
     ax = ff.add_subplot(gs[0, 0])
-    h = ax.hist2d(d_tot, d_max, bins=(np.linspace(0, d_tot.max(), 51), np.linspace(0, d_tot.max(), 51)), norm=LogNorm())
+    h = ax.hist2d(d_tot, d_max, bins=(np.arange(d_tot.max()), np.arange(d_tot.max())), norm=LogNorm())
     ff.colorbar(h[3], ax=ax, aspect=50)
     ax.set_xlabel('d_tot')
     ax.set_ylabel('d_max')

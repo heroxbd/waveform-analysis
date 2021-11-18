@@ -46,6 +46,8 @@ gsigma = 40.
 std = 1.
 p = [8., 0.5, 24.]
 Thres = {'mcmc':std / gsigma, 'xiaopeip':0, 'lucyddm':0.2, 'fbmp':0, 'fftrans':0.1, 'findpeak':0.1, 'threshold':0, 'firstthres':0, 'omp':0}
+d_history = [('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('step', np.uint32), ('loc', np.float32)]
+TRIALS = 2000
 
 def xiaopeip_old(wave, spe_pre, eta=0):
     l = len(wave)
@@ -193,7 +195,140 @@ def findpeak(wave, spe_pre):
         cha = np.array([1])
     return pet, cha
 
-def fbmpr_fxn_reduced(y, A, sig2w, sig2s, mus, D, p1, truth=None, i=None, left=None, right=None, tlist=None, gmu=None, para=None, prior=False, space=True, plot=False):
+def combine(A, cx, t):
+    '''
+    combine neighbouring dictionaries to represent sub-bin locations
+    '''
+    frac, ti = np.modf(t - 0.5) # 
+    ti = int(ti)
+    alpha = np.array((1 - frac, frac))
+    return alpha @ A[:, ti:(ti+2)].T, alpha @ cx[:, ti:(ti+2)].T
+
+def move(A_vec, c_vec, z, step, mus, sig2s, A):
+    '''
+    A_vec: 行向量
+    c_vec: 行向量
+
+    step
+    ====
+    1: 在 t 加一个 PE
+    -1: 在 t 减一个 PE
+    '''
+    fsig2s = step * sig2s
+    # Eq. (30) sig2s = 1 sigma^2 - 0 sigma^2
+    beta_under = (1 + fsig2s * np.dot(A_vec, c_vec))
+    beta = fsig2s / beta_under
+
+    # Eq. (31) # sign of mus[t] and sig2s[t] cancels
+    Δν = 0.5 * (beta * (z @ c_vec + mus / sig2s) ** 2 - mus ** 2 / fsig2s)
+    # sign of space factor in Eq. (31) is reversed.  Because Eq. (82) is in the denominator.
+    Δν -= 0.5 * np.log(beta_under) # space
+    # accept, prepare for the next
+    # Eq. (33) istar is now n_pre.  It crosses n_pre and n, thus is in vector form.
+    Δcx = -np.einsum('n,m,mp->np', beta * c_vec, c_vec, A, optimize=True)
+
+    # Eq. (34)
+    Δz = -step * A_vec * mus
+    return Δν, Δcx, Δz
+
+def flow(cx, p1, z, N, sig2s, mus, A, cha, mu_t):
+    '''
+    flow
+    ====
+    连续时间游走
+    cx: Cov^-1 * A, 详见 FBMP
+    s: list of PE locations
+    mu_t: LucyDDM 的估算 PE 数
+    z: residue waveform
+    '''
+    # istar [0, 1) 之间的随机数，用于点中 PE
+    istar = np.random.rand(TRIALS)
+    # 同时可用于创生位置的选取
+    p_cha = cha / np.sum(cha)
+    c_cha = np.cumsum(p_cha) # cha: charge; p_cha: pdf of LucyDDM charge (由 charge 引导的 PE 强度流先验)
+    home_s = np.interp(istar, xp=np.insert(c_cha, 0, 0), fp=np.arange(N+1)) # 根据 p_cha 采样得到的 PE 序列。供以后的产生过程使用。这两行是使用了 InverseCDF 算法进行的MC采样。
+
+    NPE0 = int(mu_t + 0.5) # mu_t: μ_total，LucyDDM 给出的 μ 猜测；NPE0 是 PE 序列初值 s_0 的 PE 数。
+    # t 的位置，取值为 [0, N)
+    s = list(np.interp((np.arange(NPE0) + 0.5) / NPE0, xp=np.insert(c_cha, 0, 0), fp=np.arange(N+1))) # MCMC 链的 PE configuration 初值 s0
+    ν = 0
+    for t in s: # 从空序列开始逐渐加 PE 以计算 s0 的 ν, cx, z
+        Δν, Δcx, Δz = move(*combine(A, cx, t), z, 1, mus, sig2s, A)
+        ν += Δν
+        cx += Δcx
+        z += Δz
+
+    # s 的记录方式：使用定长 compound array es_history 存储(存在 'loc' 里)，但由于 s 实际上变长，每一个有相同  'step' 的 'loc' 属于一个 s，si 作为临时变量用于分割成不定长片段，每一段是一个 s。
+    si = 0
+    es_history = np.zeros(TRIALS * (NPE0 + 5) * N, dtype=d_history)
+
+    wander_s = np.random.normal(size=TRIALS)
+
+    # step: +1 创生一个 PE， -1 消灭一个 PE， +2 向左或向右移动
+    flip = np.random.choice((-1, 1, 2), TRIALS, p=np.array((7, 7, 2)) / 16)
+    Δν_history = np.zeros(TRIALS) # list of Δν's
+    xmmse_list = []
+    T_list = []
+
+    for i, (t, step, home, wander, accept) in enumerate(zip(istar, flip, home_s, wander_s, np.log(np.random.rand(TRIALS)))):
+        # 不设左右边界
+        NPE = len(s)
+        if NPE == 0:
+            step = 1 # 只能创生
+            accept += np.log(16/7) # 惩罚
+        elif NPE == 1 and step == -1:
+            # 1 -> 0: 行动后从 0 脱出的几率大，需要鼓励
+            accept -= np.log(16/7)
+
+        if step == 1: # 创生
+            if home >= 0.5 and home <= N - 0.5: 
+                Δν, Δcx, Δz = move(*combine(A, cx, home), z, 1, mus, sig2s, A)
+                Δν += np.log(p1[int(home)]) - np.log(p_cha[int(home)]) - np.log(NPE + 1)
+                if Δν >= accept:
+                    s.append(home)
+            else: # p(w|s) 无定义
+                Δν = -np.inf
+        else:
+            op = int(t * NPE) # 操作的 PE 编号
+            loc = s[op] # 待操作 PE 的位置
+            Δν, Δcx, Δz = move(*combine(A, cx, loc), z, -1, mus, sig2s, A)
+            if step == -1: # 消灭
+                Δν -= np.log(p1[int(loc)]) - np.log(p_cha[int(loc)]) - np.log(NPE)
+                if Δν >= accept:
+                    del s[op]
+            elif step == 2: # 移动
+                nloc = loc + wander # 待操作 PE 的新位置
+                if nloc >= 0.5 and nloc <= N - 0.5: # p(w|s) 无定义
+                    Δν1, Δcx1, Δz1 = move(*combine(A, cx + Δcx, nloc), z + Δz, 1, mus, sig2s, A)
+                    Δν += Δν1
+                    Δν += np.log(p1[int(nloc)]) - np.log(p1[int(loc)])
+                    if Δν >= accept:
+                        s[op] = nloc
+                        Δcx += Δcx1
+                        Δz += Δz1
+                else: # p(w|s) 无定义
+                    Δν = -np.inf
+
+        if Δν >= accept:
+            cx += Δcx
+            z += Δz
+            si1 = si + len(s)
+            assist = np.zeros(N)
+            T_list.append(np.sort(np.digitize(s, bins=np.arange(N)) - 1))
+            t, c = np.unique(T_list[-1], return_counts=True)
+            assist[t] = mus * c + sig2s * c * np.dot(z, cx[:, t])
+            xmmse_list.append(assist)
+            es_history[si:si1]['step'] = i
+            es_history[si:si1]['loc'] = s
+            si = si1
+        else: # reject proposal
+            Δν = 0
+            step = 0
+        Δν_history[i] = Δν
+        flip[i] = step
+    return flip, [Δν_history, ν], es_history[:si1], xmmse_list, T_list
+
+def metropolis_fbmp(y, A, sig2w, sig2s, mus, p1, cha, mu_t, prior=False, space=True):
     '''
     p1: prior probability for each bin.
     sig2w: variance of white noise.
@@ -202,15 +337,6 @@ def fbmpr_fxn_reduced(y, A, sig2w, sig2s, mus, D, p1, truth=None, i=None, left=N
     '''
     # Only for multi-gaussian with arithmetic sequence of mu and sigma
     M, N = A.shape
-
-    psy_thresh = 1e-1
-    # upper limit of number of PEs.
-    P = max(math.ceil(min(M, p1.sum() + 3 * np.sqrt(p1.sum()))), 1)
-
-    T = np.full((P, D), 0)
-    nu = np.full((P, D), -np.inf)
-    xmmse = np.zeros((P, D, N))
-    cc = np.zeros((P, D, N))
 
     # nu_root: nu for all s_n=0.
     # no Gaussian space factor
@@ -221,152 +347,23 @@ def fbmpr_fxn_reduced(y, A, sig2w, sig2s, mus, D, p1, truth=None, i=None, left=N
         nu_root += poisson.logpmf(0, p1).sum()
     # Eq. (29)
     cx_root = A / sig2w
-    # Eq. (30) sig2s = 1 sigma^2 - 0 sigma^2
-    betaxt_root = sig2s / (1 + sig2s * np.einsum('ij,ij->j', A, cx_root, optimize=True))
-    # Eq. (31)
-    # no Gaussian space factor
-    nuxt_root = nu_root + 0.5 * (betaxt_root * (y @ cx_root + mus / sig2s) ** 2 - mus ** 2 / sig2s)
-    if space:
-        nuxt_root += 0.5 * np.log(betaxt_root / sig2s)
-    if prior:
-        nuxt_root += poisson.logpmf(1, p1) - poisson.logpmf(0, p1)
-    pan_root = np.zeros(N)
+    # mu = 0 => (y - A * mu -> z)
+    z = y.copy()
 
-    # Repeated Greedy Search
-    for d in range(D):
-        nuxt = nuxt_root.copy()
-        z = y.copy()
-        cx = cx_root.copy()
-        betaxt = betaxt_root.copy()
-        pan = pan_root.copy()
-        for p in range(P):
-            # look for duplicates of nu and nuxt, set to -inf.
-            # only inspect the same number of PEs in Row p.
-            nuxtshadow = np.where(np.sum(np.abs(nuxt - nu[p:(p+1), :d].T) < 1e-4, axis=0), -np.inf, nuxt)
-            nustar = max(nuxtshadow)
-            istar = np.argmax(nuxtshadow)
-            nu[p, d] = nustar
-            T[p, d] = istar
-            pan[istar] += 1
-            # Eq. (33)
-            cx -= np.einsum('n,m,mp->np', betaxt[istar] * cx[:, istar], cx[:, istar], A, optimize=True)
+    # Metropolis flow
+    flip, Δν_history, es_history, xmmse_list, T_list = flow(cx_root, p1, z, N, sig2s, mus, A, cha, mu_t)
+    steps = np.unique(es_history['step'])
+    num = len(T_list)
 
-            # Eq. (34)
-            z -= A[:, istar] * mus[istar]
-            assist = np.zeros(N)
-            t, c = np.unique(T[:p+1, d], return_counts=True)
-            assist[t] = mus[t] * c + sig2s[t] * c * np.dot(z, cx[:, t])
-            cc[p, d][t] = c
-            xmmse[p, d] = assist
-
-            # Eq. (30)
-            betaxt = sig2s / (1 + sig2s * np.sum(A * cx, axis=0))
-            # Eq. (31)
-            # no Gaussian space factor
-            nuxt = nustar + 0.5 * (betaxt * (z @ cx + mus / sig2s) ** 2 - mus ** 2 / sig2s)
-            if space:
-                nuxt += 0.5 * np.log(betaxt / sig2s)
-            if prior:
-                nuxt += poisson.logpmf(pan + 1, mu=p1) - poisson.logpmf(pan, mu=p1)
-            nuxt[np.isnan(nuxt)] = -np.inf
-            # nuxt[t] = -np.inf
-    nu = nu.T.flatten()
-
-    indx = np.argsort(nu)[::-1]
-    d_max = math.floor(indx[0] // P) + 1
-    num = min(math.ceil(np.sum(nu > nu.max() + np.log(psy_thresh))), D * P)
-    nu_star = nu[indx[:num]]
-    psy_star = np.exp(nu_star - nu_star.max()) / np.sum(np.exp(nu_star - nu_star.max()))
-    T_star = [np.sort(T[:(indx[k] % P) + 1, indx[k] // P]) for k in range(num)]
-    xmmse_star = np.empty((num, N))
-    for k in range(num):
-        xmmse_star[k] = xmmse[indx[k] % P, indx[k] // P]
-    
+    burn = num // 5
+    xmmse_star = np.vstack(xmmse_list)
     c_star = np.zeros_like(xmmse_star, dtype=int)
     for k in range(num):
-        t, c = np.unique(T_star[k], return_counts=True)
+        t, c = np.unique(T_list[k], return_counts=True)
         c_star[k, t] = c
+    nu_star = np.cumsum(Δν_history[0][steps]) + nu_root + Δν_history[1]
 
-    if plot:
-        cnorm = colors.Normalize(vmin=0, vmax=psy_star[0])
-        cmap = cm.ScalarMappable(norm=cnorm, cmap=cm.Blues)
-        cmap.set_array([])
-
-        fig = plt.figure(figsize=(16, 16))
-        fig.tight_layout()
-        gs = gridspec.GridSpec(3, 2, figure=fig, left=0.1, right=0.9, top=0.95, bottom=0.1, wspace=0.2, hspace=0.2)
-        ax = fig.add_subplot(gs[0, :])
-        # cp = ax.imshow(nu - nu.min() + 1, aspect='auto', norm=colors.LogNorm())
-        cp = ax.imshow(nu, aspect='auto')
-        fig.colorbar(cp, ax=ax)
-        ax.set_xticks(np.arange(D))
-        ax.set_xticklabels(np.arange(1, D + 1).astype(str))
-        ax.set_yticks(np.arange(P))
-        ax.set_yticklabels(np.arange(1, P + 1).astype(str))
-        ax.set_xlabel('D')
-        ax.set_ylabel('P')
-        ax.scatter([ind // P for ind in indx[:num]], [ind % P for ind in indx[:num]], c=psy_star)
-        ax.scatter(indx[0] // P, indx[0] % P, s=36.0, marker='o', facecolors='none', edgecolors='r')
-        ax.hlines(len(truth) - 1, -0.5, D - 0.5, color='g')
-
-        ax = fig.add_subplot(gs[1, 0])
-        for k in range(1, num + 1):
-            ax.plot(np.arange(1, P + 1), tlist[T[:, indx[num - k] // P]], c=cmap.to_rgba(psy_star[num - k]))
-        fig.colorbar(cmap, ticks=np.arange(0, 1, 0.1))
-        ax.scatter([ind % P + 1 for ind in indx[:num]], [tlist[T[indx[k] % P, indx[k] // P]] for k in range(num)], s=psy_star / psy_star[0] * 1000, marker='o', facecolors='none', edgecolors='r')
-        ax.set_xticks(np.arange(1, P + 1))
-        ax.set_xticklabels(np.arange(1, P + 1).astype(str))
-        ax.set_xlabel('P')
-        ax.set_ylabel('t/ns')
-
-        ax = fig.add_subplot(gs[1, 1])
-        ax.plot(np.arange(left, right), y, c='k')
-        ax2 = ax.twinx()
-        ax2.vlines(tlist, 0, xmmse[indx[0] % P, indx[0] // P] / mus, color='r')
-        ax2.scatter(tlist, np.zeros_like(tlist), color='r')
-        for t in T[:(indx[0] % P) + 1, indx[0] // P]:
-            xx = np.zeros_like(xmmse[0, 0])
-            xx[t] = xmmse[indx[0] % P, indx[0] // P][t]
-            ax.plot(np.arange(left, right), np.dot(A, xx), 'r')
-        for k in range(1, num + 1):
-            ax.plot(np.arange(left, right), np.dot(A, xmmse[indx[num - k] % P, indx[num - k] // P]), c=cmap.to_rgba(psy_star[num - k]))
-        ax2.plot(tlist, p1 / p1.max(), 'k--', alpha=0.5)
-        ax.set_xlabel('t/ns')
-        ax.set_ylabel('Voltage/V')
-        ax2.set_ylabel('Charge/nsmV')
-        xmin, xmax = ax.get_xlim()
-        align.yaxes(ax, 0, ax2, 0)
-
-        ax = fig.add_subplot(gs[2, 0])
-        for k in range(1, num + 1):
-            ax.vlines(tlist, 0, xmmse[indx[num - k] % P, indx[num - k] // P] / mus, color=cmap.to_rgba(psy_star[num - k]))
-        fig.colorbar(cmap, ticks=np.arange(0, 1, 0.1))
-        ax.set_xlim(xmin, xmax)
-        ax.set_xlabel('t/ns')
-        ax.set_ylabel('Charge/nsmV')
-
-        ax = fig.add_subplot(gs[2, 1])
-        ax.plot(np.arange(left, right), y, c='b')
-        ax2 = ax.twinx()
-        ax2.vlines(truth['HitPosInWindow'], 0, truth['Charge'] / gmu, color='k')
-        ax2.scatter(tlist, np.zeros_like(tlist), color='r')
-        for t, c in zip(truth['HitPosInWindow'], truth['Charge']):
-            ax.plot(t + np.arange(80), spe(np.arange(80), para[0], para[1], para[2]) * c / gmu, c='g')
-        ax2.plot(tlist, p1 / p1.max(), 'k--', alpha=0.5)
-        ax.set_xlabel('t/ns')
-        ax.set_ylabel('Voltage/V')
-        ax2.set_ylabel('Charge/nsmV')
-        align.yaxes(ax, 0, ax2, 0)
-        fig.savefig('t/' + str(i) + '.png')
-        plt.close()
-
-    # num += 1
-    # nu_star = np.append(nu_star, nu_root)
-    # T_star += [np.empty(0)]
-    # xmmse_star = np.append(xmmse_star, np.zeros(N))
-    # c_star = np.append(c_star, np.zeros(N, dtype=int))
-
-    return xmmse_star, nu_star, T_star, c_star, d_max, num
+    return xmmse_star[burn:, :], nu_star[burn:], T_list[burn:], c_star[burn:, :], flip[burn:], num - burn
 
 def nu_direct(y, A, nx, mus, sig2s, sig2w, la, prior=True, space=True):
     M, N = A.shape
@@ -388,8 +385,8 @@ def Phi(y, A, nx, mus, sig2s, sig2w, la):
 def elbo(nu_star_prior):
     q = np.exp(nu_star_prior - nu_star_prior.max()) / np.sum(np.exp(nu_star_prior - nu_star_prior.max()))
     e = np.sum(q * nu_star_prior) - np.sum(q * np.log(q))
-    e_star = special.logsumexp(nu_star_prior)
-    assert abs(e_star - e) < 1e-6
+    # e_star = special.logsumexp(nu_star_prior)
+    # assert abs(e_star - e) < 1e-4
     return e
 
 def rss_alpha(alpha, outputs, inputs, mnecpu):
@@ -506,13 +503,13 @@ def likelihoodt0(hitt, char, gmu, Tau, Sigma, mode='charge', is_delta=False):
         t0delta = abs(opti.fmin_l_bfgs_b(logLvdelta, x0=[tlist[np.argmin(np.abs(logLv_tlist - logL(t0) - 0.5))]], approx_grad=True, bounds=[b], maxfun=500000)[0] - t0)
     return t0, t0delta
 
-def initial_params(wave, spe_pre, Tau, Sigma, gmu, Thres, p, nsp=4, nstd=3, is_t0=False, is_delta=False, n=1, nshannon=1):
-    hitt, char = lucyddm(wave[::nshannon], spe_pre['spe'][::nshannon])
+def initial_params(wave, spe_pre, Tau, Sigma, gmu, Thres, p, nsp=4, nstd=3, is_t0=False, is_delta=False, n=1):
+    hitt, char = lucyddm(wave, spe_pre['spe'])
     hitt, char = clip(hitt, char, Thres)
-    char = char / char.sum() * np.clip(np.abs(wave[::nshannon].sum()), 1e-6, np.inf)
-    tlist = np.unique(np.clip(np.hstack(hitt[:, None] + np.arange(-nsp, nsp+1)), 0, len(wave[::nshannon]) - 1))
+    char = char / char.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
+    tlist = np.unique(np.clip(np.hstack(hitt[:, None] + np.arange(-nsp, nsp+1)), 0, len(wave) - 1))
 
-    index_prom = np.hstack([np.argwhere(savgol_filter(wave, 11 * (nshannon if nshannon % 2 == 1 else nshannon + 1), 4) > nstd * spe_pre['std']).flatten(), hitt * nshannon])
+    index_prom = np.hstack([np.argwhere(savgol_filter(wave, 11, 4) > nstd * spe_pre['std']).flatten(), hitt])
     left_wave = round(np.clip(index_prom.min() - 3 * spe_pre['mar_l'], 0, len(wave) - 1))
     right_wave = round(np.clip(index_prom.max() + 3 * spe_pre['mar_r'], 0, len(wave) - 1))
     wave = wave[left_wave:right_wave]
@@ -523,7 +520,7 @@ def initial_params(wave, spe_pre, Tau, Sigma, gmu, Thres, p, nsp=4, nstd=3, is_t
     tlist = np.unique(np.sort(np.hstack(tlist[:, None] + np.linspace(0, 1, n, endpoint=False) - (n // 2) / n)))
     if len(tlist) != 1:
         assert abs(np.diff(tlist).min() - 1 / n) < 1e-3, 'tlist anomalous'
-    t_auto = (np.arange(left_wave, right_wave) / nshannon)[:, None] - tlist
+    t_auto = np.arange(left_wave, right_wave)[:, None] - tlist
     A = spe((t_auto + np.abs(t_auto)) / 2, p[0], p[1], p[2])
 
     t0_init = None
