@@ -363,7 +363,11 @@ def metropolis_fbmp(y, A, sig2w, sig2s, mus, p1, cha, mu_t, prior=False, space=T
         c_star[k, t] = c
     nu_star = np.cumsum(Δν_history[0][steps]) + nu_root + Δν_history[1]
 
-    return xmmse_star[burn:, :], nu_star[burn:], T_list[burn:], c_star[burn:, :], flip[burn:], num - burn
+    flip[np.abs(flip) == 2] = 0 # 平移不改变 PE 数
+    NPE0 = int(mu_t + 0.5)
+    NPE_evo = np.cumsum(np.insert(flip, 0, NPE0))[burn:]
+
+    return xmmse_star[burn:, :], nu_star[burn:], T_list[burn:], c_star[burn:, :], NPE_evo, num - burn
 
 def nu_direct(y, A, nx, mus, sig2s, sig2w, la, prior=True, space=True):
     M, N = A.shape

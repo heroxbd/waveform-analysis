@@ -303,7 +303,7 @@ def fbmp_inference(a0, a1):
         sig2w = spe_pre[cid]['std'] ** 2
         sig2s = (gsigma * mus / gmu) ** 2
 
-        xmmse_star, nu_star, T_star, c_star, flip, num_i = wff.metropolis_fbmp(y, A, sig2w, sig2s, mus, p1, cha, mu_t, prior=prior, space=space)
+        xmmse_star, nu_star, T_star, c_star, NPE_evo, num_i = wff.metropolis_fbmp(y, A, sig2w, sig2s, mus, p1, cha, mu_t, prior=prior, space=space)
 
         time_fbmp[i - a0] = time.time() - time_fbmp_start
 
@@ -331,7 +331,13 @@ def fbmp_inference(a0, a1):
         if prior:
             priorfactor = -poisson.logpmf(c_star, p1).sum(axis=1)
         nu_star = priorfactor
-        mu, t0, _ = optit0mu(mu_t, [t0_t], [nu_star], [As])
+
+        NPE, counts = np.unique(NPE_evo, return_counts=True)
+        loggN = -NPE * np.log(mu_t) + np.log(counts)
+        rst = minimize_scalar(lambda μ: μ - logsumexp(loggN + NPE * np.log(μ)),
+                              bounds=(NPE[0], NPE[-1]))
+        mu = rst.x
+
         mu_i, t0_i, _ = optit0mu(mu_t, [t0_t], [np.array([0.])], [As[maxindex][None, :]])
 
         d_tot[i - a0] = num_i
