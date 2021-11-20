@@ -188,7 +188,8 @@ n = 1
 tlist_pan = np.sort(np.unique(np.hstack(np.arange(0, window)[:, None] + np.linspace(0, 1, n, endpoint=False) - (n // 2) / n)))
 b_t0 = [0., 600.]
 
-def likelihood(mu, t0, As_k, nu_star_k):
+def likelihood(mu, t0, As_k, nu_star_k, tlist_k):
+    # a = wff.convolve_exp_norm(tlist_k - t0, Tau, Sigma) / n + 1e-8
     a = wff.convolve_exp_norm(tlist_pan - t0, Tau, Sigma) / n + 1e-8 # use tlist_pan not tlist
     # a *= mu / a.sum()
     a *= mu
@@ -198,7 +199,7 @@ def likelihood(mu, t0, As_k, nu_star_k):
 def sum_mu_likelihood(mu, t0_list, As_list, nu_star_list):
     return np.sum([likelihood(mu, t0_list[k], As_list[k], nu_star_list[k]) for k in range(len(t0_list))])
 
-def optit0mu(mu, t0, nu_star, As, mu_init=None):
+def optit0mu(mu, t0, nu_star, As, tlist, mu_init=None):
     l = len(t0)
     mulist = np.arange(max(1e-8, mu - 2 * np.sqrt(mu)), mu + 2 * np.sqrt(mu), 1e-1)
     b_mu = [max(1e-8, mu - 5 * np.sqrt(mu)), mu + 5 * np.sqrt(mu)]
@@ -209,11 +210,11 @@ def optit0mu(mu, t0, nu_star, As, mu_init=None):
     if mu_init is None:
         mu_init = np.empty(l)
         for k in range(l):
-            mu_init[k] = mulist[np.array([likelihood(mulist[j], t0[k], As[k], nu_star[k]) for j in range(len(mulist))]).argmin()]
-            t0_init = t0list[k][np.array([likelihood(mu_init[k], t0list[k][j], As[k], nu_star[k]) for j in range(len(t0list[k]))]).argmin()]
-            likelihood_x = lambda x, As, nu_star: likelihood(x[0], x[1], As, nu_star)
-            t0[k] = opti.fmin_l_bfgs_b(likelihood_x, args=(As[k], nu_star[k]), x0=[mu_init[k], t0_init], approx_grad=True, bounds=[b_mu, b_t0], maxfun=50000)[0][1]
-        Likelihood = lambda mu: np.sum([likelihood(mu, t0[k], As[k], nu_star[k]) for k in range(l)])
+            mu_init[k] = mulist[np.array([likelihood(mulist[j], t0[k], As[k], nu_star[k], tlist[k]) for j in range(len(mulist))]).argmin()]
+            t0_init = t0list[k][np.array([likelihood(mu_init[k], t0list[k][j], As[k], nu_star[k], tlist[k]) for j in range(len(t0list[k]))]).argmin()]
+            likelihood_x = lambda x, As, nu_star, tlist: likelihood(x[0], x[1], As, nu_star, tlist)
+            t0[k] = opti.fmin_l_bfgs_b(likelihood_x, args=(As[k], nu_star[k], tlist[k]), x0=[mu_init[k], t0_init], approx_grad=True, bounds=[b_mu, b_t0], maxfun=50000)[0][1]
+        Likelihood = lambda mu: np.sum([likelihood(mu, t0[k], As[k], nu_star[k], tlist[k]) for k in range(l)])
         mu, fval, _ = opti.fmin_l_bfgs_b(Likelihood, x0=[np.mean(mu_init)], approx_grad=True, bounds=[b_mu], maxfun=50000)
     else:
         def Likelihood(mu, t0_list, As_list, nu_star_list):
@@ -330,15 +331,16 @@ def fbmp_inference(a0, a1):
             spacefactor = np.array([-0.5 * np.log(np.linalg.det(wff.Phi(y, A, c_star[j], mus, sig2s, sig2w, p1))) for j in range(num_i)])
         if prior:
             priorfactor = -poisson.logpmf(c_star, p1).sum(axis=1)
-        nu_star = priorfactor
 
-        NPE, counts = np.unique(NPE_evo, return_counts=True)
-        loggN = -NPE * np.log(mu_t) + np.log(counts)
-        rst = minimize_scalar(lambda μ: μ - logsumexp(loggN + NPE * np.log(μ)),
-                              bounds=(NPE[0], NPE[-1]))
-        mu = rst.x
+        nu_star = -poisson.logpmf(As, mu_t * wff.convolve_exp_norm(tlist_pan - t0_t, Tau, Sigma) / n + 1e-8).sum(axis=1)
 
-        mu_i, t0_i, _ = optit0mu(mu_t, [t0_t], [np.array([0.])], [As[maxindex][None, :]])
+        # NPE, counts = np.unique(NPE_evo, return_counts=True)
+        # loggN = -NPE * np.log(mu_t) + np.log(counts)
+        # rst = opti.minimize_scalar(lambda μ: μ - special.logsumexp(loggN + NPE * np.log(μ)), bounds=(NPE[0], NPE[-1]))
+        # mu = rst.x
+
+        mu, t0, _ = optit0mu(mu_t, [t0_t], [nu_star], [As], [tlist])
+        mu_i, t0_i, _ = optit0mu(mu_t, [t0_t], [np.array([0.])], [As[maxindex][None, :]], [tlist])
 
         d_tot[i - a0] = num_i
         d_max[i - a0] = maxindex
@@ -350,7 +352,7 @@ def fbmp_inference(a0, a1):
         mu_wav[i - a0] = mu
         mu_cha[i - a0] = mu_i
         mu_kl[i - a0] = cha.sum()
-        num[i - a0] = num_i
+        num[i - a0] = len(tlist)
         end = start + len(cha)
         dt['HitPosInWindow'][start:end] = pet
         dt['Charge'][start:end] = cha
@@ -468,8 +470,11 @@ elif method == 'fbmp':
     ax = ff.add_subplot(gs[0, 0])
     h = ax.hist2d(d_tot, d_max, bins=(np.arange(d_tot.max()), np.arange(d_tot.max())), norm=LogNorm())
     ff.colorbar(h[3], ax=ax, aspect=50)
-    ax.set_xlabel('d_tot')
-    ax.set_ylabel('d_max')
+    ax.set_xlabel(r'$N_{sam}$')
+    ax.set_ylabel(r'$N_{max}$')
+    mt = d_tot.mean()
+    mm = d_max.mean()
+    ax.legend(loc='upper right', title=fr'$E[N_{{sam}}]={mt:.02f},E[N_{{max}}]={mm:.02f}$')
     ax = ff.add_subplot(gs[0, 1])
     ax.plot(sigmamu_list[1], 2 * (sigmamu_list[2] - sigmamu_list[3]), label=r'$-2\Delta\log L$')
     ax.axvline(x=mu, color='r')
@@ -482,7 +487,7 @@ elif method == 'fbmp':
     ax.legend(loc='upper right')
     ax = ff.add_subplot(gs[1, 0])
     ax.hist(d_max / d_tot, label='frac', range=(0, 1), bins=100)
-    ax.set_xlabel('d_max / d_tot')
+    ax.set_xlabel(r'$N_{max}/N_{sam}$')
     ax.set_ylabel('Count')
     ax.set_xlim(0, 1)
     ax.set_ylim(0.5, N)
@@ -496,13 +501,13 @@ elif method == 'fbmp':
     ax.set_yscale('log')
     ax.legend(loc='upper right')
     ax = ff.add_subplot(gs[2, 0])
-    ax.hist(num, bins=np.linspace(0, num.max(), 51), label=r'$N_{sam}$')
-    ax.set_xlabel(r'$N_{sam}$')
+    ax.hist(num, bins=np.arange(num.max()), label=r'$N_{t}$')
+    ax.set_xlabel(r'$N_{t}$')
     ax.set_ylabel('Count')
     ax.set_ylim(0.5, N)
     ax.set_yscale('log')
     m = num.mean()
-    ax.legend(loc='upper right', title=fr'$E[N_{{sam}}]={m:.02f}$')
+    ax.legend(loc='upper right', title=fr'$E[N_{{t}}]={m:.02f}$')
     ax = ff.add_subplot(gs[2, 1])
     ax.hist(ts['elbo'], bins=np.linspace(ts['elbo'].min(), ts['elbo'].max(), 51), label=r'$\mathrm{ELBO}$')
     ax.set_xlabel(r'$\mathrm{ELBO}$')

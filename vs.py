@@ -433,6 +433,7 @@ for key in tqdm(mts.keys()):
                 r = np.inf
             mts[key][i]['N'] = len(start)
             vali = np.abs(time['tscharge'] - start['T0'] - np.mean(time['tscharge'] - start['T0'])) <= r * np.std(time['tscharge'] - start['T0'], ddof=-1)
+            # vali = np.full(len(time), True)
             Chnum = len(np.unique(pelist['PMTId']))
             e_ans, i_ans = np.unique(pelist['TriggerNo'] * Chnum + pelist['PMTId'], return_index=True)
             i_ans = np.append(i_ans, len(pelist))

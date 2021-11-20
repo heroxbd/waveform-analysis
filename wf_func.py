@@ -508,14 +508,18 @@ def likelihoodt0(hitt, char, gmu, Tau, Sigma, mode='charge', is_delta=False):
     return t0, t0delta
 
 def initial_params(wave, spe_pre, Tau, Sigma, gmu, Thres, p, nsp=4, nstd=3, is_t0=False, is_delta=False, n=1):
-    hitt, char = lucyddm(wave, spe_pre['spe'])
-    hitt, char = clip(hitt, char, Thres)
+    hitt_r, char_r = lucyddm(wave, spe_pre['spe'])
+    hitt_r, char_r = clip(hitt_r, char_r, Thres)
+    hitt = np.arange(hitt_r.min(), hitt_r.max() + 1)
+    hitt[np.isin(hitt, hitt_r)] = hitt_r
+    char = np.zeros(len(hitt))
+    char[np.isin(hitt, hitt_r)] = char_r
     char = char / char.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
     tlist = np.unique(np.clip(np.hstack(hitt[:, None] + np.arange(-nsp, nsp+1)), 0, len(wave) - 1))
 
     index_prom = np.hstack([np.argwhere(savgol_filter(wave, 11, 4) > nstd * spe_pre['std']).flatten(), hitt])
-    left_wave = round(np.clip(index_prom.min() - 3 * spe_pre['mar_l'], 0, len(wave) - 1))
-    right_wave = round(np.clip(index_prom.max() + 3 * spe_pre['mar_r'], 0, len(wave) - 1))
+    left_wave = np.clip(round(min(index_prom.min(), tlist.min()) - 3 * spe_pre['mar_l']), 0, len(wave) - 1)
+    right_wave = np.clip(round(max(index_prom.max(), tlist.max()) + 3 * spe_pre['mar_r']), 0, len(wave) - 1)
     wave = wave[left_wave:right_wave]
 
     npe_init = np.zeros(len(tlist))
