@@ -26,7 +26,6 @@ spe_pre = wff.read_model(reference, 1)
 with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
     ent = ipt['Readout/Waveform'][:]
     pelist = ipt['SimTriggerInfo/PEList'][:]
-    t0_truth = ipt['SimTruth/T'][:]
     N = len(ent)
     print('{} waveforms will be computed'.format(N))
     window = len(ent[0]['Waveform'])
@@ -63,7 +62,7 @@ mu0_dt = [('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('mu_t', np.float6
 
 d_history = [('TriggerNo', np.uint32), ('ChannelID', np.uint32), 
              ('step', np.uint32), ('loc', np.float32)]
-TRIALS = 2000
+TRIALS = 8000
 
 def combine(A, cx, t):
     '''
@@ -74,7 +73,7 @@ def combine(A, cx, t):
     alpha = np.array((1 - frac, frac))
     return alpha @ A[:, ti:(ti+2)].T, alpha @ cx[:, ti:(ti+2)].T
 
-def flow(cx, p1, z, N, sig2s, mus, A, p_cha, mu_t):
+def flow(cx, z, N, sig2s, mus, A, p_cha, mu_t):
     '''
     flow
     ====
@@ -107,8 +106,10 @@ def flow(cx, p1, z, N, sig2s, mus, A, p_cha, mu_t):
     wander_s = np.random.normal(size=TRIALS)
 
     # step: +1 创生一个 PE， -1 消灭一个 PE， +2 向左或向右移动
-    flip = np.random.choice((-1, 1, 2), TRIALS, p=np.array((7, 7, 2))/16)
+    flip = np.random.choice((-1, 1, 2), TRIALS, p=np.array((1, 1, 2))/4)
     Δν_history = np.zeros(TRIALS) # list of Δν's
+
+    log_mu = np.log(mu_t) # 猜测的 Poisson 流强度
 
     for i, (t, step, home, wander, accept) in enumerate(zip(istar, flip, home_s, wander_s, 
                                                            np.log(np.random.rand(TRIALS)))):
@@ -116,15 +117,15 @@ def flow(cx, p1, z, N, sig2s, mus, A, p_cha, mu_t):
         NPE = len(s)
         if NPE == 0:
             step = 1 # 只能创生
-            accept += np.log(16/7) # 惩罚
+            accept += np.log(4) # 惩罚
         elif NPE == 1 and step == -1:
             # 1 -> 0: 行动后从 0 脱出的几率大，需要鼓励
-            accept -= np.log(16/7)
+            accept -= np.log(4)
 
         if step == 1: # 创生
             if home >= 0.5 and home <= N - 0.5: 
                 Δν, Δcx, Δz = move(*combine(A, cx, home), z, 1, mus, sig2s, A)
-                Δν += np.log(p1[int(home)]) - np.log(p_cha[int(home)]) - np.log(NPE + 1)
+                Δν += log_mu - np.log(NPE + 1)
                 if Δν >= accept:
                     s.append(home)
             else: # p(w|s) 无定义
@@ -134,7 +135,7 @@ def flow(cx, p1, z, N, sig2s, mus, A, p_cha, mu_t):
             loc = s[op] # 待操作 PE 的位置
             Δν, Δcx, Δz = move(*combine(A, cx, loc), z, -1, mus, sig2s, A)
             if step == -1: # 消灭
-                Δν -= np.log(p1[int(loc)]) - np.log(p_cha[int(loc)]) - np.log(NPE)
+                Δν -= log_mu - np.log(NPE)
 
                 if Δν >= accept:
                     del s[op]
@@ -143,7 +144,7 @@ def flow(cx, p1, z, N, sig2s, mus, A, p_cha, mu_t):
                 if nloc >= 0.5 and nloc <= N - 0.5: # p(w|s) 无定义
                     Δν1, Δcx1, Δz1 = move(*combine(A, cx + Δcx, nloc), z + Δz, 1, mus, sig2s, A)
                     Δν += Δν1
-                    Δν += np.log(p1[int(nloc)]) - np.log(p1[int(loc)])
+                    Δν += np.log(p_cha[int(nloc)]) - np.log(p_cha[int(loc)])
                     if Δν >= accept:
                         s[op] = nloc
                         Δcx += Δcx1
@@ -215,7 +216,6 @@ def metropolis(ent, sample, mu0, d_tlist, s_history):
                                             np.repeat(cid, o_tlist - i_tlist),
                                             tlist, cha))
         i_tlist = o_tlist
-        t0_t = t0_truth['T0'][ie] # override with truth to debug mu
         mu_t = abs(y.sum() / gmu)
         mu0[ie] = (eid, cid, mu_t)
         # Eq. (9) where the columns of A are taken to be unit-norm.
@@ -227,27 +227,19 @@ def metropolis(ent, sample, mu0, d_tlist, s_history):
 
         '''
         A: basis dictionary
-        p1: prior probability for each bin.
         sig2w: variance of white noise.
         sig2s: variance of signal x_i.
         mus: mean of signal x_i.
         TRIALS: number of Metropolis steps.
         '''
 
-        p1 = mu_t * wff.convolve_exp_norm(tlist - t0_t, Tau, Sigma) / n
-
         sig2w = spe_pre[cid]['std'] ** 2
         sig2s = (mus * (gsigma / gmu)) ** 2 # ~94
 
         # Only for multi-gaussian with arithmetic sequence of mu and sigma
-        # N: number of t bins
+        # N: number of t samples, number of bins is N-1
         # M: length of the waveform clip
         M, N = A.shape
-
-        # nu: nu for all s_n=0.
-        ν = -0.5 * np.linalg.norm(y) ** 2 / sig2w - 0.5 * M * np.log(2 * np.pi)
-        ν -= 0.5 * M * np.log(sig2w)
-        ν += poisson.logpmf(0, p1).sum()
 
         # Eq. (29)
         cx = A / sig2w
@@ -257,7 +249,7 @@ def metropolis(ent, sample, mu0, d_tlist, s_history):
         p_cha = cha/np.sum(cha)
 
         # Metropolis flow
-        flip, Δν_history, es_history = flow(cx, p1, z, N, sig2s, mus, A, p_cha, mu_t)
+        flip, Δν_history, es_history = flow(cx, z, N, sig2s, mus, A, p_cha, mu_t)
 
         sample[ie*TRIALS:(ie+1)*TRIALS] = list(zip(np.repeat(eid, TRIALS), 
                                                    np.repeat(cid, TRIALS), 
