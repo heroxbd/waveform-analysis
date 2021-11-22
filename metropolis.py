@@ -109,7 +109,7 @@ def flow(cx, z, N, sig2s, mus, A, p_cha, mu_t):
     flip = np.random.choice((-1, 1, 2), TRIALS, p=np.array((1, 1, 2))/4)
     Δν_history = np.zeros(TRIALS) # list of Δν's
 
-    log_mN = np.log(mu_t/(N+1)) # 猜测的 Poisson 流强度，均匀分布
+    log_mN = np.log(mu_t/(N-1)) # 猜测的 Poisson 流强度，均匀分布
 
     for i, (t, step, home, wander, accept) in enumerate(zip(istar, flip, home_s, wander_s, 
                                                            np.log(np.random.rand(TRIALS)))):
