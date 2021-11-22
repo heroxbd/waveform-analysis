@@ -45,6 +45,7 @@ def rescale(ent):
     mu_t = mu0.loc[(eid, cid)][0]
     tlist = d_tlist.loc[(eid, cid)]
     t_s = tlist['t_s'].values
+    ilp_cha = np.log(tlist['q_s'].sum()) - np.log(tlist['q_s'].values)
 
     N = len(t_s) # N: number of t samples
 
@@ -61,6 +62,8 @@ def rescale(ent):
     steps[first:second] = burn
     es_history = es_history[first:]
 
+    guess = ilp_cha[es_history['loc'].values.astype(int)] # to multiply
+
     es_history['loc'] = np.interp(es_history['loc'].values, xp = np.arange(0.5, N), fp = t_s)
     t0_min = max(es_history['loc'].max() - Δt_r, t_s[0])
     t0_max = min(es_history['loc'].min() - Δt_l, t_s[-1])
@@ -74,7 +77,7 @@ def rescale(ent):
 
     mu = mu_t
     def agg_NPE(t0):
-        es_history['f'] = np.log(lc(es_history['loc'].values - t0))
+        es_history['f'] = np.log(lc(es_history['loc'].values - t0)) + guess
 
         f_vec = es_history.groupby("step").agg(
             NPE = pd.NamedAgg('f', 'count'),
@@ -91,7 +94,7 @@ def rescale(ent):
         nonlocal mu
         NPE, f_agg = agg_NPE(t0)
         rst = minimize_scalar(
-            lambda μ: μ - logsumexp(NPE * np.log(μ*(N-1)/mu_t) + f_agg),
+            lambda μ: μ - logsumexp(NPE * np.log(μ/mu_t) + f_agg),
             bounds=(NPE[0], NPE[-1]))
 
         if not rst.success:
