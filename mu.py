@@ -78,7 +78,7 @@ def rescale(ent):
 
         f_vec = es_history.groupby("step").agg(
             NPE = pd.NamedAgg('f', 'count'),
-            f_vec = pd.NamedAgg('f', logsumexp)
+            f_vec = pd.NamedAgg('f', 'sum')
         )
         f_vec['repeat'] = np.diff(np.append(f_vec.index.values, np.uint32(size)))
 
