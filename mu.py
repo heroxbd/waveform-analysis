@@ -45,7 +45,6 @@ def rescale(ent):
     mu_t = mu0.loc[(eid, cid)][0]
     tlist = d_tlist.loc[(eid, cid)]
     t_s = tlist['t_s'].values
-    ilp_cha = np.log(tlist['q_s'].sum()) - np.log(tlist['q_s'].values)
 
     N = len(t_s) # N: number of t samples
 
@@ -62,18 +61,20 @@ def rescale(ent):
     steps[first:second] = burn
     es_history = es_history[first:]
 
-    guess = ilp_cha[es_history['loc'].values.astype(int)] # to multiply
-
     es_history['loc'] = np.interp(es_history['loc'].values, xp = np.arange(0.5, N), fp = t_s)
     t0_min = max(es_history['loc'].max() - Δt_r, t_s[0])
     t0_max = min(es_history['loc'].min() - Δt_l, t_s[-1])
     assert t0_min < t0_max, "interval is not found"
 
-    t0_prev = t0 = t0_min * 0.9 + t0_max * 0.1
-    mu_prev = np.inf
+    rst = minimize_scalar(lambda x: - np.sum(np.log(lc(es_history['loc'].values - x))), bounds=(t0_min, t0_max))
+    if rst.success:
+        t00 = rst.x
+    else:
+        t00 = 0.9 * t0_min + 0.1 * t0_max
+
     mu = mu_t
     def agg_NPE(t0):
-        es_history['f'] = np.log(lc(es_history['loc'].values - t0)) + guess
+        es_history['f'] = np.log(lc(es_history['loc'].values - t0))
 
         f_vec = es_history.groupby("step").agg(
             NPE = pd.NamedAgg('f', 'count'),
@@ -85,28 +86,26 @@ def rescale(ent):
             lambda x: logsumexp(x.f_vec, b=x.repeat))
         return NPE_vec.index.values, NPE_vec.values
 
-    while np.abs(mu - mu_prev) / mu > 1e-5 or np.abs(t0_prev - t0) > 1e-5:
+    print(pe_count.loc[(eid, cid)])
+    def t_t0(t0):
+        nonlocal mu
         NPE, f_agg = agg_NPE(t0)
         rst = minimize_scalar(
-            lambda μ: μ - logsumexp(NPE * np.log(μ/mu_t) + f_agg),
+            lambda μ: μ - logsumexp(NPE * np.log(μ*(N-1)/mu_t) + f_agg),
             bounds=(NPE[0], NPE[-1]))
 
-        assert rst.success, "mu fit failed"
-        mu_prev = mu
-        mu = rst.x * 0.9 + mu * 0.1
-    
-        expo = NPE * np.log(mu/mu_t)
-        def t_t0(t0):
-            NPE, f_agg = agg_NPE(t0)
-            return - logsumexp(expo + f_agg)
+        if not rst.success:
+            return np.inf
+        else:
+            mu = rst.x
+            print(eid, mu, t0, NPE)
+            return rst.fun
 
-        rst = minimize_scalar(t_t0, bounds=(t0_min, t0_max))
-        assert rst.success, "t0 fit failed"
-        t0_prev = t0
-        t0 = rst.x * 0.9 + t0 * 0.1
-        print(eid, mu, t0)
+    rst = minimize_scalar(t_t0, bounds=(t00 - 3, t00 + 3))
+    assert rst.success, "t0 fit failed"
+    t0 = rst.x
 
-    print(t0, t0_truth[eid])
+    print(t0, t00, t0_truth[eid])
     print("-----")
 
     return pd.Series({'mu': mu,

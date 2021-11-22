@@ -24,7 +24,7 @@ reference = args.ref
 
 spe_pre = wff.read_model(reference, 1)
 with h5py.File(fipt, 'r', libver='latest', swmr=True) as ipt:
-    ent = ipt['Readout/Waveform'][:]
+    ent = ipt['Readout/Waveform'][:100]
     pelist = ipt['SimTriggerInfo/PEList'][:]
     N = len(ent)
     print('{} waveforms will be computed'.format(N))
@@ -109,7 +109,7 @@ def flow(cx, z, N, sig2s, mus, A, p_cha, mu_t):
     flip = np.random.choice((-1, 1, 2), TRIALS, p=np.array((1, 1, 2))/4)
     Δν_history = np.zeros(TRIALS) # list of Δν's
 
-    log_mu = np.log(mu_t) # 猜测的 Poisson 流强度
+    log_mN = np.log(mu_t/(N+1)) # 猜测的 Poisson 流强度，均匀分布
 
     for i, (t, step, home, wander, accept) in enumerate(zip(istar, flip, home_s, wander_s, 
                                                            np.log(np.random.rand(TRIALS)))):
@@ -125,7 +125,8 @@ def flow(cx, z, N, sig2s, mus, A, p_cha, mu_t):
         if step == 1: # 创生
             if home >= 0.5 and home <= N - 0.5: 
                 Δν, Δcx, Δz = move(*combine(A, cx, home), z, 1, mus, sig2s, A)
-                Δν += log_mu - np.log(NPE + 1)
+                # NPE + 1 一个来自湮灭的选择概率，一个来自 Poisson 的先验
+                Δν += log_mN - np.log(p_cha[int(home)]) - 2 * np.log(NPE + 1)
                 if Δν >= accept:
                     s.append(home)
             else: # p(w|s) 无定义
@@ -135,7 +136,7 @@ def flow(cx, z, N, sig2s, mus, A, p_cha, mu_t):
             loc = s[op] # 待操作 PE 的位置
             Δν, Δcx, Δz = move(*combine(A, cx, loc), z, -1, mus, sig2s, A)
             if step == -1: # 消灭
-                Δν -= log_mu - np.log(NPE)
+                Δν -= log_mN - np.log(p_cha[int(loc)]) - 2 * np.log(NPE)
 
                 if Δν >= accept:
                     del s[op]
@@ -144,7 +145,6 @@ def flow(cx, z, N, sig2s, mus, A, p_cha, mu_t):
                 if nloc >= 0.5 and nloc <= N - 0.5: # p(w|s) 无定义
                     Δν1, Δcx1, Δz1 = move(*combine(A, cx + Δcx, nloc), z + Δz, 1, mus, sig2s, A)
                     Δν += Δν1
-                    Δν += np.log(p_cha[int(nloc)]) - np.log(p_cha[int(loc)])
                     if Δν >= accept:
                         s[op] = nloc
                         Δcx += Δcx1
