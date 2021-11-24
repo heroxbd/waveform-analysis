@@ -3,8 +3,8 @@ import pandas as pd
 import numpy as np
 import h5py
 from scipy.optimize import minimize_scalar
-from scipy.special import logsumexp
-import wf_func as wff
+from scipy.special import logsumexp, erf
+from scipy.stats import norm
 
 psr = argparse.ArgumentParser()
 psr.add_argument('-o', dest='opt', type=str, help='output file')
@@ -22,17 +22,25 @@ pe = pd.read_hdf(args.ref, "SimTriggerInfo/PEList").set_index(["TriggerNo", "PMT
 with h5py.File(args.ref) as ref:
     Tau = ref['Readout/Waveform'].attrs['tau'].item()
     Sigma = ref['Readout/Waveform'].attrs['sigma'].item()
-    t0_truth = ref['SimTruth/T']['T0'][:]
+    t0_truth = pd.DataFrame.from_records(ref['SimTruth/T'][:]).set_index(tc)
 
-def lc(Δt):
+
+def lc(x, tau=Tau, sigma=Sigma):
     '''
     light curve
     '''
-    return wff.convolve_exp_norm(Δt, Tau, Sigma)
+    if tau == 0.:
+        return norm.logpdf(x, loc=0, scale=sigma)
+    else:
+        alpha = 1/tau
+        co = -np.log(2. * tau) + alpha*alpha*sigma*sigma/2.
+        x_erf = (alpha*sigma*sigma - x)/(np.sqrt(2.)*sigma)
+        return co + np.log(1. - erf(x_erf)) - alpha*x
+
 Δt_r = Δt_l = 0
-while lc(Δt_l) > 1e-9:
+while lc(Δt_l) > np.log(1e-9):
     Δt_l -= 5
-while lc(Δt_r) > 1e-9:
+while lc(Δt_r) > np.log(1e-9):
     Δt_r += 5
 
 pe_count = pe.groupby(level=[0, 1])['Charge'].count()
@@ -69,7 +77,7 @@ def rescale(ent):
     t0_max = min(es_history['loc'].min() - Δt_l, t_s[-1])
     assert t0_min < t0_max, "interval is not found"
 
-    rst = minimize_scalar(lambda x: - np.sum(np.log(lc(es_history['loc'].values - x))), bounds=(t0_min, t0_max))
+    rst = minimize_scalar(lambda x: - np.sum(lc(es_history['loc'].values - x)), bounds=(t0_min, t0_max))
     if rst.success:
         t00 = rst.x
     else:
@@ -77,11 +85,11 @@ def rescale(ent):
 
     mu = mu_t
     def agg_NPE(t0):
-        es_history['f'] = np.log(lc(es_history['loc'].values - t0)) + guess
+        es_history['f'] = lc(es_history['loc'].values - t0) + guess
 
         f_vec = es_history.groupby("step").agg(
             NPE = pd.NamedAgg('f', 'count'),
-            f_vec = pd.NamedAgg('f', 'sum')
+            f_vec = pd.NamedAgg('f', 'sum'),
         )
         f_vec['repeat'] = np.diff(np.append(f_vec.index.values, np.uint32(size)))
 
@@ -89,7 +97,6 @@ def rescale(ent):
             lambda x: logsumexp(x.f_vec, b=x.repeat))
         return NPE_vec.index.values, NPE_vec.values
 
-    print(pe_count.loc[(eid, cid)])
     def t_t0(t0):
         nonlocal mu
         NPE, f_agg = agg_NPE(t0)
@@ -101,21 +108,17 @@ def rescale(ent):
             return np.inf
         else:
             mu = rst.x
-            print(eid, mu, t0, NPE)
             return rst.fun
 
     rst = minimize_scalar(t_t0, bounds=(t00 - 3, t00 + 3))
     assert rst.success, "t0 fit failed"
     t0 = rst.x
 
-    print(t0, t00, t0_truth[eid])
-    print("-----")
-
     return pd.Series({'mu': mu,
                       't0': t0,
                       'mu0': mu_t,
                       'NPE_truth': pe_count.loc[(eid, cid)],
-                      't0_truth': t0_truth[eid]
+                      't0_truth': t0_truth.loc[(eid, cid)]['T0']
                       })
 
 mu_fit = sample.groupby(level=[0, 1]).apply(rescale)
