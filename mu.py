@@ -124,5 +124,5 @@ def rescale(ent):
 mu_fit = sample.groupby(level=[0, 1]).apply(rescale)
 
 with h5py.File(args.opt, 'w') as opt:
-    opt.create_dataset('mu', data=mu_fit.to_records(index=False), 
+    opt.create_dataset('mu', data=mu_fit.to_records(),
                        compression="gzip", shuffle=True)
