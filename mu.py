@@ -6,7 +6,6 @@ from scipy.optimize import minimize_scalar
 from scipy.special import logsumexp, erf
 from scipy.stats import norm
 from numba import njit
-import numpy_groupies as npg
 
 psr = argparse.ArgumentParser()
 psr.add_argument("-o", dest="opt", type=str, help="output file")
@@ -15,24 +14,16 @@ psr.add_argument("--ref", type=str, help="truth file")
 args = psr.parse_args()
 
 tc = ["TriggerNo", "ChannelID"]
-sample = pd.read_hdf(args.ipt, "sample").query("TriggerNo<10").set_index(tc)
-s_history = pd.read_hdf(args.ipt, "s_history").query("TriggerNo<10").set_index(tc)
-mu0 = pd.read_hdf(args.ipt, "mu0").query("TriggerNo<10").set_index(tc)
-d_tlist = pd.read_hdf(args.ipt, "tlist").query("TriggerNo<10").set_index(tc)
+sample = pd.read_hdf(args.ipt, "sample").set_index(tc)
+s_history = pd.read_hdf(args.ipt, "s_history").set_index(tc)
+mu0 = pd.read_hdf(args.ipt, "mu0").set_index(tc)
+d_tlist = pd.read_hdf(args.ipt, "tlist").set_index(tc)
 
-pe = (
-    pd.read_hdf(args.ref, "SimTriggerInfo/PEList")
-    .query("TriggerNo<10")
-    .set_index(["TriggerNo", "PMTId"])
-)
+pe = pd.read_hdf(args.ref, "SimTriggerInfo/PEList").set_index(["TriggerNo", "PMTId"])
 with h5py.File(args.ref) as ref:
     Tau = ref["Readout/Waveform"].attrs["tau"].item()
     Sigma = ref["Readout/Waveform"].attrs["sigma"].item()
-    t0_truth = (
-        pd.DataFrame.from_records(ref["SimTruth/T"][:])
-        .query("TriggerNo<10")
-        .set_index(tc)
-    )
+    t0_truth = pd.DataFrame.from_records(ref["SimTruth/T"][:]).set_index(tc)
 
 
 def lc(x, tau=Tau, sigma=Sigma):
@@ -58,25 +49,73 @@ pe_count = pe.groupby(level=[0, 1])["Charge"].count()
 
 
 @njit(nogil=True, cache=True)
+def unique_with_indices(values):
+    unq = np.unique(values)
+    idx = np.zeros_like(unq, dtype=np.int_)
+    idx[0] = 0
+    i = 0
+    for j in range(1, len(values)):
+        if values[j] != unq[i]:
+            i += 1
+            idx[i] = j
+    return unq, idx
+
+
+@njit(nogil=True, cache=True)
 def group_by_sorted_count_sum(idx, a):
-    unique_idx = np.unique(idx)
+    unique_idx, idx_of_idx = unique_with_indices(idx)
     counts = np.zeros_like(unique_idx, dtype=np.int_)
     sums = np.zeros_like(unique_idx, dtype=np.float64)
-    i = 0
-    cidx = idx[0]
-    for j in range(0, len(idx)):
-        if idx[j] != cidx:
-            cidx = idx[j]
-            i += 1
-        counts[i] += 1
-        sums[i] += a[j]
+    for i in range(0, len(idx_of_idx)):
+        start = idx_of_idx[i]
+        if i < len(idx_of_idx) - 1:
+            end = idx_of_idx[i + 1]
+        else:
+            end = len(idx)
+        counts[i] = end - start
+        sums[i] = np.sum(a[start:end])
     return unique_idx, counts, sums
 
 
-def jit_logsumexp(values):
+@njit(nogil=True, cache=True)
+def jit_logsumexp(values, b):
     a_max = np.max(values)
-    s = np.sum(np.exp(values - a_max))
+    s = np.sum(b * np.exp(values - a_max))
     return np.log(s) + a_max
+
+
+@njit(nogil=True, cache=True)
+def group_by_logsumexp(idx, a, b):
+    unique_idx, idx_of_idx = unique_with_indices(idx)
+    res = np.zeros_like(unique_idx, dtype=np.float64)
+    for i in range(0, len(idx_of_idx)):
+        start = idx_of_idx[i]
+        if i < len(idx_of_idx) - 1:
+            end = idx_of_idx[i + 1]
+        else:
+            end = len(idx)
+        res[i] = jit_logsumexp(a[start:end], b[start:end])
+    return unique_idx, res
+
+
+def jit_agg_NPE(step, f, size):
+    step, NPE, f_vec = group_by_sorted_count_sum(step, f)
+
+    f_vec_merged = np.zeros(
+        len(step),
+        dtype=np.dtype([("NPE", np.int_), ("f_vec", np.float64), ("repeat", np.int_)]),
+    )
+    f_vec_merged["NPE"] = NPE
+    f_vec_merged["f_vec"] = f_vec
+    f_vec_merged["repeat"] = np.diff(np.append(step, int(size)))
+
+    f_vec_merged = np.sort(f_vec_merged, order="NPE")
+
+    indices, NPE_vec = group_by_logsumexp(
+        f_vec_merged["NPE"], f_vec_merged["f_vec"], f_vec_merged["repeat"]
+    )
+
+    return indices, NPE_vec
 
 
 def rescale(ent):
@@ -125,25 +164,7 @@ def rescale(ent):
 
     def agg_NPE(t0):
         es_history["f"] = lc(es_history["loc"].values - t0) + guess
-
-        step, NPE, f_vec = group_by_sorted_count_sum(
-            es_history["step"].values,
-            es_history["f"].values,
-        )
-        rep = np.diff(np.append(step, np.uint32(size)))
-
-        NPE_vec = npg.aggregate(
-            NPE,
-            f_vec + np.log(rep),
-            func=jit_logsumexp,
-            fill_value=np.nan,
-            dtype=np.float64,
-        )
-        NPE_vec = NPE_vec[np.logical_not(np.isnan(NPE_vec))]
-        indices = np.unique(np.sort(NPE))
-        assert len(indices) == len(NPE_vec)
-
-        return indices, NPE_vec
+        return jit_agg_NPE(es_history["step"].values, es_history["f"].values, size)
 
     def t_t0(t0):
         nonlocal mu
