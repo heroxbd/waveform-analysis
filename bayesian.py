@@ -45,7 +45,7 @@ psr.add_argument('-o', dest='opt', type=str, help='output file')
 psr.add_argument('ipt', type=str, help='input file')
 psr.add_argument('--met', type=str, help='fitting method')
 psr.add_argument('--ref', type=str, help='reference file')
-psr.add_argument('-N', '--Ncpu', dest='Ncpu', type=int, default=25)
+psr.add_argument('-N', '--Ncpu', dest='Ncpu', type=int, default=100)
 args = psr.parse_args()
 
 fipt = args.ipt
@@ -188,60 +188,29 @@ n = 1
 tlist_pan = np.sort(np.unique(np.hstack(np.arange(0, window)[:, None] + np.linspace(0, 1, n, endpoint=False) - (n // 2) / n)))
 b_t0 = [0., 600.]
 
-def likelihood(mu, t0, As_k, nu_star_k, tlist_k):
-    # a = wff.convolve_exp_norm(tlist_k - t0, Tau, Sigma) / n + 1e-8
+def likelihood(mu, t0, As_k, nu_star_k):
     a = wff.convolve_exp_norm(tlist_pan - t0, Tau, Sigma) / n + 1e-8 # use tlist_pan not tlist
     # a *= mu / a.sum()
     a *= mu
     li = -special.logsumexp(np.log(poisson.pmf(As_k, mu=a)).sum(axis=1) + nu_star_k)
     return li
 
-def sum_mu_likelihood(mu, t0_list, As_list, nu_star_list):
-    return np.sum([likelihood(mu, t0_list[k], As_list[k], nu_star_list[k]) for k in range(len(t0_list))])
-
-def optit0mu(mu, t0, nu_star, As, tlist, mu_init=None):
-    l = len(t0)
+def optit0mu(mu, t0, nu_star, As):
     mulist = np.arange(max(1e-8, mu - 2 * np.sqrt(mu)), mu + 2 * np.sqrt(mu), 1e-1)
     b_mu = [max(1e-8, mu - 5 * np.sqrt(mu)), mu + 5 * np.sqrt(mu)]
-    # psy_star = [np.exp(nu_star[k] - nu_star[k].max()) / np.sum(np.exp(nu_star[k] - nu_star[k].max())) for k in range(l)]
-    t0list = [np.arange(t0[k] - 3 * Sigma, t0[k] + 3 * Sigma + 1e-6, 0.2) for k in range(l)]
-    sigmamu = None
-    logLv_mu = None
-    if mu_init is None:
-        mu_init = np.empty(l)
-        for k in range(l):
-            mu_init[k] = mulist[np.array([likelihood(mulist[j], t0[k], As[k], nu_star[k], tlist[k]) for j in range(len(mulist))]).argmin()]
-            t0_init = t0list[k][np.array([likelihood(mu_init[k], t0list[k][j], As[k], nu_star[k], tlist[k]) for j in range(len(t0list[k]))]).argmin()]
-            likelihood_x = lambda x, As, nu_star, tlist: likelihood(x[0], x[1], As, nu_star, tlist)
-            t0[k] = opti.fmin_l_bfgs_b(likelihood_x, args=(As[k], nu_star[k], tlist[k]), x0=[mu_init[k], t0_init], approx_grad=True, bounds=[b_mu, b_t0], maxfun=50000)[0][1]
-        Likelihood = lambda mu: np.sum([likelihood(mu, t0[k], As[k], nu_star[k], tlist[k]) for k in range(l)])
-        mu, fval, _ = opti.fmin_l_bfgs_b(Likelihood, x0=[np.mean(mu_init)], approx_grad=True, bounds=[b_mu], maxfun=50000)
-    else:
-        def Likelihood(mu, t0_list, As_list, nu_star_list):
-            with Pool(min(args.Ncpu // 3, cpu_count())) as pool:
-                result = np.sum(pool.starmap(likelihood, zip([mu] * l, t0_list, As_list, nu_star_list)))
-            return result
-        mu, fval, _ = opti.fmin_l_bfgs_b(Likelihood, args=[t0, As, nu_star], x0=[np.mean(mu_init)], approx_grad=True, bounds=[b_mu], maxfun=50000, factr=100.0, pgtol=1e-10)
-        print('Mu fitting info is', _)
-        sigmamu_est = np.sqrt(mu / N)
-        mulist = np.sort(np.append(np.arange(max(1e-8, mu - 2 * sigmamu_est), mu + 2 * sigmamu_est, sigmamu_est / 50), mu))
-        partial_sum_mu_likelihood = partial(sum_mu_likelihood, t0_list=t0, As_list=As, nu_star_list=nu_star)
-        with Pool(min(args.Ncpu // 3, cpu_count())) as pool:
-            logLv_mu = np.array(pool.starmap(partial_sum_mu_likelihood, zip(mulist)))
+    t0list = np.arange(t0 - 3 * Sigma, t0 + 3 * Sigma + 1e-6, 0.2)
 
-        mu_func = interp1d(mulist, logLv_mu, bounds_error=False, fill_value='extrapolate')
-        logLvdelta = np.vectorize(lambda mu_t: np.abs(mu_func(mu_t) - fval - 0.5))
-        # sigmamu = abs(opti.fmin_l_bfgs_b(logLvdelta, x0=[mulist[np.abs(logLv_mu - fval - 0.5).argmin()]], approx_grad=True, bounds=[[mulist[0], mulist[-1]]], maxfun=500000)[0] - mu) * np.sqrt(l)
-        sigmamu_l = abs(opti.fmin_l_bfgs_b(logLvdelta, x0=[mulist[mulist <= mu][np.abs(logLv_mu[mulist <= mu] - fval - 0.5).argmin()]], approx_grad=True, bounds=[[mulist[0], mulist[-1]]], maxfun=500000)[0] - mu) * np.sqrt(l)
-        sigmamu_r = abs(opti.fmin_l_bfgs_b(logLvdelta, x0=[mulist[mulist > mu][np.abs(logLv_mu[mulist > mu] - fval - 0.5).argmin()]], approx_grad=True, bounds=[[mulist[0], mulist[-1]]], maxfun=500000)[0] - mu) * np.sqrt(l)
-        sigmamu = (sigmamu_l + sigmamu_r) / 2
-        print('Finite difference sigmamu is {:.4}'.format(sigmamu.item()))
+    # mu_init = mulist[np.array([likelihood(mulist[j], t0, As, nu_star) for j in range(len(mulist))]).argmin()]
+    # t0_init = t0list[np.array([likelihood(mu_init, t0list[j], As, nu_star) for j in range(len(t0list))]).argmin()]
+    # likelihood_x = lambda x, As, nu_star: likelihood(x[0], x[1], As, nu_star)
+    # ans = opti.fmin_l_bfgs_b(likelihood_x, args=(As, nu_star), x0=[mu_init, t0_init], approx_grad=True, bounds=[b_mu, b_t0], maxfun=50000)
+    # mu, t0 = ans[0]
 
-        # derivative_mu2 = nd.Derivative(Likelihood, step=1e-10, n=2, full_output=True)
-        # s, info = derivative_mu2(mu, t0_list=t0, As_list=As, nu_star_list=nu_star)
-        # print('Mu derivative info is', info)
-        # sigmamu = 1 / np.sqrt(s) * np.sqrt(l)
-    return mu, t0, [sigmamu, mulist, logLv_mu, fval]
+    t0_init = t0list[np.array([likelihood(mu, t0list[j], As, nu_star) for j in range(len(t0list))]).argmin()]
+    likelihood_x = lambda x, As, nu_star: likelihood(mu, x[0], As, nu_star)
+    t0, fval, _ = opti.fmin_l_bfgs_b(likelihood_x, args=(As, nu_star), x0=[t0_init], approx_grad=True, bounds=[b_t0], maxfun=50000)
+
+    return mu, t0
 
 def fbmp_inference(a0, a1):
     t0_wav = np.empty(a1 - a0)
@@ -257,8 +226,6 @@ def fbmp_inference(a0, a1):
     nu_truth = np.empty(a1 - a0)
     nu_max = np.empty(a1 - a0)
     num = np.zeros(a1 - a0).astype(int)
-    nu_star_list = []
-    As_list = []
     start = 0
     end = 0
     for i in range(a0, a1):
@@ -275,9 +242,10 @@ def fbmp_inference(a0, a1):
         # moving average filter of size 2*n+1
         cha = np.pad(s_cha[2*n+1:], (n+1, n), 'edge') - np.pad(s_cha[:-(2*n+1)], (n+1, n), 'edge')
         cha += 1e-8 # for completeness of the random walk.
+        p_cha = cha / np.sum(cha)
         mu_t = abs(y.sum() / gmu)
 
-        t0_t = t0_truth['T0'][i] # override with truth to debug mu
+        # t0_t = t0_truth['T0'][i] # override with truth to debug mu
 
         truth = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
 
@@ -304,7 +272,7 @@ def fbmp_inference(a0, a1):
         sig2w = spe_pre[cid]['std'] ** 2
         sig2s = (gsigma * mus / gmu) ** 2
 
-        xmmse_star, nu_star, T_star, c_star, NPE_evo, num_i = wff.metropolis_fbmp(y, A, sig2w, sig2s, mus, p1, cha, mu_t, prior=prior, space=space)
+        xmmse_star, nu_star, T_star, c_star, NPE_evo, num_i = wff.metropolis_fbmp(y, A, sig2w, sig2s, mus, p1, p_cha, mu_t, prior=prior, space=space)
 
         time_fbmp[i - a0] = time.time() - time_fbmp_start
 
@@ -325,45 +293,34 @@ def fbmp_inference(a0, a1):
         As[:, np.isin(tlist_pan, tlist)] = c_star
         assert sum(np.sum(As, axis=0) > 0) > 0
 
-        spacefactor = 0
-        priorfactor = 0
-        if not space:
-            spacefactor = np.array([-0.5 * np.log(np.linalg.det(wff.Phi(y, A, c_star[j], mus, sig2s, sig2w, p1))) for j in range(num_i)])
-        if prior:
-            priorfactor = -poisson.logpmf(c_star, p1).sum(axis=1)
+        NPE, counts = np.unique(NPE_evo, return_counts=True)
+        loggN = -NPE * np.log(mu_t) + np.log(counts)
+        rst = opti.minimize_scalar(lambda μ: μ - special.logsumexp(loggN + NPE * np.log(μ)), bounds=(NPE[0], NPE[-1]))
+        mu = rst.x
 
+        mu_t = mu
         nu_star = -poisson.logpmf(As, mu_t * wff.convolve_exp_norm(tlist_pan - t0_t, Tau, Sigma) / n + 1e-8).sum(axis=1)
+        mu, t0 = optit0mu(mu, t0_t, nu_star, As)
+        mu_i, t0_i = optit0mu(mu_t, t0_t, np.array([0.]), As[maxindex][None, :])
 
-        # NPE, counts = np.unique(NPE_evo, return_counts=True)
-        # loggN = -NPE * np.log(mu_t) + np.log(counts)
-        # rst = opti.minimize_scalar(lambda μ: μ - special.logsumexp(loggN + NPE * np.log(μ)), bounds=(NPE[0], NPE[-1]))
-        # mu = rst.x
-
-        mu, t0, _ = optit0mu(mu_t, [t0_t], [nu_star], [As], [tlist])
-        mu_i, t0_i, _ = optit0mu(mu_t, [t0_t], [np.array([0.])], [As[maxindex][None, :]], [tlist])
-
-        d_tot[i - a0] = num_i
         d_max[i - a0] = maxindex
         elbo[i - a0] = wff.elbo(nu_space_prior)
         pet, cha = wff.clip(pet, cha, Thres[method])
         cha = cha * gmu
-        t0_wav[i - a0] = t0[0]
-        t0_cha[i - a0] = t0_i[0]
+        t0_wav[i - a0] = t0
+        t0_cha[i - a0] = t0_i
         mu_wav[i - a0] = mu
         mu_cha[i - a0] = mu_i
         mu_kl[i - a0] = cha.sum()
-        num[i - a0] = len(tlist)
         end = start + len(cha)
         dt['HitPosInWindow'][start:end] = pet
         dt['Charge'][start:end] = cha
         dt['TriggerNo'][start:end] = ent[i]['TriggerNo']
         dt['ChannelID'][start:end] = ent[i]['ChannelID']
         start = end
-        nu_star_list.append(nu_star)
-        As_list.append(As)
     dt = dt[:end]
     dt = np.sort(dt, kind='stable', order=['TriggerNo', 'ChannelID'])
-    return t0_wav, t0_cha, dt, mu_wav, mu_cha, mu_kl, time_fbmp, d_tot, d_max, nu_truth, nu_max, num, elbo, nu_star_list, As_list
+    return t0_wav, t0_cha, dt, mu_wav, mu_cha, mu_kl, time_fbmp, d_max, nu_truth, nu_max, elbo
 
 print('Initialization finished, real time {0:.02f}s, cpu time {1:.02f}s'.format(time.time() - global_start, time.process_time() - cpu_global_start))
 tic = time.time()
@@ -434,81 +391,33 @@ elif method == 'fbmp':
     ts['mukl'] = np.hstack([result[i][5] for i in range(len(slices))])
     ts['consumption'] = np.hstack([result[i][6] for i in range(len(slices))])
     print('FBMP finished, real time {0:.02f}s'.format(ts['consumption'].sum()))
-    d_tot = np.hstack([result[i][7] for i in range(len(slices))])
-    d_max = np.hstack([result[i][8] for i in range(len(slices))])
-    nu_truth = np.hstack([result[i][9] for i in range(len(slices))])
-    nu_max = np.hstack([result[i][10] for i in range(len(slices))])
-    num = np.hstack([result[i][11] for i in range(len(slices))])
-    ts['elbo'] = np.hstack([result[i][12] for i in range(len(slices))])
-    nu_star_list = []
-    for i in range(len(slices)):
-        nu_star_list += result[i][13]
-    As_list = []
-    for i in range(len(slices)):
-        As_list += result[i][14]
-    N_add = round(N / (1 - poisson.cdf(0, Mu)) * poisson.cdf(0, Mu))
-    nu_star_list_add = [np.array([0.])] * N_add
-    nu_star_list += nu_star_list_add
-    As_list_add = [np.zeros((1, len(tlist_pan)))] * N_add
-    As_list += As_list_add
-    t0_init = np.append(ts['tswave'], np.ones(N_add) * 100)
-    assert np.all(np.array([len(t0_init), len(nu_star_list), len(As_list)]) == N + N_add)
-
-    # mu, t0, sigmamu_list = optit0mu(Mu, t0_init, nu_star_list, As_list, mu_init=ts['muwave'])
-    mu = np.array([np.nan])
-    sigmamu_list = [np.array([np.nan]), np.nan, np.nan, np.nan]
-    sigmamu = sigmamu_list[0]
-
-    print('mu is {0:.4f}, sigma_mu is {1:.4f}'.format(mu.item(), sigmamu.item()))
-    print('nu max larger than nu truth fraction is {0:.02%}'.format((nu_max > nu_truth).sum() / len(nu_truth)))
+    d_max = np.hstack([result[i][7] for i in range(len(slices))])
+    nu_truth = np.hstack([result[i][8] for i in range(len(slices))])
+    nu_max = np.hstack([result[i][9] for i in range(len(slices))])
+    ts['elbo'] = np.hstack([result[i][10] for i in range(len(slices))])
 
     matplotlib.use('Agg')
     matplotlib.rcParams.update(matplotlib.rcParamsDefault)
-    ff = plt.figure(figsize=(16, 18))
-    gs = gridspec.GridSpec(3, 2, figure=ff, left=0.1, right=0.95, top=0.95, bottom=0.1, wspace=0.3, hspace=0.3)
+    ff = plt.figure(figsize=(16, 12))
+    gs = gridspec.GridSpec(2, 2, figure=ff, left=0.1, right=0.95, top=0.95, bottom=0.1, wspace=0.3, hspace=0.3)
     # ff.tight_layout()
     ax = ff.add_subplot(gs[0, 0])
-    h = ax.hist2d(d_tot, d_max, bins=(np.arange(d_tot.max()), np.arange(d_tot.max())), norm=LogNorm())
-    ff.colorbar(h[3], ax=ax, aspect=50)
-    ax.set_xlabel(r'$N_{sam}$')
-    ax.set_ylabel(r'$N_{max}$')
-    mt = d_tot.mean()
-    mm = d_max.mean()
-    ax.legend(loc='upper right', title=fr'$E[N_{{sam}}]={mt:.02f},E[N_{{max}}]={mm:.02f}$')
-    ax = ff.add_subplot(gs[0, 1])
-    ax.plot(sigmamu_list[1], 2 * (sigmamu_list[2] - sigmamu_list[3]), label=r'$-2\Delta\log L$')
-    ax.axvline(x=mu, color='r')
-    ax.axhline(y=1, color='k', linestyle='dashed', alpha=0.5)
-    ax.axhline(y=0, color='k')
-    ax.grid()
-    ax.set_xlabel('mu')
-    ax.set_ylim(-0.1, 4)
-    ax.set_ylabel(r'$-2\Delta\log L$')
-    ax.legend(loc='upper right')
-    ax = ff.add_subplot(gs[1, 0])
-    ax.hist(d_max / d_tot, label='frac', range=(0, 1), bins=100)
-    ax.set_xlabel(r'$N_{max}/N_{sam}$')
+    ax.hist(d_max, label=r'$N_{max}$', bins=np.arange(d_max.max() + 1))
+    ax.set_xlabel(r'$N_{max}$')
     ax.set_ylabel('Count')
-    ax.set_xlim(0, 1)
+    ax.set_xlim(0, d_max.max())
     ax.set_ylim(0.5, N)
     ax.set_yscale('log')
-    ax.legend(loc='upper right')
-    ax = ff.add_subplot(gs[1, 1])
+    m = d_max.mean()
+    ax.legend(loc='upper right', title=fr'$E[N_{{max}}]={m:.02f}$')
+    ax = ff.add_subplot(gs[0, 1])
     ax.hist(nu_max - nu_truth, label=r'$\nu_{max}-\nu_{tru}$', bins=np.linspace((nu_max - nu_truth).min(), (nu_max - nu_truth).max(), 51))
     ax.set_xlabel(r'$\Delta\nu$')
     ax.set_ylabel('Count')
     ax.set_ylim(0.5, N)
     ax.set_yscale('log')
     ax.legend(loc='upper right')
-    ax = ff.add_subplot(gs[2, 0])
-    ax.hist(num, bins=np.arange(num.max()), label=r'$N_{t}$')
-    ax.set_xlabel(r'$N_{t}$')
-    ax.set_ylabel('Count')
-    ax.set_ylim(0.5, N)
-    ax.set_yscale('log')
-    m = num.mean()
-    ax.legend(loc='upper right', title=fr'$E[N_{{t}}]={m:.02f}$')
-    ax = ff.add_subplot(gs[2, 1])
+    ax = ff.add_subplot(gs[1, 0])
     ax.hist(ts['elbo'], bins=np.linspace(ts['elbo'].min(), ts['elbo'].max(), 51), label=r'$\mathrm{ELBO}$')
     ax.set_xlabel(r'$\mathrm{ELBO}$')
     ax.set_ylabel('Count')
@@ -530,9 +439,6 @@ with h5py.File(fopt, 'w') as opt:
     pedset.attrs['tau'] = Tau
     pedset.attrs['sigma'] = Sigma
     tsdset = opt.create_dataset('starttime', data=ts, compression='gzip')
-    if method == 'fbmp':
-        tsdset.attrs['mu'] = mu
-        tsdset.attrs['sigmamu'] = sigmamu
     print('The output file path is {}'.format(fopt))
 
 print('Finished! Consuming {0:.02f}s in total, cpu time {1:.02f}s.'.format(time.time() - global_start, time.process_time() - cpu_global_start))

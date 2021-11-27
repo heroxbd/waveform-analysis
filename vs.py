@@ -458,11 +458,6 @@ for key in tqdm(mts.keys()):
             bias_mucharge = np.mean(time['mucharge'][vali]) - mu
             s_muwave = np.std(np.append(time['muwave'][vali], np.zeros(round(N_add))), ddof=-1)
             bias_muwave = np.mean(np.append(time['muwave'][vali], np.zeros(round(N_add)))) - mu
-            # Global fit STD
-            # s_mucharge = np.nan
-            # bias_mucharge = np.nan
-            # s_muwave = starttime_attrs['sigmamu']
-            # bias_muwave = starttime_attrs['mu'] - mu
 
             mts[key][i]['stdmutru'] = s_npe
             mts[key][i]['meanmutru'] = mu

@@ -47,6 +47,8 @@ std = 1.
 p = [8., 0.5, 24.]
 Thres = {'mcmc':std / gsigma, 'xiaopeip':0, 'lucyddm':0.2, 'fbmp':0, 'fftrans':0.1, 'findpeak':0.1, 'threshold':0, 'firstthres':0, 'omp':0}
 d_history = [('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('step', np.uint32), ('loc', np.float32)]
+proposal = np.array((1, 1, 2)) / 4
+# proposal = np.array((7, 7, 2)) / 16
 TRIALS = 2000
 
 def xiaopeip_old(wave, spe_pre, eta=0):
@@ -199,7 +201,7 @@ def combine(A, cx, t):
     '''
     combine neighbouring dictionaries to represent sub-bin locations
     '''
-    frac, ti = np.modf(t - 0.5) # 
+    frac, ti = np.modf(t - 0.5)
     ti = int(ti)
     alpha = np.array((1 - frac, frac))
     return alpha @ A[:, ti:(ti+2)].T, alpha @ cx[:, ti:(ti+2)].T
@@ -231,7 +233,7 @@ def move(A_vec, c_vec, z, step, mus, sig2s, A):
     Δz = -step * A_vec * mus
     return Δν, Δcx, Δz
 
-def flow(cx, p1, z, N, sig2s, mus, A, cha, mu_t):
+def flow(cx, p1, z, N, sig2s, mus, A, p_cha, mu_t):
     '''
     flow
     ====
@@ -244,7 +246,6 @@ def flow(cx, p1, z, N, sig2s, mus, A, cha, mu_t):
     # istar [0, 1) 之间的随机数，用于点中 PE
     istar = np.random.rand(TRIALS)
     # 同时可用于创生位置的选取
-    p_cha = cha / np.sum(cha)
     c_cha = np.cumsum(p_cha) # cha: charge; p_cha: pdf of LucyDDM charge (由 charge 引导的 PE 强度流先验)
     home_s = np.interp(istar, xp=np.insert(c_cha, 0, 0), fp=np.arange(N+1)) # 根据 p_cha 采样得到的 PE 序列。供以后的产生过程使用。这两行是使用了 InverseCDF 算法进行的MC采样。
 
@@ -265,8 +266,9 @@ def flow(cx, p1, z, N, sig2s, mus, A, cha, mu_t):
     wander_s = np.random.normal(size=TRIALS)
 
     # step: +1 创生一个 PE， -1 消灭一个 PE， +2 向左或向右移动
-    flip = np.random.choice((-1, 1, 2), TRIALS, p=np.array((7, 7, 2)) / 16)
+    flip = np.random.choice((-1, 1, 2), TRIALS, p=proposal)
     Δν_history = np.zeros(TRIALS) # list of Δν's
+    log_mu = np.log(mu_t) # 猜测的 Poisson 流强度
     xmmse_list = []
     T_list = []
 
@@ -275,15 +277,15 @@ def flow(cx, p1, z, N, sig2s, mus, A, cha, mu_t):
         NPE = len(s)
         if NPE == 0:
             step = 1 # 只能创生
-            accept += np.log(16/7) # 惩罚
+            accept += np.log(1 / proposal[1]) # 惩罚
         elif NPE == 1 and step == -1:
             # 1 -> 0: 行动后从 0 脱出的几率大，需要鼓励
-            accept -= np.log(16/7)
+            accept -= np.log(1 / proposal[0])
 
         if step == 1: # 创生
             if home >= 0.5 and home <= N - 0.5: 
                 Δν, Δcx, Δz = move(*combine(A, cx, home), z, 1, mus, sig2s, A)
-                Δν += np.log(p1[int(home)]) - np.log(p_cha[int(home)]) - np.log(NPE + 1)
+                Δν += log_mu - np.log(NPE + 1)
                 if Δν >= accept:
                     s.append(home)
             else: # p(w|s) 无定义
@@ -293,7 +295,7 @@ def flow(cx, p1, z, N, sig2s, mus, A, cha, mu_t):
             loc = s[op] # 待操作 PE 的位置
             Δν, Δcx, Δz = move(*combine(A, cx, loc), z, -1, mus, sig2s, A)
             if step == -1: # 消灭
-                Δν -= np.log(p1[int(loc)]) - np.log(p_cha[int(loc)]) - np.log(NPE)
+                Δν -= log_mu - np.log(NPE)
                 if Δν >= accept:
                     del s[op]
             elif step == 2: # 移动
@@ -301,7 +303,7 @@ def flow(cx, p1, z, N, sig2s, mus, A, cha, mu_t):
                 if nloc >= 0.5 and nloc <= N - 0.5: # p(w|s) 无定义
                     Δν1, Δcx1, Δz1 = move(*combine(A, cx + Δcx, nloc), z + Δz, 1, mus, sig2s, A)
                     Δν += Δν1
-                    Δν += np.log(p1[int(nloc)]) - np.log(p1[int(loc)])
+                    Δν += np.log(p_cha[int(nloc)]) - np.log(p_cha[int(loc)])
                     if Δν >= accept:
                         s[op] = nloc
                         Δcx += Δcx1
@@ -313,22 +315,22 @@ def flow(cx, p1, z, N, sig2s, mus, A, cha, mu_t):
             cx += Δcx
             z += Δz
             si1 = si + len(s)
-            assist = np.zeros(N)
-            T_list.append(np.sort(np.digitize(s, bins=np.arange(N)) - 1))
-            t, c = np.unique(T_list[-1], return_counts=True)
-            assist[t] = mus * c + sig2s * c * np.dot(z, cx[:, t])
-            xmmse_list.append(assist)
             es_history[si:si1]['step'] = i
             es_history[si:si1]['loc'] = s
             si = si1
         else: # reject proposal
             Δν = 0
             step = 0
+        assist = np.zeros(N)
+        T_list.append(np.sort(np.digitize(s, bins=np.arange(N)) - 1))
+        t, c = np.unique(T_list[-1], return_counts=True)
+        assist[t] = mus * c + sig2s * c * np.dot(z, cx[:, t])
+        xmmse_list.append(assist)
         Δν_history[i] = Δν
         flip[i] = step
     return flip, [Δν_history, ν], es_history[:si1], xmmse_list, T_list
 
-def metropolis_fbmp(y, A, sig2w, sig2s, mus, p1, cha, mu_t, prior=False, space=True):
+def metropolis_fbmp(y, A, sig2w, sig2s, mus, p1, p_cha, mu_t, prior=False, space=True):
     '''
     p1: prior probability for each bin.
     sig2w: variance of white noise.
@@ -351,8 +353,7 @@ def metropolis_fbmp(y, A, sig2w, sig2s, mus, p1, cha, mu_t, prior=False, space=T
     z = y.copy()
 
     # Metropolis flow
-    flip, Δν_history, es_history, xmmse_list, T_list = flow(cx_root, p1, z, N, sig2s, mus, A, cha, mu_t)
-    steps = np.unique(es_history['step'])
+    flip, Δν_history, es_history, xmmse_list, T_list = flow(cx_root, p1, z, N, sig2s, mus, A, p_cha, mu_t)
     num = len(T_list)
 
     burn = num // 5
@@ -361,7 +362,7 @@ def metropolis_fbmp(y, A, sig2w, sig2s, mus, p1, cha, mu_t, prior=False, space=T
     for k in range(num):
         t, c = np.unique(T_list[k], return_counts=True)
         c_star[k, t] = c
-    nu_star = np.cumsum(Δν_history[0][steps]) + nu_root + Δν_history[1]
+    nu_star = np.cumsum(Δν_history[0]) + nu_root + Δν_history[1]
 
     flip[np.abs(flip) == 2] = 0 # 平移不改变 PE 数
     NPE0 = int(mu_t + 0.5)
