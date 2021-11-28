@@ -123,30 +123,37 @@ def flow(cx, z, N, sig2s, mus, A, p_cha, mu_t):
             accept -= np.log(4)
 
         if step == 1: # 创生
-            if home >= 0.5 and home <= N - 0.5: 
-                Δν, Δcx, Δz = move(*combine(A, cx, home), z, 1, mus, sig2s, A)
+            if home >= 0.5 and home <= N - 0.5:
+                A_vec, c_vec = combine(A, cx, home)
+                Δν, beta = move1(A_vec, c_vec, z, 1, mus, sig2s)
                 # NPE + 1 一个来自湮灭的选择概率，一个来自 Poisson 的先验
                 Δν += log_mu - np.log(NPE + 1)
                 if Δν >= accept:
+                    Δcx, Δz = move2(A_vec, c_vec, 1, mus, A, beta)
                     s.append(home)
             else: # p(w|s) 无定义
                 Δν = -np.inf
         else:
             op = int(t * NPE) # 操作的 PE 编号
             loc = s[op] # 待操作 PE 的位置
-            Δν, Δcx, Δz = move(*combine(A, cx, loc), z, -1, mus, sig2s, A)
+            A_vec, c_vec = combine(A, cx, home)
+            Δν, beta = move1(A_vec, c_vec, z, -1, mus, sig2s)
             if step == -1: # 消灭
                 Δν -= log_mu - np.log(NPE)
 
                 if Δν >= accept:
+                    Δcx, Δz = move2(A_vec, c_vec, -1, mus, A, beta)
                     del s[op]
             elif step == 2: # 移动
                 nloc = loc + wander # 待操作 PE 的新位置
                 if nloc >= 0.5 and nloc <= N - 0.5: # p(w|s) 无定义
-                    Δν1, Δcx1, Δz1 = move(*combine(A, cx + Δcx, nloc), z + Δz, 1, mus, sig2s, A)
+                    Δcx, Δz = move2(A_vec, c_vec, -1, mus, A, beta)
+                    A_vec1, c_vec1 = combine(A, cx + Δcx, nloc)
+                    Δν1, beta1 = move1(A_vec1, c_vec1, z + Δz, 1, mus, sig2s)
                     Δν += Δν1
                     Δν += np.log(p_cha[int(nloc)]) - np.log(p_cha[int(loc)])
                     if Δν >= accept:
+                        Δcx1, Δz1 = move2(A_vec1, c_vec1, 1, mus, A, beta1)
                         s[op] = nloc
                         Δcx += Δcx1
                         Δz += Δz1
@@ -167,14 +174,20 @@ def flow(cx, z, N, sig2s, mus, A, p_cha, mu_t):
         flip[i] = step
     return flip, Δν_history, es_history[:si1]
 
-def move(A_vec, c_vec, z, step, mus, sig2s, A):
+
+def move1(A_vec, c_vec, z, step, mus, sig2s):
     '''
     step
     ====
     A_vec: 行向量
     c_vec: 行向量
-    1: 在 t 加一个 PE
-    -1: 在 t 减一个 PE
+    z: 残余波形
+    step:
+        1: 在 t 加一个 PE
+        -1: 在 t 减一个 PE
+    mus: spe波形的平均幅值
+    sig2s: spe波形幅值方差
+    A: spe, PE x waveform
     '''
     fsig2s = step * sig2s
     # Eq. (30) sig2s = 1 sigma^2 - 0 sigma^2
@@ -185,13 +198,22 @@ def move(A_vec, c_vec, z, step, mus, sig2s, A):
     Δν = 0.5 * (beta * (z @ c_vec + mus / sig2s) ** 2 - mus ** 2 / fsig2s)
     # sign of space factor in Eq. (31) is reversed.  Because Eq. (82) is in the denominator.
     Δν -= 0.5 * np.log(beta_under) # space
+    return Δν, beta
+
+
+def move2(A_vec, c_vec, step, mus, A, beta):
     # accept, prepare for the next
     # Eq. (33) istar is now n_pre.  It crosses n_pre and n, thus is in vector form.
     Δcx = -np.einsum('n,m,mp->np', beta * c_vec, c_vec, A, optimize=True)
 
     # Eq. (34)
     Δz = -step * A_vec * mus
-    return Δν, Δcx, Δz
+    return Δcx, Δz
+
+
+def move(A_vec, c_vec, z, step, mus, sig2s, A):
+    Δν, beta = move1(A_vec, c_vec, z, step, mus, sig2s)
+    return Δν, *move2(A_vec, c_vec, step, mus, A, beta)
 
 def metropolis(ent, sample, mu0, d_tlist, s_history):
     i_tlist = 0
