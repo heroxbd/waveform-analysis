@@ -49,7 +49,7 @@ p = [8., 0.5, 24.]
 Thres = {'mcmc':std / gsigma, 'xiaopeip':0, 'lucyddm':0.2, 'fbmp':0, 'fftrans':0.1, 'findpeak':0.1, 'threshold':0, 'firstthres':0, 'omp':0}
 d_history = [('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('step', np.uint32), ('loc', np.float32)]
 proposal = np.array((1, 1, 2)) / 4
-TRIALS = 8000
+TRIALS = 2000
 
 def xiaopeip_old(wave, spe_pre, eta=0):
     l = len(wave)

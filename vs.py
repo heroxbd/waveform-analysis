@@ -366,8 +366,8 @@ for i, (cc, ll, kk) in enumerate(zip(bar_colors, labels, keys)):
     else:
         ax.errorbar(consumption[i, 1], wdist[i, 1], xerr=consumption_dy[:, i][:, None], yerr=wdist_dy[:, i][:, None], fmt='o', ecolor=color[kk], c=color[kk], elinewidth=1, capsize=3, label=ll)
     ax.text(np.exp(np.log(consumption[i, 1]) + 0.05), wdist[i, 1] + 0.05, s=ll)
-ax.plot(np.logspace(-5, 2, 301), 2 - np.logspace(-5, 2, 301), color='k', alpha=0.5, linestyle='dashed')
-ax.fill_between(np.logspace(-5, 2, 301), y1=2 - np.logspace(-5, 2, 301), y2=10, color='k', alpha=0.2)
+ax.plot(np.logspace(-5, 2, 301), 2 - 0.5 * np.logspace(-5, 2, 301), color='k', alpha=0.5, linestyle='dashed')
+ax.fill_between(np.logspace(-5, 2, 301), y1=2 - 0.5 * np.logspace(-5, 2, 301), y2=10, color='k', alpha=0.2)
 ax.set_xlim(1e-3, 20)
 ax.set_ylim(0, 4)
 ax.set_xscale('log')
@@ -412,6 +412,7 @@ mu_std_tru_list = np.sqrt(mu_list)
 mts = {'lucyddm':mtsi.copy(), 'takara':mtsi.copy(), 'xiaopeip':mtsi.copy(), 'fbmp':mtsi.copy()}
 # mts = {'lucyddm':mtsi.copy(), 'fbmp':mtsi.copy()}
 
+use_log = False
 for key in tqdm(mts.keys()):
     for i in range(len(mts[key])):
         f = filelist[mts[key][i]['n']]

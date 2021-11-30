@@ -289,7 +289,7 @@ def fbmp_inference(a0, a1):
         cha = np.repeat(xmmse_most[xmmse_most > 0] / mus / c_star[maxindex][xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
         mu_i = (c_star[maxindex] > 0).sum()
         t0_i, _ = wff.likelihoodt0(pet, char=cha, gmu=gmu, Tau=Tau, Sigma=Sigma, mode='all')
-        pet, cha = wff.clip(pet, cha, Thres[method])
+        pet, cha = wff.clip(pet, cha, 0.0)
         cha = cha * gmu
         d_max[i - a0] = maxindex
         elbo[i - a0] = elbo_i
