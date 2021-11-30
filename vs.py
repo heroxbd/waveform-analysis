@@ -412,7 +412,6 @@ mu_std_tru_list = np.sqrt(mu_list)
 mts = {'lucyddm':mtsi.copy(), 'takara':mtsi.copy(), 'xiaopeip':mtsi.copy(), 'fbmp':mtsi.copy()}
 # mts = {'lucyddm':mtsi.copy(), 'fbmp':mtsi.copy()}
 
-use_log = False
 for key in tqdm(mts.keys()):
     for i in range(len(mts[key])):
         f = filelist[mts[key][i]['n']]
@@ -447,6 +446,8 @@ for key in tqdm(mts.keys()):
 
             npe = np.diff(i_ans)
             N_add = N / (1 - poisson.cdf(0, mu)) - N
+            # N_add = 0
+            # mu = mu / (1 - np.exp(-mu))
             # s_npe = np.std(npe, ddof=-1)
             s_npe = np.sqrt(mu)
             s_wave_sum = np.std(np.append(wave_sum[vali], np.zeros(round(N_add))), ddof=-1)

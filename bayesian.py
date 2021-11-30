@@ -31,7 +31,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.colors import LogNorm
-import numdifftools as nd
+from numba import njit
 
 import wf_func as wff
 
@@ -45,7 +45,7 @@ psr.add_argument('-o', dest='opt', type=str, help='output file')
 psr.add_argument('ipt', type=str, help='input file')
 psr.add_argument('--met', type=str, help='fitting method')
 psr.add_argument('--ref', type=str, help='reference file')
-psr.add_argument('-N', '--Ncpu', dest='Ncpu', type=int, default=100)
+psr.add_argument('-N', '--Ncpu', dest='Ncpu', type=int, default=25)
 args = psr.parse_args()
 
 fipt = args.ipt
@@ -82,6 +82,13 @@ n_t = np.arange(1, 20)
 p_t = special.comb(mu0, 2)[:, None] * np.power(wff.convolve_exp_norm(np.arange(1029) - 200, Tau, Sigma) / n_t[:, None], 2).sum(axis=1)
 n0 = np.array([n_t[p_t[i] < max(1e-1, np.sort(p_t[i])[1])].min() for i in range(len(mu0))])
 ndict = dict(zip(mu0, n0))
+TRIALS = wff.TRIALS
+
+Δt_r = Δt_l = 0
+while wff.log_convolve_exp_norm(Δt_l, Tau, Sigma) > np.log(1e-9):
+    Δt_l -= 5
+while wff.log_convolve_exp_norm(Δt_r, Tau, Sigma) > np.log(1e-9):
+    Δt_r += 5
 
 class mNormal(numpyro.distributions.distribution.Distribution):
     arg_constraints = {'pl': numpyro.distributions.constraints.real}
@@ -182,35 +189,8 @@ def time_numpyro(a0, a1):
     dt = np.sort(dt, kind='stable', order=['TriggerNo', 'ChannelID'])
     return stime_t0, stime_cha, time_mcmc, dt, count, accep, mix0ratio
 
-prior = True
-space = True
 n = 1
-tlist_pan = np.sort(np.unique(np.hstack(np.arange(0, window)[:, None] + np.linspace(0, 1, n, endpoint=False) - (n // 2) / n)))
 b_t0 = [0., 600.]
-
-def likelihood(mu, t0, As_k, nu_star_k):
-    a = wff.convolve_exp_norm(tlist_pan - t0, Tau, Sigma) / n + 1e-8 # use tlist_pan not tlist
-    # a *= mu / a.sum()
-    a *= mu
-    li = -special.logsumexp(np.log(poisson.pmf(As_k, mu=a)).sum(axis=1) + nu_star_k)
-    return li
-
-def optit0mu(mu, t0, nu_star, As):
-    mulist = np.arange(max(1e-8, mu - 2 * np.sqrt(mu)), mu + 2 * np.sqrt(mu), 1e-1)
-    b_mu = [max(1e-8, mu - 5 * np.sqrt(mu)), mu + 5 * np.sqrt(mu)]
-    t0list = np.arange(t0 - 3 * Sigma, t0 + 3 * Sigma + 1e-6, 0.2)
-
-    # mu_init = mulist[np.array([likelihood(mulist[j], t0, As, nu_star) for j in range(len(mulist))]).argmin()]
-    # t0_init = t0list[np.array([likelihood(mu_init, t0list[j], As, nu_star) for j in range(len(t0list))]).argmin()]
-    # likelihood_x = lambda x, As, nu_star: likelihood(x[0], x[1], As, nu_star)
-    # ans = opti.fmin_l_bfgs_b(likelihood_x, args=(As, nu_star), x0=[mu_init, t0_init], approx_grad=True, bounds=[b_mu, b_t0], maxfun=50000)
-    # mu, t0 = ans[0]
-
-    t0_init = t0list[np.array([likelihood(mu, t0list[j], As, nu_star) for j in range(len(t0list))]).argmin()]
-    likelihood_x = lambda x, As, nu_star: likelihood(mu, x[0], As, nu_star)
-    t0, fval, _ = opti.fmin_l_bfgs_b(likelihood_x, args=(As, nu_star), x0=[t0_init], approx_grad=True, bounds=[b_t0], maxfun=50000)
-
-    return mu, t0
 
 def fbmp_inference(a0, a1):
     t0_wav = np.empty(a1 - a0)
@@ -220,12 +200,8 @@ def fbmp_inference(a0, a1):
     mu_kl = np.empty(a1 - a0)
     time_fbmp = np.empty(a1 - a0)
     dt = np.zeros((a1 - a0) * window, dtype=opdt)
-    d_tot = np.zeros(a1 - a0).astype(int)
     d_max = np.zeros(a1 - a0).astype(int)
     elbo = np.zeros(a1 - a0)
-    nu_truth = np.empty(a1 - a0)
-    nu_max = np.empty(a1 - a0)
-    num = np.zeros(a1 - a0).astype(int)
     start = 0
     end = 0
     for i in range(a0, a1):
@@ -235,7 +211,6 @@ def fbmp_inference(a0, a1):
         wave = ent[i]['Waveform'].astype(np.float64) * spe_pre[cid]['epulse']
 
         # initialization
-        mu_t = abs(wave.sum() / gmu)
         A, y, tlist, t0_t, t0_delta, cha, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[ent[i]['ChannelID']], Tau, Sigma, gmu, Thres['lucyddm'], p, is_t0=True, is_delta=False, n=n)
         # assert len(np.unique(np.diff(tlist))) == 1
         s_cha = np.cumsum(cha)
@@ -245,10 +220,8 @@ def fbmp_inference(a0, a1):
         p_cha = cha / np.sum(cha)
         mu_t = abs(y.sum() / gmu)
 
-        # t0_t = t0_truth['T0'][i] # override with truth to debug mu
-
         truth = pelist[pelist['TriggerNo'] == ent[i]['TriggerNo']]
-
+        # t0_t = t0_truth['T0'][i] # override with truth to debug mu
         # tlist = truth['HitPosInWindow'][truth['HitPosInWindow'] < right_wave - 1]
         # t_auto = (np.arange(left_wave, right_wave) / wff.nshannon)[:, None] - tlist
         # A = wff.spe((t_auto + np.abs(t_auto)) / 2, p[0], p[1], p[2])
@@ -272,41 +245,54 @@ def fbmp_inference(a0, a1):
         sig2w = spe_pre[cid]['std'] ** 2
         sig2s = (gsigma * mus / gmu) ** 2
 
-        xmmse_star, nu_star, T_star, c_star, NPE_evo, num_i = wff.metropolis_fbmp(y, A, sig2w, sig2s, mus, p1, p_cha, mu_t, prior=prior, space=space)
-
+        nu_star, T_star, c_star, es_history, NPE_evo = wff.metropolis_fbmp(y, A, sig2w, sig2s, mus, p1, p_cha, mu_t)
         time_fbmp[i - a0] = time.time() - time_fbmp_start
+        num = len(nu_star)
 
+        # Extra calculation to test
+        # elbo_i = 0
         p1_truth = Mu * wff.convolve_exp_norm(tlist - t0_truth[i]['T0'], Tau, Sigma) / n + 1e-8
-        nu_space_prior = np.array([wff.nu_direct(y, A, c_star[j], mus, sig2s, sig2w, p1_truth, prior=True, space=True) for j in range(num_i)])
+        nu_space_prior = np.array([wff.nu_direct(y, A, c_star[j], mus, sig2s, sig2w, p1_truth) for j in range(num)])
+        elbo_i = wff.elbo(nu_space_prior)
 
-        nx = np.sum([(tlist - 0.5 / n <= truth['HitPosInWindow'][j]) * (tlist + 0.5 / n > truth['HitPosInWindow'][j]) for j in range(len(truth))], axis=0)
-        nu_truth[i - a0] = wff.nu_direct(y, A, nx, mus, sig2s, sig2w, p1, prior=prior, space=space)
-        nu = np.array([wff.nu_direct(y, A, c_star[j], mus, sig2s, sig2w, p1, prior=prior, space=space) for j in range(num_i)])
-        nu_max[i - a0] = nu.max()
+        ilp_cha = np.log(cha.sum()) - np.log(cha)
+        guess = ilp_cha[es_history['loc'].astype(int)]
+        es_history['loc'] = np.interp(es_history['loc'], xp=np.arange(0.5, len(tlist)), fp=tlist)
+        ans = opti.fmin_l_bfgs_b(lambda x: -np.sum(wff.log_convolve_exp_norm(es_history['loc'] - x, Tau, Sigma)), x0=[t0_t], approx_grad=True, bounds=[b_t0], maxfun=500000)
+        t00 = ans[0].item() if ans[-1]['warnflag'] == 0 else t0_t
+        mu = mu_t
+        b_mu = [max(1e-8, mu - 5 * np.sqrt(mu)), mu + 5 * np.sqrt(mu)]
+        def agg_NPE(t0):
+            log_f = wff.log_convolve_exp_norm(es_history['loc'] - t0, Tau, Sigma) + guess
+            return wff.jit_agg_NPE(es_history['step'], log_f, TRIALS)
 
-        maxindex = nu_star.argmax()
-        xmmse_most = np.clip(xmmse_star[maxindex], 0, np.inf)
+        def t_t0(t0):
+            nonlocal mu
+            NPE, f_agg = agg_NPE(t0)
+            ans = opti.fmin_l_bfgs_b(lambda μ: μ - special.logsumexp(NPE * np.log(μ / mu) + f_agg), x0=[mu], approx_grad=True, bounds=[b_mu], maxfun=500000)
+            mu = ans[0].item()
+            return ans[1]
+
+        ans = opti.fmin_l_bfgs_b(t_t0, x0=[t00], approx_grad=True, bounds=[b_t0], maxfun=500000)
+        t0 = ans[0].item()
+
+        j = 0
+        xmmse_most = np.zeros(len(tlist))
+        while np.all(xmmse_most <= 0):
+            maxindex = nu_star.argsort()[::-1][j]
+            zx = y - np.dot(A, mus * c_star[maxindex])
+            Phi_s = wff.Phi(y, A, c_star[maxindex], mus, sig2s, sig2w)
+            invPhi = np.linalg.inv(Phi_s)
+            xmmse_most = mus * c_star[maxindex] + np.matmul(np.diagflat(sig2s * c_star[maxindex]), np.matmul(A.T, np.matmul(invPhi, zx)))
+            j += 0
         pet = np.repeat(tlist[xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
         cha = np.repeat(xmmse_most[xmmse_most > 0] / mus / c_star[maxindex][xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
-
-        As = np.zeros((num_i, len(tlist_pan)))
-        As[:, np.isin(tlist_pan, tlist)] = c_star
-        assert sum(np.sum(As, axis=0) > 0) > 0
-
-        NPE, counts = np.unique(NPE_evo, return_counts=True)
-        loggN = -NPE * np.log(mu_t) + np.log(counts)
-        rst = opti.minimize_scalar(lambda μ: μ - special.logsumexp(loggN + NPE * np.log(μ)), bounds=(NPE[0], NPE[-1]))
-        mu = rst.x
-
-        mu_t = mu
-        nu_star = -poisson.logpmf(As, mu_t * wff.convolve_exp_norm(tlist_pan - t0_t, Tau, Sigma) / n + 1e-8).sum(axis=1)
-        mu, t0 = optit0mu(mu, t0_t, nu_star, As)
-        mu_i, t0_i = optit0mu(mu_t, t0_t, np.array([0.]), As[maxindex][None, :])
-
-        d_max[i - a0] = maxindex
-        elbo[i - a0] = wff.elbo(nu_space_prior)
+        mu_i = (c_star[maxindex] > 0).sum()
+        t0_i, _ = wff.likelihoodt0(pet, char=cha, gmu=gmu, Tau=Tau, Sigma=Sigma, mode='all')
         pet, cha = wff.clip(pet, cha, Thres[method])
         cha = cha * gmu
+        d_max[i - a0] = maxindex
+        elbo[i - a0] = elbo_i
         t0_wav[i - a0] = t0
         t0_cha[i - a0] = t0_i
         mu_wav[i - a0] = mu
@@ -320,7 +306,7 @@ def fbmp_inference(a0, a1):
         start = end
     dt = dt[:end]
     dt = np.sort(dt, kind='stable', order=['TriggerNo', 'ChannelID'])
-    return t0_wav, t0_cha, dt, mu_wav, mu_cha, mu_kl, time_fbmp, d_max, nu_truth, nu_max, elbo
+    return t0_wav, t0_cha, dt, mu_wav, mu_cha, mu_kl, time_fbmp, elbo, d_max
 
 print('Initialization finished, real time {0:.02f}s, cpu time {1:.02f}s'.format(time.time() - global_start, time.process_time() - cpu_global_start))
 tic = time.time()
@@ -380,7 +366,7 @@ elif method == 'fbmp':
     ts = np.zeros(N, dtype=sdtp)
     ts['TriggerNo'] = ent['TriggerNo'][:N]
     ts['ChannelID'] = ent['ChannelID'][:N]
-    # fbmp_inference(0, 100)
+    # fbmp_inference(8363, 8400)
     with Pool(min(args.Ncpu, cpu_count())) as pool:
         result = pool.starmap(partial(fbmp_inference), slices)
     ts['tswave'] = np.hstack([result[i][0] for i in range(len(slices))])
@@ -391,15 +377,16 @@ elif method == 'fbmp':
     ts['mukl'] = np.hstack([result[i][5] for i in range(len(slices))])
     ts['consumption'] = np.hstack([result[i][6] for i in range(len(slices))])
     print('FBMP finished, real time {0:.02f}s'.format(ts['consumption'].sum()))
-    d_max = np.hstack([result[i][7] for i in range(len(slices))])
-    nu_truth = np.hstack([result[i][8] for i in range(len(slices))])
-    nu_max = np.hstack([result[i][9] for i in range(len(slices))])
-    ts['elbo'] = np.hstack([result[i][10] for i in range(len(slices))])
+    ts['elbo'] = np.hstack([result[i][7] for i in range(len(slices))])
+    d_max = np.hstack([result[i][8] for i in range(len(slices))])
+    
+    N_add = N / (1 - poisson.cdf(0, Mu)) * poisson.cdf(0, Mu)
+    print('relative bias is {:.3%}'.format((np.mean(np.append(ts['muwave'], np.zeros(round(N_add)))) - Mu) / Mu))
 
     matplotlib.use('Agg')
     matplotlib.rcParams.update(matplotlib.rcParamsDefault)
-    ff = plt.figure(figsize=(16, 12))
-    gs = gridspec.GridSpec(2, 2, figure=ff, left=0.1, right=0.95, top=0.95, bottom=0.1, wspace=0.3, hspace=0.3)
+    ff = plt.figure(figsize=(16, 6))
+    gs = gridspec.GridSpec(1, 2, figure=ff, left=0.1, right=0.95, top=0.95, bottom=0.1, wspace=0.3, hspace=0.3)
     # ff.tight_layout()
     ax = ff.add_subplot(gs[0, 0])
     ax.hist(d_max, label=r'$N_{max}$', bins=np.arange(d_max.max() + 1))
@@ -411,13 +398,6 @@ elif method == 'fbmp':
     m = d_max.mean()
     ax.legend(loc='upper right', title=fr'$E[N_{{max}}]={m:.02f}$')
     ax = ff.add_subplot(gs[0, 1])
-    ax.hist(nu_max - nu_truth, label=r'$\nu_{max}-\nu_{tru}$', bins=np.linspace((nu_max - nu_truth).min(), (nu_max - nu_truth).max(), 51))
-    ax.set_xlabel(r'$\Delta\nu$')
-    ax.set_ylabel('Count')
-    ax.set_ylim(0.5, N)
-    ax.set_yscale('log')
-    ax.legend(loc='upper right')
-    ax = ff.add_subplot(gs[1, 0])
     ax.hist(ts['elbo'], bins=np.linspace(ts['elbo'].min(), ts['elbo'].max(), 51), label=r'$\mathrm{ELBO}$')
     ax.set_xlabel(r'$\mathrm{ELBO}$')
     ax.set_ylabel('Count')

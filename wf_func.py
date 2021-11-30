@@ -23,6 +23,7 @@ from mpl_axes_aligner import align
 import h5py
 from scipy.interpolate import interp1d
 from sklearn.linear_model import orthogonal_mp
+from numba import njit
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -48,8 +49,7 @@ p = [8., 0.5, 24.]
 Thres = {'mcmc':std / gsigma, 'xiaopeip':0, 'lucyddm':0.2, 'fbmp':0, 'fftrans':0.1, 'findpeak':0.1, 'threshold':0, 'firstthres':0, 'omp':0}
 d_history = [('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('step', np.uint32), ('loc', np.float32)]
 proposal = np.array((1, 1, 2)) / 4
-# proposal = np.array((7, 7, 2)) / 16
-TRIALS = 2000
+TRIALS = 8000
 
 def xiaopeip_old(wave, spe_pre, eta=0):
     l = len(wave)
@@ -233,7 +233,7 @@ def move(A_vec, c_vec, z, step, mus, sig2s, A):
     Δz = -step * A_vec * mus
     return Δν, Δcx, Δz
 
-def flow(cx, p1, z, N, sig2s, mus, A, p_cha, mu_t):
+def flow(cx, p1, z, N, sig2s, sig2w, mus, A, p_cha, mu_t):
     '''
     flow
     ====
@@ -269,8 +269,8 @@ def flow(cx, p1, z, N, sig2s, mus, A, p_cha, mu_t):
     flip = np.random.choice((-1, 1, 2), TRIALS, p=proposal)
     Δν_history = np.zeros(TRIALS) # list of Δν's
     log_mu = np.log(mu_t) # 猜测的 Poisson 流强度
-    xmmse_list = []
     T_list = []
+    c_star_list = []
 
     for i, (t, step, home, wander, accept) in enumerate(zip(istar, flip, home_s, wander_s, np.log(np.random.rand(TRIALS)))):
         # 不设左右边界
@@ -321,16 +321,17 @@ def flow(cx, p1, z, N, sig2s, mus, A, p_cha, mu_t):
         else: # reject proposal
             Δν = 0
             step = 0
-        assist = np.zeros(N)
         T_list.append(np.sort(np.digitize(s, bins=np.arange(N)) - 1))
         t, c = np.unique(T_list[-1], return_counts=True)
-        assist[t] = mus * c + sig2s * c * np.dot(z, cx[:, t])
-        xmmse_list.append(assist)
+        c_star = np.zeros(N, dtype=int)
+        c_star[t] = c
+        c_star_list.append(c_star)
+
         Δν_history[i] = Δν
         flip[i] = step
-    return flip, [Δν_history, ν], es_history[:si1], xmmse_list, T_list
+    return flip, [Δν_history, ν], es_history[:si1], c_star_list, T_list
 
-def metropolis_fbmp(y, A, sig2w, sig2s, mus, p1, p_cha, mu_t, prior=False, space=True):
+def metropolis_fbmp(y, A, sig2w, sig2s, mus, p1, p_cha, mu_t):
     '''
     p1: prior probability for each bin.
     sig2w: variance of white noise.
@@ -341,49 +342,42 @@ def metropolis_fbmp(y, A, sig2w, sig2s, mus, p1, p_cha, mu_t, prior=False, space
     M, N = A.shape
 
     # nu_root: nu for all s_n=0.
-    # no Gaussian space factor
     nu_root = -0.5 * np.linalg.norm(y) ** 2 / sig2w - 0.5 * M * np.log(2 * np.pi)
-    if space:
-        nu_root -= 0.5 * M * np.log(sig2w)
-    if prior:
-        nu_root += poisson.logpmf(0, p1).sum()
+    nu_root -= 0.5 * M * np.log(sig2w)
+    nu_root += poisson.logpmf(0, p1).sum()
     # Eq. (29)
     cx_root = A / sig2w
     # mu = 0 => (y - A * mu -> z)
     z = y.copy()
 
     # Metropolis flow
-    flip, Δν_history, es_history, xmmse_list, T_list = flow(cx_root, p1, z, N, sig2s, mus, A, p_cha, mu_t)
+    flip, Δν_history, es_history, c_star_list, T_list = flow(cx_root, p1, z, N, sig2s, sig2w, mus, A, p_cha, mu_t)
     num = len(T_list)
 
-    burn = num // 5
-    xmmse_star = np.vstack(xmmse_list)
-    c_star = np.zeros_like(xmmse_star, dtype=int)
-    for k in range(num):
-        t, c = np.unique(T_list[k], return_counts=True)
-        c_star[k, t] = c
+    c_star = np.vstack(c_star_list)
     nu_star = np.cumsum(Δν_history[0]) + nu_root + Δν_history[1]
 
+    burn = num // 5
+    nu_star = nu_star[burn:]
+    T_list = T_list[burn:]
+    c_star = c_star[burn:, :]
     flip[np.abs(flip) == 2] = 0 # 平移不改变 PE 数
-    NPE0 = int(mu_t + 0.5)
-    NPE_evo = np.cumsum(np.insert(flip, 0, NPE0))[burn:]
+    NPE_evo = np.cumsum(np.insert(flip, 0, int(mu_t + 0.5)))[burn:]
+    es_history = es_history[es_history['step'] >= burn]
 
-    return xmmse_star[burn:, :], nu_star[burn:], T_list[burn:], c_star[burn:, :], NPE_evo, num - burn
+    return nu_star, T_list, c_star, es_history, NPE_evo
 
-def nu_direct(y, A, nx, mus, sig2s, sig2w, la, prior=True, space=True):
+def nu_direct(y, A, nx, mus, sig2s, sig2w, la):
     M, N = A.shape
-    Phi_s = Phi(y, A, nx, mus, sig2s, sig2w, la)
+    Phi_s = Phi(y, A, nx, mus, sig2s, sig2w)
     z = y - np.dot(A, (mus * nx))
     invPhi = np.linalg.inv(Phi_s)
-    # no Gaussian space factor
     nu = -0.5 * np.matmul(np.matmul(z, invPhi), z) - 0.5 * M * np.log(2 * np.pi)
-    if space:
-        nu -= 0.5 * np.log(np.linalg.det(Phi_s))
-    if prior:
-        nu = nu + poisson.logpmf(nx, mu=la).sum()
+    nu -= 0.5 * np.log(np.linalg.det(Phi_s))
+    nu = nu + poisson.logpmf(nx, mu=la).sum()
     return nu
 
-def Phi(y, A, nx, mus, sig2s, sig2w, la):
+def Phi(y, A, nx, mus, sig2s, sig2w):
     M, N = A.shape
     return np.matmul(np.matmul(A, np.diagflat(sig2s * nx)), A.T) + np.eye(M) * sig2w
 
@@ -393,6 +387,71 @@ def elbo(nu_star_prior):
     # e_star = special.logsumexp(nu_star_prior)
     # assert abs(e_star - e) < 1e-4
     return e
+
+@njit(nogil=True, cache=True)
+def unique_with_indices(values):
+    unq = np.unique(values)
+    idx = np.zeros_like(unq, dtype=np.int_)
+    idx[0] = 0
+    i = 0
+    for j in range(1, len(values)):
+        if values[j] != unq[i]:
+            i += 1
+            idx[i] = j
+    return unq, idx
+
+@njit(nogil=True, cache=True)
+def group_by_sorted_count_sum(idx, a):
+    unique_idx, idx_of_idx = unique_with_indices(idx)
+    counts = np.zeros_like(unique_idx, dtype=np.int_)
+    sums = np.zeros_like(unique_idx, dtype=np.float64)
+    for i in range(0, len(idx_of_idx)):
+        start = idx_of_idx[i]
+        if i < len(idx_of_idx) - 1:
+            end = idx_of_idx[i + 1]
+        else:
+            end = len(idx)
+        counts[i] = end - start
+        sums[i] = np.sum(a[start:end])
+    return unique_idx, counts, sums
+
+@njit(nogil=True, cache=True)
+def jit_logsumexp(values, b):
+    a_max = np.max(values)
+    s = np.sum(b * np.exp(values - a_max))
+    return np.log(s) + a_max
+
+@njit(nogil=True, cache=True)
+def group_by_logsumexp(idx, a, b):
+    unique_idx, idx_of_idx = unique_with_indices(idx)
+    res = np.zeros_like(unique_idx, dtype=np.float64)
+    for i in range(0, len(idx_of_idx)):
+        start = idx_of_idx[i]
+        if i < len(idx_of_idx) - 1:
+            end = idx_of_idx[i + 1]
+        else:
+            end = len(idx)
+        res[i] = jit_logsumexp(a[start:end], b[start:end])
+    return unique_idx, res
+
+def jit_agg_NPE(step, f, size):
+    step, NPE, f_vec = group_by_sorted_count_sum(step, f)
+
+    f_vec_merged = np.zeros(
+        len(step),
+        dtype=np.dtype([("NPE", np.int_), ("f_vec", np.float64), ("repeat", np.int_)]),
+    )
+    f_vec_merged["NPE"] = NPE
+    f_vec_merged["f_vec"] = f_vec
+    f_vec_merged["repeat"] = np.diff(np.append(step, int(size)))
+
+    f_vec_merged = np.sort(f_vec_merged, order="NPE")
+
+    indices, NPE_vec = group_by_logsumexp(
+        f_vec_merged["NPE"], f_vec_merged["f_vec"], f_vec_merged["repeat"]
+    )
+
+    return indices, NPE_vec
 
 def rss_alpha(alpha, outputs, inputs, mnecpu):
     r = np.power(alpha * np.matmul(mnecpu, outputs) - inputs, 2).sum()
@@ -463,16 +522,28 @@ def time(n, tau, sigma):
         return np.sort(glow(n, tau) + transit(n, sigma))
 
 def convolve_exp_norm(x, tau, sigma):
-    if tau == 0.:
+    if tau == 0.0:
         y = norm.pdf(x, loc=0, scale=sigma)
-    elif sigma == 0.:
-        y = np.where(x >= 0., 1/tau * np.exp(-x/tau), 0.)
+    elif sigma == 0.0:
+        y = np.where(x >= 0.0, 1.0 / tau * np.exp(-x / tau), 0.0)
     else:
-        alpha = 1/tau
-        co = alpha/2. * np.exp(alpha*alpha*sigma*sigma/2.)
-        x_erf = (alpha*sigma*sigma - x)/(np.sqrt(2.)*sigma)
-        y = co * (1. - special.erf(x_erf)) * np.exp(-alpha*x)
+        alpha = 1 / tau
+        co = alpha / 2.0 * np.exp(alpha * alpha * sigma * sigma / 2.0)
+        x_erf = (alpha * sigma * sigma - x) / (np.sqrt(2.) * sigma)
+        y = co * (1.0 - special.erf(x_erf)) * np.exp(-alpha * x)
     return y
+
+def log_convolve_exp_norm(x, tau, sigma):
+    if tau == 0.0:
+        y = norm.logpdf(x, loc=0, scale=sigma)
+    elif sigma == 0.0:
+        y = np.where(x >= 0.0, -np.log(tau) - x / tau, -np.inf)
+    else:
+        alpha = 1.0 / tau
+        co = -np.log(2.0 * tau) + alpha * alpha * sigma * sigma / 2.0
+        x_erf = (alpha * sigma * sigma - x) / (np.sqrt(2.0) * sigma)
+        y = co + np.log(1.0 - special.erf(x_erf)) - alpha * x
+    return np.clip(y, np.log(np.finfo(np.float64).tiny), np.inf)
 
 def spe(t, tau, sigma, A, gmu=gmu, window=window):
     return A * np.exp(-1 / 2 * (np.log(t / tau) / sigma) ** 2)
