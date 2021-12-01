@@ -366,7 +366,9 @@ elif method == 'fbmp':
     ts = np.zeros(N, dtype=sdtp)
     ts['TriggerNo'] = ent['TriggerNo'][:N]
     ts['ChannelID'] = ent['ChannelID'][:N]
-    # fbmp_inference(8363, 8400)
+    # fbmp_inference(0, 200)
+    # import sys
+    # sys.exit()
     with Pool(min(args.Ncpu, cpu_count())) as pool:
         result = pool.starmap(partial(fbmp_inference), slices)
     ts['tswave'] = np.hstack([result[i][0] for i in range(len(slices))])
