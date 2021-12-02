@@ -8722,10 +8722,10 @@
 \pgfsetstrokeopacity{0.800000}%
 \pgfsetdash{}{0pt}%
 \pgfpathmoveto{\pgfqpoint{8.048611in}{1.214573in}}%
-\pgfpathlineto{\pgfqpoint{8.714031in}{1.214573in}}%
-\pgfpathquadraticcurveto{\pgfqpoint{8.727920in}{1.214573in}}{\pgfqpoint{8.727920in}{1.228462in}}%
-\pgfpathlineto{\pgfqpoint{8.727920in}{2.480389in}}%
-\pgfpathquadraticcurveto{\pgfqpoint{8.727920in}{2.494278in}}{\pgfqpoint{8.714031in}{2.494278in}}%
+\pgfpathlineto{\pgfqpoint{8.708436in}{1.214573in}}%
+\pgfpathquadraticcurveto{\pgfqpoint{8.722325in}{1.214573in}}{\pgfqpoint{8.722325in}{1.228462in}}%
+\pgfpathlineto{\pgfqpoint{8.722325in}{2.480389in}}%
+\pgfpathquadraticcurveto{\pgfqpoint{8.722325in}{2.494278in}}{\pgfqpoint{8.708436in}{2.494278in}}%
 \pgfpathlineto{\pgfqpoint{8.048611in}{2.494278in}}%
 \pgfpathquadraticcurveto{\pgfqpoint{8.034722in}{2.494278in}}{\pgfqpoint{8.034722in}{2.480389in}}%
 \pgfpathlineto{\pgfqpoint{8.034722in}{1.228462in}}%
@@ -8936,7 +8936,7 @@
 \definecolor{textcolor}{rgb}{0.000000,0.000000,0.000000}%
 \pgfsetstrokecolor{textcolor}%
 \pgfsetfillcolor{textcolor}%
-\pgftext[x=8.256944in,y=2.127380in,left,base]{\color{textcolor}\sffamily\fontsize{5.000000}{6.000000}\selectfont \(\displaystyle \mathrm{FBMPmax}\)}%
+\pgftext[x=8.256944in,y=2.127380in,left,base]{\color{textcolor}\sffamily\fontsize{5.000000}{6.000000}\selectfont \(\displaystyle \mathrm{FSMPmax}\)}%
 \end{pgfscope}%
 \begin{pgfscope}%
 \pgfsetbuttcap%
@@ -9399,7 +9399,7 @@
 \definecolor{textcolor}{rgb}{0.000000,0.000000,0.000000}%
 \pgfsetstrokecolor{textcolor}%
 \pgfsetfillcolor{textcolor}%
-\pgftext[x=8.256944in,y=1.255854in,left,base]{\color{textcolor}\sffamily\fontsize{5.000000}{6.000000}\selectfont \(\displaystyle \mathrm{FBMP}\)}%
+\pgftext[x=8.256944in,y=1.255854in,left,base]{\color{textcolor}\sffamily\fontsize{5.000000}{6.000000}\selectfont \(\displaystyle \mathrm{FSMP}\)}%
 \end{pgfscope}%
 \end{pgfpicture}%
 \makeatother%

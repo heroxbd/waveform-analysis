@@ -3955,7 +3955,7 @@
 \definecolor{textcolor}{rgb}{0.000000,0.000000,0.000000}%
 \pgfsetstrokecolor{textcolor}%
 \pgfsetfillcolor{textcolor}%
-\pgftext[x=8.616667in,y=1.565112in,left,base]{\color{textcolor}\sffamily\fontsize{12.000000}{14.400000}\selectfont \(\displaystyle \mathrm{FBMP}\)}%
+\pgftext[x=8.616667in,y=1.565112in,left,base]{\color{textcolor}\sffamily\fontsize{12.000000}{14.400000}\selectfont \(\displaystyle \mathrm{FSMP}\)}%
 \end{pgfscope}%
 \end{pgfpicture}%
 \makeatother%
