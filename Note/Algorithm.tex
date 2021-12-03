@@ -347,10 +347,10 @@ We name the method \emph{fast stochastic matching pursuit}~(FSMP) after fast Bay
   \begin{subfigure}[b]{.55\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/demoe2c0.pgf}}
-    \caption{\label{fig:fbmp} An example giving \\ $\Delta{t_0}=\SI{-3.95}{ns}$, $\mathrm{RSS}=\SI{16.0}{mV^2}$, $D_\mathrm{w}=\SI{0.56}{ns}$.}
+    \caption{\label{fig:fbmp} An example giving \\ $\Delta{t_0}=\SI{-3.97}{ns}$, $\mathrm{RSS}=\SI{17.8}{mV^2}$, $D_\mathrm{w}=\SI{0.64}{ns}$.}
   \end{subfigure}
   \caption{\label{fig:fbmp-performance}Demonstration of FSMP with $\num[retain-unity-mantissa=false]{1e4}$ waveforms in~\subref{fig:fbmp-npe} and one waveform in~\subref{fig:fbmp} sampled from the same setup as figure~\ref{fig:method}.  FSMP reconstructs the waveform and charges flawlessly.}
 \end{figure}
-In terms of $D_\mathrm{w}$, figure~\ref{fig:fbmp-npe} show that FSMP is on par with CNN in figure~\ref{fig:cnn-npe}.  Figure~\ref{fig:fbmp} demonstrates a perfect reconstruction example where the true and reconstructed charges and waveforms overlap.  A bias of $\Delta{t_0}=\SI{-3.95}{ns}$ aligns with $\hat{t}_\mathrm{ALL}$ in eq.~\eqref{eq:2}, which will be covered in section~\ref{subsec:timeresolution}.  The superior performance of FSMP attributes to sparsity and positiveness of $q'_i$, correct modeling of $V_\mathrm{PE}$, $q'$ distribution and white noise.
+In terms of $D_\mathrm{w}$, figure~\ref{fig:fbmp-npe} show that FSMP is on par with CNN in figure~\ref{fig:cnn-npe}.  Figure~\ref{fig:fbmp} demonstrates a perfect reconstruction example where the true and reconstructed charges and waveforms overlap.  A bias of $\Delta{t_0}=\SI{-3.97}{ns}$ aligns with $\hat{t}_\mathrm{ALL}$ in eq.~\eqref{eq:2}, which will be covered in section~\ref{subsec:timeresolution}.  The superior performance of FSMP attributes to sparsity and positiveness of $q'_i$, correct modeling of $V_\mathrm{PE}$, $q'$ distribution and white noise.
 
 Estimators for $t_0$ and $\mu$ in eq.~\eqref{eq:fbmpcharge} is an elegant interface to event reconstruction, eliminating the need of $\hat{t}_\mathrm{KL}$ and $\hat{\mu}_\mathrm{KL}$ in section~\ref{sec:pseudo}.

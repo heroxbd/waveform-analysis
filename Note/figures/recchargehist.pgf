@@ -1187,7 +1187,7 @@
 \definecolor{textcolor}{rgb}{0.000000,0.000000,0.000000}%
 \pgfsetstrokecolor{textcolor}%
 \pgfsetfillcolor{textcolor}%
-\pgftext[x=7.869330in,y=3.490135in,left,base]{\color{textcolor}\sffamily\fontsize{20.000000}{24.000000}\selectfont \(\displaystyle \mathrm{FBMP}\)}%
+\pgftext[x=7.869330in,y=3.490135in,left,base]{\color{textcolor}\sffamily\fontsize{20.000000}{24.000000}\selectfont \(\displaystyle \mathrm{FSMP}\)}%
 \end{pgfscope}%
 \end{pgfpicture}%
 \makeatother%
