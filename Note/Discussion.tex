@@ -83,9 +83,9 @@ Large light intensity improves the resolution of $\hat{t}_\mathrm{1st}$, as evid
 
 Intensity reconstruction using integration~(int in figure~\ref{fig:biasmu} and~\ref{fig:deltamu}), $\hat{\mu}_Q$, is deteriorated by the randomization process, such as charge distribution and Gaussian white noise in section~\ref{subsec:spe}. 
 
-Figure~\ref{fig:biasmu} shows the bias of $\hat{\mu}$ of all four methods. The bias of LucyDDM comes from the thresholding and scaling defined in eq.~\eqref{eq:fdconv2}. We suspect that the bias of FSMP comes from poisson essence of FSMP. 
+Figure~\ref{fig:biasmu} shows the bias of $\hat{\mu}$ of all four methods. The bias of LucyDDM comes from the thresholding and scaling defined in eq.~\eqref{eq:fdconv2}. We suspect that the bias of FSMP comes from poisson essence of FSMP. Figure~\ref{fig:deltamu} shows the intensity relative resolutions. For small $\mu$, FSMP gives a much better resolution by correctly modeling charge distributions, see also figure~\ref{fig:recchargehist}. For larger $\mu$, these four methods are similar to $\hat{\mu}_Q$ as expected.  
 
-Figure~\ref{fig:deltamu} shows the intensity relative resolutions.  For small $\mu$ FSMP gives a much better resolution by correctly modeling charge distributions, see also figure~\ref{fig:recchargehist}.  For larger $\mu$, these four methods are similar to $\hat{\mu}_Q$.
+The comparison indicates that these waveform analysis methods will bring enhancements of sensitivity, considering the energy resolution is crucial for all PMT-based experiments, and the resolution is deteriorated, especially when energy is small. Though it needs to be investigated in a dedicated study to what extent the sensitivity will change on a specific experiment, we believe implementing these methods allows us to shorten the time on obtaining particular statistical significance, provide more flexible analysis strategies, and even broaden the physical programs performed on existing detectors and facilities. 
 
 % Pedestal & Hardware
 
