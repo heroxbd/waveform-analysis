@@ -335,7 +335,7 @@ Taking a Markov chain sample $S = (\bm{s}_1, \bm{s}_2, \cdots, \bm{s}_M)$ from $
 \end{equation}
 and calculate RSS and $D_\mathrm{w}$ by eqs.~\eqref{eq:rss}, \eqref{eq:numerical}, \eqref{eq:gd-phi} and \eqref{eq:mcmc-w}.
 
-We name the method \emph{fast stochastic matching pursuit}~(FSMP) after fast Bayesian matching pursuit~(FBMP) by Schniter~\textit{et al.}~\cite{schniter_fast_2008}.  FSMP replaces the greedy search routine in FBMP with the Markov chain Monte Carlo in (\ref{eq:fbmpcharge}).  With FSMP we straightforwardly extend $\bm{z}$ into an unbinned vector of PE locations $t_i$ like Geyer and Møller~\cite{geyer_simulation_1994} to handle trans-dimensionality in a Poisson point process.
+We name the method \emph{fast stochastic matching pursuit}~(FSMP) after fast Bayesian matching pursuit~(FBMP) by Schniter~\textit{et al.}~\cite{schniter_fast_2008} and Bayesian stochastic matching pursuit by Chen~\textit{et al.}~\cite{chen_stochastic_2011}.  FSMP replaces the greedy search routine in FBMP with the Markov chain Monte Carlo in (\ref{eq:fbmpcharge}).  With the help of Ekanadham~\textit{et al.}'s function interpolation~\cite{ekanadham_recovery_2011}, FSMP straightforwardly extends $\bm{z}$ into an unbinned vector of PE locations $t_i$.  Geyer and Møller~\cite{geyer_simulation_1994} developed a similar sampler to handle trans-dimensionality in a Poisson point process.
 
 \begin{figure}[H]
   \begin{subfigure}[b]{.45\textwidth}
@@ -351,6 +351,6 @@ We name the method \emph{fast stochastic matching pursuit}~(FSMP) after fast Bay
   \end{subfigure}
   \caption{\label{fig:fbmp-performance}Demonstration of FSMP with $\num[retain-unity-mantissa=false]{1e4}$ waveforms in~\subref{fig:fbmp-npe} and one waveform in~\subref{fig:fbmp} sampled from the same setup as figure~\ref{fig:method}.  FSMP reconstructs the waveform and charges flawlessly.}
 \end{figure}
-In terms of $D_\mathrm{w}$, figure~\ref{fig:fbmp-npe} show that FSMP is on par with CNN in figure~\ref{fig:cnn-npe}.  Figure~\ref{fig:fbmp} demonstrates a perfect reconstruction example where the true and reconstructed charges and waveforms overlap.  A bias of $\Delta{t_0}=\SI{-3.97}{ns}$ aligns with $\hat{t}_\mathrm{ALL}$ in eq.~\eqref{eq:2}, which will be covered in section~\ref{subsec:timeresolution}.  The superior performance of FSMP attributes to sparsity and positiveness of $q'_i$, correct modeling of $V_\mathrm{PE}$, $q'$ distribution and white noise.
+In terms of $D_\mathrm{w}$, figure~\ref{fig:fbmp-npe} show that FSMP is on par with CNN in figure~\ref{fig:cnn-npe}.  Figure~\ref{fig:fbmp} is a perfect reconstruction example where the true and reconstructed charges and waveforms overlap.  A bias of $\Delta{t_0}=\SI{-3.97}{ns}$ aligns with $\hat{t}_\mathrm{ALL}$ in eq.~\eqref{eq:2}, which will be covered in section~\ref{subsec:timeresolution}.  The superior performance of FSMP attributes to sparsity and positiveness of $q'_i$, correct modeling of $V_\mathrm{PE}$, $q'$ distribution and white noise.
 
 Estimators for $t_0$ and $\mu$ in eq.~\eqref{eq:fbmpcharge} is an elegant interface to event reconstruction, eliminating the need of $\hat{t}_\mathrm{KL}$ and $\hat{\mu}_\mathrm{KL}$ in section~\ref{sec:pseudo}.
