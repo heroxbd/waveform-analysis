@@ -82,13 +82,10 @@ n_t = np.arange(1, 20)
 p_t = special.comb(mu0, 2)[:, None] * np.power(wff.convolve_exp_norm(np.arange(1029) - 200, Tau, Sigma) / n_t[:, None], 2).sum(axis=1)
 n0 = np.array([n_t[p_t[i] < max(1e-1, np.sort(p_t[i])[1])].min() for i in range(len(mu0))])
 ndict = dict(zip(mu0, n0))
-TRIALS = wff.TRIALS
-
-Δt_r = Δt_l = 0
-while wff.log_convolve_exp_norm(Δt_l, Tau, Sigma) > np.log(1e-9):
-    Δt_l -= 5
-while wff.log_convolve_exp_norm(Δt_r, Tau, Sigma) > np.log(1e-9):
-    Δt_r += 5
+if Mu >= 15.0:
+    TRIALS = 8000
+else:
+    TRIALS = 2000
 
 class mNormal(numpyro.distributions.distribution.Distribution):
     arg_constraints = {'pl': numpyro.distributions.constraints.real}
