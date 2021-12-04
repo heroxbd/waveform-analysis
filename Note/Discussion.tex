@@ -5,7 +5,7 @@ In this section, we shall address the burning question: which waveform analysis 
 
 \subsection{Performance}
 
-First, we constrain the candidates by time consumption, algorithm category and $D_\mathrm{w}$.  Figure~\ref{fig:chargesummary} shows the $D_w$ and time consumption summary of all 8 methods with the same waveform sample as figure~\ref{fig:method}.
+We constrain the candidates by time consumption, algorithm category and $D_\mathrm{w}$.  Figure~\ref{fig:chargesummary} shows the $D_w$ and time consumption summary of all 8 methods with the same waveform sample as figure~\ref{fig:method}.
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{\input{figures/summarycharge.pgf}}
@@ -15,11 +15,11 @@ First, we constrain the candidates by time consumption, algorithm category and $
 \stepcounter{footnote}\footnotetext{Graphics card of NVIDIA\textsuperscript{\textregistered} Tesla A100. }
 \stepcounter{footnote}\footnotetext{One CPU core of AMD EYPC\texttrademark\ 7742. }
 
-The $D_\mathrm{w}$ performance of waveform shifting, peak finding and Fourier deconvolution are suboptimal.  But together with CNN, they are the fastest, because no iteration is involved.  LucyDDM and Fitting have $\num{\sim 100}$ iterations, while FSMP has $\num{\sim 1000}$ iterations, so they are 2 orders of magnitudes slower.  The number of iterations and samples $N_s$ can be decreased to trade for speed.  MCMC is too expansive and its principle is not too different from FSMP.  We shall focus on CNN, LucyDDM, fitting and FSMP in the following.
+The $D_\mathrm{w}$ performance of waveform shifting, peak finding and Fourier deconvolution are suboptimal.  But they are the fastest like CNN, because no iteration is involved.  LucyDDM and Fitting have $\num{\sim 100}$ iterations, while FSMP has $\num{\sim 1000}$ iterations, so they are 2 orders of magnitudes slower.  The number of iterations and samples $N_s$ can be decreased to trade for speed.  MCMC is too expansive and its principle is not too different from FSMP.  We shall focus on CNN, LucyDDM, Fitting and FSMP in the following.
 
 % Figure of Merits
 
-The $D_\mathrm{w}$ and RSS dependence on $\mu$ of LucyDDM, Fitting, CNN and FSMP, are plotted in figure~\ref{fig:wdistsummary} and \ref{fig:rsssummary}.  When $\mu$ increases $D_\mathrm{w}$ approach each other, while RSS diverges.  The $D_\mathrm{w}$ decrease-before-increase behavior is observed in section~\ref{sec:cnn} that with large $N_\mathrm{PE}$ the overall PE times dominate.  It is harder to balance $D_\mathrm{w}$ and RSS with larger $N_\mathrm{PE}$, but FSMP achieves the best balance.  It is a interesting question whether FSMP can be approximated by a neuron network for a speed boost.  Notice that in qualitative discussion, large $N_\mathrm{PE}$, large light intensity $\mu$ and large pile-ups are used interchangably.
+The $D_\mathrm{w}$ and RSS dependence on $\mu$ of LucyDDM, Fitting, CNN and FSMP are plotted in figure~\ref{fig:wdistsummary} and \ref{fig:rsssummary}.  When $\mu$ increases $D_\mathrm{w}$ approach each other, while RSS diverges.  The $D_\mathrm{w}$ decrease-before-increase behavior is observed in section~\ref{sec:cnn} that with large $N_\mathrm{PE}$ the overall PE times dominate.  It is harder to be good both at $D_\mathrm{w}$ and RSS with larger $N_\mathrm{PE}$, but FSMP achieves the best balance.  It is a interesting question whether FSMP can be approximated by a neuron network for a speed boost.  Notice that in qualitative discussion, large $N_\mathrm{PE}$, large light intensity $\mu$ and large pile-ups are used interchangably.
 \begin{figure}[H]
   \begin{subfigure}[b]{\textwidth}
     \resizebox{\textwidth}{!}{\input{figures/vs-wdist.pgf}}
@@ -34,13 +34,13 @@ The $D_\mathrm{w}$ and RSS dependence on $\mu$ of LucyDDM, Fitting, CNN and FSMP
   \caption{\label{fig:summary}The dependence of $D_\mathrm{w}$~\subref{fig:wdistsummary} and RSS~\subref{fig:rsssummary} on light intensity $\mu$ for typical Cherenkov (left) and scintillation (right) configurations.  Central points, error bars and method abbreviations have the same meaning as figure~\ref{fig:chargesummary}.  With more pile-ups, $D_\mathrm{w}$ tends to converge while RSS diverges.  The pile-up effect is more significant for Cherenkov case because the time scale of light curve is narrower. }
 \end{figure}
 
-CNN and FSMP are the kings of $D_\mathrm{w}$ and RSS.  Because their loss functions are chosen accordingly.  It is therefore informative to study the posterior charge distribution which is not related to the loss function of any method.
+CNN and Fitting are the kings of $D_\mathrm{w}$ and RSS.  Because their loss functions are chosen accordingly.  It is therefore informative to study the posterior charge distribution which is not related to the loss function of any method.
 
 \subsection{Charge fidelity and sparsity}
 
-All the discussed mothods output $\hat{q}_i$ as the inferred charge of the PE at $t_i'$.  Evident in figure~\ref{fig:recchargehist}, FSMP considers and almost retains the true charge distribution.  It is the only method modeling PE correctly.
+All the discussed mothods output $\hat{q}_i$ as the inferred charge of the PE at $t_i'$.  Evident in figure~\ref{fig:recchargehist}, FSMP retains the true charge distribution.  It is the only method modeling PE correctly.
 
-In contrast, the distributions of LucyDDM, Fitting, and CNN are severely distorted.  During the optimization process of $D_\mathrm{w}$ or RSS, the number of $q_i$ is a constant. Many $\hat{q}_i$ are inferred to be fragmented values.  In this view, retaining charge distribution is a manifestation of sparsity.  FSMP has the best sparsity because it chooses a PE configuration $\bm{z}$ before fitting $\hat{q}_i$.  CNN somehow learns the sparsity better than Fitting, although the latter in theory has self-regulated sparsity.  It is interesting to notice, but the mechanism is unknown to us.
+In contrast, the distributions of LucyDDM, Fitting, and CNN are severely distorted.  During the optimization process of $D_\mathrm{w}$ or RSS, $N_s$, the number of $q_i$, is a constant. Many $\hat{q}_i$ are inferred to be fragmented values.  Retaining charge distribution is a manifestation of sparsity.  FSMP has the best sparsity because it chooses a PE configuration $\bm{z}$ before fitting $\hat{q}_i$.  CNN is somehow better than Fitting, although the latter in theory has self-regulated sparsity.  It is interesting to notice, but the mechanism is unknown to us.
 
 \begin{figure}[H]
   \centering
@@ -48,40 +48,42 @@ In contrast, the distributions of LucyDDM, Fitting, and CNN are severely distort
   \caption{\label{fig:recchargehist} $\hat{q}_i$ distributions on the same waveform dataset as figure~\ref{fig:method}.  Method abbreviations are defined in figure~\ref{fig:chargesummary}. ChargePDF is the charge distribution introduced for simulation in section~\ref{subsec:spe}. The cut-off near 0 in LucyDDM is an artifect of thresholding in eq.~\eqref{eq:fdconv2}.}
 \end{figure}
 
-For large $N_\mathrm{PE}$ waveforms the sparsity condition is by definition lost.  The equivalence of charge fidelity and sparity implies that FSMP breaks for large $N_\mathrm{PE}$ cases where PMTs operates in current mode, as we shall see in the next sections.
+For large $N_\mathrm{PE}$ waveforms the sparsity condition is by definition lost.  The equivalence of charge fidelity and sparity implies that FSMP performs similarly to others for these cases, as we shall see in the next sections.
 
 \subsection{Inference of incident light}
 \label{subsec:timeresolution}
 
-Like figure~\ref{fig:summary}, we show the dependence on $\mu$ of bias~(figure~\ref{fig:biasmethods}) and resolution~(figure~\ref{fig:deltamethods}) for different time estimators in two typical experimental setups.  From figure~\ref{fig:biasmethods}, we see that the $t_0$ estimation biases are all similar to that of $\hat{t}_\mathrm{ALL}$. The considerable bias for the scintillation configureation~(right of figure~\ref{fig:biasmethods}) for small $\mu$ is intrinsic for exponential distributions.
+Like figure~\ref{fig:summary}, we show the dependence on $\mu$ of bias~(figure~\ref{fig:biasmethods}) and resolution~(figure~\ref{fig:deltamethods}) for different time estimators in the two typical experimental setups.  From figure~\ref{fig:biasmethods}, we see that the $t_0$ estimation biases are all similar to that of $\hat{t}_\mathrm{ALL}$. The bias for the scintillation configuration~(right of figure~\ref{fig:biasmethods}) for small $\mu$ is intrinsic for MLE of exponential distributions.  It can be modified into an un-biased estimator, but we leave this discussion to event reconstruction.
 
-Large light intensity improves the resolution of $\hat{t}_\mathrm{1st}$, as evident in the left of figure~\ref{fig:reso-diff}.  People often argue from such an observation and the difficulties for large pile-ups that it is unnecessary to do waveform analysis when $\mu$ is large.  Comparing figure~\ref{fig:reso-diff} and \ref{fig:deltamethods}, we see it is a myth: all the methods provide magnificently better time resolutions than $\hat{t}_\mathrm{1st}$. For $\mu=30$ the improvement in time resolutions for Cherenkov and scintillation configurations are $\sim 2$ times. The improvement in time resolutions enhances the position reconstruction resolution of events. While the employed fiducial volume is proportional to the radius, a small improvement of position resolution will supply considerable fiducial volume and exposure. 
+Large light intensity improves the resolution of $\hat{t}_\mathrm{1st}$, as evident in the left of figure~\ref{fig:reso-diff}.  People often argue from such an observation and the difficulties for large pile-ups that it is unnecessary to do waveform analysis when $\mu$ is large.  Comparing figure~\ref{fig:reso-diff} and \ref{fig:deltamethods}, it is a myth: all the methods provide magnificently better time resolutions than $\hat{t}_\mathrm{1st}$. For $\mu=30$ the improvement in time resolutions for Cherenkov and scintillation configurations are $\sim 2$ times. The improvement in time resolutions enhances the position reconstruction resolution of events.  Even a small improvement of position resolution benefits not only fiducial volume and exposure, but also lowers position-dependent energy bias.   
+
+The message is clear: any PMT-based experiment targeting PMT occupancy $\mu$ larger than 3 should at least employ some form waveform analysis.
 
 \begin{figure}[H]
   \begin{subfigure}[b]{\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/vs-bias.pgf}}
-    \caption{\label{fig:biasmethods} Time reconstruction biases.}
+    \caption{\label{fig:biasmethods} Biases of time reconstruction.}
   \end{subfigure}
   \begin{subfigure}[b]{\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/vs-deltamethodsdiv.pgf}}
-    \caption{\label{fig:deltamethods} Time reconstruction ratios of resolution $\sigma/\sigma_{\mathrm{ALL}}$.}
+    \caption{\label{fig:deltamethods} Ratios of resolution $\sigma_{\hat{t}}/\sigma_{\mathrm{ALL}}$ Time reconstruction.}
   \end{subfigure}
   \begin{subfigure}[b]{\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/vs-biasmu.pgf}}
-    \caption{\label{fig:biasmu} Intensity reconstruction biases $\frac{\hat{\mu} - \mu}{\mu}$.}
+    \caption{\label{fig:biasmu} Relative biases of intensity reconstruction $\frac{\hat{\mu} - \mu}{\mu}$.}
   \end{subfigure}
   \begin{subfigure}[b]{\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/vs-deltamethodsdivmu.pgf}}
-    \caption{\label{fig:deltamu} Intensity reconstruction ratios of relative resolution $\frac{\sigma_{\hat{\mu}}}{\sqrt{\hat{\mu}}}/\frac{\sigma_\mu}{\sqrt{\mu}}$. }
+    \caption{\label{fig:deltamu} ratios of relative resolution $\frac{\sigma_{\hat{\mu}}}{\sqrt{\hat{\mu}}}/\frac{\sigma_\mu}{\sqrt{\mu}}$ for intensity reconstruction. }
   \end{subfigure}
-  \caption{ALL is the $\hat{t}_\mathrm{ALL}$ estimator defined in eq.~\eqref{eq:2}. LucyDDM, Fitting, CNN use eqs.~\eqref{eq:pseudo} and \eqref{eq:pseudo-mu}.  FSMP has its own natural $\hat{t}_0$ estimator in eq.~\eqref{eq:fbmpcharge}. Error bars are 5--95 percentiles.}
+  \caption{Incident light analysis result for the two typical cases of Cherenkov~(left) and scintillation~(right).  ``ALL'' is the $\hat{t}_\mathrm{ALL}$ estimator defined in eq.~\eqref{eq:2}. ``int'' is the $\hat{\mu}_Q$ from the QDC output.  LucyDDM, Fitting, CNN use eqs.~\eqref{eq:pseudo} and \eqref{eq:pseudo-mu}.  FSMP has its own natural $\hat{t}_0$ and $\hat{\mu}$ estimators in eq.~\eqref{eq:fbmpcharge}. Error bars are 5--95 percentiles.}
 \end{figure}
 
-Intensity reconstruction using integration~(int in figure~\ref{fig:biasmu} and~\ref{fig:deltamu}), $\hat{\mu}_Q$, is deteriorated by the randomization process, such as charge distribution and Gaussian white noise in section~\ref{subsec:spe}. 
+Intensity reconstruction using integration~(``int'' in figure~\ref{fig:biasmu} and~\ref{fig:deltamu}), $\hat{\mu}_Q$, is deteriorated by the randomization process, such as charge distribution and Gaussian white noise in section~\ref{subsec:spe}. 
 
 Figure~\ref{fig:biasmu} shows the bias of $\hat{\mu}$ of all four methods. The bias of LucyDDM comes from the thresholding and scaling defined in eq.~\eqref{eq:fdconv2}. We suspect that the bias of FSMP comes from poisson essence of FSMP. Figure~\ref{fig:deltamu} shows the intensity relative resolutions. For small $\mu$, FSMP gives a much better resolution by correctly modeling charge distributions, see also figure~\ref{fig:recchargehist}. For larger $\mu$, these four methods are similar to $\hat{\mu}_Q$ as expected. We observed that the intensity resolution can still be smaller if the we increase the number of samples of FSMP's Markov chain, but at the expense of calculation. 
 

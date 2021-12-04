@@ -322,7 +322,7 @@ In reality $w(t)$ is discretized as $\bm{w}$. If we rewrite the hierarchical mod
 \end{equation}
 The inner summation over $\bm{q}'$ is analytically the probability density of a multi-normal distribution $p(\bm{w}|\bm{z})$, which has a fast algorithm to iteratively compute by Schniter~et al.~\cite{schniter_fast_2008}. The summation over $\bm{z}$, however, takes exploding number of combinations and deserves a Markov chain to evaluate.
 
-Taking a Markov chain sample $S = (\bm{s}_1, \bm{s}_2, \cdots, \bm{s}_M)$ from $p(\bm{z}) = C p(\bm{w} | \bm{z}) q( \bm{z})$, where $C$ is independent of $\bm{z}$ and $q(\bm{z})$ is an educated guess for $p(\bm{z}|t_0, \mu)$ from a previous method like LucyDDM~(section~\ref{sec:lucyddm}).  From this sample, we get approximate maximum likelihood estimators for $t_0$, $\mu$ and $\bm{z}$, and the expectation estimation of $\hat{\bm{q}}$,
+Taking a Markov chain sample $S = (\bm{s}_1, \bm{s}_2, \cdots, \bm{s}_M)$ from $p(\bm{z}) = C p(\bm{w} | \bm{z}) q( \bm{z})$, where $C$ is independent of $\bm{z}$ and $q(\bm{z})$ is an educated guess for $p(\bm{z}|t_0, \mu)$ from a previous method like LucyDDM~(section~\ref{sec:lucyddm}).  From this sample, we get approximate MLE for $t_0$, $\mu$ and $\bm{z}$, and the expectation estimation of $\hat{\bm{q}}$,
 \begin{equation}
   \label{eq:fbmpcharge}
   \begin{aligned}
