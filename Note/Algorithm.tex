@@ -320,7 +320,7 @@ In reality $w(t)$ is discretized as $\bm{w}$. If we rewrite the hierarchical mod
     &= p(t_0, \mu) \sum_{\bm{z}} \left[\sum_{\bm{q}'|\bm{z}} p(\bm{w}|\bm{q}') p(\bm{q}'|\bm{z}) \right] p(\bm{z}|t_0, \mu)
   \end{aligned}
 \end{equation}
-The inner summation over $\bm{q}'$ is analytically the probability density of a multi-normal distribution $p(\bm{w}|\bm{z})$, which has a fast algorithm~\cite{schniter_fast_2008} to iteratively compute by Schniter~et al. The summation over $\bm{z}$, however, takes exploding number of combinations and deserves a Markov chain to evaluate.
+The inner summation over $\bm{q}'$ is analytically the probability density of a multi-normal distribution $p(\bm{w}|\bm{z})$, which has a fast algorithm to iteratively compute by Schniter~\textit{et al.}~\cite{schniter_fast_2008}. The summation over $\bm{z}$, however, takes exploding number of combinations and deserves a Markov chain to evaluate.
 
 Taking a Markov chain sample $S = (\bm{s}_1, \bm{s}_2, \cdots, \bm{s}_M)$ from $p(\bm{z}) = C p(\bm{w} | \bm{z}) q( \bm{z})$, where $C$ is independent of $\bm{z}$ and $q(\bm{z})$ is an educated guess for $p(\bm{z}|t_0, \mu)$ from a previous method like LucyDDM~(section~\ref{sec:lucyddm}).  From this sample, we get approximate maximum likelihood estimators for $t_0$, $\mu$ and $\bm{z}$, and the expectation estimation of $\hat{\bm{q}}$,
 \begin{equation}
@@ -335,7 +335,7 @@ Taking a Markov chain sample $S = (\bm{s}_1, \bm{s}_2, \cdots, \bm{s}_M)$ from $
 \end{equation}
 and calculate RSS and $D_\mathrm{w}$ by eqs.~\eqref{eq:rss}, \eqref{eq:numerical}, \eqref{eq:gd-phi} and \eqref{eq:mcmc-w}.
 
-We name the method \emph{fast stochastic matching pursuit}~(FSMP) after fast Bayesian matching pursuit~(FBMP)~\cite{schniter_fast_2008} by Schniter~et al.  FSMP replaces the greedy search routine in FBMP with the Markov chain Monte Carlo in (\ref{eq:fbmpcharge}).  With FSMP we straightforwardly extend $\bm{z}$ into an unbinned vector of PE locations $t_i$ like Geyer and Møller~\cite{geyer_simulation_1994} to handle trans-dimensionality in a Poisson point process.
+We name the method \emph{fast stochastic matching pursuit}~(FSMP) after fast Bayesian matching pursuit~(FBMP) by Schniter~\textit{et al.}~\cite{schniter_fast_2008}.  FSMP replaces the greedy search routine in FBMP with the Markov chain Monte Carlo in (\ref{eq:fbmpcharge}).  With FSMP we straightforwardly extend $\bm{z}$ into an unbinned vector of PE locations $t_i$ like Geyer and Møller~\cite{geyer_simulation_1994} to handle trans-dimensionality in a Poisson point process.
 
 \begin{figure}[H]
   \begin{subfigure}[b]{.45\textwidth}
