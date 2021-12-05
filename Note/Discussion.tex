@@ -96,6 +96,6 @@ The hit mode for $\mu < 3$ is the sweet spot for \si{MeV} and \si{keV} in fluid-
 \subsection{Prospects}
 \label{sec:prospects}
 
-We need to consider pedestals or saturations in real world experiments.  But in this article we choose not to dive into them for simplicity.
+In this article we choose not to dive into pedestals or saturations for simplicity.
 
-We can implement the algorithms in field programmable gate array~(FPGA) commonly found in front-end electronics.  That will not only accelerate waveform analysis, but also perform it online to reduce the volume of data needed for data acquisition.  Waveform analysis inspired data compression will potentially outperform general-purposed algorithms.
+Despite the best accuracy, FSMP is slow compared to non-iterative variants.  The Markov chains have room for efficiency turning.  Furthermore, implementing it in field programmable gate array~(FPGA) commonly found in front-end electronics will not only accelerate waveform analysis, but also reduces the volume of data acquisition.
