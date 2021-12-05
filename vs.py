@@ -175,7 +175,6 @@ for i, sigma in enumerate(Sigma):
             ax.legend(loc='upper left', bbox_to_anchor=(1., 0.9))
 
         ax = figdd.add_subplot(gsdd[i, j])
-        stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == tau) & (mts['lucyddm']['sigma'] == sigma)]
         for key in keylist:
             if key in badkey:
                 continue
@@ -185,13 +184,22 @@ for i, sigma in enumerate(Sigma):
             #     ax.errorbar(stdlist['mu'], stdlist['stdone'] / stdlist['stdtruth'], yerr=yerr, label='$'+deltalabel['fbmpone']+'$', c=color['fbmpone'], marker=marker['fbmpone'])
             yerr = stdlist['std'] / stdlist['stdtruth'] / np.sqrt(stdlist['N'])
             ax.errorbar(stdlist['mu'] + jitter[key], stdlist['std'] / stdlist['stdtruth'], yerr=yerr, label='$'+deltalabel[key]+'$', c=color[key], marker=marker[key])
+        temp_ylim = ax.get_ylim()
+        stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == tau) & (mts['lucyddm']['sigma'] == sigma)]
+        yerr = stdlist['std1sttruth'] / stdlist['stdtruth'] / np.sqrt(stdlist['N'])
+        ax.errorbar(stdlist['mu'] + jitter['1st'], stdlist['std1sttruth'] / stdlist['stdtruth'], yerr=yerr, label='$'+deltalabel['1st']+'$', c=color['1st'], marker=marker['1st'])
+        ax.set_ylim(temp_ylim)
         ax.set_xlabel(r'$\mu$')
         ax.set_ylabel(r'$\mathrm{ratio}$')
         ax.set_title(fr'$\tau_l={tau}\si{{ns}},\,\sigma_l={sigma}\si{{ns}}$')
         # ax.set_ylim(lim['deltadiv'][i, j], 1.01)
         ax.grid()
         if i == len(Sigma) - 1 and j == len(Tau) - 1:
-            ax.legend(loc='upper left', bbox_to_anchor=(1., 0.9))
+            handles, labels = ax.get_legend_handles_labels()
+            # sort both labels and handles by labels
+            labels = labels[-1:] + labels[:-1]
+            handles = handles[-1:] + handles[:-1]
+            ax.legend(handles, labels, loc='upper left', bbox_to_anchor=(1., 0.9))
 
         ax = figw.add_subplot(gsw[i, j])
         for key in keylist:
