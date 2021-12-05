@@ -55,9 +55,9 @@ For large $N_\mathrm{PE}$ waveforms the sparsity condition is by definition lost
 
 Like figure~\ref{fig:summary}, we show the dependence on $\mu$ of bias~(figure~\ref{fig:biasmethods}) and resolution~(figure~\ref{fig:deltamethods}) for different time estimators in the two typical experimental setups.  From figure~\ref{fig:biasmethods}, we see that the $t_0$ estimation biases are all similar to that of $\hat{t}_\mathrm{ALL}$. The bias for the scintillation configuration~(right of figure~\ref{fig:biasmethods}) for small $\mu$ is intrinsic for MLE of exponential distributions.  It can be modified into an un-biased estimator, but we leave this discussion to event reconstruction.
 
-Large light intensity improves the resolution of $\hat{t}_\mathrm{1st}$, as evident in the left of figure~\ref{fig:reso-diff}.  People often argue from such an observation and the difficulties for large pile-ups that it is unnecessary to do waveform analysis when $\mu$ is large.  Comparing figure~\ref{fig:reso-diff} and \ref{fig:deltamethods}, it is a myth: all the methods provide magnificently better time resolutions than $\hat{t}_\mathrm{1st}$. For $\mu=30$ the improvement in time resolutions for Cherenkov and scintillation configurations are $\sim 2$ times. The improvement in time resolutions enhances the position reconstruction resolution of events.  Even a small improvement of position resolution benefits not only fiducial volume and exposure, but also lowers position-dependent energy bias.   
+People often argue from difficulties for large pile-ups that waveform analysis is unnecessary.  Comparing figure~\ref{fig:reso-diff} and \ref{fig:deltamethods}, it is a myth: although $\hat{t}_\mathrm{1st}$ is more precise for large light intensity, all the waveform analysis methods provide magnificently better time resolutions than $\hat{t}_\mathrm{1st}$, more than twice for $\mu>20$ in Chenrekov setup.  FSMP gives the biggest boost.  Such improvement in time resolutions amounts to the position resolution, which not only benefits fiducial volume and exposure, but also lowers position-dependent energy bias.
 
-The message is clear: any PMT-based experiment targeting PMT occupancy $\mu$ larger than 3 should at least employ some form waveform analysis.
+The message is clear from figure~\ref{fig:deltamethods}: any PMT-based experiment that cares time with PMT occupancy $\mu$ larger than 3 should employ waveform analysis.
 
 \begin{figure}[H]
   \begin{subfigure}[b]{\textwidth}
@@ -68,7 +68,7 @@ The message is clear: any PMT-based experiment targeting PMT occupancy $\mu$ lar
   \begin{subfigure}[b]{\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/vs-deltamethodsdiv.pgf}}
-    \caption{\label{fig:deltamethods} Ratios of resolution $\sigma_{\hat{t}}/\sigma_{\mathrm{ALL}}$ Time reconstruction.}
+    \caption{\label{fig:deltamethods} Ratios of resolution $\sigma_{\hat{t}_0}/\sigma_{\mathrm{ALL}}$ for time reconstruction.}
   \end{subfigure}
   \begin{subfigure}[b]{\textwidth}
     \centering
@@ -80,14 +80,16 @@ The message is clear: any PMT-based experiment targeting PMT occupancy $\mu$ lar
     \resizebox{\textwidth}{!}{\input{figures/vs-deltamethodsdivmu.pgf}}
     \caption{\label{fig:deltamu} ratios of relative resolution $\frac{\sigma_{\hat{\mu}}}{\sqrt{\hat{\mu}}}/\frac{\sigma_\mu}{\sqrt{\mu}}$ for intensity reconstruction. }
   \end{subfigure}
-  \caption{Incident light analysis result for the two typical cases of Cherenkov~(left) and scintillation~(right).  ``ALL'' is the $\hat{t}_\mathrm{ALL}$ estimator defined in eq.~\eqref{eq:2}. ``int'' is the $\hat{\mu}_Q$ from the QDC output.  LucyDDM, Fitting, CNN use eqs.~\eqref{eq:pseudo} and \eqref{eq:pseudo-mu}.  FSMP has its own natural $\hat{t}_0$ and $\hat{\mu}$ estimators in eq.~\eqref{eq:fbmpcharge}. Error bars are 5--95 percentiles.}
+  \caption{Incident light analysis results for the two typical cases of Cherenkov~(left) and scintillation~(right).  ``ALL'' is the $\hat{t}_\mathrm{ALL}$ estimator defined in eq.~\eqref{eq:2}. ``int'' is the $\hat{\mu}_Q$ from the QDC output.  LucyDDM, Fitting, CNN use eqs.~\eqref{eq:pseudo} and \eqref{eq:pseudo-mu}.  FSMP has its own natural $\hat{t}_0$ and $\hat{\mu}$ estimators in eq.~\eqref{eq:fbmpcharge}. Error bars are 5--95 percentiles.}
 \end{figure}
 
-Intensity reconstruction using integration~(``int'' in figure~\ref{fig:biasmu} and~\ref{fig:deltamu}), $\hat{\mu}_Q$, is deteriorated by the randomization process, such as charge distribution and Gaussian white noise in section~\ref{subsec:spe}. 
+Next we discuss the inference of light intensity.  The integration estimator $\hat{\mu}_Q$~(``int'' in figure~\ref{fig:biasmu} and~\ref{fig:deltamu}) is ubiquitous.  But as pointed out in section~\ref{sec:intensity-mu}, it is deteriorated by charge smearing $\sigma_q^2$ and white noise.
 
-Figure~\ref{fig:biasmu} shows the bias of $\hat{\mu}$ of all four methods. The bias of LucyDDM comes from the thresholding and scaling defined in eq.~\eqref{eq:fdconv2}. We suspect that the bias of FSMP comes from poisson essence of FSMP. Figure~\ref{fig:deltamu} shows the intensity relative resolutions. For small $\mu$, FSMP gives a much better resolution by correctly modeling charge distributions, see also figure~\ref{fig:recchargehist}. For larger $\mu$, these four methods are similar to $\hat{\mu}_Q$ as expected. We observed that the intensity resolution can still be smaller if the we increase the number of samples of FSMP's Markov chain, but at the expense of calculation. 
+In figure~\ref{fig:biasmu}, the bias of $\hat{\mu}$ of the four methods are within \SI{2}{\percent} and tend to 0 for large $\mu$ expect LucyDDM.  The bias of LucyDDM comes from the thresholding and scaling in eq.~\eqref{eq:fdconv2}.  The upward bias of FSMP and Fitting for low $\mu$ is due to PE granularity.  The charge $q$ of one PE can fluctuate close to 2 or 0, but eqs.~\eqref{eq:gd-q} and \eqref{eq:fbmpcharge} favor 2 more than 0 in waveforms.  We shall leave the amendment of the bias to event reconstruction in our next publication.
 
-The comparison indicates that these waveform analysis methods will bring enhancements of sensitivity, considering the energy resolution is crucial for all PMT-based experiments, and the resolution worsens when energy is small. Though it needs to be investigated in a dedicated study to what extent the sensitivity will change on a specific experiment, we believe implementing these methods allows us to shorten the time on obtaining particular statistical significance, provide more flexible analysis strategies, and even broaden the physical programs performed on existing detectors and facilities. 
+For small $\mu$, FSMP gives the best resolution by correctly modeling charge distributions~(figure~\ref{fig:deltamu}), as predicted in figure~\ref{fig:recchargehist}.  Like the hit estimator $\hat{\mu}_\mathrm{hit}$ in section~\ref{sec:intensity-mu}, it eliminates the influence of $\sigma_q^2$. But unlike $\hat{\mu}_\mathrm{hit}$, FSMP works well for multiple PEs provided the pile-up is low.  More importantly, it provides a smooth transition from the ``hit mode'' to the ``charge mode'' with the best intensity resolution of all.  For large $\mu$ in the charge mode the four methods are similar to $\hat{\mu}_Q$.
+
+The hit mode for $\mu < 3$ is the sweet spot for \si{MeV} and \si{keV} in fluid-based neutrino and dark matter experiments.  Demonstrated in figure~\ref{fig:deltamu}, FSMP boosts intensity resolution up to $\sigma_q$, \SIrange{20}{40}{\percent} depending on PMT models, which converts directly to energy resolution in event reconstruction.  It is profound to notice that good analysis having the potential to boost energy resolution, shorten shorten the time to achieve discovery and broaden the physics reach of existing detectors. 
 
 % Pedestal & Hardware
 
