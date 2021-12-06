@@ -136,7 +136,7 @@ def flow(cx, z, N, sig2s, mus, A, p_cha, mu_t):
         else:
             op = int(t * NPE) # 操作的 PE 编号
             loc = s[op] # 待操作 PE 的位置
-            A_vec, c_vec = combine(A, cx, home)
+            A_vec, c_vec = combine(A, cx, loc)
             Δν, beta = move1(A_vec, c_vec, z, -1, mus, sig2s)
             if step == -1: # 消灭
                 Δν -= log_mu - np.log(NPE)
