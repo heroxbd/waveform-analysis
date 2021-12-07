@@ -101,22 +101,21 @@ def flow(cx, z, N, sig2s, mus, A, p_cha, mu_t):
     # istar [0, 1) 之间的随机数，用于点中 PE
     istar = np.random.rand(TRIALS)
     # 同时可用于创生位置的选取
-    c_cha = np.cumsum(
-        p_cha
-    )  # cha: charge; p_cha: pdf of LucyDDM charge (由 charge 引导的 PE 强度流先验)
-    home_s = np.interp(
-        istar, xp=np.insert(c_cha, 0, 0), fp=np.arange(N + 1)
-    )  # 根据 p_cha 采样得到的 PE 序列。供以后的产生过程使用。这两行是使用了 InverseCDF 算法进行的MC采样。
+    # cha: charge; p_cha: pdf of LucyDDM charge (由 charge 引导的 PE 强度流先验)
+    c_cha = np.cumsum(p_cha)
+    # 根据 p_cha 采样得到的 PE 序列。供以后的产生过程使用。这两行是使用了 InverseCDF 算法进行的MC采样。
+    home_s = np.interp(istar, xp=np.insert(c_cha, 0, 0), fp=np.arange(N + 1))
 
     NPE0 = int(mu_t + 0.5)  # mu_t: μ_total，LucyDDM 给出的 μ 猜测；NPE0 是 PE 序列初值 s_0 的 PE 数。
     # t 的位置，取值为 [0, N)
+    # MCMC 链的 PE configuration 初值 s0
     s = list(
         np.interp(
             (np.arange(NPE0) + 0.5) / NPE0,
             xp=np.insert(c_cha, 0, 0),
             fp=np.arange(N + 1),
         )
-    )  # MCMC 链的 PE configuration 初值 s0
+    )
     for t in s:  # 从空序列开始逐渐加 PE 以计算 s0 的 ν, cx, z
         Δν, Δcx, Δz = move(*combine(A, cx, t), z, 1, mus, sig2s, A)
         cx += Δcx
