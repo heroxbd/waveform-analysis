@@ -189,20 +189,20 @@ def time_numpyro(a0, a1):
 n = 1
 b_t0 = [0., 600.]
 
-def fbmp_inference(a0, a1):
+def fsmp_inference(a0, a1):
     t0_wav = np.empty(a1 - a0)
     t0_cha = np.empty(a1 - a0)
     mu_wav = np.empty(a1 - a0)
     mu_cha = np.empty(a1 - a0)
     mu_kl = np.empty(a1 - a0)
-    time_fbmp = np.empty(a1 - a0)
+    time_fsmp = np.empty(a1 - a0)
     dt = np.zeros((a1 - a0) * window, dtype=opdt)
     d_max = np.zeros(a1 - a0).astype(int)
     elbo = np.zeros(a1 - a0)
     start = 0
     end = 0
     for i in range(a0, a1):
-        time_fbmp_start = time.time()
+        time_fsmp_start = time.time()
         cid = ent[i]['ChannelID']
         assert cid == 0
         wave = ent[i]['Waveform'].astype(np.float64) * spe_pre[cid]['epulse']
@@ -242,8 +242,8 @@ def fbmp_inference(a0, a1):
         sig2w = spe_pre[cid]['std'] ** 2
         sig2s = (gsigma * mus / gmu) ** 2
 
-        nu_star, T_star, c_star, es_history, NPE_evo = wff.metropolis_fbmp(y, A, sig2w, sig2s, mus, p1, p_cha, mu_t)
-        time_fbmp[i - a0] = time.time() - time_fbmp_start
+        nu_star, T_star, c_star, es_history, NPE_evo = wff.metropolis_fsmp(y, A, sig2w, sig2s, mus, p1, p_cha, mu_t, TRIALS=TRIALS)
+        time_fsmp[i - a0] = time.time() - time_fsmp_start
         num = len(nu_star)
 
         # Extra calculation to test
@@ -303,7 +303,7 @@ def fbmp_inference(a0, a1):
         start = end
     dt = dt[:end]
     dt = np.sort(dt, kind='stable', order=['TriggerNo', 'ChannelID'])
-    return t0_wav, t0_cha, dt, mu_wav, mu_cha, mu_kl, time_fbmp, elbo, d_max
+    return t0_wav, t0_cha, dt, mu_wav, mu_cha, mu_kl, time_fsmp, elbo, d_max
 
 print('Initialization finished, real time {0:.02f}s, cpu time {1:.02f}s'.format(time.time() - global_start, time.process_time() - cpu_global_start))
 tic = time.time()
@@ -358,16 +358,16 @@ if method == 'mcmc':
 
     dt = np.sort(dt, kind='stable', order=['TriggerNo', 'ChannelID'])
     print('Successful MCMC ratio is {:.4%}'.format(count / N))
-elif method == 'fbmp':
+elif method == 'fsmp':
     sdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('tscharge', np.float64), ('tswave', np.float64), ('mucharge', np.float64), ('muwave', np.float64), ('mukl', np.float64), ('elbo', np.float64), ('consumption', np.float64)])
     ts = np.zeros(N, dtype=sdtp)
     ts['TriggerNo'] = ent['TriggerNo'][:N]
     ts['ChannelID'] = ent['ChannelID'][:N]
-    # fbmp_inference(0, 200)
+    # fsmp_inference(0, 200)
     # import sys
     # sys.exit()
     with Pool(min(args.Ncpu, cpu_count())) as pool:
-        result = pool.starmap(partial(fbmp_inference), slices)
+        result = pool.starmap(partial(fsmp_inference), slices)
     ts['tswave'] = np.hstack([result[i][0] for i in range(len(slices))])
     ts['tscharge'] = np.hstack([result[i][1] for i in range(len(slices))])
     dt = np.hstack([result[i][2] for i in range(len(slices))])
@@ -375,7 +375,7 @@ elif method == 'fbmp':
     ts['mucharge'] = np.hstack([result[i][4] for i in range(len(slices))])
     ts['mukl'] = np.hstack([result[i][5] for i in range(len(slices))])
     ts['consumption'] = np.hstack([result[i][6] for i in range(len(slices))])
-    print('FBMP finished, real time {0:.02f}s'.format(ts['consumption'].sum()))
+    print('FSMP finished, real time {0:.02f}s'.format(ts['consumption'].sum()))
     ts['elbo'] = np.hstack([result[i][7] for i in range(len(slices))])
     d_max = np.hstack([result[i][8] for i in range(len(slices))])
     

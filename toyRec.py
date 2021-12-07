@@ -59,7 +59,7 @@ with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as ipt, h5py.File(args
     tc['TriggerNo'] = photoelectron['TriggerNo']
     tc['ChannelID'] = photoelectron['ChannelID']
     tc = np.unique(tc)
-    if method in ['fbmp', 'mcmc']:
+    if method in ['fsmp', 'mcmc']:
     # if 'starttime' in ipt:
     # if False:
         ts = ipt['starttime'][:]

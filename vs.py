@@ -38,7 +38,7 @@ with open(args.conf) as f:
     Sigma = next(f_csv)
     Sigma = [float(i) for i in Sigma]
 
-filelist = os.listdir('result/fbmp/solu')
+filelist = os.listdir('result/fsmp/solu')
 filelist = [f for f in filelist if f[0] != '.' and os.path.splitext(f)[-1] == '.h5']
 numbers = [[float(i) for i in f[:-3].split('-')] for f in filelist]
 stype = np.dtype([('mu', np.float64), ('tau', np.float64), ('sigma', np.float64), ('n', np.uint), ('std1sttruth', np.float64), ('stdtruth', np.float64), ('std', np.float64), ('stdone', np.float64), ('bias1sttruth', np.float64), ('biastruth', np.float64), ('bias', np.float64), ('biasone', np.float64), ('wdist', np.float64, 3), ('RSS', np.float64, 3), ('N', np.uint), ('consumption', np.float64, 3), ('stdsuccess', np.uint), ('stdonesuccess', np.uint)])
@@ -60,13 +60,13 @@ mtsi['RSS'] = np.nan
 mtsi['consumption'] = np.nan
 mtsi = np.sort(mtsi, kind='stable', order=['mu', 'tau', 'sigma'])
 
-mts = {'firstthres':mtsi.copy(), 'threshold':mtsi.copy(), 'findpeak':mtsi.copy(), 'fftrans':mtsi.copy(), 'lucyddm':mtsi.copy(), 'takara':mtsi.copy(), 'xiaopeip':mtsi.copy(), 'mcmc':mtsi.copy(), 'fbmp':mtsi.copy()}
-deltalabel = {'1st':'\mathrm{1st}', 'tru':'\mathrm{ALL}', 'findpeak':'\mathrm{FindPeak}', 'threshold':'\mathrm{Shift}', 'fftrans':'\mathrm{FFT}', 'lucyddm':'\mathrm{LucyDDM}', 'xiaopeip':'\mathrm{Fitting}', 'takara':'\mathrm{CNN}', 'fbmp':'\mathrm{FSMP}', 'fbmpone':'\mathrm{FSMPmax}', 'mcmc':'\mathrm{MCMCt0}', 'mcmcone':'\mathrm{MCMCcha}', 'firstthres':'\mathrm{1stthres}'}
-label = {'1st':'\mathrm{1st}', 'tru':'\mathrm{ALL}', 'findpeak':'\mathrm{Peak\ finding}', 'threshold':'\mathrm{Waveform\ shifting}', 'fftrans':'\mathrm{Fourier\ deconvolution}', 'lucyddm':'\mathrm{LucyDDM}', 'xiaopeip':'\mathrm{Fitting}', 'takara':'\mathrm{CNN}', 'fbmp':'\mathrm{FSMP}', 'fbmpone':'\mathrm{FSMPmax}', 'mcmc':'\mathrm{MCMC}', 'firstthres':'\mathrm{1stthres}'}
-marker = {'1st':'o', 'tru':'h', 'findpeak':',', 'threshold':'1', 'fftrans':'+', 'lucyddm':'p', 'xiaopeip':'*', 'takara':'x', 'fbmp':'s', 'fbmpone':'^', 'mcmc':'X', 'mcmcone':'>', 'firstthres':'>'}
-color = {'1st':'g', 'tru':'k', 'findpeak':'C1', 'threshold':'C2', 'fftrans':'m', 'lucyddm':'y', 'xiaopeip':'c', 'takara':'C0', 'fbmp':'r', 'fbmpone':'b', 'mcmc':'C4', 'mcmcone':'C5', 'firstthres':'C6'}
+mts = {'firstthres':mtsi.copy(), 'threshold':mtsi.copy(), 'findpeak':mtsi.copy(), 'fftrans':mtsi.copy(), 'lucyddm':mtsi.copy(), 'takara':mtsi.copy(), 'xiaopeip':mtsi.copy(), 'mcmc':mtsi.copy(), 'fsmp':mtsi.copy()}
+deltalabel = {'1st':'\mathrm{1st}', 'tru':'\mathrm{ALL}', 'findpeak':'\mathrm{FindPeak}', 'threshold':'\mathrm{Shift}', 'fftrans':'\mathrm{FFT}', 'lucyddm':'\mathrm{LucyDDM}', 'xiaopeip':'\mathrm{Fitting}', 'takara':'\mathrm{CNN}', 'fsmp':'\mathrm{FSMP}', 'fsmpone':'\mathrm{FSMPmax}', 'mcmc':'\mathrm{MCMCt0}', 'mcmcone':'\mathrm{MCMCcha}', 'firstthres':'\mathrm{1stthres}'}
+label = {'1st':'\mathrm{1st}', 'tru':'\mathrm{ALL}', 'findpeak':'\mathrm{Peak\ finding}', 'threshold':'\mathrm{Waveform\ shifting}', 'fftrans':'\mathrm{Fourier\ deconvolution}', 'lucyddm':'\mathrm{LucyDDM}', 'xiaopeip':'\mathrm{Fitting}', 'takara':'\mathrm{CNN}', 'fsmp':'\mathrm{FSMP}', 'fsmpone':'\mathrm{FSMPmax}', 'mcmc':'\mathrm{MCMC}', 'firstthres':'\mathrm{1stthres}'}
+marker = {'1st':'o', 'tru':'h', 'findpeak':',', 'threshold':'1', 'fftrans':'+', 'lucyddm':'p', 'xiaopeip':'*', 'takara':'x', 'fsmp':'s', 'fsmpone':'^', 'mcmc':'X', 'mcmcone':'>', 'firstthres':'>'}
+color = {'1st':'g', 'tru':'k', 'findpeak':'C1', 'threshold':'C2', 'fftrans':'m', 'lucyddm':'y', 'xiaopeip':'c', 'takara':'C0', 'fsmp':'r', 'fsmpone':'b', 'mcmc':'C4', 'mcmcone':'C5', 'firstthres':'C6'}
 jit = 0.05
-jitter = {'mcmcone':-5 * jit, 'mcmc':-4 * jit, 'tru':-3 * jit, 'fbmp':-2 * jit, 'fbmpone':-1 * jit, 'lucyddm':0 * jit, 'xiaopeip':1 * jit, 'takara':2 * jit, '1st':3 * jit, 'fftrans':4 * jit, 'findpeak':5 * jit, 'threshold':6 * jit, 'firstthres':7 * jit}
+jitter = {'mcmcone':-5 * jit, 'mcmc':-4 * jit, 'tru':-3 * jit, 'fsmp':-2 * jit, 'fsmpone':-1 * jit, 'lucyddm':0 * jit, 'xiaopeip':1 * jit, 'takara':2 * jit, '1st':3 * jit, 'fftrans':4 * jit, 'findpeak':5 * jit, 'threshold':6 * jit, 'firstthres':7 * jit}
 
 alpha = 0.05
 for key in tqdm(mts.keys()):
@@ -137,7 +137,7 @@ for i, sigma in enumerate(Sigma):
         yerrall = np.vstack([stdlist['stdtruth']-np.sqrt(np.power(stdlist['stdtruth'],2)*stdlist['N']/chi2.ppf(1-alpha, stdlist['N'])), np.sqrt(np.power(stdlist['stdtruth'],2)*stdlist['N']/chi2.ppf(alpha, stdlist['N']))-stdlist['stdtruth']])
         ax.errorbar(stdlist['mu'] + jitter['1st'], stdlist['std1sttruth'], yerr=yerr1st, c=color['1st'], label='$'+deltalabel['1st']+'$', marker=marker['1st'])
         ax.errorbar(stdlist['mu'] + jitter['tru'], stdlist['stdtruth'], yerr=yerrall, c=color['tru'], label='$'+deltalabel['tru']+'$', marker=marker['tru'])
-        for m in ['mcmc', 'fbmp']:
+        for m in ['mcmc', 'fsmp']:
             stdlistwav = mts[m][(mts[m]['tau'] == tau) & (mts[m]['sigma'] == sigma)]
             yerrwav = np.vstack([stdlistwav['stdone']-np.sqrt(np.power(stdlistwav['stdone'],2)*stdlistwav['N']/chi2.ppf(1-alpha, stdlistwav['N'])), np.sqrt(np.power(stdlistwav['stdone'],2)*stdlistwav['N']/chi2.ppf(alpha, stdlistwav['N']))-stdlistwav['stdone']])
             ax.errorbar(stdlistwav['mu'] + jitter[m + 'one'], stdlistwav['stdone'], yerr=yerrwav, c=color[m + 'one'], label='$'+deltalabel[m + 'one']+'$', marker=marker[m + 'one'])
@@ -179,9 +179,9 @@ for i, sigma in enumerate(Sigma):
             if key in badkey:
                 continue
             stdlist = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
-            # if key == 'fbmp':
+            # if key == 'fsmp':
             #     yerr = stdlist['stdone'] / stdlist['stdtruth'] / np.sqrt(stdlist['N'])
-            #     ax.errorbar(stdlist['mu'], stdlist['stdone'] / stdlist['stdtruth'], yerr=yerr, label='$'+deltalabel['fbmpone']+'$', c=color['fbmpone'], marker=marker['fbmpone'])
+            #     ax.errorbar(stdlist['mu'], stdlist['stdone'] / stdlist['stdtruth'], yerr=yerr, label='$'+deltalabel['fsmpone']+'$', c=color['fsmpone'], marker=marker['fsmpone'])
             yerr = stdlist['std'] / stdlist['stdtruth'] / np.sqrt(stdlist['N'])
             ax.errorbar(stdlist['mu'] + jitter[key], stdlist['std'] / stdlist['stdtruth'], yerr=yerr, label='$'+deltalabel[key]+'$', c=color[key], marker=marker[key])
         temp_ylim = ax.get_ylim()
@@ -327,7 +327,7 @@ tau = 20
 sigma = 5
 wdist = np.vstack([mts[key][(mts[key]['mu'] == mu) & (mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]['wdist'] for key in keylist if key != 'firstthres'])
 wdist_dy = np.vstack([wdist[:, 1] - wdist[:, 0], wdist[:, 2] - wdist[:, 1]])
-bar_colors = ['b' if key in ['lucyddm', 'takara', 'xiaopeip', 'fbmp'] else 'c' for key in keylist if key != 'firstthres']
+bar_colors = ['b' if key in ['lucyddm', 'takara', 'xiaopeip', 'fsmp'] else 'c' for key in keylist if key != 'firstthres']
 labels = ['$'+label[key]+'$' for key in keylist if key != 'firstthres']
 keys = [key for key in keylist if key != 'firstthres']
 fig = plt.figure(figsize=(10, 5))
@@ -392,7 +392,7 @@ plt.close(fig)
 for key in mts.keys():
     print(key.rjust(10) + ' stdchargesuccess mean = {:.04%}'.format((mts[key]['stdsuccess'] / mts[key]['N']).mean()))
     print(key.rjust(10) + '  stdchargesuccess min = {:.04%}'.format((mts[key]['stdsuccess'] / mts[key]['N']).min()))
-for m in ['mcmc', 'fbmp']:
+for m in ['mcmc', 'fsmp']:
     print((m + 'one').rjust(10) + '   stdwavesuccess mean = {:.04%}'.format((mts[m]['stdonesuccess'] / mts[m]['N']).mean()))
     print((m + 'one').rjust(10) + '    stdwavesuccess min = {:.04%}'.format((mts[m]['stdonesuccess'] / mts[m]['N']).min()))
 
@@ -414,11 +414,11 @@ mtsi['biasmumax'] = np.nan
 mtsi['biasmu'] = np.nan
 mtsi = np.sort(mtsi, kind='stable', order=['mu', 'tau', 'sigma'])
 
-mu_list = np.unique(mts['fbmp']['mu'])
+mu_list = np.unique(mts['fsmp']['mu'])
 mu_std_tru_list = np.sqrt(mu_list)
 
-mts = {'lucyddm':mtsi.copy(), 'takara':mtsi.copy(), 'xiaopeip':mtsi.copy(), 'fbmp':mtsi.copy()}
-# mts = {'lucyddm':mtsi.copy(), 'fbmp':mtsi.copy()}
+mts = {'lucyddm':mtsi.copy(), 'takara':mtsi.copy(), 'xiaopeip':mtsi.copy(), 'fsmp':mtsi.copy()}
+# mts = {'lucyddm':mtsi.copy(), 'fsmp':mtsi.copy()}
 
 use_log = False
 for key in tqdm(mts.keys()):
@@ -498,7 +498,7 @@ gs = gridspec.GridSpec(1, 2, figure=figb, left=0.1, right=0.8, top=0.92, bottom=
 for i, sigma in enumerate(Sigma):
     for j, tau in enumerate(Tau):
         # charge std
-        stdlist = mts['fbmp'][(mts['fbmp']['tau'] == tau) & (mts['fbmp']['sigma'] == sigma)]
+        stdlist = mts['fsmp'][(mts['fsmp']['tau'] == tau) & (mts['fsmp']['sigma'] == sigma)]
         ax = figd.add_subplot(gs[i, j])
         yerr = np.vstack([stdlist['stdmuint']-np.sqrt(np.power(stdlist['stdmuint'],2)*stdlist['N']/chi2.ppf(1-alpha, stdlist['N'])), np.sqrt(np.power(stdlist['stdmuint'],2)*stdlist['N']/chi2.ppf(alpha, stdlist['N']))-stdlist['stdmuint']]) / (stdlist['biasmuint'][:, 1] + stdlist['meanmutru'])
         ax.errorbar(stdlist['mu'] + jitter['tru'], stdlist['stdmuint'] / (stdlist['biasmuint'][:, 1] + stdlist['meanmutru']) / (1 / np.sqrt(stdlist['mu'])), yerr=yerr / (1 / np.sqrt(stdlist['mu'])), label='$\mathrm{int}$', c=color['1st'], marker=marker['1st'])
@@ -516,7 +516,7 @@ for i, sigma in enumerate(Sigma):
         if i == len(Sigma) - 1 and j == len(Tau) - 1:
             ax.legend(loc='upper left', bbox_to_anchor=(1., 0.9))
 
-        stdlist = mts['fbmp'][(mts['fbmp']['tau'] == tau) & (mts['fbmp']['sigma'] == sigma)]
+        stdlist = mts['fsmp'][(mts['fsmp']['tau'] == tau) & (mts['fsmp']['sigma'] == sigma)]
         ax = figdd.add_subplot(gs[i, j])
         yerr = np.vstack([stdlist['stdmuint']-np.sqrt(np.power(stdlist['stdmuint'],2)*stdlist['N']/chi2.ppf(1-alpha, stdlist['N'])), np.sqrt(np.power(stdlist['stdmuint'],2)*stdlist['N']/chi2.ppf(alpha, stdlist['N']))-stdlist['stdmuint']]) / (stdlist['biasmuint'][:, 1] + stdlist['meanmutru'])
         ax.errorbar(stdlist['mu'] + jitter['tru'], stdlist['stdmuint'] / (stdlist['biasmuint'][:, 1] + stdlist['meanmutru']), yerr=yerr, label='$\mathrm{int}$', c=color['1st'], marker=marker['1st'])
@@ -536,7 +536,7 @@ for i, sigma in enumerate(Sigma):
             ax.legend(loc='upper left', bbox_to_anchor=(1., 0.9))
         
         # charge bias ratio
-        stdlist = mts['fbmp'][(mts['fbmp']['tau'] == tau) & (mts['fbmp']['sigma'] == sigma)]
+        stdlist = mts['fsmp'][(mts['fsmp']['tau'] == tau) & (mts['fsmp']['sigma'] == sigma)]
         ax = figbr.add_subplot(gs[i, j])
         # yerr = stdlist['biasmuint'][:, 1] / np.sqrt(stdlist['N']) / stdlist['meanmutru']
         yerr = np.vstack([-t.ppf(alpha, stdlist['N'])*stdlist['stdmuint']/np.sqrt(stdlist['N']), t.ppf(1-alpha, stdlist['N'])*stdlist['stdmuint']/np.sqrt(stdlist['N'])]) / stdlist['meanmutru']
@@ -564,7 +564,7 @@ for i, sigma in enumerate(Sigma):
             ax.legend(loc='upper left', bbox_to_anchor=(1., 0.9))
 
         # charge bias
-        stdlist = mts['fbmp'][(mts['fbmp']['tau'] == tau) & (mts['fbmp']['sigma'] == sigma)]
+        stdlist = mts['fsmp'][(mts['fsmp']['tau'] == tau) & (mts['fsmp']['sigma'] == sigma)]
         ax = figb.add_subplot(gs[i, j])
         # yerr = stdlist['biasmuint'][:, 1] / np.sqrt(stdlist['N'])
         yerr = np.vstack([-t.ppf(alpha, stdlist['N'])*stdlist['stdmuint']/np.sqrt(stdlist['N']), t.ppf(1-alpha, stdlist['N'])*stdlist['stdmuint']/np.sqrt(stdlist['N'])])

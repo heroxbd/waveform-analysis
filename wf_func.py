@@ -46,7 +46,7 @@ gmu = 160.
 gsigma = 40.
 std = 1.
 p = [8., 0.5, 24.]
-Thres = {'mcmc':std / gsigma, 'xiaopeip':0, 'lucyddm':0.2, 'fbmp':0, 'fftrans':0.1, 'findpeak':0.1, 'threshold':0, 'firstthres':0, 'omp':0}
+Thres = {'mcmc':std / gsigma, 'xiaopeip':0, 'lucyddm':0.2, 'fsmp':0, 'fftrans':0.1, 'findpeak':0.1, 'threshold':0, 'firstthres':0, 'omp':0}
 d_history = [('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('step', np.uint32), ('loc', np.float32)]
 proposal = np.array((1, 1, 2)) / 4
 
@@ -232,7 +232,7 @@ def move(A_vec, c_vec, z, step, mus, sig2s, A):
     Δz = -step * A_vec * mus
     return Δν, Δcx, Δz
 
-def flow(cx, p1, z, N, sig2s, sig2w, mus, A, p_cha, mu_t):
+def flow(cx, p1, z, N, sig2s, sig2w, mus, A, p_cha, mu_t, TRIALS=2000):
     '''
     flow
     ====
@@ -330,7 +330,7 @@ def flow(cx, p1, z, N, sig2s, sig2w, mus, A, p_cha, mu_t):
         flip[i] = step
     return flip, [Δν_history, ν], es_history[:si1], c_star_list, T_list
 
-def metropolis_fbmp(y, A, sig2w, sig2s, mus, p1, p_cha, mu_t):
+def metropolis_fsmp(y, A, sig2w, sig2s, mus, p1, p_cha, mu_t, TRIALS=2000):
     '''
     p1: prior probability for each bin.
     sig2w: variance of white noise.
@@ -350,7 +350,7 @@ def metropolis_fbmp(y, A, sig2w, sig2s, mus, p1, p_cha, mu_t):
     z = y.copy()
 
     # Metropolis flow
-    flip, Δν_history, es_history, c_star_list, T_list = flow(cx_root, p1, z, N, sig2s, sig2w, mus, A, p_cha, mu_t)
+    flip, Δν_history, es_history, c_star_list, T_list = flow(cx_root, p1, z, N, sig2s, sig2w, mus, A, p_cha, mu_t, TRIALS=TRIALS)
     num = len(T_list)
 
     c_star = np.vstack(c_star_list)

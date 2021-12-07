@@ -1,7 +1,7 @@
 \section{Summary and discussion}
 \label{sec:discussion}
 
-This section will address the burning question: which waveform analysis method should my experiment use?  We surveyed 8 methods, heuristics~(figure~\ref{fig:method}), deconvolution~(figure~\ref{fig:deconv}), neuron network~(figure~\ref{fig:cnn-performance}) and regressions(figures~\ref{fig:dcf}--\ref{fig:fbmp-performance}), from the simplest to the most dedicated.  To make a choice, we shall investigate the light curve reconstruction precision under different light intensities $\mu$.
+This section will address the burning question: which waveform analysis method should my experiment use?  We surveyed 8 methods, heuristics~(figure~\ref{fig:method}), deconvolution~(figure~\ref{fig:deconv}), neuron network~(figure~\ref{fig:cnn-performance}) and regressions(figures~\ref{fig:dcf}--\ref{fig:fsmp-performance}), from the simplest to the most dedicated.  To make a choice, we shall investigate the light curve reconstruction precision under different light intensities $\mu$.
 
 \subsection{Performance}
 
@@ -78,12 +78,12 @@ The message is clear from figure~\ref{fig:deltamethods}: any PMT-based experimen
     \resizebox{\textwidth}{!}{\input{figures/vs-deltamethodsdivmu.pgf}}
     \caption{\label{fig:deltamu} ratios of relative resolution $\frac{\sigma_{\hat{\mu}}}{\sqrt{\hat{\mu}}}/\frac{\sigma_\mu}{\sqrt{\mu}}$ for intensity reconstruction. }
   \end{subfigure}
-  \caption{Incident light analysis results for the two typical cases of Cherenkov~(left) and scintillation~(right).  ``ALL'' is the $\hat{t}_\mathrm{ALL}$ estimator defined in eq.~\eqref{eq:2}. ``int'' is the $\hat{\mu}_Q$ from the QDC output.  LucyDDM, Fitting, CNN use eqs.~\eqref{eq:pseudo} and \eqref{eq:pseudo-mu}.  FSMP has its own natural $\hat{t}_0$ and $\hat{\mu}$ estimators in eq.~\eqref{eq:fbmpcharge}. Error bars are 5--95 percentiles.}
+  \caption{Incident light analysis results for the two typical cases of Cherenkov~(left) and scintillation~(right).  ``ALL'' is the $\hat{t}_\mathrm{ALL}$ estimator defined in eq.~\eqref{eq:2}. ``int'' is the $\hat{\mu}_Q$ from the QDC output.  LucyDDM, Fitting, CNN use eqs.~\eqref{eq:pseudo} and \eqref{eq:pseudo-mu}.  FSMP has its own natural $\hat{t}_0$ and $\hat{\mu}$ estimators in eq.~\eqref{eq:fsmpcharge}. Error bars are 5--95 percentiles.}
 \end{figure}
 
 Next, we discuss the inference of light intensity.  The integration estimator $\hat{\mu}_Q$~(``int'' in figures~\ref{fig:biasmu} and~\ref{fig:deltamu}) is ubiquitous.  But as pointed out in section~\ref{sec:intensity-mu}, it is deteriorated by charge smearing $\sigma_q^2$ and white noise.
 
-In figure~\ref{fig:biasmu}, the biases of $\hat{\mu}$ of the four methods are within \SI{2}{\percent} and disappear for large $\mu$ expect LucyDDM.  The tendency of LucyDDM comes from the thresholding and scaling in eq.~\eqref{eq:fdconv2}.  The upward bias of FSMP and Fitting for low $\mu$ is due to PE granularity.  The charge $q$ of one PE can fluctuate close to 2 or 0, but eqs.~\eqref{eq:gd-q} and \eqref{eq:fbmpcharge} favor 2 more than 0 in waveforms.  We shall leave the amendment of the bias to event reconstruction in our subsequent publication.
+In figure~\ref{fig:biasmu}, the biases of $\hat{\mu}$ of the four methods are within \SI{2}{\percent} and disappear for large $\mu$ expect LucyDDM.  The tendency of LucyDDM comes from the thresholding and scaling in eq.~\eqref{eq:fdconv2}.  The upward bias of FSMP and Fitting for low $\mu$ is due to PE granularity.  The charge $q$ of one PE can fluctuate close to 2 or 0, but eqs.~\eqref{eq:gd-q} and \eqref{eq:fsmpcharge} favor 2 more than 0 in waveforms.  We shall leave the amendment of the bias to event reconstruction in our subsequent publication.
 
 For small $\mu$, FSMP gives the best resolution by correctly modeling charge distributions~(figure~\ref{fig:deltamu}), as predicted in figure~\ref{fig:recchargehist}.  Like the hit estimator $\hat{\mu}_\mathrm{hit}$ in section~\ref{sec:intensity-mu}, it eliminates the influence of $\sigma_q^2$. But unlike $\hat{\mu}_\mathrm{hit}$, FSMP works well for multiple PEs provided the pile-up is low.  More importantly, it provides a smooth transition from the ``hit mode'' to the ``charge mode'' with the best intensity resolution of all.  For large $\mu$ in the charge mode, the four methods are similar to $\hat{\mu}_Q$.
 
