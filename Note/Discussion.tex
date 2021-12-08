@@ -1,7 +1,7 @@
 \section{Summary and discussion}
 \label{sec:discussion}
 
-This section will address the burning question: which waveform analysis method should my experiment use?  We surveyed 8 methods, heuristics~(figure~\ref{fig:method}), deconvolution~(figure~\ref{fig:deconv}), neural network~(figure~\ref{fig:cnn-performance}) and regressions(figures~\ref{fig:dcf}--\ref{fig:fsmp-performance}), from the simplest to the most dedicated.  To make a choice, we shall investigate the light curve reconstruction precision under different light intensities $\mu$.
+This section will address the burning question: which waveform analysis method should my experiment use?  We surveyed 8 methods, heuristics~(figure~\ref{fig:method}), deconvolution~(figure~\ref{fig:deconv}), neural network~(figure~\ref{fig:cnn-performance}) and regressions(figures~\ref{fig:dcf}--\ref{fig:fsmp-performance}), from the simplest to the most dedicated\footnote{The source codes are available on GitHub \url{https://github.com/heroxbd/waveform-analysis}}.  To make a choice, we shall investigate the light curve reconstruction precision under different light intensities $\mu$.
 
 \subsection{Performance}
 
@@ -96,5 +96,3 @@ In the fluid-based neutrino and dark matter experiments, hit mode for $\mu < 3$ 
   \end{aligned}
 \end{equation}
 If on average each PMT has one hit, $\E\mu=1$.  We see \SIrange{20}{40}{\percent} boost in $\sigma_\mu$ amounts to \SIrange{10}{20}{\percent} in energy resolution $\sigma_E$.  Good waveform analysis has the potential to accelerate discovery and broaden the physics reach of existing detectors. 
-
-The codes are available now on GitHub.\footnote{\url{https://github.com/heroxbd/waveform-analysis}}
