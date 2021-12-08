@@ -317,25 +317,33 @@ In reality, $w(t)$ is discretized as $\bm{w}$. If we rewrite the hierarchical mo
   \label{eq:universe}
   \begin{aligned}
     p(\bm{w}, t_0, \mu) &= \sum_{\bm{z}} \sum_{\bm{q}'|\bm{z}} p(\bm{w}, \bm{q}', \bm{z}, t_0, \mu) \\
-    &= p(t_0, \mu) \sum_{\bm{z}} \left[\sum_{\bm{q}'|\bm{z}} p(\bm{w}|\bm{q}') p(\bm{q}'|\bm{z}) \right] p(\bm{z}|t_0, \mu)
+    &= p(t_0, \mu) \sum_{\bm{z}} \left[\sum_{\bm{q}'|\bm{z}} p(\bm{w}|\bm{q}') p(\bm{q}'|\bm{z}) \right] p(\bm{z}|t_0, \mu) \\
+    &= p(t_0, \mu) \sum_{\bm{z}} p(\bm{w}|\bm{z}) p(\bm{z}|t_0, \mu) \\
+    &= p(t_0, \mu) p(\bm{w}|t_0, \mu) \\
   \end{aligned}
 \end{equation}
-The inner summation over $\bm{q}'$ is the probability density of a multi-normal distribution $p(\bm{w}|\bm{z})$, with a fast algorithm to iteratively compute by Schniter~et al.~\cite{schniter_fast_2008}. The summation over $\bm{z}$, however, takes an exploding number of combinations and deserves a Markov chain to evaluate.
+The inner summation over $\bm{q}'$ is the probability density of a multi-normal distribution $p(\bm{w}|\bm{z})$, with a fast algorithm to iteratively compute by Schniter~et al.~\cite{schniter_fast_2008}. The summation over $\bm{z}$, however, takes an exploding number of combinations.
 
-Taking a Markov chain sample $S = (\bm{s}_1, \bm{s}_2, \cdots, \bm{s}_M)$ from $p(\bm{z}) = C p(\bm{w} | \bm{z}) q( \bm{z})$, where $C$ is independent of $\bm{z}$ and $q(\bm{z})$ is an educated guess for $p(\bm{z}|t_0, \mu)$ from a previous method like LucyDDM~(section~\ref{sec:lucyddm}).  From this sample, we get approximate MLE for $t_0$, $\mu$ and $\bm{z}$, and the expectation estimation of $\hat{\bm{q}}$,
+Let's approximate the summation with a sample from $S = (\bm{s}_1, \bm{s}_2, \cdots, \bm{s}_M)$ by Metropolis-Hasings~\cite{metropolis_equation_1953, hastings_monte_1970, mackay_information_2003} from $p(\bm{z}) = C p(\bm{w} | \bm{z}) h( \bm{z})$. $C$ is independent of $\bm{z}$, and $h(\bm{z})$ is an educated guess for $p(\bm{z}|t_0, \mu)$ from a previous method like LucyDDM~(section~\ref{sec:lucyddm}). Then,
+\begin{equation}
+  \label{eq:mh}
+  \begin{aligned}
+    p(\bm{w}|\mu, t_0) &= \sum_{\bm{z}} p(\bm{w}|\bm{z}) p(\bm{z}|t_0, \mu) = \frac{1}{C}\sum_{\bm{z}} p(\bm{z}) \frac{p(\bm{z} | \mu, t_0)}{h(\bm{z})} \\
+    &= \frac{1}{C} \E_{\bm{z}}\left[ \frac{p(\bm{z} | \mu, t_0)}{h(\bm{z})} \right] \approx \frac{1}{CM} \sum_{i=1}^M \frac{p(\bm{s}_i | \mu, t_0)}{h(\bm{s}_i)}. \\
+  \end{aligned}
+\end{equation}
+Construct approximate MLEs for $t_0$, $\mu$ and $\bm{z}$, and the expectation estimation of $\hat{\bm{q}}$,
 \begin{equation}
   \label{eq:fsmpcharge}
   \begin{aligned}
-    p(\bm{w}|\mu, t_0) &= \sum_{\bm{z}} C p(\bm{z}) \frac{p(\bm{z} | \mu, t_0)}{q(\bm{z})} = C \E_{\bm{z}}\left[ \frac{p(\bm{z} | \mu, t_0)}{q(\bm{z})} \right] \\
-    &\approx C \frac{1}{M} \sum_{i=1}^M \frac{p(\bm{s}_i | \mu, t_0)}{q(\bm{s}_i)} \\
-    \left(\hat{t}_0, \hat{\mu}\right) &= \arg\underset{t_0,\mu}{\max} p(\bm{w}|\mu, t_0) \\
-    \hat{\bm{z}} &= \arg \underset{\bm{s}_i}{\max} p(\bm{w}|\bm{s}_i) \\
-    \hat{\bm{q}}|{\hat{\bm{z}}} &= E(\bm{q}'|\bm{w},\hat{\bm{z}}) = \hat{\bm{z}} + \bm{Z}\bm{V}_\mathrm{PE}^\intercal\bm{\Sigma}^{-1}(\bm{w}-\bm{V}_\mathrm{PE}\hat{\bm{z}})
+    \left(\hat{t}_0, \hat{\mu}\right) &= \arg\underset{t_0,\mu}{\max} p(\bm{w}|\mu, t_0) = \arg\underset{t_0,\mu}{\max} \sum_{i=1}^M \frac{p(\bm{s}_i | \mu, t_0)}{h(\bm{s}_i)}\\
+    \hat{\bm{z}} &= \arg \underset{\bm{s}_i \in S}{\max} p(\bm{w}|\bm{s}_i) h(\bm{s}_i) \\
+    \hat{\bm{q}}|{\hat{\bm{z}}} &= \E(\bm{q}'|\bm{w},\hat{\bm{z}})
   \end{aligned}
 \end{equation}
-and calculate RSS and $D_\mathrm{w}$ by eqs.~\eqref{eq:rss}, \eqref{eq:numerical}, \eqref{eq:gd-phi} and \eqref{eq:mcmc-w}.
+RSS and $D_\mathrm{w}$ are calculated by eqs.~\eqref{eq:rss}, \eqref{eq:numerical}, \eqref{eq:gd-phi} and \eqref{eq:mcmc-w}.
 
-We name the method \emph{fast stochastic matching pursuit}~(FSMP) after fast Bayesian matching pursuit~(FBMP) by Schniter~et al.~\cite{schniter_fast_2008} and Bayesian stochastic matching pursuit by Chen~et al.~\cite{chen_stochastic_2011}.  FSMP replaces the greedy search routine in FBMP with the Markov chain Monte Carlo in (\ref{eq:fsmpcharge}).  With the help of Ekanadham~et al.'s function interpolation~\cite{ekanadham_recovery_2011}, FSMP straightforwardly extends $\bm{z}$ into an unbinned vector of PE locations $t_i$.  Geyer and Møller~\cite{geyer_simulation_1994} developed a similar sampler to handle trans-dimensionality in a Poisson point process.
+We name the method \emph{fast stochastic matching pursuit}~(FSMP) after \emph{fast Bayesian matching pursuit}~(FBMP) by Schniter~et al.~\cite{schniter_fast_2008} and \emph{Bayesian stochastic matching pursuit} by Chen~et al.~\cite{chen_stochastic_2011}.  Here FSMP replaces the greedy search routine in FBMP with stochastic sampling.  With the help of Ekanadham~et al.'s function interpolation~\cite{ekanadham_recovery_2011}, FSMP straightforwardly extends $\bm{z}$ into an unbinned vector of PE locations $t_i$.  Geyer and Møller~\cite{geyer_simulation_1994} developed a similar sampler to handle trans-dimensionality in a Poisson point process.  $h(\bm{z})$ and the proposal distribution in Metropolis-Hastings steps could be tuned to improve sampling efficiency.  We shell leave the detailed study of the Markov chain convergence to our future publications.
 
 \begin{figure}[H]
   \begin{subfigure}[b]{.45\textwidth}
