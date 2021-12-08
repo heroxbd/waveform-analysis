@@ -53,9 +53,9 @@ For large $N_\mathrm{PE}$, the sparsity condition is by definition lost.  The eq
 
 As figure~\ref{fig:summary}, we show the dependence on $\mu$ of bias~(figure~\ref{fig:biasmethods}) and resolution~(figure~\ref{fig:deltamethods}) for different time estimators in the two typical experimental setups.  From figure~\ref{fig:biasmethods}, we see that the $t_0$ estimation biases are all similar to that of $\hat{t}_\mathrm{ALL}$. The bias for the scintillation configuration~(right of figure~\ref{fig:biasmethods}) for small $\mu$ is intrinsic for MLE of exponential distributions.  We can modify it into an unbiased estimator, but leave this discussion to event reconstruction.
 
-People often argue from difficulties for large pile-ups that waveform analysis is unnecessary.  Comparing figures~\ref{fig:reso-diff} and \ref{fig:deltamethods}, it is a myth.  Although $\hat{t}_\mathrm{1st}$ is more precise for large light intensity, all the waveform analysis methods provide magnificently better time resolutions than $\hat{t}_\mathrm{1st}$, more than twice for $\mu>20$ in Cherenkov setup.  FSMP gives the most significant boost.  Such improvement in time resolutions amounts to the position resolution, which benefits fiducial volume thus exposure, and lowers position-dependent energy bias.
+People often argue from difficulties for large pile-ups that waveform analysis is unnecessary.  Comparing figures~\ref{fig:reso-diff} and \ref{fig:deltamethods}, it is a myth.  Although $\hat{t}_\mathrm{1st}$ is more precise for large light intensity, all the waveform analysis methods provide magnificently better time resolutions than $\hat{t}_\mathrm{1st}$, more than twice for $\mu>20$ in Cherenkov setup.  FSMP gives the most significant boost.  Such improvement in time resolutions amounts to the position resolution, which benefits fiducial volume, exposure and position-dependent energy bias.
 
-The message is clear from figure~\ref{fig:deltamethods}: any PMT-based experiment that cares time with PMT occupancy $\mu$ larger than 3 should employ waveform analysis.
+The message is clear from figure~\ref{fig:deltamethods}: any PMT-based experiment that relies on time with PMT occupancy $\mu$ larger than 3 should employ waveform analysis.
 
 \begin{figure}[H]
   \begin{subfigure}[b]{\textwidth}
@@ -76,9 +76,9 @@ The message is clear from figure~\ref{fig:deltamethods}: any PMT-based experimen
   \begin{subfigure}[b]{\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/vs-deltamethodsdivmu.pgf}}
-    \caption{\label{fig:deltamu} Ratios of relative resolution $\frac{\sigma_{\hat{\mu}}}{\sqrt{\hat{\mu}}}/\frac{\sigma_\mu}{\sqrt{\mu}}$ for intensity reconstruction. }
+    \caption{\label{fig:deltamu} Ratios of relative resolution $\frac{\sigma_{\hat{\mu}}}{\sqrt{\hat{\mu}}}/\frac{\sigma_\mu}{\sqrt{\mu}}$ for intensity reconstruction.}
   \end{subfigure}
-  \caption{Incident light analysis results for the two typical cases of Cherenkov~(left) and scintillation~(right).  ``ALL'' is the $\hat{t}_\mathrm{ALL}$ estimator defined in eq.~\eqref{eq:2}. ``int'' is the $\hat{\mu}_Q$ from the QDC output.  LucyDDM, Fitting, CNN use eqs.~\eqref{eq:pseudo} and \eqref{eq:pseudo-mu}.  FSMP has its own natural $\hat{t}_0$ and $\hat{\mu}$ estimators in eq.~\eqref{eq:fsmpcharge}. Error bars are 5--95 percentiles.}
+  \caption{Incident light analysis results for the two typical cases of Cherenkov~(left) and scintillation~(right).  ``ALL'' is the $\hat{t}_\mathrm{ALL}$ estimator defined in eq.~\eqref{eq:2}. ``int'' is the $\hat{\mu}_Q$ from the QDC output.  LucyDDM, Fitting, CNN use eqs.~\eqref{eq:pseudo} and \eqref{eq:pseudo-mu}.  FSMP has its own natural $\hat{t}_0$ and $\hat{\mu}$ estimators in eq.~\eqref{eq:fsmpcharge}. $\mu$ and $\sigma_\mu$ in \subref{fig:biasmu} and \subref{fig:deltamu} are caluculated from the PE truths of the simulation~(section~\ref{sec:toyMC}). Error bars are 5--95 percentiles.}
 \end{figure}
 
 Next, we discuss the inference of light intensity.  The integration estimator $\hat{\mu}_Q$~(``int'' in figures~\ref{fig:biasmu} and~\ref{fig:deltamu}) is ubiquitous.  But as pointed out in section~\ref{sec:intensity-mu}, it is deteriorated by charge smearing $\sigma_q^2$ and white noise.
