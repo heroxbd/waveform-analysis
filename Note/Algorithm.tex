@@ -251,7 +251,7 @@ Fitting the charges $q'_i$ in eq.~\eqref{eq:gd} directly by minimizing RSS of $w
   \label{eq:gd-q}
   \bm{\hat{q}} = \arg \underset{q'_i \ge 0}{\min}~\mathrm{RSS}\left[w'(t),w(t)\right].
 \end{equation}
-Slawski and Hein~\cite{slawski_non-negative_2013} prove that in deconvolution problems, the non-negative least-squares formulation in eq.~\eqref{eq:gd-q} is self-regularized and gives sparse solutions of $q'_i$.  We optimize eq.~\eqref{eq:gd-q} by Broyden-Fletcher-Goldfarb-Shanno algorithm with a bound constraint~\cite{byrd_limited_1995}.  In figure~\ref{fig:fitting-npe}, charge fitting is consistent in $D_\mathrm{w}$ for different $N_\mathrm{PE}$'s, showing its resilience to pile-up.
+Slawski and Hein~\cite{slawski_non-negative_2013} prove that in deconvolution problems, the non-negative least-squares formulation in eq.~\eqref{eq:gd-q} is self-regularized and gives sparse solutions of $q'_i$.  We optimize eq.~\eqref{eq:gd-q} by Broyden-Fletcher-\allowbreak{}Goldfarb-Shanno algorithm with a bound constraint~\cite{byrd_limited_1995}.  In figure~\ref{fig:fitting-npe}, charge fitting is consistent in $D_\mathrm{w}$ for different $N_\mathrm{PE}$'s, showing its resilience to pile-up.
 
 \begin{figure}[H]
   \begin{subfigure}{.5\textwidth}
