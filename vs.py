@@ -263,8 +263,8 @@ plt.close(figr)
 thresfirst = False
 marker2 = [['s', '^']]
 colors2 = [['r', 'b']]
-fig = plt.figure(figsize=(8, 4))
-gs = gridspec.GridSpec(1, 2, figure=fig, left=0.1, right=0.85, top=0.92, bottom=0.15, wspace=0.25, hspace=0.2)
+fig = plt.figure(figsize=(10, 4))
+gs = gridspec.GridSpec(1, 2, figure=fig, left=0.1, right=0.85, top=0.92, bottom=0.15, wspace=0.30, hspace=0.2)
 ax = fig.add_subplot(gs[0, 0])
 std1sttruth = np.empty(len(stdlist['mu']))
 stdlist = mts['firstthres'][(mts['firstthres']['tau'] == Tau[0]) & (mts['firstthres']['sigma'] == Sigma[0])]
