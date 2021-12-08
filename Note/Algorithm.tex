@@ -136,7 +136,7 @@ where $I(x)$ is the indicator function, and $\hat{\alpha}$ is a scaling factor t
 \end{equation*}
 $\tilde{w}(t)$ unknown in data analysis, we replace it in eq.~(\ref{eq:rss}) with $w(t)$.
 
-Figure~\ref{fig:fd} illustrates that Fourier deconvolution outperforms heuristic methods.  Meanwhile, noise and precision loss in the waveform lead to smaller and even negative $\hat{q}_i$. Those can be mitigated by thresholding and scaling in eq.~\eqref{eq:fdconv2}, but calls for a more elegant solution.
+Figure~\ref{fig:fd} illustrates that Fourier deconvolution outperforms heuristic methods.  Meanwhile, noise and precision loss in the waveform lead to smaller and even negative $\hat{q}_i$. Those can be mitigated by thresholding and scaling in eq.~\eqref{eq:fdconv2}, but call for a more elegant solution.
 
 \begin{figure}[H]
   \begin{subfigure}{0.5\textwidth}
@@ -176,7 +176,7 @@ Then a recurrence relation $\phi_*$ is,
 where only $V_{\mathrm{PE}*}$ in the numerator is normalized, and superscript $n$ denotes the iteration step.
 Like Fourier deconvolution in eq.~\eqref{eq:fdconv2}, we threshold and scale the converged $\hat{\phi}^\infty$ to get $\hat{\phi}$.  As shown in figure~\ref{fig:lucy}, the positive constraint of $\hat{\phi}$ makes LucyDDM more resilient to noise.
 
-The remaining noise in the smoothed $\tilde{w}$ crucially influences deconvolution.  A probabilistic method will correctly model the noise term $\epsilon$, as we shall see in section \ref{sec:regression}.  Before that let's try something different.
+The remaining noise in the smoothed $\tilde{w}$ crucially influences deconvolution.  A probabilistic method will correctly model the noise term $\epsilon$, as we shall see in section \ref{sec:regression}.  Before that, let us try something different.
 
 \subsection{Convolutional neural network}
 \label{sec:cnn}
