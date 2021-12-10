@@ -143,14 +143,14 @@ def flow(cx, tlist, z, N, sig2s, mus, A, p_cha, mu_t):
         cx += Δcx
         z += Δz
 
-    t0 = real_time(s[0])
+    if len(s) == 0:
+        t0 = tlist[0]
+    else:
+        t0 = real_time(s[0])
 
     # s 的记录方式：使用定长 compound array es_history 存储(存在 'loc' 里)，但由于 s 实际上变长，每一个有相同  'step' 的 'loc' 属于一个 s，si 作为临时变量用于分割成不定长片段，每一段是一个 s。
     si = 0
     es_history = np.zeros(TRIALS * (NPE0 + 5) * N, dtype=d_history)
-
-    wander_s = np.random.normal(size=TRIALS)
-    wander_t = np.random.normal(size=TRIALS)
 
     # step: +1 创生一个 PE， -1 消灭一个 PE， +2 向左或向右移动
     flip = np.random.choice((-1, 1, 2), TRIALS, p=np.array((1, 1, 2)) / 4)
@@ -164,10 +164,8 @@ def flow(cx, tlist, z, N, sig2s, mus, A, p_cha, mu_t):
             istar,
             flip,
             home_s,
-            wander_s,
-            wander_t,
-            np.log(np.random.rand(TRIALS)),
-            np.log(np.random.rand(TRIALS)),
+            *np.random.normal(size=(2, TRIALS)),
+            *np.log(np.random.rand(2, TRIALS)),
         )
     ):
         p1 = lc(real_time(s) - t0)
