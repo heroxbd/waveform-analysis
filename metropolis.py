@@ -157,6 +157,8 @@ def flow(cx, tlist, z, N, sig2s, mus, A, p_cha, mu_t):
     Δν_history = np.zeros(TRIALS)  # list of Δν's
     t0_history = np.zeros(TRIALS)
 
+    log_mu = np.log(mu_t)  # 猜测的 Poisson 流强度
+
     for i, (t, step, home, wander, wt, accept, acct) in enumerate(
         zip(
             istar,
@@ -192,7 +194,8 @@ def flow(cx, tlist, z, N, sig2s, mus, A, p_cha, mu_t):
                 A_vec, c_vec = combine(A, cx, home)
                 Δν, beta = move1(A_vec, c_vec, z, 1, mus, sig2s)
                 Δν += (
-                    lc(real_time(home) - t0)
+                    log_mu
+                    + lc(real_time(home) - t0)
                     - np.log(p_cha[int(home)])
                     - np.log(NPE + 1)
                 )
@@ -207,7 +210,7 @@ def flow(cx, tlist, z, N, sig2s, mus, A, p_cha, mu_t):
             A_vec, c_vec = combine(A, cx, loc)
             Δν, beta = move1(A_vec, c_vec, z, -1, mus, sig2s)
             if step == -1:  # 消灭
-                Δν -= p1[op] - np.log(p_cha[int(loc)]) - np.log(NPE)
+                Δν -= log_mu + p1[op] - np.log(p_cha[int(loc)]) - np.log(NPE)
 
                 if Δν >= accept:
                     Δcx, Δz = move2(A_vec, c_vec, -1, mus, A, beta)
