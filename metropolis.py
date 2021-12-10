@@ -25,7 +25,7 @@ reference = args.ref
 
 spe_pre = wff.read_model(reference, 1)
 with h5py.File(fipt, "r", libver="latest", swmr=True) as ipt:
-    ent = ipt["Readout/Waveform"][:10]
+    ent = ipt["Readout/Waveform"][:]
     pelist = ipt["SimTriggerInfo/PEList"][:]
     t0_truth = ipt["SimTruth/T"][:]
     N = len(ent)
