@@ -4,6 +4,10 @@ import argparse
 import h5py
 import numpy as np
 
+# np.seterr(all='raise')
+from scipy.special import erf
+from scipy.stats import norm
+
 import wf_func as wff
 
 global_start = time.time()
@@ -21,8 +25,9 @@ reference = args.ref
 
 spe_pre = wff.read_model(reference, 1)
 with h5py.File(fipt, "r", libver="latest", swmr=True) as ipt:
-    ent = ipt["Readout/Waveform"][:]
+    ent = ipt["Readout/Waveform"][:10]
     pelist = ipt["SimTriggerInfo/PEList"][:]
+    t0_truth = ipt["SimTruth/T"][:]
     N = len(ent)
     print("{} waveforms will be computed".format(N))
     window = len(ent[0]["Waveform"])
@@ -65,6 +70,7 @@ dt = [
     ("ChannelID", np.uint32),
     ("flip", np.int8),
     ("delta_nu", np.float64),
+    ("t0", np.float64),
 ]
 mu0_dt = [("TriggerNo", np.uint32), ("ChannelID", np.uint32), ("mu_t", np.float64)]
 
@@ -74,7 +80,7 @@ d_history = [
     ("step", np.uint32),
     ("loc", np.float32),
 ]
-TRIALS = 8000
+TRIALS = 2000
 
 
 def combine(A, cx, t):
@@ -87,12 +93,24 @@ def combine(A, cx, t):
     return alpha @ A[:, ti : (ti + 2)].T, alpha @ cx[:, ti : (ti + 2)].T
 
 
+def lc(x, tau=Tau, sigma=Sigma):
+    """
+    light curve
+    """
+    if tau == 0.0:
+        return norm.logpdf(x, loc=0, scale=sigma)
+    else:
+        alpha = 1 / tau
+        co = -np.log(2.0 * tau) + alpha * alpha * sigma * sigma / 2.0
+        x_erf = (alpha * sigma * sigma - x) / (np.sqrt(2.0) * sigma)
+        return co + np.log(1.0 - erf(x_erf)) - alpha * x
+
+
 def flow(cx, z, N, sig2s, mus, A, p_cha, mu_t):
     """
     flow
     ====
     连续时间游走
-
     cx: Cov^-1 * A, 详见 FBMP
     s: list of PE locations
     mu_t: LucyDDM 的估算 PE 数
@@ -121,21 +139,42 @@ def flow(cx, z, N, sig2s, mus, A, p_cha, mu_t):
         cx += Δcx
         z += Δz
 
+    t0 = s[0]
+    breakpoint()
+
     # s 的记录方式：使用定长 compound array es_history 存储(存在 'loc' 里)，但由于 s 实际上变长，每一个有相同  'step' 的 'loc' 属于一个 s，si 作为临时变量用于分割成不定长片段，每一段是一个 s。
     si = 0
     es_history = np.zeros(TRIALS * (NPE0 + 5) * N, dtype=d_history)
 
     wander_s = np.random.normal(size=TRIALS)
+    wander_t = np.random.normal(size=TRIALS)
 
     # step: +1 创生一个 PE， -1 消灭一个 PE， +2 向左或向右移动
     flip = np.random.choice((-1, 1, 2), TRIALS, p=np.array((1, 1, 2)) / 4)
     Δν_history = np.zeros(TRIALS)  # list of Δν's
+    t0_history = np.zeros(TRIALS)
 
-    log_mu = np.log(mu_t)  # 猜测的 Poisson 流强度
-
-    for i, (t, step, home, wander, accept) in enumerate(
-        zip(istar, flip, home_s, wander_s, np.log(np.random.rand(TRIALS)))
+    for i, (t, step, home, wander, wt, accept, acct) in enumerate(
+        zip(
+            istar,
+            flip,
+            home_s,
+            wander_s,
+            wander_t,
+            np.log(np.random.rand(TRIALS)),
+            np.log(np.random.rand(TRIALS)),
+        )
     ):
+        p1 = lc(np.array(s) - t0)
+
+        new_t0 = t0 + wt
+        new_p1 = lc(np.array(s) - new_t0)
+        acc = np.sum(new_p1 - p1)
+        if acc >= acct:
+            t0 = new_t0
+            p1 = new_p1
+        t0_history[i] = t0
+
         # 不设左右边界
         NPE = len(s)
         if NPE == 0:
@@ -149,8 +188,7 @@ def flow(cx, z, N, sig2s, mus, A, p_cha, mu_t):
             if home >= 0.5 and home <= N - 0.5:
                 A_vec, c_vec = combine(A, cx, home)
                 Δν, beta = move1(A_vec, c_vec, z, 1, mus, sig2s)
-                # NPE + 1 一个来自湮灭的选择概率，一个来自 Poisson 的先验
-                Δν += log_mu - np.log(NPE + 1)
+                Δν += lc(home - t0) - np.log(p_cha[int(home)]) - np.log(NPE + 1)
                 if Δν >= accept:
                     Δcx, Δz = move2(A_vec, c_vec, 1, mus, A, beta)
                     s.append(home)
@@ -162,7 +200,7 @@ def flow(cx, z, N, sig2s, mus, A, p_cha, mu_t):
             A_vec, c_vec = combine(A, cx, loc)
             Δν, beta = move1(A_vec, c_vec, z, -1, mus, sig2s)
             if step == -1:  # 消灭
-                Δν -= log_mu - np.log(NPE)
+                Δν -= p1[op] - np.log(p_cha[int(loc)]) - np.log(NPE)
 
                 if Δν >= accept:
                     Δcx, Δz = move2(A_vec, c_vec, -1, mus, A, beta)
@@ -174,7 +212,7 @@ def flow(cx, z, N, sig2s, mus, A, p_cha, mu_t):
                     A_vec1, c_vec1 = combine(A, cx + Δcx, nloc)
                     Δν1, beta1 = move1(A_vec1, c_vec1, z + Δz, 1, mus, sig2s)
                     Δν += Δν1
-                    Δν += np.log(p_cha[int(nloc)]) - np.log(p_cha[int(loc)])
+                    Δν += lc(nloc - t0) - p1[op]
                     if Δν >= accept:
                         Δcx1, Δz1 = move2(A_vec1, c_vec1, 1, mus, A, beta1)
                         s[op] = nloc
@@ -195,7 +233,7 @@ def flow(cx, z, N, sig2s, mus, A, p_cha, mu_t):
             step = 0
         Δν_history[i] = Δν
         flip[i] = step
-    return flip, Δν_history, es_history[:si1]
+    return flip, Δν_history, es_history[:si1], t0_history
 
 
 def move1(A_vec, c_vec, z, step, mus, sig2s):
@@ -290,6 +328,7 @@ def metropolis(ent, sample, mu0, d_tlist, s_history):
 
         """
         A: basis dictionary
+        p1: prior probability for each bin.
         sig2w: variance of white noise.
         sig2s: variance of signal x_i.
         mus: mean of signal x_i.
@@ -300,7 +339,7 @@ def metropolis(ent, sample, mu0, d_tlist, s_history):
         sig2s = (mus * (gsigma / gmu)) ** 2  # ~94
 
         # Only for multi-gaussian with arithmetic sequence of mu and sigma
-        # N: number of t samples, number of bins is N-1
+        # N: number of t bins
         # M: length of the waveform clip
         M, N = A.shape
 
@@ -312,10 +351,18 @@ def metropolis(ent, sample, mu0, d_tlist, s_history):
         p_cha = cha / np.sum(cha)
 
         # Metropolis flow
-        flip, Δν_history, es_history = flow(cx, z, N, sig2s, mus, A, p_cha, mu_t)
+        flip, Δν_history, es_history, t0_history = flow(
+            cx, z, N, sig2s, mus, A, p_cha, mu_t
+        )
 
         sample[ie * TRIALS : (ie + 1) * TRIALS] = list(
-            zip(np.repeat(eid, TRIALS), np.repeat(cid, TRIALS), flip, Δν_history)
+            zip(
+                np.repeat(eid, TRIALS),
+                np.repeat(cid, TRIALS),
+                flip,
+                Δν_history,
+                t0_history,
+            )
         )
         so = si + len(es_history)
         es_history["TriggerNo"] = eid
