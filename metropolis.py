@@ -106,7 +106,7 @@ def lc(x, tau=Tau, sigma=Sigma):
         return co + np.log(1.0 - erf(x_erf)) - alpha * x
 
 
-def flow(cx, z, N, sig2s, mus, A, p_cha, mu_t):
+def flow(cx, tlist, z, N, sig2s, mus, A, p_cha, mu_t):
     """
     flow
     ====
@@ -116,6 +116,10 @@ def flow(cx, z, N, sig2s, mus, A, p_cha, mu_t):
     mu_t: LucyDDM 的估算 PE 数
     z: residue waveform
     """
+
+    def real_time(t):
+        return np.interp(t, xp=np.arange(0.5, N), fp=tlist)
+
     # istar [0, 1) 之间的随机数，用于点中 PE
     istar = np.random.rand(TRIALS)
     # 同时可用于创生位置的选取
@@ -139,8 +143,7 @@ def flow(cx, z, N, sig2s, mus, A, p_cha, mu_t):
         cx += Δcx
         z += Δz
 
-    t0 = s[0]
-    breakpoint()
+    t0 = real_time(s[0])
 
     # s 的记录方式：使用定长 compound array es_history 存储(存在 'loc' 里)，但由于 s 实际上变长，每一个有相同  'step' 的 'loc' 属于一个 s，si 作为临时变量用于分割成不定长片段，每一段是一个 s。
     si = 0
@@ -165,10 +168,10 @@ def flow(cx, z, N, sig2s, mus, A, p_cha, mu_t):
             np.log(np.random.rand(TRIALS)),
         )
     ):
-        p1 = lc(np.array(s) - t0)
+        p1 = lc(real_time(s) - t0)
 
         new_t0 = t0 + wt
-        new_p1 = lc(np.array(s) - new_t0)
+        new_p1 = lc(real_time(s) - new_t0)
         acc = np.sum(new_p1 - p1)
         if acc >= acct:
             t0 = new_t0
@@ -188,7 +191,11 @@ def flow(cx, z, N, sig2s, mus, A, p_cha, mu_t):
             if home >= 0.5 and home <= N - 0.5:
                 A_vec, c_vec = combine(A, cx, home)
                 Δν, beta = move1(A_vec, c_vec, z, 1, mus, sig2s)
-                Δν += lc(home - t0) - np.log(p_cha[int(home)]) - np.log(NPE + 1)
+                Δν += (
+                    lc(real_time(home) - t0)
+                    - np.log(p_cha[int(home)])
+                    - np.log(NPE + 1)
+                )
                 if Δν >= accept:
                     Δcx, Δz = move2(A_vec, c_vec, 1, mus, A, beta)
                     s.append(home)
@@ -212,7 +219,7 @@ def flow(cx, z, N, sig2s, mus, A, p_cha, mu_t):
                     A_vec1, c_vec1 = combine(A, cx + Δcx, nloc)
                     Δν1, beta1 = move1(A_vec1, c_vec1, z + Δz, 1, mus, sig2s)
                     Δν += Δν1
-                    Δν += lc(nloc - t0) - p1[op]
+                    Δν += lc(real_time(nloc) - t0) - p1[op]
                     if Δν >= accept:
                         Δcx1, Δz1 = move2(A_vec1, c_vec1, 1, mus, A, beta1)
                         s[op] = nloc
@@ -352,7 +359,7 @@ def metropolis(ent, sample, mu0, d_tlist, s_history):
 
         # Metropolis flow
         flip, Δν_history, es_history, t0_history = flow(
-            cx, z, N, sig2s, mus, A, p_cha, mu_t
+            cx, tlist, z, N, sig2s, mus, A, p_cha, mu_t
         )
 
         sample[ie * TRIALS : (ie + 1) * TRIALS] = list(
