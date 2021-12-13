@@ -497,15 +497,29 @@ figb = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
 gs = gridspec.GridSpec(1, 2, figure=figb, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
 for i, sigma in enumerate(Sigma):
     for j, tau in enumerate(Tau):
-        # charge std
+        #
+        # intensity resolution comparison
+        #
         stdlist = mts['fsmp'][(mts['fsmp']['tau'] == tau) & (mts['fsmp']['sigma'] == sigma)]
         ax = figd.add_subplot(gs[i, j])
-        yerr = np.vstack([stdlist['stdmuint']-np.sqrt(np.power(stdlist['stdmuint'],2)*stdlist['N']/chi2.ppf(1-alpha, stdlist['N'])), np.sqrt(np.power(stdlist['stdmuint'],2)*stdlist['N']/chi2.ppf(alpha, stdlist['N']))-stdlist['stdmuint']]) / (stdlist['biasmuint'][:, 1] + stdlist['meanmutru'])
-        ax.errorbar(stdlist['mu'] + jitter['tru'], stdlist['stdmuint'] / (stdlist['biasmuint'][:, 1] + stdlist['meanmutru']) / (1 / np.sqrt(stdlist['mu'])), yerr=yerr / (1 / np.sqrt(stdlist['mu'])), label='$\mathrm{int}$', c=color['1st'], marker=marker['1st'])
+        yerr = np.vstack([stdlist['stdmuint']-np.sqrt(np.power(stdlist['stdmuint'],2)*stdlist['N']/chi2.ppf(1-alpha, stdlist['N'])), 
+                          np.sqrt(np.power(stdlist['stdmuint'],2)*stdlist['N']/chi2.ppf(alpha, stdlist['N']))-stdlist['stdmuint']]) / (stdlist['biasmuint'][:, 1] + stdlist['meanmutru'])
+        ax.errorbar(stdlist['mu'] + jitter['tru'], 
+                    stdlist['stdmuint'] / (stdlist['biasmuint'][:, 1] + stdlist['meanmutru']) / (1 / np.sqrt(stdlist['mu'])),
+                    yerr=yerr / (1 / np.sqrt(stdlist['mu'])), 
+                    label='$\mathrm{int}$', 
+                    c=color['1st'], 
+                    marker=marker['1st'])
         for key in keylist:
             stdlist = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
-            yerr = np.vstack([stdlist['stdmu']-np.sqrt(np.power(stdlist['stdmu'],2)*stdlist['N']/chi2.ppf(1-alpha, stdlist['N'])), np.sqrt(np.power(stdlist['stdmu'],2)*stdlist['N']/chi2.ppf(alpha, stdlist['N']))-stdlist['stdmu']]) / (stdlist['biasmu'][:, 1] + stdlist['meanmutru'])
-            ax.errorbar(stdlist['mu'] + jitter[key], stdlist['stdmu'] / (stdlist['biasmu'][:, 1] + stdlist['meanmutru']) / (1 / np.sqrt(stdlist['mu'])), yerr=yerr / (1 / np.sqrt(stdlist['mu'])), label='$' + label[key] + '$', c=color[key], marker=marker[key])
+            yerr = np.vstack([stdlist['stdmu']-np.sqrt(np.power(stdlist['stdmu'],2)*stdlist['N']/chi2.ppf(1-alpha, stdlist['N'])), 
+                              np.sqrt(np.power(stdlist['stdmu'],2)*stdlist['N']/chi2.ppf(alpha, stdlist['N']))-stdlist['stdmu']]) / (stdlist['biasmu'][:, 1] + stdlist['meanmutru'])
+            ax.errorbar(stdlist['mu'] + jitter[key], 
+                        stdlist['stdmu'] / (stdlist['biasmu'][:, 1] + stdlist['meanmutru']) / (1 / np.sqrt(stdlist['mu'])), 
+                        yerr=yerr / (1 / np.sqrt(stdlist['mu'])), 
+                        label='$' + label[key] + '$', 
+                        c=color[key], 
+                        marker=marker[key])
         ax.axhline(y=1, color='k', alpha=0.5)
         ax.set_xlabel(r'$\mu$')
         ax.set_ylabel(r'$\mathrm{ratio}$')
@@ -516,6 +530,9 @@ for i, sigma in enumerate(Sigma):
         if i == len(Sigma) - 1 and j == len(Tau) - 1:
             ax.legend(loc='upper left', bbox_to_anchor=(1., 0.9))
 
+        #
+        # intensity bias comparison
+        #
         stdlist = mts['fsmp'][(mts['fsmp']['tau'] == tau) & (mts['fsmp']['sigma'] == sigma)]
         ax = figdd.add_subplot(gs[i, j])
         yerr = np.vstack([stdlist['stdmuint']-np.sqrt(np.power(stdlist['stdmuint'],2)*stdlist['N']/chi2.ppf(1-alpha, stdlist['N'])), np.sqrt(np.power(stdlist['stdmuint'],2)*stdlist['N']/chi2.ppf(alpha, stdlist['N']))-stdlist['stdmuint']]) / (stdlist['biasmuint'][:, 1] + stdlist['meanmutru'])
