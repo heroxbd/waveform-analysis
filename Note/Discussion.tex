@@ -61,30 +61,36 @@ The message is clear from figure~\ref{fig:deltamethods}: any PMT-based experimen
   \begin{subfigure}[b]{\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/vs-bias.pgf}}
-    \caption{\label{fig:biasmethods} Biases of time reconstruction.}
+    \caption{\label{fig:biasmethods} Sample average of time reconstruction biases $\overline{\Delta t}$, where $\Delta t = \hat{t} - t_0$.}
   \end{subfigure}
+
+  \vspace{0.5em}
   \begin{subfigure}[b]{\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/vs-deltamethodsdiv.pgf}}
     \caption{\label{fig:deltamethods} Ratios of resolution $\sigma_{\hat{t}_0}/\sigma_{\mathrm{ALL}}$ for time reconstruction. ``1st'' is a reproduction of figure~\ref{fig:reso-diff}.}
   \end{subfigure}
+
+  \vspace{0.5em}
   \begin{subfigure}[b]{\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/vs-biasmu.pgf}}
-    \caption{\label{fig:biasmu} Relative biases of intensity reconstruction $\frac{\hat{\mu} - \mu}{\mu}$.}
+    \caption{\label{fig:biasmu} Relative sample average of intensity reconstruction biases $\frac{\overline{\Delta \mu}}{\mu}$, where $\Delta \mu = \hat{\mu} - \mu$.}
   \end{subfigure}
+
+  \vspace{0.5em}
   \begin{subfigure}[b]{\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/vs-deltamethodsdivmu.pgf}}
-    \caption{\label{fig:deltamu} Ratios of relative resolution $\frac{\sigma_{\hat{\mu}}}{\sqrt{\hat{\mu}}}/\frac{\sigma_\mu}{\sqrt{\mu}}$ for intensity reconstruction.}
+    \caption{\label{fig:deltamu} Ratios of resolution $\frac{\sigma_{\hat{\mu}}}{\underline{\sigma}_\mu}\left(1 + \frac{\overline{\Delta \mu}}{\mu}\right)$ for intensity reconstruction.  The factor $1 + \frac{\overline{\Delta \mu}}{\mu}$ neutralizes biases of $\hat{\mu}$.}
   \end{subfigure}
-  \caption{Incident light analysis results for the two typical cases of Cherenkov~(left) and scintillation~(right).  ``ALL'' is the $\hat{t}_\mathrm{ALL}$ estimator defined in eq.~\eqref{eq:2}. ``int'' is the $\hat{\mu}_Q$ from the QDC output.  LucyDDM, Fitting, CNN use eqs.~\eqref{eq:pseudo} and \eqref{eq:pseudo-mu}.  FSMP has its own natural $\hat{t}_0$ and $\hat{\mu}$ estimators in eq.~\eqref{eq:fsmpcharge}. $\mu$ and $\sigma_\mu$ in \subref{fig:biasmu} and \subref{fig:deltamu} are caluculated from the PE truths of the simulation~(section~\ref{sec:toyMC}). Error bars are 5--95 percentiles.}
+  \caption{Incident light analysis results for the two typical cases of Cherenkov~(left) and scintillation~(right).  ``ALL'' and ``1st'' are the $\hat{t}_\mathrm{ALL}$ estimator defined in eq.~\eqref{eq:2}. ``int'' is the $\hat{\mu}_Q$ by eq.~\eqref{eq:mu-q}.  LucyDDM, Fitting, CNN use eqs.~\eqref{eq:pseudo} and \eqref{eq:pseudo-mu}.  FSMP has its own natural $\hat{t}_0$ and $\hat{\mu}$ estimators in eq.~\eqref{eq:fsmpcharge}. $\underline{\sigma}_\mu = \sqrt{\mu}$ is the lower bound of intensity resolution~(section~\ref{sec:intensity-mu}). Error bars are 5--95 percentiles.}
 \end{figure}
 
-Next, we discuss the inference of light intensity.  As we described in \ref{sec:time-shift-t_0}, the waveform samples all have at least 1 PE, though the photoelectric effect on PMT photocathode is a Poisson process. So we complete the intensity estimators here~($\hat{\mu}$) by certain numbers of 0 to make an ideal $\mu$ estimator follows Poisson distributions.  For example, when $\mu=0.5$, we will add 15414 zeros to the $\hat{\mu}$ sample.  The integration estimator $\hat{\mu}_Q$~(``int'' in figures~\ref{fig:biasmu} and~\ref{fig:deltamu}) is ubiquitous.  But as pointed out in section~\ref{sec:intensity-mu}, it is deteriorated by charge smearing $\sigma_q^2$ and white noise.
+In contract to time, inference of light intensity uses empty waveforms as well.  We append the waveform samples by $10^4 \times e^{-\mu} / (1-e^{-\mu})$ empty ones.  The number is proportional to the Poisson prediction.  It is equivalent to appending the same amount of zeros to the $\hat{\mu}$'s. The QDC integration estimator $\hat{\mu}_Q$~(``int'' in figures~\ref{fig:biasmu} and~\ref{fig:deltamu}) is ubiquitous and is plotted togethers with the four waveform analysis methods.
 
-In figure~\ref{fig:biasmu}, the biases of $\hat{\mu}$ of the four methods are within \SI{2}{\percent} and disappear for large $\mu$ expect LucyDDM.  The tendency of LucyDDM comes from the thresholding and scaling in eq.~\eqref{eq:fdconv2}.  For low $\mu$, the upward bias of FSMP and Fitting is due to PE granularity.  The charge $q$ of one PE can fluctuate close to 2 or 0, but eqs.~\eqref{eq:gd-q} and \eqref{eq:fsmpcharge} favor 2 more than 0 in waveforms.  We shall leave the amendment of the bias to event reconstruction in our subsequent publication.
+In figure~\ref{fig:biasmu}, the biases of $\hat{\mu}$ of the four methods are within \SI{2}{\percent} and disappear for large $\mu$ expect LucyDDM.  The tendency of LucyDDM comes from the thresholding and scaling in eq.~\eqref{eq:fdconv2}.  For low $\mu$, the upward bias of FSMP and Fitting is due to PE granularity.  The charge $q$ of one PE can fluctuate close to 2 or 0, but eqs.~\eqref{eq:gd-q} and \eqref{eq:fsmpcharge} favor 2 more than 0 in waveforms.  We shall leave the amendment of the bias to event reconstruction in our subsequent publications.
 
-For large $\mu$ in the charge mode, the four methods are similar to $\hat{\mu}_Q$~(figure~\ref{fig:deltamu}).  For small $\mu$, FSMP gives the best resolution by correctly modeling charge distributions, as predicted in figure~\ref{fig:recchargehist}.  Like the hit estimator $\hat{\mu}_\mathrm{hit}$ in section~\ref{sec:intensity-mu}, it eliminates the influence of $\sigma_q^2$. But unlike $\hat{\mu}_\mathrm{hit}$, FSMP also works well for a few PEs.  More importantly, it provides a smooth transition from the ``hit mode'' to the ``charge mode'' with the best intensity resolution of all.   In the scintillation case of figure~\ref{fig:deltamu}, FSMP approaches the resolution limit set by the PE truths for $\mu < 5$, which is the ultimate waveform analysis in that we can hardly do any better.
+For large $\mu$ the four methods are similar in intensity resolution to $\hat{\mu}_Q$~(figure~\ref{fig:deltamu}).  The resolution ratios of them all approach $1.03 = \sqrt{1 + 0.25^2}$, consistent with eq.~\eqref{eq:energy} if white noise is ignored.  For small $\mu$, FSMP gives the best resolution by correctly modeling charge distributions, as predicted in figure~\ref{fig:recchargehist}.  Like the hit estimator $\hat{\mu}_\mathrm{hit}$ in section~\ref{sec:intensity-mu}, it eliminates the influence of $\sigma_\mathrm{q}$ and $\sigma_\epsilon$ in eq.~\eqref{eq:energy}.  But unlike $\hat{\mu}_\mathrm{hit}$, FSMP also works well for a few PEs.  More importantly, it provides a smooth transition from the ``hit mode'' to the ``charge mode'' with the best intensity resolution of all.   In the scintillation case of figure~\ref{fig:deltamu}, FSMP approaches the resolution lower bound $\underline{\sigma}_\mu$ set by the PE truths for $\mu < 5$, which is the ultimate waveform analysis in that we can hardly do any better.
 
-In the fluid-based neutrino and dark matter experiments, hit mode for $\mu < 3$ is the sweet spot for \si{MeV} and \si{keV} physics respectively.  As demonstrated in figure~\ref{fig:deltamu}, FSMP boosts intensity resolution $\sigma_\mu$ by $\sigma_q$, \SIrange{2}{4}{\percent} depending on PMT models. Good waveform analysis has the potential to accelerate discovery and broaden the physics reach of existing detectors. 
+In the fluid-based neutrino and dark matter experiments, $\mu < 5$ is the sweet spot for \si{MeV} and \si{keV} physics respectively.  The intensity resolution boost in figure~\ref{fig:deltamu} converts directly into energy resolution.  It varies depending on PMT models for different $\sigma_\mathrm{q}$ and $\sigma_\epsilon$.  In our scintillation setup, the improvement is up to $\times 1.04$~(figure~\ref{fig:deltamu}) . Good waveform analysis has the potential to accelerate discovery and broaden the physics reach of existing detectors. 
