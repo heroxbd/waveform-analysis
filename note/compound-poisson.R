@@ -5,7 +5,7 @@
 
 library(plyr)
 
-sigma_q <- 0.4
+sigma_q <- 0.25
 mu_q <- 1
 N <- rpois(100000, lambda=4)
 Q <- laply(N, function(N) {
