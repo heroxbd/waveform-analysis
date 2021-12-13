@@ -316,13 +316,13 @@ In reality, $w(t)$ is discretized as $\bm{w}$. If we rewrite the hierarchical mo
 \begin{equation}
   \label{eq:universe}
   \begin{aligned}
-    p(\bm{w}, t_0, \mu) &= \sum_{\bm{z}} \sum_{\bm{q}'|\bm{z}} p(\bm{w}, \bm{q}', \bm{z}, t_0, \mu) \\
-    &= p(t_0, \mu) \sum_{\bm{z}} \left[\sum_{\bm{q}'|\bm{z}} p(\bm{w}|\bm{q}') p(\bm{q}'|\bm{z}) \right] p(\bm{z}|t_0, \mu) \\
+    p(\bm{w}, t_0, \mu) &= \sum_{\bm{z}} \int \mathrm{d}\bm{q}' p(\bm{w}, \bm{q}', \bm{z}, t_0, \mu) \\
+    &= p(t_0, \mu) \sum_{\bm{z}} \left[\int \mathrm{d}\bm{q}' p(\bm{w}|\bm{q}') p(\bm{q}'|\bm{z}) \right] p(\bm{z}|t_0, \mu) \\
     &= p(t_0, \mu) \sum_{\bm{z}} p(\bm{w}|\bm{z}) p(\bm{z}|t_0, \mu) \\
     &= p(t_0, \mu) p(\bm{w}|t_0, \mu) \\
   \end{aligned}
 \end{equation}
-The inner summation over $\bm{q}'$ is the probability density of a multi-normal distribution $p(\bm{w}|\bm{z})$, with a fast algorithm to iteratively compute by Schniter~et al.~\cite{schniter_fast_2008}. The summation over $\bm{z}$, however, takes an exploding number of combinations.
+The integration over $\bm{q}'$ is the probability density of a multi-normal distribution $p(\bm{w}|\bm{z})$, with a fast algorithm to iteratively compute by Schniter~et al.~\cite{schniter_fast_2008}. The summation over $\bm{z}$, however, takes an exploding number of combinations.
 
 Let's approximate the summation with a sample from $S = (\bm{s}_1, \bm{s}_2, \cdots, \bm{s}_M)$ by Metropolis-Hasings~\cite{metropolis_equation_1953, hastings_monte_1970, mackay_information_2003} from $p(\bm{z}) = C p(\bm{w} | \bm{z}) h( \bm{z})$. $C$ is independent of $\bm{z}$, and $h(\bm{z})$ is an educated guess for $p(\bm{z}|t_0, \mu)$ from a previous method like LucyDDM~(section~\ref{sec:lucyddm}). Then,
 \begin{equation}

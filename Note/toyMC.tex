@@ -93,17 +93,29 @@ Nevertheless, for $\sigma_\ell > 0$ and $\mu >0$, the $\sigma_{\mathrm{1st}}$ si
 \subsubsection{Intensity $\mu$}
 \label{sec:intensity-mu}
 
-The charge estimator $\hat{\mu}_Q$
+Noting $Q_0 = {\int V_\mathrm{PE}(t) \mathrm{d} t}$, the charge estimator $\hat{\mu}_Q$ for QDC is
 \begin{equation}
   \begin{aligned}
   \label{eq:mu-q}
-  \hat{\mu}_Q = \frac{\int w(t) \mathrm{d} t}{\int V_\mathrm{PE}(t) \mathrm{d} t} &= \frac{\sum_{i=1}^{N_\mathrm{PE}} \int \left[ q_i V_\mathrm{PE}(t-t_i) + \epsilon(t) \right] \mathrm{d} t}{\int V_\mathrm{PE}(t) \mathrm{d} t} \\
-  & = \sum_{i=1}^{N_\mathrm{PE}} q_i + \frac{\int \epsilon(t) \mathrm{d} t}{\int V_\mathrm{PE}(t) \mathrm{d} t}
+  \hat{\mu}_Q = \frac{1}{Q_0}\int w(t) \mathrm{d} t &= \frac{1}{Q_0}\sum_{i=1}^{N_\mathrm{PE}} \int \left[ q_i V_\mathrm{PE}(t-t_i) + \epsilon(t) \right] \mathrm{d} t \\
+  & = \sum_{i=1}^{N_\mathrm{PE}} q_i + \frac{1}{Q_0} \int \epsilon(t) \mathrm{d} t.
   \end{aligned}
 \end{equation}
-is not only affected by Poisson fluctuation of $N_\mathrm{PE}$, but also by charge resolution of a PE $\sigma_\mathrm{q}$.  Sometimes we mitigate the impact of $\sigma_\mathrm{q}$ by rounding $\hat{\mu}_Q$ to integers.  It works well for $N_\mathrm{PE} \le 1$, which is equivalently a hit-based 0-1 $\mu$ estimator $\hat{\mu}_\mathrm{hit}$.  But for $N_\mathrm{PE} \ge 2$, it is hard to interpret $\hat{\mu}_Q$ rounding by physics principles and $\hat{\mu}_\mathrm{hit}$ does not gain any additional information from the extra PEs.
+Its expectation and variance are,
+\begin{equation}
+  \label{eq:energy}
+  \begin{aligned}
+    \E[\hat{\mu}_Q] &= \E[N_\mathrm{PE}] \\
+    \Var[\hat{\mu}_Q] &= \Var\left[\sum_{i=1}^{N_\mathrm{PE}} q_i\right] + \Var\left[\frac{1}{Q_0} \int \epsilon(t) \mathrm{d} t\right] \\
+    &= \E[q^2] \Var(N_\mathrm{PE}) + \frac{T}{Q_0^2} \sigma_\epsilon^2 \\
+    &= (1 + \sigma_\mathrm{q}^2) \Var(N_\mathrm{PE}) + \frac{T}{Q_0^2} \sigma_\epsilon^2. \\
+  \end{aligned}
+\end{equation}
+where the first term of the variance is the that of a compound Poisson distribution, and $T$ in the second one is a constant proportional to the time window.  Resolution of $\hat{\mu}_Q$ is affected by the Poisson fluctuation of $N_\mathrm{PE}$, the charge resolution of a PE $\sigma_\mathrm{q}$ and the while noise $\sigma_\epsilon$.
 
-The goal of waveform analysis is to eliminate the impact of $\sigma_\mathrm{q}$ as much as possible.  The resolution of any $\mu$ estimator is therefore lower bounded by the pure Poisson fluctuation of $N_\mathrm{PE}$.
+Sometimes we mitigate the impact of $\sigma_\mathrm{q}$ and $\sigma_\epsilon$ by rounding $\hat{\mu}_Q$ to integers.  It works well for $N_\mathrm{PE} \le 1$, which is equivalently a hit-based 0-1 $\mu$ estimator $\hat{\mu}_\mathrm{hit}$.  But for $N_\mathrm{PE} \ge 2$, it is hard to interpret $\hat{\mu}_Q$ rounding by physics principles and $\hat{\mu}_\mathrm{hit}$ does not gain any additional information from the extra PEs.
+
+The goal of waveform analysis is to eliminate the impact of $\sigma_\mathrm{q}$ and $\sigma_\epsilon$ as much as possible.  The resolution lower bound $\underline{\sigma}_\mu$ of any $\mu$ estimator is therefore the pure Poisson fluctuation of $N_\mathrm{PE}$.
 
 \subsubsection{Shape $\phi(\cdot)$}
 \label{sec:shape-phicdot}
