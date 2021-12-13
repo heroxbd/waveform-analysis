@@ -51,7 +51,7 @@ where shape parameters $\tau_\mathrm{PE}=\SI{8}{ns}$, $\sigma_\mathrm{PE}=\SI{0.
   \label{eq:lc-sample}
   \tilde{\phi}(t) = \sum_{i=1}^{N_{\mathrm{PE}}} q_i \delta(t-t_i),
 \end{equation}
-where $N_\mathrm{PE}$ is the number of PEs following Poisson distribution with parameter $\mu$.  $t_i$ is the hit time of the $i$-th PE, $q_i$ is the relative charge of the $i$-th PE from charge distribution $\mathcal{N}(1,\sigma_\mathrm{q}^2)$.  $\sigma_\mathrm{q}$ is set to $0.4$ in our simulation.
+where $N_\mathrm{PE}$ is the number of PEs following Poisson distribution with parameter $\mu$.  $t_i$ is the hit time of the $i$-th PE, $q_i$ is the relative charge of the $i$-th PE from charge distribution $\mathcal{N}(1,\sigma_\mathrm{q}^2)$.  $\sigma_\mathrm{q}$ is set to $0.25$ in our simulation.
 
 A noise-free waveform $\tilde{w}(t)$ is a convolution of $\tilde{\phi}(t)$ and $V_\mathrm{PE}(t)$, and the PMT voltage output waveform $w(t)$ is a time series modeled by the sum of $\tilde{w}(t)$ and a Gaussian white noise $\epsilon(t)$,
 \begin{equation}
