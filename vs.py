@@ -180,13 +180,13 @@ for i, sigma in enumerate(Sigma):
                 continue
             stdlist = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
             # if key == 'fsmp':
-            #     yerr = stdlist['stdone'] / stdlist['stdtruth'] / np.sqrt(stdlist['N'])
+            #     yerr = np.vstack([stdlist['stdone'] / stdlist['stdtruth']*(1-1/np.sqrt(stats.f.ppf(1-alpha, stdlist['N']-1, stdlist['N']-1))), (1/np.sqrt(stats.f.ppf(alpha, stdlist['N']-1, stdlist['N']-1))-1)*stdlist['stdone']/stdlist['stdtruth']])
             #     ax.errorbar(stdlist['mu'], stdlist['stdone'] / stdlist['stdtruth'], yerr=yerr, label='$'+deltalabel['fsmpone']+'$', c=color['fsmpone'], marker=marker['fsmpone'])
-            yerr = stdlist['std'] / stdlist['stdtruth'] / np.sqrt(stdlist['N'])
+            yerr = np.vstack([stdlist['std'] / stdlist['stdtruth']*(1-1/np.sqrt(stats.f.ppf(1-alpha, stdlist['N']-1, stdlist['N']-1))), (1/np.sqrt(stats.f.ppf(alpha, stdlist['N']-1, stdlist['N']-1))-1)*stdlist['std']/stdlist['stdtruth']])
             ax.errorbar(stdlist['mu'] + jitter[key], stdlist['std'] / stdlist['stdtruth'], yerr=yerr, label='$'+deltalabel[key]+'$', c=color[key], marker=marker[key])
         temp_ylim = ax.get_ylim()
         stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == tau) & (mts['lucyddm']['sigma'] == sigma)]
-        yerr = stdlist['std1sttruth'] / stdlist['stdtruth'] / np.sqrt(stdlist['N'])
+        yerr = np.vstack([stdlist['std'] / stdlist['stdtruth']*(1-1/np.sqrt(stats.f.ppf(1-alpha, stdlist['N']-1, stdlist['N']-1))), (1/np.sqrt(stats.f.ppf(alpha, stdlist['N']-1, stdlist['N']-1))-1)*stdlist['std']/stdlist['stdtruth']])
         ax.errorbar(stdlist['mu'] + jitter['1st'], stdlist['std1sttruth'] / stdlist['stdtruth'], yerr=yerr, label='$'+deltalabel['1st']+'$', c=color['1st'], marker=marker['1st'])
         ax.set_ylim(temp_ylim)
         ax.set_xlabel(r'$\mu$')
@@ -298,7 +298,7 @@ ax = fig.add_subplot(gs[0, 1])
 sigma = 0
 tau = max(Tau)
 stdlist = mts['firstthres'][(mts['firstthres']['tau'] == Tau[0]) & (mts['firstthres']['sigma'] == Sigma[0])]
-yerr = std1sttruth / std1sttruth / np.sqrt(stdlist['N'])
+yerr = np.vstack([std1sttruth / std1sttruth*(1-1/np.sqrt(stats.f.ppf(1-alpha, stdlist['N']-1, stdlist['N']-1))), (1/np.sqrt(stats.f.ppf(alpha, stdlist['N']-1, stdlist['N']-1))-1)*std1sttruth / std1sttruth])
 ax.errorbar(stdlist['mu'], std1sttruth / std1sttruth, yerr=yerr, label=fr'$(20,0)$', marker='o', color='g')
 for i, sigma in enumerate(Sigma):
     for j, tau in enumerate(Tau):
@@ -307,7 +307,7 @@ for i, sigma in enumerate(Sigma):
             stdlist['std1sttruth'] = stdlist['std']
         sigma = int(sigma)
         tau = int(tau)
-        yerr = stdlist['std1sttruth'] / stdlist['stdtruth'] / np.sqrt(stdlist['N'])
+        yerr = np.vstack([stdlist['std1sttruth'] / stdlist['stdtruth']*(1-1/np.sqrt(stats.f.ppf(1-alpha, stdlist['N']-1, stdlist['N']-1))), (1/np.sqrt(stats.f.ppf(alpha, stdlist['N']-1, stdlist['N']-1))-1)*stdlist['std1sttruth']/stdlist['stdtruth']])
         ax.errorbar(stdlist['mu'], stdlist['std1sttruth'] / stdlist['stdtruth'], yerr=yerr, label=fr'$({tau},{sigma})$', marker=marker2[i][j], color=colors2[i][j])
 ax.set_xlabel(r'$\mu$')
 ax.set_ylabel(r'$\mathrm{\sigma_\mathrm{1st}/\sigma_\mathrm{ALL}\ ratio}$')
@@ -555,7 +555,6 @@ for i, sigma in enumerate(Sigma):
         # charge bias ratio
         stdlist = mts['fsmp'][(mts['fsmp']['tau'] == tau) & (mts['fsmp']['sigma'] == sigma)]
         ax = figbr.add_subplot(gs[i, j])
-        # yerr = stdlist['biasmuint'][:, 1] / np.sqrt(stdlist['N']) / stdlist['meanmutru']
         yerr = np.vstack([-t.ppf(alpha, stdlist['N'])*stdlist['stdmuint']/np.sqrt(stdlist['N']), t.ppf(1-alpha, stdlist['N'])*stdlist['stdmuint']/np.sqrt(stdlist['N'])]) / stdlist['meanmutru']
         ax.errorbar(stdlist['mu'] + jitter['tru'], stdlist['biasmuint'][:, 1] / stdlist['meanmutru'], yerr=yerr, label='$\mathrm{int}$', c=color['1st'], marker=marker['1st'])
 
@@ -583,7 +582,6 @@ for i, sigma in enumerate(Sigma):
         # charge bias
         stdlist = mts['fsmp'][(mts['fsmp']['tau'] == tau) & (mts['fsmp']['sigma'] == sigma)]
         ax = figb.add_subplot(gs[i, j])
-        # yerr = stdlist['biasmuint'][:, 1] / np.sqrt(stdlist['N'])
         yerr = np.vstack([-t.ppf(alpha, stdlist['N'])*stdlist['stdmuint']/np.sqrt(stdlist['N']), t.ppf(1-alpha, stdlist['N'])*stdlist['stdmuint']/np.sqrt(stdlist['N'])])
         ax.errorbar(stdlist['mu'] + jitter['tru'], stdlist['biasmuint'][:, 1], yerr=yerr, label='$\mathrm{int}$', c=color['1st'], marker=marker['1st'])
 
