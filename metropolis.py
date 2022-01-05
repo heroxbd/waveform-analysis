@@ -80,7 +80,7 @@ d_history = [
     ("step", np.uint32),
     ("loc", np.float32),
 ]
-TRIALS = 2000
+TRIALS = 500000
 
 
 def combine(A, cx, t):
@@ -104,6 +104,25 @@ def lc(x, tau=Tau, sigma=Sigma):
         co = -np.log(2.0 * tau) + alpha * alpha * sigma * sigma / 2.0
         x_erf = (alpha * sigma * sigma - x) / (np.sqrt(2.0) * sigma)
         return co + np.log(1.0 - erf(x_erf)) - alpha * x
+
+
+def gelman(xis):
+    T = len(xis) // 2
+    xis_1 = xis[:T]
+    xis_2 = xis[-T:]
+    xi_ave_1 = np.average(xis_1)
+    xi_ave_2 = np.average(xis_2)
+    xi_ave = (xi_ave_1 + xi_ave_2) / 2
+    b = (xi_ave_1 - xi_ave) ** 2 + (xi_ave_2 - xi_ave) ** 2
+    s2_1 = np.sum((xis_1 - xi_ave_1) ** 2) / (T - 1)
+    s2_2 = np.sum((xis_2 - xi_ave_2) ** 2) / (T - 1)
+    wt = (s2_1 + s2_2) / 2
+    var = (T - 1) / T * wt + b
+    if var == 0 and wt == 0:
+        rt = np.sqrt((T - 1) / T)
+    else:
+        rt = np.sqrt(var / wt)
+    return rt
 
 
 def flow(cx, tlist, z, N, sig2s, mus, A, p_cha, mu_t):
@@ -156,6 +175,7 @@ def flow(cx, tlist, z, N, sig2s, mus, A, p_cha, mu_t):
     flip = np.random.choice((-1, 1, 2), TRIALS, p=np.array((1, 1, 2)) / 4)
     Δν_history = np.zeros(TRIALS)  # list of Δν's
     t0_history = np.zeros(TRIALS)
+    nu_history = np.zeros(TRIALS)
 
     log_mu = np.log(mu_t)  # 猜测的 Poisson 流强度
 
@@ -241,7 +261,19 @@ def flow(cx, tlist, z, N, sig2s, mus, A, p_cha, mu_t):
             step = 0
         Δν_history[i] = Δν
         flip[i] = step
-    return flip, Δν_history, es_history[:si1], t0_history
+        nu_history[i] = len(s)
+
+        if i > 600:
+            rt_nu = gelman(nu_history[500 : i + 1])
+            rt_t0 = gelman(t0_history[500 : i + 1])
+            # print(rt_nu, rt_t0)
+
+            if np.abs(rt_nu - 1.0) < 1e-3 and np.abs(rt_t0 - 1.0) < 1e-3:
+                print(i)
+                if i > 10000:
+                    breakpoint()
+                break
+    return flip, Δν_history, es_history[:si], t0_history
 
 
 def move1(A_vec, c_vec, z, step, mus, sig2s):

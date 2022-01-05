@@ -16,6 +16,7 @@ sample = pd.read_hdf(args.ipt, "sample").set_index(["TriggerNo", "ChannelID"])
 mu0 = pd.read_hdf(args.ipt, "mu0").set_index(["TriggerNo", "ChannelID"])
 pe = pd.read_hdf(args.ref, "SimTriggerInfo/PEList").set_index(["TriggerNo", "PMTId"])
 pe_count = pe.groupby(level=[0, 1])["Charge"].count()
+t0_truth = pd.read_hdf(args.ref, "SimTruth/T").set_index(["TriggerNo", "ChannelID"])
 
 
 def rescale(ent):
@@ -60,6 +61,7 @@ def rescale(ent):
             "NPE_mean": np.average(NPE_evo),
             "NPE_median": np.median(NPE_evo),
             "t0": t0,
+            "t0_truth": t0_truth.loc[(eid, cid)]["T0"],
         }
     )
 
