@@ -42,6 +42,10 @@ solu : $(solu)
 
 sim : $(sim)
 
+sparsify/%.h5: waveform/%.h5 spe.h5
+	mkdir -p $(dir $@)
+	python3 sparsify.py $< --ref $(word 2,$^) -o $@
+
 metropolis/%.h5: waveform/%.h5 spe.h5
 	mkdir -p $(dir $@)
 	python3 metropolis.py $< --ref $(word 2,$^) -o $@
