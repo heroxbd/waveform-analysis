@@ -25,7 +25,7 @@ reference = args.ref
 
 spe_pre = wff.read_model(reference, 1)
 with h5py.File(fipt, "r", libver="latest", swmr=True) as ipt:
-    ent = ipt["Readout/Waveform"][:100]
+    ent = ipt["Readout/Waveform"][:]
     window = len(ent[0]["Waveform"])
     assert window >= len(spe_pre[0]["spe"]), "Single PE too long which is {}".format(
         len(spe_pre[0]["spe"])
