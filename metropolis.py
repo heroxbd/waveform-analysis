@@ -80,7 +80,7 @@ d_history = [
     ("step", np.uint32),
     ("loc", np.float32),
 ]
-TRIALS = 500000
+TRIALS = 5000
 
 
 def combine(A, cx, t):
