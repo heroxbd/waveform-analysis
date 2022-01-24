@@ -78,22 +78,44 @@ def move1(A_vec, c_vec, z, step, mus, sig2s):
     """
     fsig2s = step * sig2s
     # Eq. (30) sig2s = 1 sigma^2 - 0 sigma^2
-    beta_under = 1 + fsig2s * np.einsum('ij,ij->i', A_vec, c_vec)
+    beta_under = 1 + fsig2s * np.einsum('ej,ej->e', A_vec, c_vec)
     beta = fsig2s / beta_under
 
     # Eq. (31) # sign of mus[t] and sig2s[t] cancels
-    Δν = 0.5 * (beta * (np.einsum('ij,ij->i', z, c_vec) + mus / sig2s) ** 2 - mus ** 2 / fsig2s)
+    Δν = 0.5 * (beta * (np.einsum('ej,ej->e', z, c_vec) + mus / sig2s) ** 2 - mus ** 2 / fsig2s)
     # sign of space factor in Eq. (31) is reversed.  Because Eq. (82) is in the denominator.
-    Δν -= 0.5 * np.log(beta_under)  # space
+    Δν -= 0.5 * np.log(beta_under) # space
     return Δν, beta
+
+vstep = np.array([-1, 1], np.float32)
+def vmove1(A_vec, c_vec, z, mus, sig2s):
+    '''
+    A_vec: 行向量 x 2
+    c_vec: 行向量 x 2
+    vstep: (-1, 1) 则 np.einsum('ej,ejk,ek->e', fmu, fsig2s_inv, fmu) 恒等于 0
+    '''
+    fsig2s_inv = np.diag(vstep)[None, :, :] / sig2s[:, None, None]
+    beta_inv = fsig2s_inv + np.einsum('eiw,ejw->eij', A_vec, c_vec)
+    beta = np.linalg.inv(beta_inv)
+
+    fmu = mus[:, None] * vstep[None, :]
+    zc = np.einsum('ejk,ek->ej', c_vec, z) + np.einsum('ej,ejk->ek', fmu, fsig2s_inv)
+    Δν = 0.5 * np.einsum('ej,ejk,ek->e', zc, beta, zc)
+    Δν += 0.5 * np.log(-np.linalg.det(beta) / sig2s ** 2) # det(diag(-sig2s, sig2s)) = sig2s**2
+    return Δν, beta, fmu
 
 def move2(A_vec, c_vec, step, mus, A, beta):
     # accept, prepare for the next
     # Eq. (33) istar is now n_pre.  It crosses n_pre and n, thus is in vector form.
-    Δcx = -np.einsum("e,en,em,emp->enp", beta, c_vec, c_vec, A, optimize=True)
+    Δcx = -np.einsum("e,ev,ew,ewt->evt", beta, c_vec, c_vec, A, optimize=True)
 
     # Eq. (34)
     Δz = -(step * mus)[:, None] * A_vec
+    return Δcx, Δz
+
+def vmove2(A_vec, c_vec, fmu, A, beta):
+    Δcx = -np.einsum("eij,eiv,ejw,ewt->evt", beta, c_vec, c_vec, A, optimize=True)
+    Δz = -np.einsum("ej,ejw->ew", fmu, A_vec)
     return Δcx, Δz
 
 def move(A_vec, c_vec, z, step, mus, sig2s, A):
@@ -138,7 +160,7 @@ with h5py.File(fipt, "r", libver="latest", swmr=True) as ipt:
     tq = ipt["tq"][:1000]
     z = ipt["z"][:1000]
 
-@profile
+
 def batch(A, index, tq, z):
     """
     batch
@@ -205,7 +227,10 @@ def batch(A, index, tq, z):
 
     # step: +1 创生一个 PE， -1 消灭一个 PE， +2 向左或向右移动
     flip = np.random.choice((-1, 1, 2), (l_e, TRIALS), p=np.array((1, 1, 2)) / 4)
+    Δν = np.zeros(l_e, dtype=np.float32)
     Δν_history = np.zeros((l_e, TRIALS), dtype=np.float32) # list of Δν's
+    annihilations = np.zeros((l_e, TRIALS), dtype=np.float32)
+    creations = np.zeros((l_e, TRIALS), dtype=np.float32)
     t0_history = np.zeros((l_e, TRIALS), dtype=np.float32)
     s0_history = np.zeros((l_e, TRIALS), dtype=np.int32) # 0-norm of s
 
@@ -245,18 +270,17 @@ def batch(A, index, tq, z):
 
         e_move = step == 2
         e_pm = ~e_move
-        step[e_move] = -1
         A_vec, c_vec = combine(A, cx, loc)
-        Δν, beta = move1(A_vec, c_vec, z, step, index["mus"], index["sig2s"])
+        Δν[e_pm], beta_pm = move1(A_vec[e_pm], c_vec[e_pm], z[e_pm], step[e_pm], index["mus"][e_pm], index["sig2s"][e_pm])
 
         ## move, step == 2
         # 待操作 PE 的新位置
         nloc = loc[e_move] + wander[e_move]
         nloc = periodic(nloc, index["l_t"][e_move])
-        Δcx_move, Δz_move = move2(A_vec[e_move], c_vec[e_move], -1, index["mus"][e_move], A[e_move], beta[e_move])
-        A_vec1, c_vec1 = combine(A[e_move], cx[e_move] + Δcx_move, nloc)
-        Δν1, beta1 = move1(A_vec1, c_vec1, z[e_move] + Δz_move, 1, index["mus"][e_move], index["sig2s"][e_move])
-        Δν[e_move] += Δν1
+        A_move, c_move = combine(A[e_move], cx[e_move], nloc)
+        vA_move = np.stack((A_vec[e_move], A_move), axis=1) # l_e * 2 * l_wave
+        vc_move = np.stack((c_vec[e_move], c_move), axis=1)
+        Δν[e_move], beta_move, fmu = vmove1(vA_move, vc_move, z[e_move], index["mus"][e_move], index["sig2s"][e_move])
 
         ## -1 cases, step == 2, -1
         Δν[e_minus] -= lc(v_rt(loc[e_minus], tq["t_s"][e_minus]) - t0[e_minus])
@@ -272,38 +296,42 @@ def batch(A, index, tq, z):
         NPE[e_create] -= 1
 
         ## 计算 Δcx, Δz, 对 move-accept 进行特别处理
-        step[e_move] = 1
         e_accept = Δν >= accept
-        e_amove = np.logical_and(e_accept, e_move)
-        ec_move = e_accept[e_move] # accept conditioned on moves
-        beta[e_amove] = beta1[ec_move]
-        A_vec[e_amove] = A_vec1[ec_move]
-        c_vec[e_amove] = c_vec1[ec_move]
-        Δcx, Δz = move2(A_vec[e_accept], c_vec[e_accept], step[e_accept], index["mus"][e_accept], A[e_accept], beta[e_accept])
-        em_accept = e_move[e_accept] # moves conditioned on accept
-        Δcx[em_accept] += Δcx_move[ec_move]
-        Δz[em_accept] += Δz_move[ec_move]
 
-        Δν[~e_accept] = 0
-        step[~e_accept] = 0
-        step[e_amove] = 2
-        cx[e_accept] += Δcx
-        z[e_accept] += Δz
-        for e, (_s, _eacc, _ec, _em, _loc, _op) in enumerate(zip(s, e_accept, e_create, e_move, loc, op)):
+        ea_pm = np.logical_and(e_accept, e_pm)
+        ec_pm = e_accept[e_pm] # accept conditioned on pm
+        Δcx, Δz = move2(A_vec[ea_pm], c_vec[ea_pm], step[ea_pm], index["mus"][ea_pm], A[ea_pm], beta_pm[ec_pm])
+        cx[ea_pm] += Δcx
+        z[ea_pm] += Δz
+
+        ea_move = np.logical_and(e_accept, e_move)
+        ec_move = e_accept[e_move] # accept conditioned on moves
+        Δcx, Δz = vmove2(vA_move[ec_move], vc_move[ec_move], fmu[ec_move], A[ea_move], beta_move[ec_move])
+        cx[ea_move] += Δcx
+        z[ea_move] += Δz
+
+        for e, (_s, _eacc, _ec, _em, _loc, _op, _an, _cr) in enumerate(zip(s, e_accept, e_create, e_move, loc, op, annihilations, creations)):
             if _eacc:
                 if _ec: # 创生
+                    _cr[i] = _loc
                     _s[NPE[e]] = _loc
                     NPE[e] += 1
                 elif _em: # 移动
+                    _an[i] = _s[_op]
+                    _cr[i] = _loc
                     _s[_op] = _loc
                 else: # 消灭
+                    _an[i] = _s[_op]
                     NPE[e] -= 1
                     _s[_op] = _s[NPE[e]]
+
+        Δν[~e_accept] = 0
+        step[~e_accept] = 0
 
         Δν_history[:, i] = Δν
         flip[:, i] = step
         s0_history[:, i] = NPE
-    return flip, Δν_history
+    return flip, Δν_history, annihilations, creations
 
 l_e = len(index)
 s_t = np.argsort(index["l_t"])
