@@ -335,21 +335,28 @@ def batch(A, index, tq, z):
 
 l_e = len(index)
 s_t = np.argsort(index["l_t"])
+
+sample = np.zeros((l_e * TRIALS), dtype=[("TriggerNo", "u4"), ("ChannelID", "u4"),
+                                ("flip", "i2"), ("annihilation", "f4"), ("creation", "f4"),
+                                ("delta_nu", "f4")])
+sample["TriggerNo"] = np.repeat(index["TriggerNo"], TRIALS)
+sample["ChannelID"] = np.repeat(index["ChannelID"], TRIALS)
+for part in range(l_e // args.size + 1):
+    i_part = s_t[part * args.size:(part + 1) * args.size]
+    if len(i_part):
+        lp_t = np.max(index[i_part]["l_t"])
+        lp_wave = np.max(index[i_part]["l_wave"])
+        print(lp_t, lp_wave)
+        flip, Δν_history, annihilations, creations = batch(A[i_part, :lp_wave, :lp_t], index[i_part], tq[i_part, :lp_t], z[i_part, :lp_wave])
+        fi_part = (i_part * TRIALS)[:, None] + np.arange(TRIALS)[None, :]
+        fip = fi_part.flatten()
+        sample["flip"][fip] = flip.flatten()
+        sample["annihilation"][fip] = annihilations.flatten()
+        sample["creation"][fip] = creations.flatten()
+        sample["delta_nu"][fip] = Δν_history.flatten()
+
+
 with h5py.File(fopt, "w") as opt:
-    sample = opt.create_dataset("sample", shape=(l_e * TRIALS), 
-                                dtype=[("TriggerNo", "u4"), ("ChannelID", "u4"),
-                                       ("flip", "i2"), ("delta_nu", "f8")],
+    opt.create_dataset("sample", data=sample,
                                 compression="gzip", shuffle=True, compression_opts=9)
     
-    sample["TriggerNo"] = np.repeat(index["TriggerNo"], TRIALS)
-    sample["ChannelID"] = np.repeat(index["ChannelID"], TRIALS)
-    for part in range(l_e // args.size + 1):
-        i_part = s_t[part * args.size:(part + 1) * args.size]
-        if len(i_part):
-            lp_t = np.max(index[i_part]["l_t"])
-            lp_wave = np.max(index[i_part]["l_wave"])
-            print(lp_t, lp_wave)
-            flip, Δν_history = batch(A[i_part, :lp_wave, :lp_t], index[i_part], tq[i_part, :lp_t], z[i_part, :lp_wave])
-            fi_part = (i_part * TRIALS)[:, None] + np.arange(TRIALS)[None, :]
-            sample["flip"][fi_part.flatten()] = flip.flatten()
-            sample["delta_nu"][fi_part.flatten()] = Δν_history.flatten()
