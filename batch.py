@@ -4,6 +4,7 @@ import argparse
 
 import h5py
 import numpy as np
+import cupy as cp
 from numba import njit, vectorize
 
 from math import erf
@@ -20,30 +21,15 @@ args = psr.parse_args()
 fipt = args.ipt
 fopt = args.opt
 
-dt = [
-    ("TriggerNo", np.uint32),
-    ("ChannelID", np.uint32),
-    ("flip", np.int8),
-    ("delta_nu", np.float64),
-    ("t0", np.float64),
-]
-mu0_dt = [("TriggerNo", np.uint32), ("ChannelID", np.uint32), ("mu_t", np.float64)]
-
-d_history = [
-    ("TriggerNo", np.uint32),
-    ("ChannelID", np.uint32),
-    ("step", np.uint32),
-    ("loc", np.float32),
-]
 TRIALS = 5000
 
 def combine(A, cx, t):
     """
     combine neighbouring dictionaries to represent sub-bin locations
     """
-    frac, ti = np.modf(t)
-    ti = np.array(ti, np.int32)
-    w_all = np.arange(A.shape[0]) # index of all the waveforms
+    frac, ti = cp.modf(t)
+    ti = cp.array(ti, np.int32)
+    w_all = cp.arange(A.shape[0]) # index of all the waveforms
     A_vec = (1 - frac)[:, None] * A[w_all, :, ti] + frac[:, None] * A[w_all, :, ti+1]
     c_vec = (1 - frac)[:, None] * cx[w_all, :, ti] + frac[:, None] * cx[w_all, :, ti+1]
     return A_vec, c_vec
@@ -78,30 +64,30 @@ def move1(A_vec, c_vec, z, step, mus, sig2s):
     """
     fsig2s = step * sig2s
     # Eq. (30) sig2s = 1 sigma^2 - 0 sigma^2
-    beta_under = 1 + fsig2s * np.einsum('ej,ej->e', A_vec, c_vec)
+    beta_under = 1 + fsig2s * cp.einsum('ej,ej->e', A_vec, c_vec)
     beta = fsig2s / beta_under
 
     # Eq. (31) # sign of mus[t] and sig2s[t] cancels
-    Δν = 0.5 * (beta * (np.einsum('ej,ej->e', z, c_vec) + mus / sig2s) ** 2 - mus ** 2 / fsig2s)
+    Δν = 0.5 * (beta * (cp.einsum('ej,ej->e', z, c_vec) + mus / sig2s) ** 2 - mus ** 2 / fsig2s)
     # sign of space factor in Eq. (31) is reversed.  Because Eq. (82) is in the denominator.
-    Δν -= 0.5 * np.log(beta_under) # space
+    Δν -= 0.5 * cp.log(beta_under) # space
     return Δν, beta
 
-vstep = np.array([-1, 1], np.float32)
+vstep = cp.array([-1, 1], np.float32)
 def vmove1(A_vec, c_vec, z, mus, sig2s):
     '''
     A_vec: 行向量 x 2
     c_vec: 行向量 x 2
     vstep: (-1, 1) 则 np.einsum('ej,ejk,ek->e', fmu, fsig2s_inv, fmu) 恒等于 0
     '''
-    fsig2s_inv = np.diag(vstep)[None, :, :] / sig2s[:, None, None]
-    beta_inv = fsig2s_inv + np.einsum('eiw,ejw->eij', A_vec, c_vec)
-    beta = np.linalg.inv(beta_inv)
+    fsig2s_inv = cp.diag(vstep)[None, :, :] / sig2s[:, None, None]
+    beta_inv = fsig2s_inv + cp.einsum('eiw,ejw->eij', A_vec, c_vec)
+    beta = cp.linalg.inv(beta_inv)
 
     fmu = mus[:, None] * vstep[None, :]
-    zc = np.einsum('ejk,ek->ej', c_vec, z) + np.einsum('ej,ejk->ek', fmu, fsig2s_inv)
-    Δν = 0.5 * np.einsum('ej,ejk,ek->e', zc, beta, zc)
-    Δν += 0.5 * np.log(-np.linalg.det(beta) / sig2s ** 2) # det(diag(-sig2s, sig2s)) = sig2s**2
+    zc = cp.einsum('ejk,ek->ej', c_vec, z) + cp.einsum('ej,ejk->ek', fmu, fsig2s_inv)
+    Δν = 0.5 * cp.einsum('ej,ejk,ek->e', zc, beta, zc)
+    Δν += 0.5 * cp.log(-cp.linalg.det(beta) / sig2s ** 2) # det(diag(-sig2s, sig2s)) = sig2s**2
     return Δν, beta, fmu
 
 def move2(A_vec, c_vec, step, mus, A, beta):
@@ -154,13 +140,6 @@ def shift(t0, nt0, si, s, ts, NPE, acct):
         if np.sum(lc(_rt - _nt0)) - np.sum(lc(_rt - _t0)) >= _acct:
             t0[e] = _nt0
 
-with h5py.File(fipt, "r", libver="latest", swmr=True) as ipt:
-    A = ipt["A"][:1000]
-    index = ipt["index"][:1000]
-    tq = ipt["tq"][:1000]
-    z = ipt["z"][:1000]
-
-
 def batch(A, index, tq, z):
     """
     batch
@@ -169,12 +148,12 @@ def batch(A, index, tq, z):
     cx: Cov^-1 * A, 详见 FBMP
     s: list of PE locations
     mu_t: LucyDDM 的估算 PE 数
-    z: residue waveform
+    z: residue waveform (raw - predicted)
 
     home_s 是在指标意义上的连续变量
 
     0   1   2   3   4   5   6   7   8   9   l_t = 10
-    +---+---+---+---+---+---+---+---+---+  
+    +---+---+---+---+---+---+---+---+---+
     0  0.1 0.2 0.2 0.5 0.4 0.3 0.2  0   0   q_s
     0  0.1 0.3 0.5 1.0 1.4 1.7 1.9 1.9 1.9  cq
      _h \in [0, 9) 范围的测度是 9
@@ -182,7 +161,7 @@ def batch(A, index, tq, z):
     int(_h) 是插值的下指标 占比为 1 - decimal(_h)
     int(_h) + 1 是插值的上指标 占比为 decimal(_h)
     """
-    cx = (A / index["sig2w"][:, None, None])
+    cx = A / cp.asarray(index["sig2w"][:, None, None])
 
     l_e = len(index)
     l_t = tq.shape[1]
@@ -192,32 +171,43 @@ def batch(A, index, tq, z):
     # q_s: pdf of LucyDDM charge (由 charge 引导的 PE 强度流先验)
     cq = np.cumsum(tq["q_s"], axis=1)
     cq[:, 0] = 0 # 第一位须置0，否则会外溢
+    cq[np.arange(l_e), index["l_t"] - 1] = 1
 
     # 根据 p_cha 采样得到的 PE 序列。供以后的产生过程使用。这两行是使用了 InverseCDF 算法进行的MC采样。
     fp = np.arange(l_t)
-    home_s = np.array([ np.interp(_is, xp=_xp, fp=fp) for _is, _xp in zip(istar, cq)])
+    home_s = np.array([ np.interp(_is, xp=_xp[:_lt], fp=fp[:_lt]) for _is, _xp, _lt in zip(istar, cq, index["l_t"])])
 
-    NPE = np.array(np.round(index["mu0"]), np.int32)  # mu_t: μ_total，LucyDDM 给出的 μ 猜测；NPE 是 PE 序列初值 s_0 的 PE 数。
+    NPE = np.array(np.round(index["mu0"]), np.uint32)  # mu_t: μ_total，LucyDDM 给出的 μ 猜测；NPE 是 PE 序列初值 s_0 的 PE 数。
     mNPE = np.max(NPE)
     # t 的初始位置，取值为 {0.5, 1.5, 2.5, ..., (NPE-0.5)} / NPE 的 InverseCDF
     # MCMC 链的 PE configuration 初值 s0
-    s = np.zeros((l_e, int(np.ceil(mNPE * 1.5))))
-    for _s, _npe, _xp in zip(s, NPE, cq):
+    s = np.zeros((l_e, int(np.ceil(mNPE * 1.5)))) # float64
+    for _s, _npe, _xp, _lt in zip(s, NPE, cq, index["l_t"]):
         _s[:_npe] =  np.interp(
             (np.arange(_npe) + 0.5) / _npe,
-            xp = _xp,
-            fp = fp,
+            xp = _xp[:_lt],
+            fp = fp[:_lt],
         )
 
     # 从空序列开始逐渐加 PE 以计算 s0 的 ν, cx, z
-    counter = np.copy(NPE)
+    counter = np.array(NPE, np.int_)
+    ### debug
+    Δν0 = cp.zeros_like(NPE, dtype=np.float32)
+    ###
     for _, _st in zip(range(mNPE), s.T):
-        e = counter>0 # waveform index
-        A_vec, c_vec = combine(A[e], cx[e], _st[e])
-        Δν, Δcx, Δz = move(A_vec, c_vec, z[e], 1, index["mus"][e], index["sig2s"][e], A[e])
+        e = counter > 0 # waveform index
+        A_vec, c_vec = combine(A[e], cx[e], cp.asarray(_st[e]))
+        Δν, Δcx, Δz = move(A_vec, c_vec, z[e], 1, cp.asarray(index["mus"][e]), cp.asarray(index["sig2s"][e]), A[e])
+        Δν0[e] += Δν
         cx[e] += Δcx
         z[e] += Δz
         counter -= 1
+
+    ### debug
+    cx0 = cp.asnumpy(cx)
+    z0 = cp.asnumpy(z)
+    Δν0 = cp.asnumpy(Δν0)
+    ###
 
     t0 = np.zeros(l_e, np.float32)
     e_hit = NPE > 0
@@ -227,15 +217,16 @@ def batch(A, index, tq, z):
 
     # step: +1 创生一个 PE， -1 消灭一个 PE， +2 向左或向右移动
     flip = np.random.choice((-1, 1, 2), (l_e, TRIALS), p=np.array((1, 1, 2)) / 4)
+    Δν_g = cp.zeros(l_e, dtype=np.float32)
     Δν = np.zeros(l_e, dtype=np.float32)
     Δν_history = np.zeros((l_e, TRIALS), dtype=np.float32) # list of Δν's
-    annihilations = np.zeros((l_e, TRIALS), dtype=np.float32)
-    creations = np.zeros((l_e, TRIALS), dtype=np.float32)
+    annihilations = np.zeros((l_e, TRIALS)) # float64
+    creations = np.zeros((l_e, TRIALS)) # float64
     t0_history = np.zeros((l_e, TRIALS), dtype=np.float32)
-    s0_history = np.zeros((l_e, TRIALS), dtype=np.int32) # 0-norm of s
+    s0_history = np.zeros((l_e, TRIALS), dtype=np.uint32) # 0-norm of s
 
     log_mu = np.log(index["mu0"])  # 猜测的 Poisson 流强度
-    loc = np.zeros(l_e)
+    loc = np.zeros(l_e) # float64
 
     for i, (t, step, home, wander, wt, accept, acct) in enumerate(
         zip(
@@ -270,18 +261,19 @@ def batch(A, index, tq, z):
 
         e_move = step == 2
         e_pm = ~e_move
-        A_vec, c_vec = combine(A, cx, loc)
-        Δν[e_pm], beta_pm = move1(A_vec[e_pm], c_vec[e_pm], z[e_pm], step[e_pm], index["mus"][e_pm], index["sig2s"][e_pm])
+        A_vec, c_vec = combine(A, cx, cp.asarray(loc))
+        Δν_g[e_pm], beta_pm = move1(A_vec[e_pm], c_vec[e_pm], z[e_pm], cp.asarray(step[e_pm]), cp.asarray(index["mus"][e_pm]), cp.asarray(index["sig2s"][e_pm]))
 
         ## move, step == 2
         # 待操作 PE 的新位置
         nloc = loc[e_move] + wander[e_move]
         nloc = periodic(nloc, index["l_t"][e_move])
-        A_move, c_move = combine(A[e_move], cx[e_move], nloc)
+        A_move, c_move = combine(A[e_move], cx[e_move], cp.asarray(nloc))
         vA_move = np.stack((A_vec[e_move], A_move), axis=1) # l_e * 2 * l_wave
         vc_move = np.stack((c_vec[e_move], c_move), axis=1)
-        Δν[e_move], beta_move, fmu = vmove1(vA_move, vc_move, z[e_move], index["mus"][e_move], index["sig2s"][e_move])
+        Δν_g[e_move], beta_move, fmu = vmove1(vA_move, vc_move, z[e_move], cp.asarray(index["mus"][e_move]), cp.asarray(index["sig2s"][e_move]))
 
+        Δν[:] = 0
         ## -1 cases, step == 2, -1
         Δν[e_minus] -= lc(v_rt(loc[e_minus], tq["t_s"][e_minus]) - t0[e_minus])
 
@@ -295,12 +287,13 @@ def batch(A, index, tq, z):
         Δν[e_pm] += step[e_pm] * (log_mu[e_pm] - np.log(tq["q_s"][e_pm, np.array(loc[e_pm], dtype=np.int32) + 1]) - np.log(NPE[e_pm]))
         NPE[e_create] -= 1
 
+        Δν += cp.asnumpy(Δν_g)
         ## 计算 Δcx, Δz, 对 move-accept 进行特别处理
         e_accept = Δν >= accept
 
         ea_pm = np.logical_and(e_accept, e_pm)
         ec_pm = e_accept[e_pm] # accept conditioned on pm
-        Δcx, Δz = move2(A_vec[ea_pm], c_vec[ea_pm], step[ea_pm], index["mus"][ea_pm], A[ea_pm], beta_pm[ec_pm])
+        Δcx, Δz = move2(A_vec[ea_pm], c_vec[ea_pm], cp.asarray(step[ea_pm]), cp.asarray(index["mus"][ea_pm]), A[ea_pm], beta_pm[ec_pm])
         cx[ea_pm] += Δcx
         z[ea_pm] += Δz
 
@@ -314,8 +307,11 @@ def batch(A, index, tq, z):
             if _eacc:
                 if _ec: # 创生
                     _cr[i] = _loc
-                    _s[NPE[e]] = _loc
-                    NPE[e] += 1
+                    try:
+                        _s[NPE[e]] = _loc
+                        NPE[e] += 1
+                    except IndexError:
+                        pass
                 elif _em: # 移动
                     _an[i] = _s[_op]
                     _cr[i] = _loc
@@ -331,32 +327,49 @@ def batch(A, index, tq, z):
         Δν_history[:, i] = Δν
         flip[:, i] = step
         s0_history[:, i] = NPE
-    return flip, Δν_history, annihilations, creations
+    return flip, s0_history, t0_history, Δν_history, annihilations, creations, cx0, z0, Δν0 # cx0, z0, Δν0 are for debug
+
+with h5py.File(fipt, "r", libver="latest", swmr=True) as ipt:
+    A = ipt["A"][:10000]
+    index = ipt["index"][:10000]
+    tq = ipt["tq"][:10000]
+    z = ipt["z"][:10000]
 
 l_e = len(index)
 s_t = np.argsort(index["l_t"])
 
 sample = np.zeros((l_e * TRIALS), dtype=[("TriggerNo", "u4"), ("ChannelID", "u4"),
-                                ("flip", "i2"), ("annihilation", "f4"), ("creation", "f4"),
-                                ("delta_nu", "f4")])
+                                         ("flip", "i2"), ("s0", "u4"), ("t0", "f8"), 
+                                         ("annihilation", "f8"), ("creation", "f8"), 
+                                         ("delta_nu", "f4")])
 sample["TriggerNo"] = np.repeat(index["TriggerNo"], TRIALS)
 sample["ChannelID"] = np.repeat(index["ChannelID"], TRIALS)
+
+cx0_debug = np.zeros_like(A)
+z0_debug = np.zeros_like(z)
+ν0_debug = np.zeros(l_e)
+
 for part in range(l_e // args.size + 1):
     i_part = s_t[part * args.size:(part + 1) * args.size]
     if len(i_part):
         lp_t = np.max(index[i_part]["l_t"])
         lp_wave = np.max(index[i_part]["l_wave"])
         print(lp_t, lp_wave)
-        flip, Δν_history, annihilations, creations = batch(A[i_part, :lp_wave, :lp_t], index[i_part], tq[i_part, :lp_t], z[i_part, :lp_wave])
+        flip, s0_history, t0_history, Δν_history, annihilations, creations, cx0, z0, Δν0 = batch(cp.asarray(A[i_part, :lp_wave, :lp_t]), index[i_part], tq[i_part, :lp_t], cp.asarray(z[i_part, :lp_wave]))
         fi_part = (i_part * TRIALS)[:, None] + np.arange(TRIALS)[None, :]
         fip = fi_part.flatten()
         sample["flip"][fip] = flip.flatten()
+        sample["s0"][fip] = s0_history.flatten()
+        sample["t0"][fip] = t0_history.flatten()
         sample["annihilation"][fip] = annihilations.flatten()
         sample["creation"][fip] = creations.flatten()
         sample["delta_nu"][fip] = Δν_history.flatten()
-
+        cx0_debug[i_part, :lp_wave, :lp_t] = cx0
+        z0_debug[i_part, :lp_wave] = z0
+        ν0_debug[i_part] = Δν0
 
 with h5py.File(fopt, "w") as opt:
-    opt.create_dataset("sample", data=sample,
-                                compression="gzip", shuffle=True, compression_opts=9)
-    
+    opt.create_dataset("sample", data=sample, compression="gzip", shuffle=True)
+    opt.create_dataset("cx0", data=cx0_debug, compression="gzip", shuffle=True)
+    opt.create_dataset("z0", data=z0_debug, compression="gzip", shuffle=True)
+    opt.create_dataset("nu0", data=ν0_debug, compression="gzip", shuffle=True)
