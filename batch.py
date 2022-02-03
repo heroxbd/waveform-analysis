@@ -64,11 +64,11 @@ def move1(A_vec, c_vec, z, step, mus, sig2s):
     """
     fsig2s = step * sig2s
     # Eq. (30) sig2s = 1 sigma^2 - 0 sigma^2
-    beta_under = 1 + fsig2s * (A_vec[:, np.newaxis, :] @ c_vec[:, :, np.newaxis]).squeeze()
+    beta_under = 1 + fsig2s * cp.einsum('ej,ej->e', A_vec, c_vec)
     beta = fsig2s / beta_under
 
     # Eq. (31) # sign of mus[t] and sig2s[t] cancels
-    Δν = 0.5 * (beta * ((z[:, np.newaxis, :] @ c_vec[:, :, np.newaxis]).squeeze() + mus / sig2s) ** 2 - mus ** 2 / fsig2s)
+    Δν = 0.5 * (beta * (cp.einsum('ej,ej->e', z, c_vec) + mus / sig2s) ** 2 - mus ** 2 / fsig2s)
     # sign of space factor in Eq. (31) is reversed.  Because Eq. (82) is in the denominator.
     Δν -= 0.5 * cp.log(beta_under) # space
     return Δν, beta
