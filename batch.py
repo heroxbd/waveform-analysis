@@ -140,6 +140,7 @@ def shift(t0, nt0, si, s, ts, NPE, acct):
         if np.sum(lc(_rt - _nt0)) - np.sum(lc(_rt - _t0)) >= _acct:
             t0[e] = _nt0
 
+
 def batch(A, index, tq, z):
     """
     batch
@@ -303,23 +304,22 @@ def batch(A, index, tq, z):
         cx[ea_move] += Δcx
         z[ea_move] += Δz
 
-        for e, (_s, _eacc, _ec, _em, _loc, _op, _an, _cr) in enumerate(zip(s, e_accept, e_create, e_move, loc, op, annihilations, creations)):
-            if _eacc:
-                if _ec: # 创生
-                    _cr[i] = _loc
-                    try:
-                        _s[NPE[e]] = _loc
-                        NPE[e] += 1
-                    except IndexError:
-                        pass
-                elif _em: # 移动
-                    _an[i] = _s[_op]
-                    _cr[i] = _loc
-                    _s[_op] = _loc
-                else: # 消灭
-                    _an[i] = _s[_op]
-                    NPE[e] -= 1
-                    _s[_op] = _s[NPE[e]]
+        # 增加
+        ea_create = np.logical_and(e_accept, e_create)
+        ea_plus = np.logical_and(e_accept, e_plus)
+        creations[ea_plus, i] = loc[ea_plus]
+
+        s[ea_create, NPE[ea_create]] = loc[ea_create]
+        NPE[ea_create] += 1
+        # 减少
+        ea_annihilate = np.logical_and(e_accept, step == -1)
+        ea_minus = np.logical_and(e_accept, e_minus)
+        annihilations[ea_minus, i] = s[ea_minus, op[ea_minus]]
+
+        NPE[ea_annihilate] -= 1
+        s[ea_annihilate, op[ea_annihilate]] = s[ea_annihilate, NPE[ea_annihilate]]
+        # 移动
+        s[ea_move, op[ea_move]] = loc[ea_move]
 
         Δν[~e_accept] = 0
         step[~e_accept] = 0
