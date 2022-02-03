@@ -93,15 +93,15 @@ def vmove1(A_vec, c_vec, z, mus, sig2s):
 def move2(A_vec, c_vec, step, mus, A, beta):
     # accept, prepare for the next
     # Eq. (33) istar is now n_pre.  It crosses n_pre and n, thus is in vector form.
-    Δcx = -np.einsum("e,ev,ew,ewt->evt", beta, c_vec, c_vec, A, optimize=True)
+    Δcx = -cp.einsum("e,ev,ew,ewt->evt", beta, c_vec, c_vec, A, optimize=True)
 
     # Eq. (34)
     Δz = -(step * mus)[:, None] * A_vec
     return Δcx, Δz
 
 def vmove2(A_vec, c_vec, fmu, A, beta):
-    Δcx = -np.einsum("eij,eiv,ejw,ewt->evt", beta, c_vec, c_vec, A, optimize=True)
-    Δz = -np.einsum("ej,ejw->ew", fmu, A_vec)
+    Δcx = -cp.einsum("eij,eiv,ejw,ewt->evt", beta, c_vec, c_vec, A, optimize=True)
+    Δz = -cp.einsum("ej,ejw->ew", fmu, A_vec)
     return Δcx, Δz
 
 def move(A_vec, c_vec, z, step, mus, sig2s, A):
@@ -182,7 +182,7 @@ def batch(A, index, tq, z):
     mNPE = np.max(NPE)
     # t 的初始位置，取值为 {0.5, 1.5, 2.5, ..., (NPE-0.5)} / NPE 的 InverseCDF
     # MCMC 链的 PE configuration 初值 s0
-    s = np.zeros((l_e, int(np.ceil(mNPE * 1.5)))) # float64
+    s = np.zeros((l_e, int(np.ceil(mNPE * 2)))) # float64
     for _s, _npe, _xp, _lt in zip(s, NPE, cq, index["l_t"]):
         _s[:_npe] =  np.interp(
             (np.arange(_npe) + 0.5) / _npe,
@@ -270,8 +270,8 @@ def batch(A, index, tq, z):
         nloc = loc[e_move] + wander[e_move]
         nloc = periodic(nloc, index["l_t"][e_move])
         A_move, c_move = combine(A[e_move], cx[e_move], cp.asarray(nloc))
-        vA_move = np.stack((A_vec[e_move], A_move), axis=1) # l_e * 2 * l_wave
-        vc_move = np.stack((c_vec[e_move], c_move), axis=1)
+        vA_move = cp.stack((A_vec[e_move], A_move), axis=1) # l_e * 2 * l_wave
+        vc_move = cp.stack((c_vec[e_move], c_move), axis=1)
         Δν_g[e_move], beta_move, fmu = vmove1(vA_move, vc_move, z[e_move], cp.asarray(index["mus"][e_move]), cp.asarray(index["sig2s"][e_move]))
 
         Δν[:] = 0
