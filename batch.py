@@ -103,8 +103,12 @@ def move2(A_vec, c_vec, step, mus, A, beta):
 
 
 def vmove2(A_vec, c_vec, fmu, A, beta):
-    Δcx = -cp.einsum("eij,eiv,ejw,ewt->evt", beta, c_vec, c_vec, A, optimize=True)
-    Δz = -cp.einsum("ej,ejw->ew", fmu, A_vec)
+    '''
+    "eij, eiv, ejw, ewt->evt"
+    beta c_vec c_vec A
+    '''
+    Δcx = -np.transpose(beta @ c_vec, (0, 2, 1)) @ (c_vec @ A)
+    Δz = -(fmu[:, None, :] @ A_vec).squeeze()
     return Δcx, Δz
 
 def move(A_vec, c_vec, z, step, mus, sig2s, A):
@@ -185,7 +189,7 @@ def batch(A, index, tq, z):
     mNPE = np.max(NPE)
     # t 的初始位置，取值为 {0.5, 1.5, 2.5, ..., (NPE-0.5)} / NPE 的 InverseCDF
     # MCMC 链的 PE configuration 初值 s0
-    s_bound = int(np.ceil(mNPE * 1.5))
+    s_bound = int(np.ceil(mNPE * 2))
     s = np.zeros((l_e, s_bound)) # float64
     for _s, _npe, _xp, _lt in zip(s, NPE, cq, index["l_t"]):
         _s[:_npe] =  np.interp(
@@ -314,7 +318,7 @@ def batch(A, index, tq, z):
         creations[ea_plus, i] = loc[ea_plus]
 
         s[ea_create, NPE[ea_create]] = loc[ea_create]
-        NPE[ea_create] += 1
+        NPE[ea_create] = np.minimum(NPE[ea_create] + 1, s_bound - 1)
         # 减少
         ea_annihilate = np.logical_and(e_accept, step == -1)
         ea_minus = np.logical_and(e_accept, e_minus)
