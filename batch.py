@@ -74,6 +74,7 @@ def move1(A_vec, c_vec, z, step, mus, sig2s):
     return Δν, beta
 
 vstep = cp.array([-1, 1], np.float32)
+
 def vmove1(A_vec, c_vec, z, mus, sig2s):
     '''
     A_vec: 行向量 x 2
@@ -90,6 +91,7 @@ def vmove1(A_vec, c_vec, z, mus, sig2s):
     Δν += 0.5 * cp.log(-cp.linalg.det(beta) / sig2s ** 2) # det(diag(-sig2s, sig2s)) = sig2s**2
     return Δν, beta, fmu
 
+
 def move2(A_vec, c_vec, step, mus, A, beta):
     # accept, prepare for the next
     # Eq. (33) istar is now n_pre.  It crosses n_pre and n, thus is in vector form.
@@ -98,6 +100,7 @@ def move2(A_vec, c_vec, step, mus, A, beta):
     # Eq. (34)
     Δz = -(step * mus)[:, None] * A_vec
     return Δcx, Δz
+
 
 def vmove2(A_vec, c_vec, fmu, A, beta):
     Δcx = -cp.einsum("eij,eiv,ejw,ewt->evt", beta, c_vec, c_vec, A, optimize=True)
@@ -162,7 +165,7 @@ def batch(A, index, tq, z):
     int(_h) 是插值的下指标 占比为 1 - decimal(_h)
     int(_h) + 1 是插值的上指标 占比为 decimal(_h)
     """
-    cx = A / cp.asarray(index["sig2w"][:, None, None])
+    cx = cp.asarray(A / cp.asarray(index["sig2w"][:, None, None]), np.float64)
 
     l_e = len(index)
     l_t = tq.shape[1]
@@ -182,7 +185,8 @@ def batch(A, index, tq, z):
     mNPE = np.max(NPE)
     # t 的初始位置，取值为 {0.5, 1.5, 2.5, ..., (NPE-0.5)} / NPE 的 InverseCDF
     # MCMC 链的 PE configuration 初值 s0
-    s = np.zeros((l_e, int(np.ceil(mNPE * 2)))) # float64
+    s_bound = int(np.ceil(mNPE * 1.5))
+    s = np.zeros((l_e, s_bound)) # float64
     for _s, _npe, _xp, _lt in zip(s, NPE, cq, index["l_t"]):
         _s[:_npe] =  np.interp(
             (np.arange(_npe) + 0.5) / _npe,
