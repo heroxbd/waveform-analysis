@@ -80,14 +80,20 @@ def vmove1(A_vec, c_vec, z, mus, sig2s):
     A_vec: 行向量 x 2
     c_vec: 行向量 x 2
     vstep: (-1, 1) 则 np.einsum('ej,ejk,ek->e', fmu, fsig2s_inv, fmu) 恒等于 0
+
+    cp.einsum('eiw,ejw->eij', A_vec, c_vec)
+
+    cp.einsum('ejk,ek->ej', c_vec, z) + cp.einsum('ej,ejk->ek', fmu, fsig2s_inv)
+    cp.einsum('ej,ejk,ek->e', zc, beta, zc)
     '''
     fsig2s_inv = cp.diag(vstep)[None, :, :] / sig2s[:, None, None]
-    beta_inv = fsig2s_inv + cp.einsum('eiw,ejw->eij', A_vec, c_vec)
+    beta_inv = fsig2s_inv + A_vec @ cp.transpose(c_vec, (0, 2, 1))
     beta = cp.linalg.inv(beta_inv)
 
     fmu = mus[:, None] * vstep[None, :]
-    zc = cp.einsum('ejk,ek->ej', c_vec, z) + cp.einsum('ej,ejk->ek', fmu, fsig2s_inv)
-    Δν = 0.5 * cp.einsum('ej,ejk,ek->e', zc, beta, zc)
+    zc = (c_vec @ z[:, :, None]).squeeze() + (fmu[:, None, :] @ fsig2s_inv).squeeze()
+    Δν = 0.5 * (zc[:, None, :] @ beta @ zc[:, :, None]).squeeze()
+    
     Δν += 0.5 * cp.log(-cp.linalg.det(beta) / sig2s ** 2) # det(diag(-sig2s, sig2s)) = sig2s**2
     return Δν, beta, fmu
 
