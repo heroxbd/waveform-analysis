@@ -75,6 +75,7 @@ def move1(A_vec, c_vec, z, step, mus, sig2s):
 
 vstep = cp.array([-1, 1], np.float32)
 
+@profile
 def vmove1(A_vec, c_vec, z, mus, sig2s):
     '''
     A_vec: 行向量 x 2
@@ -97,7 +98,7 @@ def vmove1(A_vec, c_vec, z, mus, sig2s):
     Δν += 0.5 * cp.log(-cp.linalg.det(beta) / sig2s ** 2) # det(diag(-sig2s, sig2s)) = sig2s**2
     return Δν, beta, fmu
 
-
+@profile
 def move2(A_vec, c_vec, step, mus, A, beta):
     # accept, prepare for the next
     # Eq. (33) istar is now n_pre.  It crosses n_pre and n, thus is in vector form.
@@ -107,7 +108,7 @@ def move2(A_vec, c_vec, step, mus, A, beta):
     Δz = -(step * mus)[:, None] * A_vec
     return Δcx, Δz
 
-
+@profile
 def vmove2(A_vec, c_vec, fmu, A, beta):
     '''
     "eij, eiv, ejw, ewt->evt"
@@ -153,7 +154,7 @@ def shift(t0, nt0, si, s, ts, NPE, acct):
         if np.sum(lc(_rt - _nt0)) - np.sum(lc(_rt - _t0)) >= _acct:
             t0[e] = _nt0
 
-
+@profile
 def batch(A, index, tq, z):
     """
     batch
@@ -211,8 +212,8 @@ def batch(A, index, tq, z):
     ###
     for _, _st in zip(range(mNPE), s.T):
         e = counter > 0 # waveform index
-        A_vec, c_vec = combine(A[e], cx[e], cp.asarray(_st[e]))
-        Δν, Δcx, Δz = move(A_vec, c_vec, z[e], 1, cp.asarray(index["mus"][e]), cp.asarray(index["sig2s"][e]), A[e])
+        Δν, Δcx, Δz = move(*combine(A[e], cx[e], cp.asarray(_st[e])), 
+                           z[e], 1, cp.asarray(index["mus"][e]), cp.asarray(index["sig2s"][e]), A[e])
         Δν0[e] += Δν
         cx[e] += Δcx
         z[e] += Δz
@@ -257,16 +258,9 @@ def batch(A, index, tq, z):
 
         s_t0 = s[:, :np.max(NPE)]
         shift(t0, t0 + wt, np.array(s_t0, np.int32), s_t0, tq["t_s"], NPE, acct)
-
-        # 不设左右边界
-        e_bounce = NPE == 0
-        step[e_bounce] = 1
-        accept[e_bounce] += np.log(4)  # 惩罚
-        ea_bounce = np.logical_and(NPE == 1, step == -1)
-        accept[ea_bounce] -= np.log(4) # 1 -> 0: 行动后从 0 脱出的几率大，需要鼓励
-
         t0_history[:, i] = t0
 
+        ### 矩阵 Δν 计算
         e_create = step == 1
         loc[e_create] = periodic(home[e_create], index["l_t"][e_create])
 
@@ -288,7 +282,16 @@ def batch(A, index, tq, z):
         vc_move = cp.stack((c_vec[e_move], c_move), axis=1)
         Δν_g[e_move], beta_move, fmu = vmove1(vA_move, vc_move, z[e_move], cp.asarray(index["mus"][e_move]), cp.asarray(index["sig2s"][e_move]))
 
-        Δν[:] = 0
+        Δν[:] = cp.asnumpy(Δν_g)
+        #######
+
+        ### 光变曲线和移动计算
+        e_bounce = NPE == 0
+        step[e_bounce] = 1
+        accept[e_bounce] += np.log(4)  # 惩罚
+        ea_bounce = np.logical_and(NPE == 1, step == -1)
+        accept[ea_bounce] -= np.log(4) # 1 -> 0: 行动后从 0 脱出的几率大，需要鼓励
+
         ## -1 cases, step == 2, -1
         Δν[e_minus] -= lc(v_rt(loc[e_minus], tq["t_s"][e_minus]) - t0[e_minus])
 
@@ -301,9 +304,9 @@ def batch(A, index, tq, z):
         NPE[e_create] += 1
         Δν[e_pm] += step[e_pm] * (log_mu[e_pm] - np.log(tq["q_s"][e_pm, np.array(loc[e_pm], dtype=np.int32) + 1]) - np.log(NPE[e_pm]))
         NPE[e_create] -= 1
+        ########
 
-        Δν += cp.asnumpy(Δν_g)
-        ## 计算 Δcx, Δz, 对 move-accept 进行特别处理
+        ### 计算 Δcx, Δz, 更新 cx 和 z。对 move-accept 进行特别处理
         e_accept = Δν >= accept
 
         ea_pm = np.logical_and(e_accept, e_pm)
@@ -317,6 +320,7 @@ def batch(A, index, tq, z):
         Δcx, Δz = vmove2(vA_move[ec_move], vc_move[ec_move], fmu[ec_move], A[ea_move], beta_move[ec_move])
         cx[ea_move] += Δcx
         z[ea_move] += Δz
+        ########
 
         # 增加
         ea_create = np.logical_and(e_accept, e_create)
