@@ -34,6 +34,16 @@ def combine(A, cx, t):
     c_vec = (1 - frac)[:, None] * cx[w_all, :, ti] + frac[:, None] * cx[w_all, :, ti+1]
     return A_vec, c_vec
 
+def vcombine(A, cx, t, w_all):
+    '''
+    t is 2 x l_e
+    '''
+    frac, ti = cp.modf(t)
+    ti = cp.array(ti, np.int32)
+    A_vec = (1 - frac)[:, :, None] * A[w_all, :, ti] + frac[:, :, None] * A[w_all, :, ti+1]
+    c_vec = (1 - frac)[:, :, None] * cx[w_all, :, ti] + frac[:, :, None] * cx[w_all, :, ti+1]
+    return A_vec, c_vec
+
 @vectorize(cache=True)
 def verf(x):
     return erf(x)
@@ -73,32 +83,30 @@ def move1(A_vec, c_vec, z, step, mus, sig2s):
     Δν -= 0.5 * cp.log(beta_under) # space
     return Δν, beta
 
-vstep = cp.array([-1, 1], np.float32)
+vstep = cp.array((-1, 1), np.float64)
 
-@profile
-def vmove1(A_vec, c_vec, z, mus, sig2s):
+#profile
+def vmove1(A_vec, c_vec, z, fmu, fsig2s_inv, det_fsig2s_inv, b0):
     '''
     A_vec: 行向量 x 2
     c_vec: 行向量 x 2
-    vstep: (-1, 1) 则 np.einsum('ej,ejk,ek->e', fmu, fsig2s_inv, fmu) 恒等于 0
+    vstep: 构造 (-1, 1) 则 np.einsum('ej,ejk,ek->e', fmu, fsig2s_inv, fmu) 恒等于 0
 
     cp.einsum('eiw,ejw->eij', A_vec, c_vec)
 
     cp.einsum('ejk,ek->ej', c_vec, z) + cp.einsum('ej,ejk->ek', fmu, fsig2s_inv)
     cp.einsum('ej,ejk,ek->e', zc, beta, zc)
     '''
-    fsig2s_inv = cp.diag(vstep)[None, :, :] / sig2s[:, None, None]
-    beta_inv = fsig2s_inv + A_vec @ cp.transpose(c_vec, (0, 2, 1))
+    ac = A_vec @ cp.transpose(c_vec, (0, 2, 1))
+    beta_inv = fsig2s_inv + (ac + cp.transpose(ac, (0, 2, 1))) / 2
     beta = cp.linalg.inv(beta_inv)
 
-    fmu = mus[:, None] * vstep[None, :]
     zc = (c_vec @ z[:, :, None]).squeeze() + (fmu[:, None, :] @ fsig2s_inv).squeeze()
     Δν = 0.5 * (zc[:, None, :] @ beta @ zc[:, :, None]).squeeze()
-    
-    Δν += 0.5 * cp.log(-cp.linalg.det(beta) / sig2s ** 2) # det(diag(-sig2s, sig2s)) = sig2s**2
-    return Δν, beta, fmu
 
-@profile
+    Δν += 0.5 * cp.log(cp.clip(cp.linalg.det(beta) * det_fsig2s_inv, 1/b0, b0))
+    return Δν, beta
+
 def move2(A_vec, c_vec, step, mus, A, beta):
     # accept, prepare for the next
     # Eq. (33) istar is now n_pre.  It crosses n_pre and n, thus is in vector form.
@@ -108,7 +116,7 @@ def move2(A_vec, c_vec, step, mus, A, beta):
     Δz = -(step * mus)[:, None] * A_vec
     return Δcx, Δz
 
-@profile
+#profile
 def vmove2(A_vec, c_vec, fmu, A, beta):
     '''
     "eij, eiv, ejw, ewt->evt"
@@ -154,7 +162,8 @@ def shift(t0, nt0, si, s, ts, NPE, acct):
         if np.sum(lc(_rt - _nt0)) - np.sum(lc(_rt - _t0)) >= _acct:
             t0[e] = _nt0
 
-@profile
+sel_add =  cp.ElementwiseKernel('float64 delta, bool sel', 'float64 dest', "if(sel) dest += delta", "mask_add")
+#profile
 def batch(A, index, tq, z):
     """
     batch
@@ -176,9 +185,18 @@ def batch(A, index, tq, z):
     int(_h) 是插值的下指标 占比为 1 - decimal(_h)
     int(_h) + 1 是插值的上指标 占比为 decimal(_h)
     """
-    cx = cp.asarray(A / cp.asarray(index["sig2w"][:, None, None]), np.float64)
+    sig2w = cp.asarray(index["sig2w"])
+    sig2s = cp.asarray(index["sig2s"])
+    mus = cp.asarray(index["mus"])
+    cx = cp.asarray(A / sig2w[:, None, None], np.float64)
+
+    a0 = A[:, :, 0]
+    b0 = 1 + sig2s * (a0[:, None, :] @ a0[:, :, None]).squeeze() / sig2w
 
     l_e = len(index)
+    w_all = cp.arange(l_e) # index of all the waveforms
+    w_all2 = cp.stack((w_all, w_all), axis=1) # l_e x 2 index of all the waveforms
+
     l_t = tq.shape[1]
     # istar [0, 1) 之间的随机数，用于点中 PE
     istar = np.random.rand(l_e, TRIALS)
@@ -212,8 +230,8 @@ def batch(A, index, tq, z):
     ###
     for _, _st in zip(range(mNPE), s.T):
         e = counter > 0 # waveform index
-        Δν, Δcx, Δz = move(*combine(A[e], cx[e], cp.asarray(_st[e])), 
-                           z[e], 1, cp.asarray(index["mus"][e]), cp.asarray(index["sig2s"][e]), A[e])
+        Δν, Δcx, Δz = move(*combine(A[e], cx[e], cp.asarray(_st[e], np.float64)),
+                           z[e], 1, mus[e], sig2s[e], A[e])
         Δν0[e] += Δν
         cx[e] += Δcx
         z[e] += Δz
@@ -242,7 +260,10 @@ def batch(A, index, tq, z):
     s0_history = np.zeros((l_e, TRIALS), dtype=np.uint32) # 0-norm of s
 
     log_mu = np.log(index["mu0"])  # 猜测的 Poisson 流强度
-    loc = np.zeros(l_e) # float64
+    loc = np.zeros((l_e, 2)) # float64
+    fsig2s_inv = cp.diag(vstep)[None, :, :] * (1/sig2s)[:, None, None]
+    det_fsig2s_inv = cp.linalg.det(fsig2s_inv)
+    fmu = vstep[None, :] * mus[:, None]
 
     for i, (t, step, home, wander, wt, accept, acct) in enumerate(
         zip(
@@ -260,84 +281,71 @@ def batch(A, index, tq, z):
         shift(t0, t0 + wt, np.array(s_t0, np.int32), s_t0, tq["t_s"], NPE, acct)
         t0_history[:, i] = t0
 
-        ### 矩阵 Δν 计算
-        e_create = step == 1
-        loc[e_create] = periodic(home[e_create], index["l_t"][e_create])
-
-        e_minus = ~e_create
-        op = np.array(t * NPE, dtype=np.int32)
-        loc[e_minus] = s[e_minus, op[e_minus]]
-
-        e_move = step == 2
-        e_pm = ~e_move
-        A_vec, c_vec = combine(A, cx, cp.asarray(loc))
-        Δν_g[e_pm], beta_pm = move1(A_vec[e_pm], c_vec[e_pm], z[e_pm], cp.asarray(step[e_pm]), cp.asarray(index["mus"][e_pm]), cp.asarray(index["sig2s"][e_pm]))
-
-        ## move, step == 2
-        # 待操作 PE 的新位置
-        nloc = loc[e_move] + wander[e_move]
-        nloc = periodic(nloc, index["l_t"][e_move])
-        A_move, c_move = combine(A[e_move], cx[e_move], cp.asarray(nloc))
-        vA_move = cp.stack((A_vec[e_move], A_move), axis=1) # l_e * 2 * l_wave
-        vc_move = cp.stack((c_vec[e_move], c_move), axis=1)
-        Δν_g[e_move], beta_move, fmu = vmove1(vA_move, vc_move, z[e_move], cp.asarray(index["mus"][e_move]), cp.asarray(index["sig2s"][e_move]))
-
-        Δν[:] = cp.asnumpy(Δν_g)
-        #######
-
         ### 光变曲线和移动计算
+        Δν[:] = 0
         e_bounce = NPE == 0
         step[e_bounce] = 1
         accept[e_bounce] += np.log(4)  # 惩罚
         ea_bounce = np.logical_and(NPE == 1, step == -1)
         accept[ea_bounce] -= np.log(4) # 1 -> 0: 行动后从 0 脱出的几率大，需要鼓励
 
+        e_create = step == 1
+        e_minus = ~e_create
+        e_move = step == 2
+        e_pm = ~e_move
+        e_annihilate = step == -1
+        e_plus = ~e_annihilate
+        loc[e_create, 0] = l_t # 0 A_vec
+        op = np.array(t * NPE, dtype=np.int32)
+        loc[e_minus, 0] = s[e_minus, op[e_minus]] # annihilate + move
+        loc[e_move, 1] = periodic(loc[e_move, 0] + wander[e_move], index["l_t"][e_move])
+        loc[e_create, 1] = periodic(home[e_create], index["l_t"][e_create])
+
         ## -1 cases, step == 2, -1
-        Δν[e_minus] -= lc(v_rt(loc[e_minus], tq["t_s"][e_minus]) - t0[e_minus])
+        Δν[e_minus] -= lc(v_rt(loc[e_minus, 0], tq["t_s"][e_minus]) - t0[e_minus])
 
         ## +1 cases, step == 2, 1
-        e_plus = np.logical_or(e_move, e_create)
-        loc[e_move] = nloc
-        Δν[e_plus] += lc(v_rt(loc[e_plus], tq["t_s"][e_plus]) - t0[e_plus])
+        Δν[e_plus] += lc(v_rt(loc[e_plus, 1], tq["t_s"][e_plus]) - t0[e_plus])
 
         ## non-move cases, step == 1, -1
         NPE[e_create] += 1
-        Δν[e_pm] += step[e_pm] * (log_mu[e_pm] - np.log(tq["q_s"][e_pm, np.array(loc[e_pm], dtype=np.int32) + 1]) - np.log(NPE[e_pm]))
+        loc[e_annihilate, 1] = loc[e_annihilate, 0]
+        Δν[e_pm] += step[e_pm] * (log_mu[e_pm] - np.log(tq["q_s"][e_pm, np.array(loc[e_pm, 1], dtype=np.int32) + 1]) - np.log(NPE[e_pm]))
+        loc[e_annihilate, 1] = l_t
         NPE[e_create] -= 1
         ########
 
-        ### 计算 Δcx, Δz, 更新 cx 和 z。对 move-accept 进行特别处理
+        ### 矩阵 Δν 计算
+        vA, vc = vcombine(A, cx, cp.asarray(loc), w_all2)
+        Δν_g, beta = vmove1(vA, vc, z, fmu, fsig2s_inv, det_fsig2s_inv, b0)
+        Δν += cp.asnumpy(Δν_g)
+        #######
+
+        ### 计算 Δcx, Δz, 更新 cx 和 z。对 accept 进行特别处理
         e_accept = Δν >= accept
-
-        ea_pm = np.logical_and(e_accept, e_pm)
-        ec_pm = e_accept[e_pm] # accept conditioned on pm
-        Δcx, Δz = move2(A_vec[ea_pm], c_vec[ea_pm], cp.asarray(step[ea_pm]), cp.asarray(index["mus"][ea_pm]), A[ea_pm], beta_pm[ec_pm])
-        cx[ea_pm] += Δcx
-        z[ea_pm] += Δz
-
-        ea_move = np.logical_and(e_accept, e_move)
-        ec_move = e_accept[e_move] # accept conditioned on moves
-        Δcx, Δz = vmove2(vA_move[ec_move], vc_move[ec_move], fmu[ec_move], A[ea_move], beta_move[ec_move])
-        cx[ea_move] += Δcx
-        z[ea_move] += Δz
+        _e_accept = cp.asarray(e_accept)
+        Δcx, Δz = vmove2(vA, vc, fmu, A, beta)
+        sel_add(Δcx, _e_accept[:, None, None], cx)
+        sel_add(Δz, _e_accept[:, None], z)
         ########
 
         # 增加
         ea_create = np.logical_and(e_accept, e_create)
         ea_plus = np.logical_and(e_accept, e_plus)
-        creations[ea_plus, i] = loc[ea_plus]
+        creations[ea_plus, i] = loc[ea_plus, 1]
 
-        s[ea_create, NPE[ea_create]] = loc[ea_create]
+        s[ea_create, NPE[ea_create]] = loc[ea_create, 1]
         NPE[ea_create] = np.minimum(NPE[ea_create] + 1, s_bound - 1)
         # 减少
         ea_annihilate = np.logical_and(e_accept, step == -1)
         ea_minus = np.logical_and(e_accept, e_minus)
-        annihilations[ea_minus, i] = s[ea_minus, op[ea_minus]]
+        annihilations[ea_minus, i] = loc[ea_minus, 0]
 
         NPE[ea_annihilate] -= 1
         s[ea_annihilate, op[ea_annihilate]] = s[ea_annihilate, NPE[ea_annihilate]]
         # 移动
-        s[ea_move, op[ea_move]] = loc[ea_move]
+        ea_move = np.logical_and(e_accept, e_move)
+        s[ea_move, op[ea_move]] = loc[ea_move, 1]
 
         Δν[~e_accept] = 0
         step[~e_accept] = 0
@@ -345,7 +353,7 @@ def batch(A, index, tq, z):
         Δν_history[:, i] = Δν
         flip[:, i] = step
         s0_history[:, i] = NPE
-    return flip, s0_history, t0_history, Δν_history, annihilations, creations, cx0, z0, Δν0 # cx0, z0, Δν0 are for debug
+    return flip, s0_history, t0_history, Δν_history, annihilations, creations, cx0[:, :, :-1], z0, Δν0 # cx0, z0, Δν0 are for debug
 
 with h5py.File(fipt, "r", libver="latest", swmr=True) as ipt:
     A = ipt["A"][:10000]
@@ -373,7 +381,13 @@ for part in range(l_e // args.size + 1):
         lp_t = np.max(index[i_part]["l_t"])
         lp_wave = np.max(index[i_part]["l_wave"])
         print(lp_t, lp_wave)
-        flip, s0_history, t0_history, Δν_history, annihilations, creations, cx0, z0, Δν0 = batch(cp.asarray(A[i_part, :lp_wave, :lp_t]), index[i_part], tq[i_part, :lp_t], cp.asarray(z[i_part, :lp_wave]))
+
+        # A[:, :, -1] = 0 用于 +- 的空白维度
+        (flip, s0_history, t0_history, Δν_history, annihilations, creations,
+         cx0, z0, Δν0) = batch(cp.asarray(np.append(A[i_part, :lp_wave, :lp_t],
+                                                    np.zeros((len(i_part), lp_wave, 1)), axis=2), np.float64),
+                               index[i_part], tq[i_part, :lp_t],
+                               cp.asarray(z[i_part, :lp_wave], np.float64))
         fi_part = (i_part * TRIALS)[:, None] + np.arange(TRIALS)[None, :]
         fip = fi_part.flatten()
         sample["flip"][fip] = flip.flatten()
