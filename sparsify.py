@@ -10,9 +10,6 @@ from scipy.stats import norm
 
 import wf_func as wff
 
-global_start = time.time()
-cpu_global_start = time.process_time()
-
 psr = argparse.ArgumentParser()
 psr.add_argument("-o", dest="opt", type=str, help="output file")
 psr.add_argument("ipt", type=str, help="input file")
@@ -49,6 +46,7 @@ Chnum = len(np.unique(ent["ChannelID"]))
 d_tq = [
     ("t_s", np.float32),
     ("q_s", np.float32),
+    ("cq", np.float32)
 ]
 
 d_index = [
@@ -56,6 +54,7 @@ d_index = [
     ("TriggerNo", np.uint32),
     ("ChannelID", np.uint32),
     ("mu0", np.float32),
+    ("NPE", np.uint32),
     ("l_t", np.uint32),
     ("l_wave", np.uint32),
     ("mus", np.float32),
@@ -65,12 +64,16 @@ d_index = [
 
 t_l = []
 q_l = []
+cq_l = [] # cumulative q
 mu_l = []
+NPE_l = []
 mus_l = []
 sig2s_l = []
 sig2w_l = []
 z_l = []
 A_l = []
+cx_l = []
+s_l = []
 
 n_wave = len(ent)  # number of waveforms
 
@@ -99,7 +102,9 @@ for ie, e in enumerate(ent):
     cha = np.pad(s_cha[3:], (2, 1), "edge") - np.pad(s_cha[:-3], (2, 1), "edge")
     cha += 1e-8  # for completeness of the random walk.
 
-    mu_t = abs(y.sum() / gmu)
+    mu0 = abs(y.sum() / gmu)
+    NPE = round(mu0)  # mu0: μ_total，LucyDDM 给出的 μ 猜测；NPE 是 PE 序列初值 s_0 的 PE 数。
+
     # Eq. (9) where the columns of A are taken to be unit-norm.
     mus = np.sqrt(np.diag(np.matmul(A.T, A)))  # ~39
     # elements of mus must be equal for continuous metropolis to function
@@ -120,9 +125,7 @@ for ie, e in enumerate(ent):
     sig2s = (mus * (gsigma / gmu)) ** 2  # ~94
 
     # Only for multi-gaussian with arithmetic sequence of mu and sigma
-    # N: number of t bins
-    # M: length of the waveform clip
-    M, N = A.shape
+    l_wave, l_t = A.shape
 
     # Eq. (29)
     cx = A / sig2w
@@ -130,67 +133,84 @@ for ie, e in enumerate(ent):
     z = y
 
     p_cha = cha / np.sum(cha)
+    # q_s: pdf of LucyDDM charge (由 charge 引导的 PE 强度流先验)
+    cq = np.cumsum(p_cha)
+    cq[0] = 0 # 第一位须置0，否则会外溢
+    cq[-1] = 1 # 最后置1，否则会外溢
 
+    # t 的初始位置，取值为 {0.5, 1.5, 2.5, ..., (NPE-0.5)} / NPE 的 InverseCDF
+    # MCMC 链的 PE configuration 初值 s0
+    s =  np.interp(
+        (np.arange(NPE) + 0.5) / NPE,
+        xp = cq,
+        fp = np.arange(l_t)
+    )
+
+    # 直接算出 cx 和 z，防止大数相减积累误差。
+    frac, ti = np.modf(s)
+    ti = np.array(ti, np.int_)
+    A_vec = (1 - frac)[None, :] * A[:, ti] + frac[None, :] * A[:, ti+1]
+    phi = A_vec @ A_vec.T * sig2s + np.eye(l_wave) * sig2w
+    phi_inv = np.linalg.inv(phi)
+    cx = phi_inv @ A
+    z -= np.sum(A_vec, axis=1)
+    
     t_l.append(tlist)
     q_l.append(p_cha)
-    mu_l.append(mu_t)
+    cq_l.append(cq)
+    mu_l.append(mu0)
+    NPE_l.append(NPE)
     mus_l.append(mus)
     sig2s_l.append(sig2s)
     sig2w_l.append(sig2w)
     z_l.append(z)
     A_l.append(A)
+    cx_l.append(cx)
+    s_l.append(s)
 
 A_shape = np.array([x.shape for x in A_l])
 # lengths of waveform and tlist
 l_wave, l_t = np.max(A_shape, axis=0)
+mNPE = np.max(NPE_l)
+
+opts = {"compression":"gzip", "shuffle":True}
+
+A = np.zeros((n_wave, l_wave, l_t), np.float32)
+z = np.zeros((n_wave, l_wave), np.float32)
+cx = np.zeros((n_wave, l_wave, l_t), np.float32)
+s = np.zeros((n_wave, mNPE), np.float32)
+tq = np.zeros((n_wave, l_t), d_tq)
+
+for loc, _lw, _lt, _npe, _t, _q, _cq, _z, _A, _cx, _s in zip(
+        range(n_wave), A_shape[:, 0], A_shape[:, 1], NPE_l, t_l, q_l, cq_l, z_l, A_l, cx_l, s_l
+):
+    tq["t_s"][loc, :_lt] = _t
+    tq["q_s"][loc, :_lt] = _q
+    tq["cq"][loc, :_lt] = _cq
+    z[loc, :_lw] = _z
+    A[loc, :_lw, :_lt] = _A
+    cx[loc, :_lw, :_lt] = _cx
+    s[loc, :_npe] = _s
 
 with h5py.File(fopt, "w") as opt:
-    A = opt.create_dataset(
-        "A",
-        shape=(n_wave, l_wave, l_t),
-        dtype=np.float32,
-        compression="gzip",
-        shuffle=True,
-        compression_opts=9,
-    )
-    tq = opt.create_dataset(
-        "tq",
-        shape=(n_wave, l_t),
-        dtype=d_tq,
-        compression="gzip",
-        shuffle=True,
-        compression_opts=9,
-    )
-    z = opt.create_dataset(
-        "z",
-        shape=(n_wave, l_wave),
-        dtype=np.float32,
-        compression="gzip",
-        shuffle=True,
-        compression_opts=9,
-    )
+    opt.create_dataset("A", data=A, **opts)
+    opt.create_dataset("cx", data=cx, **opts)
+    opt.create_dataset("s", data=s, **opts)
+    opt.create_dataset("tq", data=tq, **opts)
+    opt.create_dataset("z", data=z, **opts)
     index = opt.create_dataset(
         "index",
         shape=(n_wave,),
-        dtype=d_index,
-        compression="gzip",
-        shuffle=True,
-        compression_opts=9,
+        dtype=d_index, **opts
     )
 
     index["loc"] = np.arange(n_wave, dtype=np.uint32)
     index["TriggerNo"] = ent["TriggerNo"]
     index["ChannelID"] = ent["ChannelID"]
     index["mu0"] = mu_l
+    index["NPE"] = NPE_l
     index["mus"] = mus_l
     index["sig2s"] = sig2s_l
     index["sig2w"] = sig2w_l
     index["l_wave"] = A_shape[:, 0]
     index["l_t"] = A_shape[:, 1]
-
-    for loc, _lw, _lt, _t, _q, _z, _A in zip(
-        range(n_wave), index["l_wave"], index["l_t"], t_l, q_l, z_l, A_l
-    ):
-        tq[loc, :_lt] = list(zip(_t, _q))
-        z[loc, :_lw] = _z
-        A[loc, :_lw, :_lt] = _A
