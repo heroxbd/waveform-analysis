@@ -153,7 +153,7 @@ for ie, e in enumerate(ent):
     phi = A_vec @ A_vec.T * sig2s + np.eye(l_wave) * sig2w
     phi_inv = np.linalg.inv(phi)
     cx = phi_inv @ A
-    z -= np.sum(A_vec, axis=1)
+    z -= np.sum(A_vec, axis=1) * mus
     
     t_l.append(tlist)
     q_l.append(p_cha)
