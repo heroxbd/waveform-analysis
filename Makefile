@@ -46,11 +46,11 @@ sparsify/%.h5: waveform/%.h5 spe.h5
 	mkdir -p $(dir $@)
 	python3 sparsify.py $< --ref $(word 2,$^) -o $@
 
-metropolis/%.h5: waveform/%.h5 spe.h5
+batch/%.h5: sparsify/%.h5
 	mkdir -p $(dir $@)
-	python3 metropolis.py $< --ref $(word 2,$^) -o $@
+	python3 batch.py $^ -o $@
 
-mu/%.h5: metropolis/%.h5 waveform/%.h5 
+mu/%.h5: batch/%.h5 waveform/%.h5
 	mkdir -p $(dir $@)
 	python3 mu.py $< --ref $(word 2,$^) -o $@
 
