@@ -5,7 +5,7 @@ mu:=$(shell seq -f '%0.1f' 0.5 0.5 3.5 && seq -f '%0.1f' 4 2 10 && seq -f '%0.1f
 tau:=$(shell awk -F',' 'NR == 1 { print $1 }' rc.csv)
 sigma:=$(shell awk -F',' 'NR == 2 { print $1 }' rc.csv)
 
-config:=$(foreach j,$(tau),$(foreach k,$(sigma),$(j)-$(k)))
+config:=20-5
 
 method:=fbmp
 sim:=$(erg:%=waveform/%.h5)
@@ -48,11 +48,11 @@ sparsify/%.h5: waveform/%.h5 spe.h5
 
 batch/%.h5: sparsify/%.h5
 	mkdir -p $(dir $@)
-	python3 batch.py $^ -o $@
+	sem --fg python3 batch.py $^ -o $@ --size 5000
 
-mu/%.h5: batch/%.h5 waveform/%.h5
+mu/%.h5: batch/%.h5 sparsify/%.h5 waveform/%.h5 
 	mkdir -p $(dir $@)
-	python3 mu.py $< --ref $(word 2,$^) -o $@
+	python3 mu.py $< --sparse $(word 2,$^) --ref $(word 3,$^) -o $@
 
 define bayesian
 result/$(method)/char/%.h5 : waveform/%.h5 spe.h5

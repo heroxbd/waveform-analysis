@@ -9,22 +9,23 @@ from scipy.special import logsumexp
 psr = argparse.ArgumentParser()
 psr.add_argument("-o", dest="opt", type=str, help="output file")
 psr.add_argument("ipt", type=str, help="input file")
+psr.add_argument("--sparse", type=str, help="LucyDDM file")
 psr.add_argument("--ref", type=str, help="truth file")
 args = psr.parse_args()
 
 sample = pd.read_hdf(args.ipt, "sample").set_index(["TriggerNo", "ChannelID"])
-mu0 = pd.read_hdf(args.ipt, "mu0").set_index(["TriggerNo", "ChannelID"])
+index = pd.read_hdf(args.sparse, "index").set_index(["TriggerNo", "ChannelID"])
+mu0 = index["mu0"]
 pe = pd.read_hdf(args.ref, "SimTriggerInfo/PEList").set_index(["TriggerNo", "PMTId"])
 pe_count = pe.groupby(level=[0, 1])["Charge"].count()
 t0_truth = pd.read_hdf(args.ref, "SimTruth/T").set_index(["TriggerNo", "ChannelID"])
-
 
 def rescale(ent):
     """
     rescale mu0 to a better mu.
     """
     eid, cid = ent.index[0]
-    mu_t = mu0.loc[(eid, cid)][0]
+    mu_t = mu0.loc[(eid, cid)]
     NPE0 = int(mu_t + 0.5)
     NPE_truth = pe_count.loc[(eid, cid)]
     size = len(ent)
