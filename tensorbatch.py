@@ -19,7 +19,7 @@ fopt = args.opt
 TRIALS = 5000
 
 
-@tf.function(jit_compile=True)
+# tf.function(jit_compile=True)
 def vcombine(A, cx, t, w_all):
     frac = tf.math.mod(t, 1,)
     ti = tf.cast(tf.floor(t), tf.int32)
@@ -30,10 +30,10 @@ def vcombine(A, cx, t, w_all):
     return A_vec, c_vec
 
 
-vstep = tf.Tensor([-1, 1], tf.float32)
+vstep = tf.constant([-1, 1], dtype=tf.float32)
 
 
-@tf.function(jit_compile=True)
+# tf.function(jit_compile=True)
 def vmove1(A_vec, c_vec, z, fmu, fsig2s_inv, det_fsig2s_inv, b0):
     ac = A_vec @ tf.transpose(c_vec, (0, 2, 1))
     beta_inv = fsig2s_inv + (ac + tf.transpose(ac, (0, 2, 1))) / 2
@@ -47,14 +47,14 @@ def vmove1(A_vec, c_vec, z, fmu, fsig2s_inv, det_fsig2s_inv, b0):
     return Δν, beta
 
 
-@tf.function(jit_compile=True)
+# tf.function(jit_compile=True)
 def vmove2(A_vec, c_vec, fmu, A, beta):
     Δcx = -tf.transpose(beta @ c_vec, (0, 2, 1)) @ (c_vec @ A)
     Δz = -tf.squeeze(fmu[:, None, :] @ A_vec)
     return Δcx, Δz
 
 
-@tf.function(jit_compile=True)
+# tf.function(jit_compile=True)
 def periodic(_h, _lt):
     c_overflow = _h < 0
     _h[c_overflow] += _lt[c_overflow] - 1
@@ -63,11 +63,12 @@ def periodic(_h, _lt):
     return _h
 
 
-@tf.function(jit_compile=True)
+# tf.function(jit_compile=True)
 def v_rt(_s, _ts, w_all):
     frac = tf.math.mod(_s, 1, name="frac")
     ti = tf.cast(tf.floor(_s), tf.int32)
-    return (1 - frac) * _ts[w_all, ti] + frac * _ts[w_all, ti+1]
+    breakpoint()
+    return (1-frac)*tf.gather(tf.boolean_mask(_ts, w_all), ti, axis=1)+frac*tf.gather(tf.boolean_mask(_ts, w_all), ti+1, axis=1)
 
 
 tau = 20
@@ -78,16 +79,16 @@ ass = alpha * sigma * sigma
 s2s = np.sqrt(2.0) * sigma
 
 
-@tf.function(jit_compile=True)
+# tf.function(jit_compile=True)
 def lc(t):
     return co + np.log(1.0 - erf((ass - t)/s2s)) - alpha*t
 
 
-@tf.function(jit_compile=True)
+# tf.function(jit_compile=True)
 def batch(A, cx, index, tq, s, z):
-    sig2w = tf.Tensor(index["sig2w"], dtype=tf.float32)
-    sig2s = tf.Tensor(index["sig2s"], dtype=tf.float32)
-    mus = tf.Tensor(index["mus"], dtype=tf.float32)
+    sig2w = tf.constant(index["sig2w"], dtype=tf.float32)
+    sig2s = tf.constant(index["sig2s"], dtype=tf.float32)
+    mus = tf.constant(index["mus"], dtype=tf.float32)
     NPE = index["NPE"]
 
     a0 = A[:, :, 0]
@@ -144,9 +145,9 @@ def batch(A, cx, index, tq, s, z):
         mNPE = np.max(NPE)
         rt = v_rt(s[:, :mNPE], tq["t_s"], np.arange(l_e)[:, None])
         nt0 = t0 + wt.astype(np.float32)
-        sel = tf.Tensor(np.arange(mNPE)[None, :] < NPE[:, None])
-        lc0 = tf.reduce_sum(lc(tf.Tensor(rt - t0[:, None]), sel), axis=1)
-        lc1 = tf.reduce_sum(lc(tf.Tensor(rt - nt0[:, None]), sel), axis=1)
+        sel = tf.constant(np.arange(mNPE)[None, :] < NPE[:, None])
+        lc0 = tf.reduce_sum(lc(tf.constant(rt - t0[:, None]), sel), axis=1)
+        lc1 = tf.reduce_sum(lc(tf.constant(rt - nt0[:, None]), sel), axis=1)
         np.putmask(t0, (lc1 - lc0).numpy() >= acct, nt0)
         t0_history[:, i] = t0
 
@@ -173,7 +174,7 @@ def batch(A, cx, index, tq, s, z):
         loc[e_annihilate, 1] = l_t
 
         # 矩阵 Δν 计算
-        vA, vc = vcombine(A, cx, tf.Tensor(
+        vA, vc = vcombine(A, cx, tf.constant(
             loc, dtype=tf.float32), w_all[:, None])
         Δν_g, beta = vmove1(vA, vc, z, fmu, fsig2s_inv, det_fsig2s_inv, b0)
 
@@ -190,12 +191,12 @@ def batch(A, cx, index, tq, s, z):
         loc[e_annihilate, 1] = l_t
         NPE[e_create] -= 1
         ########
-        Δν += tf.Tensor(Δν_g)
+        Δν += tf.constant(Δν_g)
         #######
 
         # 计算 Δcx, Δz, 更新 cx 和 z。对 accept 进行特别处理
         e_accept = Δν >= accept
-        _e_accept = tf.Tensor(e_accept)
+        _e_accept = tf.constant(e_accept)
         Δcx, Δz = vmove2(vA, vc, fmu, A, beta)
         cx[_e_accept] += Δcx[_e_accept]
         z[_e_accept] += Δz[_e_accept]
@@ -260,13 +261,16 @@ for part in range(l_e // args.size + 1):
         # cx, A[:, :, -1] = 0  用于 +- 的空白维度
         null = np.zeros((l_part, lp_wave, 1), np.float32)
         s_null = np.zeros((l_part, lp_NPE * 2), np.float32)  # 富余的 PE 活动空间
+        A_slice = np.asarray(
+            np.append(A[i_part, :lp_wave, :lp_t], null, axis=2), dtype=np.float32)
+        cx_slice = np.asarray(
+            np.append(cx[i_part, :lp_wave, :lp_t], null, axis=2), dtype=np.float32)
         (flip, s0_history, t0_history, Δν_history, annihilations, creations,
-         ) = batch(tf.Tensor(np.append(A[i_part, :lp_wave, :lp_t], null, axis=2), dtype=tf.float32),
-                   tf.Tensor(
-                       np.append(cx[i_part, :lp_wave, :lp_t], null, axis=2), dtype=tf.float32),
+         ) = batch(tf.constant(A_slice),
+                   tf.constant(cx_slice),
                    index[i_part], tq[i_part, :lp_t],
                    np.append(s[i_part, :lp_NPE], s_null, axis=1),
-                   tf.Tensor(z[i_part, :lp_wave], dtype=tf.float32))
+                   tf.constant(z[i_part, :lp_wave]))
         fi_part = (i_part * TRIALS)[:, None] + np.arange(TRIALS)[None, :]
         fip = fi_part.flatten()
         sample["flip"][fip] = flip.flatten()
