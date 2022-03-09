@@ -19,14 +19,26 @@ fopt = args.opt
 TRIALS = 5000
 
 
+def bool_inplace_add(x, b, y):
+    i = tf.cast(tf.experimental.numpy.nonzero(b)[0], tf.int32)
+    return tf.raw_ops.InplaceAdd(x=x, i=i, v=tf.gather(y, i))
+
+
+def bool_inplace_update(x, b, y):
+    i = tf.cast(tf.experimental.numpy.nonzero(b)[0], tf.int32)
+    return tf.raw_ops.InplaceUpdate(x=x, i=i, v=tf.cast(tf.repeat(y, len(i)), x.dtype))
+
+
 # tf.function(jit_compile=True)
-def vcombine(A, cx, t, w_all):
-    frac = tf.math.mod(t, 1,)
+def vcombine(A, cx, t):
+    frac = tf.math.floormod(t, 1)
     ti = tf.cast(tf.floor(t), tf.int32)
-    A_vec = (1 - frac)[:, :, None] * A[w_all, :, ti] + \
-        frac[:, :, None] * A[w_all, :, ti+1]
-    c_vec = (1 - frac)[:, :, None] * cx[w_all, :, ti] + \
-        frac[:, :, None] * cx[w_all, :, ti+1]
+    A = tf.transpose(A, perm=(0, 2, 1))
+    cx = tf.transpose(cx, perm=(0, 2, 1))
+    A_vec = (1 - frac)[:, :, None] * tf.gather(A, ti, batch_dims=1) + \
+        frac[:, :, None] * tf.gather(A, ti+1, batch_dims=1)
+    c_vec = (1 - frac)[:, :, None] * tf.gather(cx, ti, batch_dims=1) + \
+        frac[:, :, None] * tf.gather(cx, ti+1, batch_dims=1)
     return A_vec, c_vec
 
 
@@ -37,13 +49,14 @@ vstep = tf.constant([-1, 1], dtype=tf.float32)
 def vmove1(A_vec, c_vec, z, fmu, fsig2s_inv, det_fsig2s_inv, b0):
     ac = A_vec @ tf.transpose(c_vec, (0, 2, 1))
     beta_inv = fsig2s_inv + (ac + tf.transpose(ac, (0, 2, 1))) / 2
-    beta = tf.linalg.inv(beta_inv)
+    beta = tf.linalg.pinv(beta_inv)
 
     zc = tf.squeeze(c_vec @ z[:, :, None]) + \
         tf.squeeze(fmu[:, None, :] @ fsig2s_inv)
     Δν = 0.5 * tf.squeeze(zc[:, None, :] @ beta @ zc[:, :, None])
 
-    Δν += 0.5 * tf.log(tf.clip(tf.linalg.det(beta) * det_fsig2s_inv, 1/b0, b0))
+    Δν += 0.5 * tf.math.log(tf.clip_by_value(tf.linalg.det(beta)
+                            * det_fsig2s_inv, 1/b0, b0))
     return Δν, beta
 
 
@@ -63,12 +76,10 @@ def periodic(_h, _lt):
     return _h
 
 
-# tf.function(jit_compile=True)
 def v_rt(_s, _ts, w_all):
-    frac = tf.math.mod(_s, 1, name="frac")
-    ti = tf.cast(tf.floor(_s), tf.int32)
-    breakpoint()
-    return (1-frac)*tf.gather(tf.boolean_mask(_ts, w_all), ti, axis=1)+frac*tf.gather(tf.boolean_mask(_ts, w_all), ti+1, axis=1)
+    frac, ti = np.modf(_s)
+    ti = np.array(ti, np.int32)
+    return (1 - frac) * _ts[w_all, ti] + frac * _ts[w_all, ti+1]
 
 
 tau = 20
@@ -95,7 +106,6 @@ def batch(A, cx, index, tq, s, z):
     b0 = 1 + sig2s * tf.squeeze(a0[:, None, :] @ a0[:, :, None]) / sig2w
 
     l_e = len(index)
-    w_all = tf.range(0, l_e)  # index of all the waveforms
 
     l_t = tq.shape[1]
     # istar [0, 1) 之间的随机数，用于点中 PE
@@ -126,7 +136,7 @@ def batch(A, cx, index, tq, s, z):
 
     log_mu = np.log(index["mu0"])  # 猜测的 Poisson 流强度
     loc = np.zeros((l_e, 2))  # float64
-    fsig2s_inv = tf.diag(vstep)[None, :, :] * (1/sig2s)[:, None, None]
+    fsig2s_inv = tf.linalg.diag(vstep)[None, :, :] * (1/sig2s)[:, None, None]
     det_fsig2s_inv = tf.linalg.det(fsig2s_inv)
     fmu = vstep[None, :] * mus[:, None]
 
@@ -145,9 +155,11 @@ def batch(A, cx, index, tq, s, z):
         mNPE = np.max(NPE)
         rt = v_rt(s[:, :mNPE], tq["t_s"], np.arange(l_e)[:, None])
         nt0 = t0 + wt.astype(np.float32)
-        sel = tf.constant(np.arange(mNPE)[None, :] < NPE[:, None])
-        lc0 = tf.reduce_sum(lc(tf.constant(rt - t0[:, None]), sel), axis=1)
-        lc1 = tf.reduce_sum(lc(tf.constant(rt - nt0[:, None]), sel), axis=1)
+        sel = np.arange(mNPE)[None, :] < NPE[:, None]
+        lc0 = tf.reduce_sum(
+            lc(tf.where(sel, tf.constant(rt - t0[:, None]), 0)), axis=1)
+        lc1 = tf.reduce_sum(
+            lc(tf.where(sel, tf.constant(rt - nt0[:, None]), 0)), axis=1)
         np.putmask(t0, (lc1 - lc0).numpy() >= acct, nt0)
         t0_history[:, i] = t0
 
@@ -174,8 +186,7 @@ def batch(A, cx, index, tq, s, z):
         loc[e_annihilate, 1] = l_t
 
         # 矩阵 Δν 计算
-        vA, vc = vcombine(A, cx, tf.constant(
-            loc, dtype=tf.float32), w_all[:, None])
+        vA, vc = vcombine(A, cx, tf.constant(loc, dtype=tf.float32))
         Δν_g, beta = vmove1(vA, vc, z, fmu, fsig2s_inv, det_fsig2s_inv, b0)
 
         # -1 cases, step == 2, -1
@@ -191,15 +202,14 @@ def batch(A, cx, index, tq, s, z):
         loc[e_annihilate, 1] = l_t
         NPE[e_create] -= 1
         ########
-        Δν += tf.constant(Δν_g)
+        Δν += np.array(Δν_g)
         #######
 
         # 计算 Δcx, Δz, 更新 cx 和 z。对 accept 进行特别处理
         e_accept = Δν >= accept
-        _e_accept = tf.constant(e_accept)
         Δcx, Δz = vmove2(vA, vc, fmu, A, beta)
-        cx[_e_accept] += Δcx[_e_accept]
-        z[_e_accept] += Δz[_e_accept]
+        bool_inplace_add(cx, e_accept, Δcx)
+        bool_inplace_add(z, e_accept, Δz)
         ########
 
         # 增加
