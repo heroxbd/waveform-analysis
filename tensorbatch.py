@@ -24,11 +24,6 @@ def bool_inplace_add(x, b, y):
     return tf.raw_ops.InplaceAdd(x=x, i=i, v=tf.gather(y, i))
 
 
-def bool_inplace_update(x, b, y):
-    i = tf.cast(tf.experimental.numpy.nonzero(b)[0], tf.int32)
-    return tf.raw_ops.InplaceUpdate(x=x, i=i, v=tf.cast(tf.repeat(y, len(i)), x.dtype))
-
-
 # tf.function(jit_compile=True)
 def vcombine(A, cx, t):
     frac = tf.math.floormod(t, 1)
@@ -129,8 +124,8 @@ def batch(A, cx, index, tq, s, z):
     Δν_g = tf.zeros(l_e, dtype=np.float32)
     Δν = np.zeros(l_e, dtype=np.float32)
     Δν_history = np.zeros((l_e, TRIALS), dtype=np.float32)  # list of Δν's
-    annihilations = np.zeros((l_e, TRIALS))  # float64
-    creations = np.zeros((l_e, TRIALS))  # float64
+    annihilations = np.zeros((l_e, TRIALS), dtype=np.float64)  # float64
+    creations = np.zeros((l_e, TRIALS), dtype=np.float64)  # float64
     t0_history = np.zeros((l_e, TRIALS), dtype=np.float32)
     s0_history = np.zeros((l_e, TRIALS), dtype=np.uint32)  # 0-norm of s
 
@@ -150,16 +145,16 @@ def batch(A, cx, index, tq, s, z):
         )
     ):
         if i % 1000 == 0:
-            print(i)
+            print(i, NPE)
 
         mNPE = np.max(NPE)
         rt = v_rt(s[:, :mNPE], tq["t_s"], np.arange(l_e)[:, None])
         nt0 = t0 + wt.astype(np.float32)
         sel = np.arange(mNPE)[None, :] < NPE[:, None]
         lc0 = tf.reduce_sum(
-            lc(tf.where(sel, tf.constant(rt - t0[:, None]), 0)), axis=1)
+            tf.where(sel, lc(tf.constant(rt - t0[:, None])), 0), axis=1)
         lc1 = tf.reduce_sum(
-            lc(tf.where(sel, tf.constant(rt - nt0[:, None]), 0)), axis=1)
+            tf.where(sel, lc(tf.constant(rt - nt0[:, None])), 0), axis=1)
         np.putmask(t0, (lc1 - lc0).numpy() >= acct, nt0)
         t0_history[:, i] = t0
 
@@ -208,8 +203,8 @@ def batch(A, cx, index, tq, s, z):
         # 计算 Δcx, Δz, 更新 cx 和 z。对 accept 进行特别处理
         e_accept = Δν >= accept
         Δcx, Δz = vmove2(vA, vc, fmu, A, beta)
-        bool_inplace_add(cx, e_accept, Δcx)
-        bool_inplace_add(z, e_accept, Δz)
+        cx = bool_inplace_add(cx, e_accept, Δcx)
+        z = bool_inplace_add(z, e_accept, Δz)
         ########
 
         # 增加
@@ -276,11 +271,11 @@ for part in range(l_e // args.size + 1):
         cx_slice = np.asarray(
             np.append(cx[i_part, :lp_wave, :lp_t], null, axis=2), dtype=np.float32)
         (flip, s0_history, t0_history, Δν_history, annihilations, creations,
-         ) = batch(tf.constant(A_slice),
-                   tf.constant(cx_slice),
+         ) = batch(tf.constant(A_slice, dtype=tf.float32),
+                   tf.constant(cx_slice, dtype=tf.float32),
                    index[i_part], tq[i_part, :lp_t],
                    np.append(s[i_part, :lp_NPE], s_null, axis=1),
-                   tf.constant(z[i_part, :lp_wave]))
+                   tf.constant(z[i_part, :lp_wave], dtype=tf.float32))
         fi_part = (i_part * TRIALS)[:, None] + np.arange(TRIALS)[None, :]
         fip = fi_part.flatten()
         sample["flip"][fip] = flip.flatten()
