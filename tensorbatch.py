@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
+from scipy.special import erf
 import argparse
 
 import h5py
 import numpy as np
 import tensorflow as tf
 
-from scipy.special import erf
+tf.config.experimental.enable_tensor_float_32_execution(False)
+# import cupy as cp
+
 
 psr = argparse.ArgumentParser()
 psr.add_argument("-o", dest="opt", type=str, help="output file")
@@ -44,7 +47,8 @@ vstep = tf.constant([-1, 1], dtype=tf.float32)
 def vmove1(A_vec, c_vec, z, fmu, fsig2s_inv, det_fsig2s_inv, b0):
     ac = A_vec @ tf.transpose(c_vec, (0, 2, 1))
     beta_inv = fsig2s_inv + (ac + tf.transpose(ac, (0, 2, 1))) / 2
-    beta = tf.linalg.pinv(beta_inv)
+    beta = tf.linalg.inv(beta_inv)
+    # beta = tf.constant(cp.asnumpy(cp.linalg.inv(cp.array(beta_inv))))
 
     zc = tf.squeeze(c_vec @ z[:, :, None]) + \
         tf.squeeze(fmu[:, None, :] @ fsig2s_inv)
@@ -87,7 +91,7 @@ s2s = np.sqrt(2.0) * sigma
 
 # tf.function(jit_compile=True)
 def lc(t):
-    return co + np.log(1.0 - erf((ass - t)/s2s)) - alpha*t
+    return co + tf.math.log(1.0 - erf((ass - t)/s2s)) - alpha*t
 
 
 # tf.function(jit_compile=True)
@@ -152,9 +156,9 @@ def batch(A, cx, index, tq, s, z):
         nt0 = t0 + wt.astype(np.float32)
         sel = np.arange(mNPE)[None, :] < NPE[:, None]
         lc0 = tf.reduce_sum(
-            tf.where(sel, lc(tf.constant(rt - t0[:, None])), 0), axis=1)
+            tf.where(sel, lc(rt - t0[:, None]), 0), axis=1)
         lc1 = tf.reduce_sum(
-            tf.where(sel, lc(tf.constant(rt - nt0[:, None])), 0), axis=1)
+            tf.where(sel, lc(rt - nt0[:, None]), 0), axis=1)
         np.putmask(t0, (lc1 - lc0).numpy() >= acct, nt0)
         t0_history[:, i] = t0
 
