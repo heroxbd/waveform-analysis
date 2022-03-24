@@ -8,7 +8,7 @@ import numpy as np
 np.set_printoptions(suppress=True)
 import scipy
 import scipy.stats
-from scipy.stats import poisson, uniform, norm
+from scipy.stats import poisson, uniform, norm, gamma
 from scipy.fftpack import fft, ifft
 from scipy import optimize as opti
 import scipy.special as special
@@ -550,8 +550,11 @@ def spe(t, tau, sigma, A, gmu=gmu, window=window):
     # return np.ones_like(t) / window * gmu
 
 def charge(n, gmu, gsigma, thres=0):
-    # chargesam = norm.ppf(1 - uniform.rvs(scale=1-norm.cdf(thres, loc=gmu, scale=gsigma), size=n), loc=gmu, scale=gsigma)
-    chargesam = norm.rvs(loc=gmu, scale=gsigma, size=n)
+    chargesam = gamma.rvs(a=(gmu / gsigma) ** 2, loc=0, scale=gsigma**2/gmu, size=n)
+    # alpha = (gmu / gsigma) ** 2
+    # beta = gmu / gsigma ** 2
+    # chargesam = gamma.rvs(a=alpha, loc=0, scale=1/beta, size=n)
+    # chargesam = norm.rvs(loc=gmu, scale=gsigma, size=n)
     return chargesam
 
 def probcharhitt(t0, hitt, probcharge, Tau, Sigma, npe):
