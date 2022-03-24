@@ -43,7 +43,7 @@ plt.rcParams['pgf.preamble'] = r'\usepackage[detect-all,locale=DE]{siunitx}'
 nshannon = 1
 window = 1029
 gmu = 160.
-gsigma = 40.
+gsigma = 160. * 0.4
 std = 1.
 p = [8., 0.5, 24.]
 Thres = {'mcmc':std / gsigma, 'xiaopeip':0, 'lucyddm':0.2, 'fsmp':0, 'fftrans':0.1, 'findpeak':0.1, 'threshold':0, 'firstthres':0, 'omp':0}
@@ -550,7 +550,8 @@ def spe(t, tau, sigma, A, gmu=gmu, window=window):
     # return np.ones_like(t) / window * gmu
 
 def charge(n, gmu, gsigma, thres=0):
-    chargesam = norm.ppf(1 - uniform.rvs(scale=1-norm.cdf(thres, loc=gmu, scale=gsigma), size=n), loc=gmu, scale=gsigma)
+    # chargesam = norm.ppf(1 - uniform.rvs(scale=1-norm.cdf(thres, loc=gmu, scale=gsigma), size=n), loc=gmu, scale=gsigma)
+    chargesam = norm.rvs(loc=gmu, scale=gsigma, size=n)
     return chargesam
 
 def probcharhitt(t0, hitt, probcharge, Tau, Sigma, npe):

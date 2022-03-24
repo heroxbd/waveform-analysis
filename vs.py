@@ -31,6 +31,8 @@ psr = argparse.ArgumentParser()
 psr.add_argument('--conf', type=str, help='configuration of tau & sigma')
 args = psr.parse_args()
 
+std = wff.std
+
 with open(args.conf) as f:
     f_csv = csv.reader(f, delimiter=' ')
     Tau = next(f_csv)
@@ -38,7 +40,7 @@ with open(args.conf) as f:
     Sigma = next(f_csv)
     Sigma = [float(i) for i in Sigma]
 
-filelist = os.listdir('result/fsmp/solu')
+filelist = os.listdir('result/lucyddm/solu')
 filelist = [f for f in filelist if f[0] != '.' and os.path.splitext(f)[-1] == '.h5']
 numbers = [[float(i) for i in f[:-3].split('-')] for f in filelist]
 stype = np.dtype([('mu', np.float64), ('tau', np.float64), ('sigma', np.float64), ('n', np.uint), ('std1sttruth', np.float64), ('stdtruth', np.float64), ('std', np.float64), ('stdone', np.float64), ('bias1sttruth', np.float64), ('biastruth', np.float64), ('bias', np.float64), ('biasone', np.float64), ('wdist', np.float64, 3), ('RSS', np.float64, 3), ('N', np.uint), ('consumption', np.float64, 3), ('stdsuccess', np.uint), ('stdonesuccess', np.uint)])
@@ -82,7 +84,7 @@ for key in tqdm(mts.keys()):
                 start = wavef['SimTruth/T'][:]
                 gmu = wavef['SimTriggerInfo/PEList'].attrs['gmu']
                 gsigma = wavef['SimTriggerInfo/PEList'].attrs['gsigma']
-                r = wavef['SimTruth/T'].attrs['r']
+                # r = wavef['SimTruth/T'].attrs['r']
                 r = np.inf
             mts[key][i]['N'] = len(start)
             vali = np.abs(time['tscharge'] - start['T0'] - np.mean(time['tscharge'] - start['T0'])) <= r * np.std(time['tscharge'] - start['T0'], ddof=-1)
@@ -117,21 +119,21 @@ rhigh = np.max(rhigh[~np.isnan(rhigh)]) * 1.05
 
 lim = {'deltadiv':np.array([[0.3, 0.5]]), 'wdist':np.array([[1.0, 1.5]]), 'rss':np.array([[100, 200]])}
 
-figd = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
-gsd = gridspec.GridSpec(len(Sigma), len(Tau), figure=figd, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
-figb = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
-gsb = gridspec.GridSpec(len(Sigma), len(Tau), figure=figd, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
-figdd = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
-gsdd = gridspec.GridSpec(len(Sigma), len(Tau), figure=figd, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
-figw = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
-gsw = gridspec.GridSpec(len(Sigma), len(Tau), figure=figw, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
-figr = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
-gsr = gridspec.GridSpec(len(Sigma), len(Tau), figure=figr, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
+fig_t0_resolution = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
+gs_t0_resolution = gridspec.GridSpec(len(Sigma), len(Tau), figure=fig_t0_resolution, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
+fig_t0_bias = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
+gs_t0_bias = gridspec.GridSpec(len(Sigma), len(Tau), figure=fig_t0_bias, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
+fig_t0_resolution_ratio = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
+gs_t0_resolution_ratio = gridspec.GridSpec(len(Sigma), len(Tau), figure=fig_t0_resolution_ratio, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
+fig_wdist = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
+gs_wdist = gridspec.GridSpec(len(Sigma), len(Tau), figure=fig_wdist, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
+fig_rss = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
+gs_rss = gridspec.GridSpec(len(Sigma), len(Tau), figure=fig_rss, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
 keylist = list(mts.keys())
 badkey = ['findpeak', 'threshold', 'fftrans', 'mcmc', 'firstthres']
 for i, sigma in enumerate(Sigma):
     for j, tau in enumerate(Tau):
-        ax = figd.add_subplot(gsd[i, j])
+        ax = fig_t0_resolution.add_subplot(gs_t0_resolution[i, j])
         stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == tau) & (mts['lucyddm']['sigma'] == sigma)]
         yerr1st = np.vstack([stdlist['std1sttruth']-np.sqrt(np.power(stdlist['std1sttruth'],2)*stdlist['N']/chi2.ppf(1-alpha, stdlist['N'])), np.sqrt(np.power(stdlist['std1sttruth'],2)*stdlist['N']/chi2.ppf(alpha, stdlist['N']))-stdlist['std1sttruth']])
         yerrall = np.vstack([stdlist['stdtruth']-np.sqrt(np.power(stdlist['stdtruth'],2)*stdlist['N']/chi2.ppf(1-alpha, stdlist['N'])), 
@@ -157,7 +159,7 @@ for i, sigma in enumerate(Sigma):
         #
         # bias of t_0 estimation
         # 
-        ax = figb.add_subplot(gsb[i, j])
+        ax = fig_t0_bias.add_subplot(gs_t0_bias[i, j])
         stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == tau) & (mts['lucyddm']['sigma'] == sigma)]
         # yerr1st = np.vstack([-t.ppf(alpha, stdlist['N'])*stdlist['std1sttruth']/np.sqrt(stdlist['N']), t.ppf(1-alpha, stdlist['N'])*stdlist['std1sttruth']/np.sqrt(stdlist['N'])])
         yerrall = np.vstack([-t.ppf(alpha, stdlist['N'])*stdlist['stdtruth']/np.sqrt(stdlist['N']), 
@@ -182,7 +184,7 @@ for i, sigma in enumerate(Sigma):
         #
         # Ratio of sigma^2_{t_0} and sigma^2_{ALL}
         # 
-        ax = figdd.add_subplot(gsdd[i, j])
+        ax = fig_t0_resolution_ratio.add_subplot(gs_t0_resolution_ratio[i, j])
         for key in keylist:
             if key in badkey:
                 continue
@@ -210,7 +212,7 @@ for i, sigma in enumerate(Sigma):
             handles = handles[-1:] + handles[:-1]
             ax.legend(handles, labels, loc='upper left', bbox_to_anchor=(1., 0.9))
 
-        ax = figw.add_subplot(gsw[i, j])
+        ax = fig_wdist.add_subplot(gs_wdist[i, j])
         for key in keylist:
             if key in badkey:
                 continue
@@ -229,7 +231,7 @@ for i, sigma in enumerate(Sigma):
         if i == len(Sigma) - 1 and j == len(Tau) - 1:
             ax.legend(loc='upper left', bbox_to_anchor=(1., 0.9))
 
-        ax = figr.add_subplot(gsr[i, j])
+        ax = fig_rss.add_subplot(gs_rss[i, j])
         for key in keylist:
             if key in badkey:
                 continue
@@ -248,26 +250,26 @@ for i, sigma in enumerate(Sigma):
         ax.grid()
         if i == len(Sigma) - 1 and j == len(Tau) - 1:
             ax.legend(loc='upper left', bbox_to_anchor=(1., 0.9))
-figd.savefig('Note/figures/vs-delta.pgf')
-figd.savefig('Note/figures/vs-delta.pdf')
-figd.savefig('Note/figures/vs-delta.png')
-plt.close(figd)
-figb.savefig('Note/figures/vs-bias.pgf')
-figb.savefig('Note/figures/vs-bias.pdf')
-figb.savefig('Note/figures/vs-bias.png')
-plt.close(figb)
-figdd.savefig('Note/figures/vs-deltamethodsdiv.pgf')
-figdd.savefig('Note/figures/vs-deltamethodsdiv.pdf')
-figdd.savefig('Note/figures/vs-deltamethodsdiv.png')
-plt.close(figdd)
-figw.savefig('Note/figures/vs-wdist.pgf')
-figw.savefig('Note/figures/vs-wdist.pdf')
-figw.savefig('Note/figures/vs-wdist.png')
-plt.close(figw)
-figr.savefig('Note/figures/vs-rss.pgf')
-figr.savefig('Note/figures/vs-rss.pdf')
-figr.savefig('Note/figures/vs-rss.png')
-plt.close(figr)
+fig_t0_resolution.savefig('Note/figures/vs-sigmat0.pgf')
+fig_t0_resolution.savefig('Note/figures/vs-sigmat0.pdf')
+fig_t0_resolution.savefig('Note/figures/vs-sigmat0.png')
+plt.close(fig_t0_resolution)
+fig_t0_resolution_ratio.savefig('Note/figures/vs-sigmat0-r.pgf')
+fig_t0_resolution_ratio.savefig('Note/figures/vs-sigmat0-r.pdf')
+fig_t0_resolution_ratio.savefig('Note/figures/vs-sigmat0-r.png')
+plt.close(fig_t0_resolution_ratio)
+fig_t0_bias.savefig('Note/figures/vs-biast0.pgf')
+fig_t0_bias.savefig('Note/figures/vs-biast0.pdf')
+fig_t0_bias.savefig('Note/figures/vs-biast0.png')
+plt.close(fig_t0_bias)
+fig_wdist.savefig('Note/figures/vs-wdist.pgf')
+fig_wdist.savefig('Note/figures/vs-wdist.pdf')
+fig_wdist.savefig('Note/figures/vs-wdist.png')
+plt.close(fig_wdist)
+fig_rss.savefig('Note/figures/vs-rss.pgf')
+fig_rss.savefig('Note/figures/vs-rss.pdf')
+fig_rss.savefig('Note/figures/vs-rss.png')
+plt.close(fig_rss)
 
 thresfirst = False
 marker2 = [['s', '^']]
@@ -275,8 +277,8 @@ colors2 = [['r', 'b']]
 fig = plt.figure(figsize=(10, 4))
 gs = gridspec.GridSpec(1, 2, figure=fig, left=0.1, right=0.85, top=0.92, bottom=0.15, wspace=0.30, hspace=0.2)
 ax = fig.add_subplot(gs[0, 0])
-std1sttruth = np.empty(len(stdlist['mu']))
 stdlist = mts['firstthres'][(mts['firstthres']['tau'] == Tau[0]) & (mts['firstthres']['sigma'] == Sigma[0])]
+std1sttruth = np.empty(len(stdlist['mu']))
 sigma = 0
 tau = max(Tau)
 np.random.seed(0)
@@ -372,17 +374,20 @@ ax = fig.add_subplot(gs[0, 0])
 consumption = np.vstack([mts[key][(mts[key]['mu'] == mu) & (mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]['consumption'] for key in keylist if key != 'firstthres'])
 consumption_dy = np.vstack([consumption[:, 1] - consumption[:, 0], consumption[:, 2] - consumption[:, 1]])
 for i, (cc, ll, kk) in enumerate(zip(bar_colors, labels, keys)):
-    if kk == 'takara':
-        eb = ax.errorbar(consumption[i, 1], wdist[i, 1], xerr=consumption_dy[:, i][:, None], yerr=wdist_dy[:, i][:, None], fmt='o', ecolor=color[kk], c=color[kk], elinewidth=1, capsize=0, label='$\mathrm{CNN(GPU)}$')
-        eb[-1][0].set_linestyle('--')
-        eb[-1][1].set_linestyle('--')
-        with h5py.File('result/takara/solu/' + str(mu) + '-' + str(tau) + '-' + str(sigma) + '.h5', 'r', libver='latest', swmr=True) as soluf:
-            time = soluf['starttime_cpu'][:]
-            consumption_i = np.insert(np.percentile(time['consumption'], [alpha * 100, 100 - alpha * 100]), 1, time['consumption'].mean())
-        consumption_dy_i = np.array([consumption_i[1] - consumption_i[0], consumption_i[2] - consumption_i[1]])
-        ax.errorbar(consumption_i[1], wdist[i, 1], xerr=consumption_dy_i[:, None], yerr=wdist_dy[:, i][:, None], fmt='o', elinewidth=1, capsize=3, c=color[kk], label='$\mathrm{CNN(CPU)}$')
-    else:
-        ax.errorbar(consumption[i, 1], wdist[i, 1], xerr=consumption_dy[:, i][:, None], yerr=wdist_dy[:, i][:, None], fmt='o', ecolor=color[kk], c=color[kk], elinewidth=1, capsize=3, label=ll)
+    try:
+        if kk == 'takara':
+            eb = ax.errorbar(consumption[i, 1], wdist[i, 1], xerr=consumption_dy[:, i][:, None], yerr=wdist_dy[:, i][:, None], fmt='o', ecolor=color[kk], c=color[kk], elinewidth=1, capsize=0, label='$\mathrm{CNN(GPU)}$')
+            eb[-1][0].set_linestyle('--')
+            eb[-1][1].set_linestyle('--')
+            with h5py.File('result/takara/solu/' + str(mu) + '-' + str(tau) + '-' + str(sigma) + '.h5', 'r', libver='latest', swmr=True) as soluf:
+                time = soluf['starttime_cpu'][:]
+                consumption_i = np.insert(np.percentile(time['consumption'], [alpha * 100, 100 - alpha * 100]), 1, time['consumption'].mean())
+            consumption_dy_i = np.array([consumption_i[1] - consumption_i[0], consumption_i[2] - consumption_i[1]])
+            ax.errorbar(consumption_i[1], wdist[i, 1], xerr=consumption_dy_i[:, None], yerr=wdist_dy[:, i][:, None], fmt='o', elinewidth=1, capsize=3, c=color[kk], label='$\mathrm{CNN(CPU)}$')
+        else:
+            ax.errorbar(consumption[i, 1], wdist[i, 1], xerr=consumption_dy[:, i][:, None], yerr=wdist_dy[:, i][:, None], fmt='o', ecolor=color[kk], c=color[kk], elinewidth=1, capsize=3, label=ll)
+    except:
+        pass
     ax.text(np.exp(np.log(consumption[i, 1]) + 0.05), wdist[i, 1] + 0.05, s=ll)
 ax.plot(np.logspace(-5, 2, 301), 2 - 0.5 * np.logspace(-5, 2, 301), color='k', alpha=0.5, linestyle='dashed')
 ax.fill_between(np.logspace(-5, 2, 301), y1=2 - 0.5 * np.logspace(-5, 2, 301), y2=10, color='k', alpha=0.2)
@@ -424,7 +429,7 @@ mtsi['biasmumax'] = np.nan
 mtsi['biasmu'] = np.nan
 mtsi = np.sort(mtsi, kind='stable', order=['mu', 'tau', 'sigma'])
 
-mu_list = np.unique(mts['fsmp']['mu'])
+mu_list = np.unique(mts['lucyddm']['mu'])
 mu_std_tru_list = np.sqrt(mu_list)
 
 mts = {'lucyddm':mtsi.copy(), 'takara':mtsi.copy(), 'xiaopeip':mtsi.copy(), 'fsmp':mtsi.copy()}
@@ -445,9 +450,10 @@ for key in tqdm(mts.keys()):
                 start = wavef['SimTruth/T'][:]
                 pelist = wavef['SimTriggerInfo/PEList'][:]
                 waves = wavef['Readout/Waveform'][:]
+                npe_removed = wavef['Readout/Waveform'].attrs['npe_removed']
                 gmu = wavef['SimTriggerInfo/PEList'].attrs['gmu']
                 gsigma = wavef['SimTriggerInfo/PEList'].attrs['gsigma']
-                r = wavef['SimTruth/T'].attrs['r']
+                # r = wavef['SimTruth/T'].attrs['r']
                 r = np.inf
             mts[key][i]['N'] = len(start)
             vali = np.abs(time['tscharge'] - start['T0'] - np.mean(time['tscharge'] - start['T0'])) <= r * np.std(time['tscharge'] - start['T0'], ddof=-1)
@@ -458,60 +464,50 @@ for key in tqdm(mts.keys()):
             pe_sum = np.array([pelist[i_ans[i]:i_ans[i+1]]['Charge'].sum() for i in range(len(e_ans))]) / gmu
             wave_sum = waves['Waveform'].sum(axis=1) / gmu
 
-            # n = np.arange(1, 1000)
-            # mean = np.average(n, weights=poisson.pmf(n, mu=mu))
-            # lognm = np.average(np.log(n), weights=poisson.pmf(n, mu=mu))
-            # s = np.sqrt(np.average((np.log(n) - mean)**2, weights=poisson.pmf(n, mu=mu)))
-
             npe = np.diff(i_ans)
+            N = mts[key][i]['N'] + len(npe_removed)
             N_add = N / (1 - poisson.cdf(0, mu)) - N
-            # N_add = 0
-            # mu = mu / (1 - np.exp(-mu))
-            # s_npe = np.std(npe, ddof=-1)
+            npe_add = np.hstack([np.zeros(round(N_add)), npe_removed])
             s_npe = np.sqrt(mu)
-            s_wave_sum = np.std(np.append(wave_sum[vali], np.zeros(round(N_add))), ddof=-1)
-            bias_wave_sum = np.mean(np.append(wave_sum[vali], np.zeros(round(N_add)))) - mu
-            s_pe_sum = np.std(np.append(pe_sum[vali], np.zeros(round(N_add))), ddof=-1)
-            bias_pe_sum = np.mean(np.append(pe_sum[vali], np.zeros(round(N_add)))) - mu
-            # Use sample STD to estimate STD
-            s_mucharge = np.std(np.append(time['mucharge'][vali], np.zeros(round(N_add))), ddof=-1)
-            bias_mucharge = np.mean(np.append(time['mucharge'][vali], np.zeros(round(N_add)))) - mu
-            s_muwave = np.std(np.append(time['muwave'][vali], np.zeros(round(N_add))), ddof=-1)
-            bias_muwave = np.mean(np.append(time['muwave'][vali], np.zeros(round(N_add)))) - mu
+            wave_sum_recovered = np.append(wave_sum[vali], npe_add)
+            pe_sum_recovered = np.append(pe_sum[vali], npe_add)
+            mucharge_recovered = np.append(time['mucharge'][vali], npe_add)
+            muwave_recovered = np.append(time['muwave'][vali], npe_add)
 
-            mts[key][i]['stdmutru'] = s_npe
+            # Use sample STD to estimate STD
+            mts[key][i]['stdmutru'] = np.sqrt(mu)
             mts[key][i]['meanmutru'] = mu
-            mts[key][i]['stdmuint'] = s_wave_sum
-            # mts[key][i]['biasmuint'] = bias_wave_sum
-            mts[key][i]['biasmuint'] = np.insert(np.percentile(np.append(wave_sum[vali], np.zeros(round(N_add))), [alpha * 100, 100 - alpha * 100]), 1, np.append(wave_sum[vali], np.zeros(round(N_add))).mean()) - mu
-            mts[key][i]['stdmupe'] = s_pe_sum
-            # mts[key][i]['biasmupe'] = bias_pe_sum
-            mts[key][i]['biasmupe'] = np.insert(np.percentile(np.append(pe_sum[vali], np.zeros(round(N_add))), [alpha * 100, 100 - alpha * 100]), 1, np.append(pe_sum[vali], np.zeros(round(N_add))).mean()) - mu
-            mts[key][i]['stdmumax'] = s_mucharge
-            # mts[key][i]['biasmumax'] = bias_mucharge
-            mts[key][i]['biasmumax'] = np.insert(np.percentile(np.append(time['mucharge'][vali], np.zeros(round(N_add))), [alpha * 100, 100 - alpha * 100]), 1, np.append(time['mucharge'][vali], np.zeros(round(N_add))).mean()) - mu
-            mts[key][i]['stdmu'] = s_muwave
-            # mts[key][i]['biasmu'] = bias_muwave
-            mts[key][i]['biasmu'] = np.insert(np.percentile(np.append(time['muwave'][vali], np.zeros(round(N_add))), [alpha * 100, 100 - alpha * 100]), 1, np.append(time['muwave'][vali], np.zeros(round(N_add))).mean()) - mu
+            mts[key][i]['stdmuint'] = np.std(wave_sum_recovered, ddof=-1)
+            # mts[key][i]['biasmuint'] = np.mean(wave_sum_recovered) - mu
+            mts[key][i]['biasmuint'] = np.insert(np.percentile(wave_sum_recovered, [alpha * 100, 100 - alpha * 100]), 1, wave_sum_recovered.mean()) - mu
+            mts[key][i]['stdmupe'] = np.std(pe_sum_recovered, ddof=-1)
+            # mts[key][i]['biasmupe'] = np.mean(pe_sum_recovered) - mu
+            mts[key][i]['biasmupe'] = np.insert(np.percentile(pe_sum_recovered, [alpha * 100, 100 - alpha * 100]), 1, pe_sum_recovered.mean()) - mu
+            mts[key][i]['stdmumax'] = np.std(mucharge_recovered, ddof=-1)
+            # mts[key][i]['biasmumax'] = np.mean(mucharge_recovered) - mu
+            mts[key][i]['biasmumax'] = np.insert(np.percentile(mucharge_recovered, [alpha * 100, 100 - alpha * 100]), 1, mucharge_recovered.mean()) - mu
+            mts[key][i]['stdmu'] = np.std(muwave_recovered, ddof=-1)
+            # mts[key][i]['biasmu'] = np.mean(muwave_recovered) - mu
+            mts[key][i]['biasmu'] = np.insert(np.percentile(muwave_recovered, [alpha * 100, 100 - alpha * 100]), 1, muwave_recovered.mean()) - mu
         except:
             pass
 
 keylist = mts.keys()
-figd = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
-gs = gridspec.GridSpec(1, 2, figure=figdd, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
-figdd = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
-gs = gridspec.GridSpec(1, 2, figure=figdd, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
-figbr = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
-gs = gridspec.GridSpec(1, 2, figure=figbr, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
-figb = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
-gs = gridspec.GridSpec(1, 2, figure=figb, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
+fig_mu_resolution_ratio = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
+gs_mu_resolution_ratio = gridspec.GridSpec(1, 2, figure=fig_mu_resolution_ratio, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
+fig_mu_resolution = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
+gs_mu_resolution = gridspec.GridSpec(1, 2, figure=fig_mu_resolution, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
+fig_mu_bias_ratio = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
+gs_mu_bias_ratio = gridspec.GridSpec(1, 2, figure=fig_mu_bias_ratio, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
+fig_mu_bias = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
+gs_mu_bias = gridspec.GridSpec(1, 2, figure=fig_mu_bias, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
 for i, sigma in enumerate(Sigma):
     for j, tau in enumerate(Tau):
         #
-        # intensity resolution comparison
+        # related intensity resolution comparison
         #
-        stdlist = mts['fsmp'][(mts['fsmp']['tau'] == tau) & (mts['fsmp']['sigma'] == sigma)]
-        ax = figd.add_subplot(gs[i, j])
+        stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == tau) & (mts['lucyddm']['sigma'] == sigma)]
+        ax = fig_mu_resolution_ratio.add_subplot(gs_mu_resolution_ratio[i, j])
         yerr = np.vstack([stdlist['stdmuint']-np.sqrt(np.power(stdlist['stdmuint'],2)*stdlist['N']/chi2.ppf(1-alpha, stdlist['N'])), 
                           np.sqrt(np.power(stdlist['stdmuint'],2)*stdlist['N']/chi2.ppf(alpha, stdlist['N']))-stdlist['stdmuint']]) / (stdlist['biasmuint'][:, 1] + stdlist['meanmutru'])
         ax.errorbar(stdlist['mu'] + jitter['tru'], 
@@ -541,10 +537,10 @@ for i, sigma in enumerate(Sigma):
             ax.legend(loc='upper left', bbox_to_anchor=(1., 0.9))
 
         #
-        # intensity bias comparison
+        # intensity resolution comparison
         #
-        stdlist = mts['fsmp'][(mts['fsmp']['tau'] == tau) & (mts['fsmp']['sigma'] == sigma)]
-        ax = figdd.add_subplot(gs[i, j])
+        stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == tau) & (mts['lucyddm']['sigma'] == sigma)]
+        ax = fig_mu_resolution.add_subplot(gs_mu_resolution[i, j])
         yerr = np.vstack([stdlist['stdmuint']-np.sqrt(np.power(stdlist['stdmuint'],2)*stdlist['N']/chi2.ppf(1-alpha, stdlist['N'])), 
                           np.sqrt(np.power(stdlist['stdmuint'],2)*stdlist['N']/chi2.ppf(alpha, stdlist['N']))-stdlist['stdmuint']]) / (stdlist['biasmuint'][:, 1] + stdlist['meanmutru'])
         ax.errorbar(stdlist['mu'] + jitter['tru'], stdlist['stdmuint'] / (stdlist['biasmuint'][:, 1] + stdlist['meanmutru']), yerr=yerr, label='$\mathrm{int}$', c=color['1st'], marker=marker['1st'])
@@ -566,8 +562,8 @@ for i, sigma in enumerate(Sigma):
         #
         # relative charge bias
         #
-        stdlist = mts['fsmp'][(mts['fsmp']['tau'] == tau) & (mts['fsmp']['sigma'] == sigma)]
-        ax = figbr.add_subplot(gs[i, j])
+        stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == tau) & (mts['lucyddm']['sigma'] == sigma)]
+        ax = fig_mu_bias_ratio.add_subplot(gs_mu_bias_ratio[i, j])
         yerr = np.vstack([-t.ppf(alpha, stdlist['N'])*stdlist['stdmuint']/np.sqrt(stdlist['N']), 
                           t.ppf(1-alpha, stdlist['N'])*stdlist['stdmuint']/np.sqrt(stdlist['N'])]) / stdlist['meanmutru']
         ax.errorbar(stdlist['mu'] + jitter['tru'], stdlist['biasmuint'][:, 1] / stdlist['meanmutru'], yerr=yerr, label='$\mathrm{int}$', c=color['1st'], marker=marker['1st'])
@@ -593,9 +589,11 @@ for i, sigma in enumerate(Sigma):
         if i == len(Sigma) - 1 and j == len(Tau) - 1:
             ax.legend(loc='upper left', bbox_to_anchor=(1., 0.9))
 
+        #
         # charge bias
-        stdlist = mts['fsmp'][(mts['fsmp']['tau'] == tau) & (mts['fsmp']['sigma'] == sigma)]
-        ax = figb.add_subplot(gs[i, j])
+        #
+        stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == tau) & (mts['lucyddm']['sigma'] == sigma)]
+        ax = fig_mu_bias.add_subplot(gs_mu_bias[i, j])
         yerr = np.vstack([-t.ppf(alpha, stdlist['N'])*stdlist['stdmuint']/np.sqrt(stdlist['N']), t.ppf(1-alpha, stdlist['N'])*stdlist['stdmuint']/np.sqrt(stdlist['N'])])
         ax.errorbar(stdlist['mu'] + jitter['tru'], stdlist['biasmuint'][:, 1], yerr=yerr, label='$\mathrm{int}$', c=color['1st'], marker=marker['1st'])
 
@@ -619,19 +617,19 @@ for i, sigma in enumerate(Sigma):
         ax.grid()
         if i == len(Sigma) - 1 and j == len(Tau) - 1:
             ax.legend(loc='upper left', bbox_to_anchor=(1., 0.9))
-figd.savefig('Note/figures/vs-deltamethodsdivmu.pgf')
-figd.savefig('Note/figures/vs-deltamethodsdivmu.pdf')
-figd.savefig('Note/figures/vs-deltamethodsdivmu.png')
-plt.close(figd)
-figdd.savefig('Note/figures/vs-deltamu.pgf')
-figdd.savefig('Note/figures/vs-deltamu.pdf')
-figdd.savefig('Note/figures/vs-deltamu.png')
-plt.close(figdd)
-figbr.savefig('Note/figures/vs-biasmu.pgf')
-figbr.savefig('Note/figures/vs-biasmu.pdf')
-figbr.savefig('Note/figures/vs-biasmu.png')
-plt.close(figbr)
-figb.savefig('Note/figures/vs-biasmut.pgf')
-figb.savefig('Note/figures/vs-biasmut.pdf')
-figb.savefig('Note/figures/vs-biasmut.png')
-plt.close(figb)
+fig_mu_resolution_ratio.savefig('Note/figures/vs-sigmamu-r.pgf') # Ratio of mu's resolution
+fig_mu_resolution_ratio.savefig('Note/figures/vs-sigmamu-r.pdf')
+fig_mu_resolution_ratio.savefig('Note/figures/vs-sigmamu-r.png')
+plt.close(fig_mu_resolution_ratio)
+fig_mu_resolution.savefig('Note/figures/vs-sigmamu.pgf')
+fig_mu_resolution.savefig('Note/figures/vs-sigmamu.pdf')
+fig_mu_resolution.savefig('Note/figures/vs-sigmamu.png')
+plt.close(fig_mu_resolution)
+fig_mu_bias_ratio.savefig('Note/figures/vs-biasmu-r.pgf') # Relative mu biases
+fig_mu_bias_ratio.savefig('Note/figures/vs-biasmu-r.pdf')
+fig_mu_bias_ratio.savefig('Note/figures/vs-biasmu-r.png')
+plt.close(fig_mu_bias_ratio)
+fig_mu_bias.savefig('Note/figures/vs-biasmu.pgf')
+fig_mu_bias.savefig('Note/figures/vs-biasmu.pdf')
+fig_mu_bias.savefig('Note/figures/vs-biasmu.png')
+plt.close(fig_mu_bias)
