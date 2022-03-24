@@ -451,11 +451,11 @@ for key in tqdm(mts.keys()):
                 pelist = wavef['SimTriggerInfo/PEList'][:]
                 waves = wavef['Readout/Waveform'][:]
                 npe_removed = wavef['Readout/Waveform'].attrs['npe_removed']
+                wavesum_removed = wavef['Readout/Waveform'].attrs['wavesum_removed']
                 gmu = wavef['SimTriggerInfo/PEList'].attrs['gmu']
                 gsigma = wavef['SimTriggerInfo/PEList'].attrs['gsigma']
                 # r = wavef['SimTruth/T'].attrs['r']
                 r = np.inf
-            mts[key][i]['N'] = len(start)
             vali = np.abs(time['tscharge'] - start['T0'] - np.mean(time['tscharge'] - start['T0'])) <= r * np.std(time['tscharge'] - start['T0'], ddof=-1)
             # vali = np.full(len(time), True)
             Chnum = len(np.unique(pelist['PMTId']))
@@ -465,14 +465,15 @@ for key in tqdm(mts.keys()):
             wave_sum = waves['Waveform'].sum(axis=1) / gmu
 
             npe = np.diff(i_ans)
-            N = mts[key][i]['N'] + len(npe_removed)
+            N = len(start) + len(npe_removed)
             N_add = N / (1 - poisson.cdf(0, mu)) - N
-            npe_add = np.hstack([np.zeros(round(N_add)), npe_removed])
+            mu_add = np.hstack([np.zeros(round(N_add)), wavesum_removed / gmu])
+            mts[key][i]['N'] = N + round(N_add)
             s_npe = np.sqrt(mu)
-            wave_sum_recovered = np.append(wave_sum[vali], npe_add)
-            pe_sum_recovered = np.append(pe_sum[vali], npe_add)
-            mucharge_recovered = np.append(time['mucharge'][vali], npe_add)
-            muwave_recovered = np.append(time['muwave'][vali], npe_add)
+            wave_sum_recovered = np.append(wave_sum[vali], mu_add)
+            pe_sum_recovered = np.append(pe_sum[vali], mu_add)
+            mucharge_recovered = np.append(time['mucharge'][vali], mu_add)
+            muwave_recovered = np.append(time['muwave'][vali], mu_add)
 
             # Use sample STD to estimate STD
             mts[key][i]['stdmutru'] = np.sqrt(mu)

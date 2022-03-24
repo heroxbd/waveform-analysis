@@ -114,8 +114,13 @@ valit.append(np.isin(waves['TriggerNo'], pelist['TriggerNo'][pelist['Charge'] <=
 for i, t in enumerate(valit):
     print(f'Loss {i} is {t.sum()}, {t.sum()/len(t):.2%}')
     vali |= t
+npe_removed = waves['Npe'][vali]
+pelist_removed = pelist[np.isin(pelist['TriggerNo'], waves['TriggerNo']) & np.isin(pelist['PMTId'], waves['ChannelID'])]
+wavesum_removed = np.empty(vali.sum())
+for i, w in enumerate(waves[vali]):
+    wavesum_removed[i] = pelist_removed['Charge'][(pelist_removed['TriggerNo'] == w['TriggerNo']) & (pelist_removed['PMTId'] == w['ChannelID'])].sum()
+
 vali = np.logical_not(vali)
-npe_removed = waves['Npe'][~vali]
 if np.sum(vali) != args.N:
     t0 = t0[vali]
     waves = waves[vali]
@@ -135,6 +140,7 @@ with h5py.File(args.opt, 'w') as opt:
     dset.attrs['sigma'] = Sigma
     dset.attrs['Std'] = std
     dset.attrs['npe_removed'] = npe_removed
+    dset.attrs['wavesum_removed'] = wavesum_removed
 print(args.opt + ' saved, l =', int(np.sum(vali)))
 
 if not os.path.exists('spe.h5'):
