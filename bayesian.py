@@ -281,7 +281,7 @@ def fsmp_inference(a0, a1):
             Phi_s = wff.Phi(y, A, c_star[maxindex], mus, sig2s, sig2w)
             invPhi = np.linalg.inv(Phi_s)
             xmmse_most = mus * c_star[maxindex] + np.matmul(np.diagflat(sig2s * c_star[maxindex]), np.matmul(A.T, np.matmul(invPhi, zx)))
-            j += 0
+            j += 1
         pet = np.repeat(tlist[xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
         cha = np.repeat(xmmse_most[xmmse_most > 0] / mus / c_star[maxindex][xmmse_most > 0], c_star[maxindex][xmmse_most > 0])
         mu_i = (c_star[maxindex] > 0).sum()
