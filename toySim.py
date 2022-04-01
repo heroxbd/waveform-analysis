@@ -108,7 +108,7 @@ valit.append(np.sum(waves['Waveform'], axis=1) <= 0)
 valit.append(np.any(np.isnan(waves['Waveform']), axis=1))
 valit.append(np.isin(waves['TriggerNo'], pelist['TriggerNo'][pelist['HitPosInWindow'] > window - 1]))
 r = 7
-valit.append(np.abs(t0['tstruth'] - t0['T0'] - np.mean(t0['tstruth'] - t0['T0'])) > r * np.std(t0['tstruth'] - t0['T0'], ddof=-1))
+# valit.append(np.abs(t0['tstruth'] - t0['T0'] - np.mean(t0['tstruth'] - t0['T0'])) > r * np.std(t0['tstruth'] - t0['T0'], ddof=-1))
 valit.append(np.sum(waves['Waveform'] > 5 * std, axis=1) <= 0)
 valit.append(np.isin(waves['TriggerNo'], pelist['TriggerNo'][pelist['Charge'] <= 0]) & np.isin(waves['ChannelID'], pelist['PMTId'][pelist['Charge'] <= 0]))
 for i, t in enumerate(valit):

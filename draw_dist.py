@@ -10,7 +10,7 @@ args = psr.parse_args()
 
 import numpy as np
 from scipy import stats
-from scipy.stats import poisson, uniform, norm
+from scipy.stats import poisson, uniform, norm, gamma
 from tqdm import tqdm
 import matplotlib
 matplotlib.use('pgf')
@@ -275,7 +275,8 @@ fig = plt.figure()
 ax = fig.add_subplot(111)
 ax.hist(charge['Charge'], bins=np.arange(0, 600, 5), density=True, label='PDF_rec')
 t = np.arange(0, 1000, 0.1)
-ax.plot(t, norm.pdf(t, loc=gmu, scale=gsigma) / (1 - norm.cdf(0, loc=gmu, scale=gsigma)), label='PDF_tru', color='k')
+ax.plot(t, gamma.pdf(t, a=(gmu / gsigma) ** 2, loc=0, scale=gsigma**2/gmu), label='PDF_tru', color='k')
+# ax.plot(t, norm.pdf(t, loc=gmu, scale=gsigma) / (1 - norm.cdf(0, loc=gmu, scale=gsigma)), label='PDF_tru', color='k')
 ax.set_xlabel('Charge/mV·ns')
 ax.set_xlim(0, 500)
 ax.legend()
