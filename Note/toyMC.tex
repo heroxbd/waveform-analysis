@@ -1,7 +1,7 @@
-\section{Motivation}
+\section{Scope and Motivation}
 \label{sec:toyMC}
 
-In this section, we discuss the crucialness of waveform analysis for incident light measurements in PMT-based experiments.
+In this section, we discuss the vital importance of waveform analysis for incident light measurements in PMT-based experiments.
 
 \subsection{Light curve}
 A particle interacts with matter and deposits energy when passing through the detector. Part of such energy converts into visible Cherenkov or scintillation photons. The \textit{light curve} is the time evolution of light intensity at a PMT,
@@ -9,7 +9,7 @@ A particle interacts with matter and deposits energy when passing through the de
   \label{eq:light-curve}
   \mu\phi(t-t_0)
 \end{equation}
-where $\mu$ is the intensity factor, $t_0$ is the time shift factor and $\phi(\cdot)$ is the normalized shape function. We parameterize the scintillation light curve as several exponentials with different decay rates~\cite{rebber_particle_2021} and instantaneous Cherenkov light curve by a Dirac delta function.  It is convienent to model the PMT transit time spread~(TTS) in $\phi(t)$ as a Gaussian smear, giving an \textit{ex-Gaussian} or \textit{exponentially modified Gaussian}~\cite{li_separation_2016},
+where $\mu$ is the intensity factor, $t_0$ is the time shift factor, and $\phi(\cdot)$ is the normalized shape function. For simplicity, we parameterize the scintillation light curve as an exponential distribution and the Cherenkov one by a Dirac delta function.  It is convenient to model the PMT transit time spread~(TTS) in $\phi(t)$ as a Gaussian smear, giving an \textit{ex-Gaussian} or \textit{exponentially modified Gaussian}~\cite{li_separation_2016},
 \begin{align}
     \phi(t) = \frac{1}{2\tau_\ell} \exp\left(\frac{\sigma_\ell^2}{2\tau_\ell^2}-\frac{t}{\tau_\ell}\right) \left[1 - \erf\left( \frac{\sigma_\ell}{\sqrt{2}\tau_\ell} - \frac{t}{\sqrt{2}\sigma_\ell} \right)\right],
     \label{eq:time-pro}
@@ -19,7 +19,7 @@ where subscript $\ell$ stands for ``light curve'' and $\sigma_\ell$ encodes the 
 \begin{figure}[!htb]
   \centering
   \resizebox{0.5\textwidth}{!}{\input{figures/profile.pgf}}
-  \caption{\label{fig:time-pro} Effective light curves in 3 settings.  A scintillator paired with ultra-fast photo-sensors gives the green curve with $\tau_\ell \gg \sigma_\ell$.  A fast Cherenkov detector by the red curve has $\tau_\ell \ll \sigma_\ell$.  The blue curve combining $\tau_\ell=\SI{20}{ns}$ and $\sigma_\ell=\SI{5}{ns}$ represents a typical scintillation detector.  We can regard $\phi(t)\mathrm{d}t$ as a probability density function~(PDF at the vertical axis) of PE times.}
+  \caption{\label{fig:time-pro} Effective light curves in the three settings.  A scintillator paired with ultra-fast photo-sensors gives the green curve with $\tau_\ell \gg \sigma_\ell$.  A fast Cherenkov detector by the red curve has $\tau_\ell \ll \sigma_\ell$.  The blue curve combining $\tau_\ell=\SI{20}{ns}$ and $\sigma_\ell=\SI{5}{ns}$ represents a typical scintillation detector.  We can regard $\phi(t)\mathrm{d}t$ as a probability density function~(PDF at the vertical axis) of PE times.}
 \end{figure}
 
 
@@ -38,10 +38,10 @@ A PE induced by a photon at the PMT photocathode is then accelerated, collected,
     \resizebox{\textwidth}{!}{\input{figures/wave.pgf}}
     \caption{\label{fig:pile} PE pile-up and white noise in an PMT waveform.}
   \end{subfigure}
-  \caption{A single PE from a PMT induces a voltage pulse in \subref{fig:spe}. Multiple PEs piling up at a PMT form an input waveform $w(t)$ in \subref{fig:pile}, when PEs are barely visually separable from each other. Output charge $\hat{\bm{t}}, \hat{\bm{q}}$ also in \subref{fig:pile}, which we will discuss in~\ref{sec:algorithm}. }
+  \caption{A single PE from a PMT induces a voltage pulse in \subref{fig:spe}. Multiple PEs pile up at a PMT form an input waveform $w(t)$ in \subref{fig:pile}, when PEs are barely visually separable from each other. Output charge $\hat{\bm{t}}, \hat{\bm{q}}$ also in \subref{fig:pile}, which we will discuss in section~\ref{sec:algorithm}. }
 \end{figure}
 
-S.~Jetter et al.~\cite{jetter_pmt_2012} parameterizes $V_\mathrm{PE}(t)$ as,
+S.~Jetter~et al.~\cite{jetter_pmt_2012} parameterize $V_\mathrm{PE}(t)$ as,
 \begin{equation}
   V_\mathrm{PE}(t) = V_{0}\exp\left[-\frac{1}{2}\left(\frac{\log(t/\tau_\mathrm{PE})}{\sigma_\mathrm{PE}}\right)^{2}\right],
   \label{eq:dayaspe}
@@ -51,9 +51,9 @@ where shape parameters $\tau_\mathrm{PE}=\SI{8}{ns}$, $\sigma_\mathrm{PE}=\SI{0.
   \label{eq:lc-sample}
   \tilde{\phi}(t) = \sum_{i=1}^{N_{\mathrm{PE}}} q_i \delta(t-t_i),
 \end{equation}
-where $N_\mathrm{PE}$ is the number of PEs, following Poisson distribution with parameter $\mu$.  $t_i$ is the hit time of the $i$-th PE, $q_i$ is the relative charge of the $i$-th PE from charge distribution $\mathcal{N}(1,\sigma_\mathrm{q}^2)$.  $\sigma_\mathrm{q}$ is set to $0.4$ in our simulation.
+where $N_\mathrm{PE}$ is the number of PEs following Poisson distribution with parameter $\mu$.  $t_i$ is the hit time of the $i$-th PE, $q_i$ is the relative charge of the $i$-th PE from charge distribution $\mathcal{N}(1,\sigma_\mathrm{q}^2)$.  $\sigma_\mathrm{q}$ is set to $0.25$ in our simulation.
 
-A noise-free waveform $\tilde{w}(t)$ is convolution of $\tilde{\phi}(t)$ and $V_\mathrm{PE}(t)$, and the PMT voltage output waveform $w(t)$ is a time series modeled by the sum of $\tilde{w}(t)$ and a Gaussian white noise $\epsilon(t)$,
+A noise-free waveform $\tilde{w}(t)$ is a convolution of $\tilde{\phi}(t)$ and $V_\mathrm{PE}(t)$, and the PMT voltage output waveform $w(t)$ is a time series modeled by the sum of $\tilde{w}(t)$ and a Gaussian white noise $\epsilon(t)$,
 \begin{equation}
   \label{eq:1}
   \begin{aligned}
@@ -63,15 +63,17 @@ A noise-free waveform $\tilde{w}(t)$ is convolution of $\tilde{\phi}(t)$ and $V_
 \end{equation}
 See figure~\ref{fig:pile} for an example.
 
+We do not dive into pedestals or saturation for simplicity.  We also assumed the single PE response $V_\mathrm{PE}(t)$, the variance of charge $\sigma_q^2$ and the distribution of noise $\epsilon(t)$ are known.  Otherwise, they should be measured by PMT calibrations and modeled with uncertainty.
+
 
 \subsection{Measurement of incident light}
 \label{sec:time}
-We see in figure~\ref{fig:pile} that pile-ups and noises hinder the time $t_i$ and charge $q_i$ of the PEs. Fortunately event reconstruction only takes the time shift $t_0$ and the intensity $\mu$ in eq.~\eqref{eq:light-curve} as inputs.  All the uncertainties of $\hat{t}_i$, $\hat{q}_i$ and $\hat{N}_\mathrm{PE}$ are reflected in $\hat{t}_0$ and $\hat{\mu}$. In this article, we denote $\hat{x}$ as an estimator for the corresponding variable $x$ if not otherwise specified.  Classical TDC extracts the waveform's threshold crossing time $\hat{t}_\mathrm{1st}$ to approximate hit time of the first PE, while QDC extracts total charge $Q$ from waveform integration to estimate $\mu$ by $\hat{\mu}_Q$.
+We see in figure~\ref{fig:pile} that pile-ups and noises hinder the time $t_i$ and charge $q_i$ of the PEs. Fortunately, event reconstruction only takes the time shift $t_0$ and the intensity $\mu$ in eq.~\eqref{eq:light-curve} as inputs, where $t_0$ carries the time of flight information and $\mu$ is the expected $N_\mathrm{PE}$ in a real detector.  All the uncertainties of $\hat{t}_i$, $\hat{q}_i$ and $\hat{N}_\mathrm{PE}$ are reflected in $\hat{t}_0$ and $\hat{\mu}$. In this article, we denote $\hat{x}$ as an estimator for the corresponding variable $x$ if not otherwise specified.  Classical TDC extracts the waveform's threshold crossing time $\hat{t}_\mathrm{1st}$ to approximate the hit time of the first PE, while QDC extracts total charge $Q$ from waveform integration to estimate $\mu$ by $\hat{\mu}_Q$.
 
 \subsubsection{Time $t_0$}
 \label{sec:time-shift-t_0}
 
-$\hat{t}_\mathrm{1st}$ is a biased estimator of $t_0$.  It is affected by the light intensity $\mu$, as will be shown in figure~\ref{fig:biasmethods} and discussed in section~\ref{subsec:timeresolution}. We define the resolution $\sigma_\mathrm{1st}$ for a batch of waveforms as the standard deviation of $\Delta t_0 = \hat{t}_\mathrm{1st} - t_0$. From a hypothetical perfect measurement of $t_i$, we define an ideal maximum likelihood estimator~(MLE) $\hat{t}_\mathrm{ALL}$ to capture time information of all the PEs,
+$\hat{t}_\mathrm{1st}$ is a biased estimator of $t_0$.  It is affected by the light intensity $\mu$, which we shall show in figure~\ref{fig:biasmethods} and section~\ref{subsec:timeresolution}. We define the resolution $\sigma_\mathrm{1st}$ for a batch of waveforms as the standard deviation of $\Delta t_0 = \hat{t}_\mathrm{1st} - t_0$. From a hypothetical perfect measurement of $t_i$, we define an ideal maximum likelihood estimator~(MLE) $\hat{t}_\mathrm{ALL}$ to capture time information of all the PEs,
 \begin{equation}
   \label{eq:2}
   \hat{t}_\mathrm{ALL} = \arg\underset{t_0}{\max} \prod_{i=1}^{N_\mathrm{PE}} \phi(t_i-t_0).
@@ -82,8 +84,8 @@ To characterize $\hat{t}_\mathrm{1st}$ and $\hat{t}_\mathrm{ALL}$, we scan $\mu$
 
 \begin{figure}[H]
   \centering
-  \resizebox{0.8\textwidth}{!}{\input{figures/vs-deltadiv.pgf}}
-  \caption{\label{fig:reso-diff} Time resolution comparisons between $\hat{t}_{\mathrm{ALL}}$~(solid lines, when using information of all PEs) and $\hat{t}_\mathrm{1st}$~(dashed lines, using the true first PE instead of the threshold crossing time to eliminate the influence from TDC, while their resolutions are in comparison).  The difference is manifested especially when $\sigma_\ell$ and $\mu$ are large. The three cases of $(\tau_\ell, \sigma_\ell)/\si{ns}$ represent the scintillation with ultra-fast PMTs~$(20, 0)$, Cherenkov~$(0, 5)$ and scintilation coupled with PMT TTS~$(20, 5)$. The performance of waveform analysis lies between $\sigma_{\mathrm{1st}}$ and $\sigma_{\mathrm{ALL}}$. }
+  \resizebox{1.0\textwidth}{!}{\input{figures/vs-deltadiv.pgf}}
+  \caption{\label{fig:reso-diff} Time resolution comparisons between $\hat{t}_{\mathrm{ALL}}$~(solid lines, when using the information of all PEs) and $\hat{t}_\mathrm{1st}$~(dashed lines, using the first PE instead of the threshold crossing time to eliminate the influence from TDC).  The difference is manifested especially when $\sigma_\ell$ and $\mu$ are large. The three cases of $(\tau_\ell, \sigma_\ell)/\si{ns}$ represent the scintillation with ultra-fast PMTs~$(20, 0)$, Cherenkov~$(0, 5)$ and scintillation coupled with PMT TTS~$(20, 5)$. The performance of waveform analysis lies between $\sigma_{\mathrm{1st}}$ and $\sigma_{\mathrm{ALL}}$. }
 \end{figure}
 
 Nevertheless, for $\sigma_\ell > 0$ and $\mu >0$, the $\sigma_{\mathrm{1st}}$ significantly deteriorates from $\sigma_{\mathrm{ALL}}$.  For Cherenkov and scintillation experiments with non-negligible PMT TTS and occupancy, we shall explore more sophisticated waveform analysis algorithms to go beyond $\hat{t}_{\mathrm{1st}}$ and recover the accuracy of $\hat{t}_\mathrm{ALL}$ in eq.~\eqref{eq:2} from waveform in eq.~\eqref{eq:1}.
@@ -91,19 +93,32 @@ Nevertheless, for $\sigma_\ell > 0$ and $\mu >0$, the $\sigma_{\mathrm{1st}}$ si
 \subsubsection{Intensity $\mu$}
 \label{sec:intensity-mu}
 
-The charge estimator $\hat{\mu}_Q$
+Noting $Q_0 = {\int V_\mathrm{PE}(t) \mathrm{d} t}$, the charge estimator $\hat{\mu}_Q$ for QDC is
 \begin{equation}
   \begin{aligned}
   \label{eq:mu-q}
-  \hat{\mu}_Q = \frac{\int w(t) \mathrm{d} t}{\int V_\mathrm{PE}(t) \mathrm{d} t} &= \frac{\sum_{i=1}^{N_\mathrm{PE}} \int \left[ q_i V_\mathrm{PE}(t-t_i) + \epsilon(t) \right] \mathrm{d} t}{\int V_\mathrm{PE}(t) \mathrm{d} t} \\
-  & = \sum_{i=1}^{N_\mathrm{PE}} q_i + \frac{\int \epsilon(t) \mathrm{d} t}{\int V_\mathrm{PE}(t) \mathrm{d} t}
+  \hat{\mu}_Q = \frac{1}{Q_0}\int w(t) \mathrm{d} t &= \frac{1}{Q_0}\sum_{i=1}^{N_\mathrm{PE}} \int \left[ q_i V_\mathrm{PE}(t-t_i) + \epsilon(t) \right] \mathrm{d} t \\
+  & = \sum_{i=1}^{N_\mathrm{PE}} q_i + \frac{1}{Q_0} \int \epsilon(t) \mathrm{d} t.
   \end{aligned}
 \end{equation}
-is not only affected by Poisson fluctuation of $N_\mathrm{PE}$, but also by charge resolution of a PE $\sigma_\mathrm{q}$.  Sometimes we mitigate the impact of $\sigma_\mathrm{q}$ by rounding $\hat{\mu}_Q$ to integers.  It works well for $N_\mathrm{PE} \le 1$, which is equivalently a hit-based 0-1 $\mu$ estimator $\hat{\mu}_\mathrm{hit}$.  But for $N_\mathrm{PE} \ge 2$, it is hard to interpret $\hat{\mu}_Q$ rounding by physics principles and $\hat{\mu}_\mathrm{hit}$ does not gain any additional information from the extra PEs.
+Its expectation and variance are,
+\begin{equation}
+  \label{eq:energy}
+  \begin{aligned}
+    \E[\hat{\mu}_Q] &= \E[N_\mathrm{PE}] \\
+    \Var[\hat{\mu}_Q] &= \Var\left[\sum_{i=1}^{N_\mathrm{PE}} q_i\right] + \Var\left[\frac{1}{Q_0} \int \epsilon(t) \mathrm{d} t\right] \\
+    &= \E[q^2] \Var(N_\mathrm{PE}) + \frac{T}{Q_0^2} \sigma_\epsilon^2 \\
+    &= (1 + \sigma_\mathrm{q}^2) \Var(N_\mathrm{PE}) + \frac{T}{Q_0^2} \sigma_\epsilon^2. \\
+  \end{aligned}
+\end{equation}
+where the first term of the variance is the that of a compound Poisson distribution, and $T$ in the second one is a constant proportional to the time window.  Resolution of $\hat{\mu}_Q$ is affected by the Poisson fluctuation of $N_\mathrm{PE}$, the charge resolution of a PE $\sigma_\mathrm{q}$ and the while noise $\sigma_\epsilon$.
 
-The goal of waveform analysis is to eliminate the impact of $\sigma_\mathrm{q}$ as much as possible.  The resolution of any $\mu$ estimator is therefore lower bounded by the pure Poisson fluctuation of $N_\mathrm{PE}$.
+Sometimes we mitigate the impact of $\sigma_\mathrm{q}$ and $\sigma_\epsilon$ by rounding $\hat{\mu}_Q$ to integers.  It works well for $N_\mathrm{PE} \le 1$, which is equivalently a hit-based 0-1 $\mu$ estimator $\hat{\mu}_\mathrm{hit}$.  But for $N_\mathrm{PE} \ge 2$, it is hard to interpret $\hat{\mu}_Q$ rounding by physics principles and $\hat{\mu}_\mathrm{hit}$ does not gain any additional information from the extra PEs.
+
+The goal of waveform analysis is to eliminate the impact of $\sigma_\mathrm{q}$ and $\sigma_\epsilon$ as much as possible.  The pure Poisson fluctuation of $N_\mathrm{PE}$ is the resolution lower bound $\underline{\sigma}_\mu = \sqrt{\mu}$ of any $\mu$ estimator.
 
 \subsubsection{Shape $\phi(\cdot)$}
 \label{sec:shape-phicdot}
 
-The shape of a light curve is determined by light emission time profile, PMT timing and light propagation including refraction, reflection, dispersion and scattering.  $\phi(\cdot)$ thus depends on event locations.  In this article, we model $\phi(\cdot)$ by eq.~\eqref{eq:time-pro} for simplicity and leave the $\phi(\cdot)$ variations to event reconstruction in the future publications.
+The shape of a light curve is determined by light emission time profile, PMT timing and light propagation, including refraction, reflection, dispersion and scattering.  $\phi(\cdot)$ thus depends on event locations.  In this article, we model $\phi(\cdot)$ by eq.~\eqref{eq:time-pro} for simplicity and leave the $\phi(\cdot)$ variations to event reconstruction in future publications.
+% LocalWords:  PEs

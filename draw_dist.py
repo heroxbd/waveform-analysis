@@ -10,7 +10,7 @@ args = psr.parse_args()
 
 import numpy as np
 from scipy import stats
-from scipy.stats import poisson, uniform, norm
+from scipy.stats import poisson, uniform, norm, gamma
 from tqdm import tqdm
 import matplotlib
 matplotlib.use('pgf')
@@ -157,7 +157,7 @@ ax0.set_yscale('log')
 ax0.legend()
 s = np.std(start['ts1sttruth'] - start['T0'], ddof=-1)
 m = np.mean(start['ts1sttruth'] - start['T0'])
-ax0.set_title(fr'$\delta_{{1sttru}}={s:.02f},\mathrm{{bias}}={m:.02f}$')
+ax0.set_title(fr'$\sigma_{{1sttru}}={s:.02f},\mathrm{{bias}}={m:.02f}$')
 
 ax1 = fig.add_subplot(gs[0, 1])
 ax1.hist(start['tstruth'] - start['T0'], bins=100, label=r'$t_{truth} - t_{0}$')
@@ -167,7 +167,7 @@ ax1.set_yscale('log')
 ax1.legend()
 s = np.std(start['tstruth'] - start['T0'], ddof=-1)
 m = np.mean(start['tstruth'] - start['T0'])
-ax1.set_title(fr'$\delta_{{alltru}}={s:.02f},\mathrm{{bias}}={m:.02f}$')
+ax1.set_title(fr'$\sigma_{{alltru}}={s:.02f},\mathrm{{bias}}={m:.02f}$')
 
 ax2 = fig.add_subplot(gs[1, 0])
 ax2.hist(time['tscharge'] - start['T0'], bins=100, label=r'$t_{charge} - t_{0}$')
@@ -177,7 +177,7 @@ ax2.set_yscale('log')
 ax2.legend()
 s = np.std(time['tscharge'] - start['T0'], ddof=-1)
 m = np.mean(time['tscharge'] - start['T0'])
-ax2.set_title(fr'$\delta_{{charge}}={s:.02f},\mathrm{{bias}}={m:.02f}$')
+ax2.set_title(fr'$\sigma_{{charge}}={s:.02f},\mathrm{{bias}}={m:.02f}$')
 
 if not np.all(np.isnan(time['tswave'])):
     ax3 = fig.add_subplot(gs[1, 1])
@@ -188,96 +188,95 @@ if not np.all(np.isnan(time['tswave'])):
     ax3.legend()
     s = np.std(time['tswave'] - start['T0'], ddof=-1)
     m = np.mean(time['tswave'] - start['T0'])
-    ax3.set_title(fr'$\delta_{{wave}}={s:.02f},\mathrm{{bias}}={m:.02f}$')
+    ax3.set_title(fr'$\sigma_{{wave}}={s:.02f},\mathrm{{bias}}={m:.02f}$')
 
 pdf.savefig(fig)
 plt.close(fig)
 
-if 'muwave' in time.dtype.names:
-    # Mu = dt['NPE']
-    fig = plt.figure()
-    gs = gridspec.GridSpec(2, 2, figure=fig, left=0.1, right=0.95, top=0.9, bottom=0.1, wspace=0.2, hspace=0.3)
+# Mu = dt['NPE']
+fig = plt.figure()
+gs = gridspec.GridSpec(2, 2, figure=fig, left=0.1, right=0.95, top=0.9, bottom=0.1, wspace=0.2, hspace=0.3)
 
-    Chnum = len(np.unique(pelist['PMTId']))
+Chnum = len(np.unique(pelist['PMTId']))
 
-    e_ans, i_ans = np.unique(pelist['TriggerNo'] * Chnum + pelist['PMTId'], return_index=True)
-    i_ans = np.append(i_ans, len(pelist))
-    pe_sum = np.array([pelist[i_ans[i]:i_ans[i+1]]['Charge'].sum() for i in range(len(e_ans))]) / gmu
+e_ans, i_ans = np.unique(pelist['TriggerNo'] * Chnum + pelist['PMTId'], return_index=True)
+i_ans = np.append(i_ans, len(pelist))
+pe_sum = np.array([pelist[i_ans[i]:i_ans[i+1]]['Charge'].sum() for i in range(len(e_ans))]) / gmu
 
-    # e_sub, i_sub = np.unique(charge['TriggerNo'] * Chnum + charge['ChannelID'], return_index=True)
-    # i_sub = np.append(i_sub, len(charge))
-    # pe_sum = np.array([charge[i_sub[i]:i_sub[i+1]]['Charge'].sum() for i in range(len(e_sub))]) / gmu
+# e_sub, i_sub = np.unique(charge['TriggerNo'] * Chnum + charge['ChannelID'], return_index=True)
+# i_sub = np.append(i_sub, len(charge))
+# pe_sum = np.array([charge[i_sub[i]:i_sub[i+1]]['Charge'].sum() for i in range(len(e_sub))]) / gmu
 
-    wave_sum = waves['Waveform'].sum(axis=1) / gmu
+N = len(waves)
+wave_sum = waves['Waveform'].sum(axis=1) / gmu
+N_add = N / (1 - poisson.cdf(0, Mu)) - N
 
-    n = np.arange(1, 1000)
-    mean = np.average(n, weights=poisson.pmf(n, mu=Mu))
-    lognm = np.average(np.log(n), weights=poisson.pmf(n, mu=Mu))
-    s = np.sqrt(np.average((n - mean)**2, weights=poisson.pmf(n, mu=Mu)))
-    slog = np.sqrt(np.average((np.log(n) - lognm)**2, weights=poisson.pmf(n, mu=Mu)))
-    fig.suptitle(fr'$\mu={mean:.02f},\delta_{{N_{{pe}}}}={s:.02f},\delta_{{logN_{{pe}}}}={slog:.02f}$')
+n = np.arange(1, 1000)
+s = np.sqrt(Mu)
+fig.suptitle(fr'$\mu={Mu:.02f},\sigma_{{N_{{pe}}}}={s:.02f}$')
 
-    ax0 = fig.add_subplot(gs[0, 0])
-    ax0.hist(wave_sum - mean, bins=100, label=r'$\mu_{int} - \mu$')
-    ax0.set_xlabel(r'$\mu_{int} - \mu$')
-    ax0.set_ylabel(r'$Count$')
-    ax0.set_yscale('log')
-    ax0.legend()
-    s = np.std(wave_sum - mean, ddof=-1)
-    slog = np.std(np.log(wave_sum), ddof=-1)
-    m = np.mean(wave_sum - mean)
-    eta = m / mean
-    # ax0.set_xlim(-mean, dt['NPE'].max() - mean)
-    ax0.set_title(fr'$\delta_{{int}}={s:.02f},\delta_{{logint}}={slog:.02f},\mathrm{{bias}}={m:.02f},\eta={eta:.02%}$%')
+ax0 = fig.add_subplot(gs[0, 0])
+ax0.hist(wave_sum - Mu, bins=100, label=r'$\mu_{int} - \mu$')
+ax0.set_xlabel(r'$\mu_{int} - \mu$')
+ax0.set_ylabel(r'$Count$')
+ax0.set_yscale('log')
+ax0.legend()
+s = np.std(np.append(wave_sum, np.zeros(round(N_add))), ddof=-1)
+mu = np.mean(np.append(wave_sum, np.zeros(round(N_add))))
+m = mu - Mu
+eta = m / Mu
+# ax0.set_xlim(-Mu, dt['NPE'].max() - Mu)
+ax0.set_title(fr'$\sigma_{{int}}={s:.02f},\mathrm{{bias}}={m:.02f},\eta={eta:.02%}$%')
 
-    ax1 = fig.add_subplot(gs[0, 1])
-    ax1.hist(pe_sum - mean, bins=100, label=r'$\mu_{pe} - \mu$')
-    ax1.set_xlabel(r'$\mu_{pe} - \mu$')
-    ax1.set_ylabel(r'$Count$')
-    ax1.set_yscale('log')
-    ax1.legend()
-    s = np.std(pe_sum - mean, ddof=-1)
-    slog = np.std(np.log(pe_sum), ddof=-1)
-    m = np.mean(pe_sum - mean)
-    eta = m / mean
-    # ax1.set_xlim(-mean, dt['NPE'].max() - mean)
-    ax1.set_title(fr'$\delta_{{pe}}={s:.02f},\delta_{{logpe}}={slog:.02f},\mathrm{{bias}}={m:.02f},\eta={eta:.02%}$%')
+ax1 = fig.add_subplot(gs[0, 1])
+ax1.hist(pe_sum - Mu, bins=100, label=r'$\mu_{pe} - \mu$')
+ax1.set_xlabel(r'$\mu_{pe} - \mu$')
+ax1.set_ylabel(r'$Count$')
+ax1.set_yscale('log')
+ax1.legend()
+s = np.std(np.append(pe_sum, np.zeros(round(N_add))), ddof=-1)
+mu = np.mean(np.append(pe_sum, np.zeros(round(N_add))))
+m = mu - Mu
+eta = m / Mu
+# ax1.set_xlim(-Mu, dt['NPE'].max() - Mu)
+ax1.set_title(fr'$\sigma_{{pe}}={s:.02f},\mathrm{{bias}}={m:.02f},\eta={eta:.02%}$%')
 
-    if ~np.all(np.isnan(time['mucharge'])):
-        ax2 = fig.add_subplot(gs[1, 0])
-        ax2.hist(time['mucharge'] - mean, bins=100, label=r'$\mu_{cha} - \mu$')
-        ax2.set_xlabel(r'$\mu_{cha} - \mu$')
-        ax2.set_ylabel(r'$Count$')
-        ax2.set_yscale('log')
-        ax2.legend()
-        s = np.std(time['mucharge'] - mean, ddof=-1)
-        slog = np.std(np.log(time['mucharge']), ddof=-1)
-        m = np.mean(time['mucharge'] - mean)
-        eta = m / mean
-        # ax2.set_xlim(-mean, dt['NPE'].max() - mean)
-        ax2.set_title(fr'$\delta_{{cha}}={s:.02f},\delta_{{logcha}}={slog:.02f},\mathrm{{bias}}={m:.02f},\eta={eta:.02%}$%')
+if ~np.all(np.isnan(time['mucharge'])):
+    ax2 = fig.add_subplot(gs[1, 0])
+    ax2.hist(time['mucharge'] - Mu, bins=100, label=r'$\mu_{cha} - \mu$')
+    ax2.set_xlabel(r'$\mu_{cha} - \mu$')
+    ax2.set_ylabel(r'$Count$')
+    ax2.set_yscale('log')
+    ax2.legend()
+    s = np.std(np.append(time['mucharge'], np.zeros(round(N_add))), ddof=-1)
+    mu = np.mean(np.append(time['mucharge'], np.zeros(round(N_add))))
+    m = mu - Mu
+    eta = m / Mu
+    # ax2.set_xlim(-Mu, dt['NPE'].max() - Mu)
+    ax2.set_title(fr'$\sigma_{{cha}}={s:.02f},\mathrm{{bias}}={m:.02f},\eta={eta:.02%}$%')
 
-    ax3 = fig.add_subplot(gs[1, 1])
-    ax3.hist(time['muwave'] - mean, bins=100, label=r'$\mu_{wave} - \mu$')
-    ax3.set_xlabel(r'$\mu_{wave} - \mu$')
-    ax3.set_ylabel(r'$Count$')
-    ax3.set_yscale('log')
-    ax3.legend()
-    s = np.std(time['muwave'] - mean, ddof=-1)
-    slog = np.std(np.log(time['muwave']), ddof=-1)
-    m = np.mean(time['muwave'] - mean)
-    eta = m / mean
-    # ax3.set_xlim(-v, dt['NPE'].max() - mean)
-    ax3.set_title(fr'$\delta_{{wave}}={s:.02f},\delta_{{logwave}}={slog:.02f},\mathrm{{bias}}={m:.02f},\eta={eta:.02%}$%')
+ax3 = fig.add_subplot(gs[1, 1])
+ax3.hist(time['muwave'] - Mu, bins=100, label=r'$\mu_{wave} - \mu$')
+ax3.set_xlabel(r'$\mu_{wave} - \mu$')
+ax3.set_ylabel(r'$Count$')
+ax3.set_yscale('log')
+ax3.legend()
+s = np.std(np.append(time['muwave'], np.zeros(round(N_add))), ddof=-1)
+mu = np.mean(np.append(time['muwave'], np.zeros(round(N_add))))
+m = mu - Mu
+eta = m / Mu
+# ax3.set_xlim(-v, dt['NPE'].max() - Mu)
+ax3.set_title(fr'$\sigma_{{wave}}={s:.02f},\mathrm{{bias}}={m:.02f},\eta={eta:.02%}$%')
 
-    pdf.savefig(fig)
-    plt.close(fig)
+pdf.savefig(fig)
+plt.close(fig)
 
 fig = plt.figure()
 ax = fig.add_subplot(111)
 ax.hist(charge['Charge'], bins=np.arange(0, 600, 5), density=True, label='PDF_rec')
 t = np.arange(0, 1000, 0.1)
-ax.plot(t, norm.pdf(t, loc=gmu, scale=gsigma) / (1 - norm.cdf(0, loc=gmu, scale=gsigma)), label='PDF_tru', color='k')
+ax.plot(t, gamma.pdf(t, a=(gmu / gsigma) ** 2, loc=0, scale=gsigma**2/gmu), label='PDF_tru', color='k')
+# ax.plot(t, norm.pdf(t, loc=gmu, scale=gsigma) / (1 - norm.cdf(0, loc=gmu, scale=gsigma)), label='PDF_tru', color='k')
 ax.set_xlabel('Charge/mV·ns')
 ax.set_xlim(0, 500)
 ax.legend()

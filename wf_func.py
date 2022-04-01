@@ -8,7 +8,7 @@ import numpy as np
 np.set_printoptions(suppress=True)
 import scipy
 import scipy.stats
-from scipy.stats import poisson, uniform, norm
+from scipy.stats import poisson, uniform, norm, gamma
 from scipy.fftpack import fft, ifft
 from scipy import optimize as opti
 import scipy.special as special
@@ -23,6 +23,7 @@ from mpl_axes_aligner import align
 import h5py
 from scipy.interpolate import interp1d
 from sklearn.linear_model import orthogonal_mp
+from numba import njit
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -42,10 +43,12 @@ plt.rcParams['pgf.preamble'] = r'\usepackage[detect-all,locale=DE]{siunitx}'
 nshannon = 1
 window = 1029
 gmu = 160.
-gsigma = 40.
+gsigma = 160. * 0.4
 std = 1.
 p = [8., 0.5, 24.]
-Thres = {'mcmc':std / gsigma, 'xiaopeip':0, 'lucyddm':0.2, 'fbmp':0, 'fftrans':0.1, 'findpeak':0.1, 'threshold':0, 'firstthres':0, 'omp':0}
+Thres = {'mcmc':std / gsigma, 'xiaopeip':0, 'lucyddm':0.2, 'fsmp':0, 'fftrans':0.1, 'findpeak':0.1, 'threshold':0, 'firstthres':0, 'omp':0}
+d_history = [('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('step', np.uint32), ('loc', np.float32)]
+proposal = np.array((1, 1, 2)) / 4
 
 def xiaopeip_old(wave, spe_pre, eta=0):
     l = len(wave)
@@ -193,7 +196,141 @@ def findpeak(wave, spe_pre):
         cha = np.array([1])
     return pet, cha
 
-def fbmpr_fxn_reduced(y, A, sig2w, sig2s, mus, p1):
+def combine(A, cx, t):
+    '''
+    combine neighbouring dictionaries to represent sub-bin locations
+    '''
+    frac, ti = np.modf(t - 0.5)
+    ti = int(ti)
+    alpha = np.array((1 - frac, frac))
+    return alpha @ A[:, ti:(ti+2)].T, alpha @ cx[:, ti:(ti+2)].T
+
+def move(A_vec, c_vec, z, step, mus, sig2s, A):
+    '''
+    A_vec: 行向量
+    c_vec: 行向量
+
+    step
+    ====
+    1: 在 t 加一个 PE
+    -1: 在 t 减一个 PE
+    '''
+    fsig2s = step * sig2s
+    # Eq. (30) sig2s = 1 sigma^2 - 0 sigma^2
+    beta_under = (1 + fsig2s * np.dot(A_vec, c_vec))
+    beta = fsig2s / beta_under
+
+    # Eq. (31) # sign of mus[t] and sig2s[t] cancels
+    Δν = 0.5 * (beta * (z @ c_vec + mus / sig2s) ** 2 - mus ** 2 / fsig2s)
+    # sign of space factor in Eq. (31) is reversed.  Because Eq. (82) is in the denominator.
+    Δν -= 0.5 * np.log(beta_under) # space
+    # accept, prepare for the next
+    # Eq. (33) istar is now n_pre.  It crosses n_pre and n, thus is in vector form.
+    Δcx = -np.einsum('n,m,mp->np', beta * c_vec, c_vec, A, optimize=True)
+
+    # Eq. (34)
+    Δz = -step * A_vec * mus
+    return Δν, Δcx, Δz
+
+def flow(cx, p1, z, N, sig2s, sig2w, mus, A, p_cha, mu_t, TRIALS=2000):
+    '''
+    flow
+    ====
+    连续时间游走
+    cx: Cov^-1 * A, 详见 FBMP
+    s: list of PE locations
+    mu_t: LucyDDM 的估算 PE 数
+    z: residue waveform
+    '''
+    # istar [0, 1) 之间的随机数，用于点中 PE
+    istar = np.random.rand(TRIALS)
+    # 同时可用于创生位置的选取
+    c_cha = np.cumsum(p_cha) # cha: charge; p_cha: pdf of LucyDDM charge (由 charge 引导的 PE 强度流先验)
+    home_s = np.interp(istar, xp=np.insert(c_cha, 0, 0), fp=np.arange(N+1)) # 根据 p_cha 采样得到的 PE 序列。供以后的产生过程使用。这两行是使用了 InverseCDF 算法进行的MC采样。
+
+    NPE0 = int(mu_t + 0.5) # mu_t: μ_total，LucyDDM 给出的 μ 猜测；NPE0 是 PE 序列初值 s_0 的 PE 数。
+    # t 的位置，取值为 [0, N)
+    s = list(np.interp((np.arange(NPE0) + 0.5) / NPE0, xp=np.insert(c_cha, 0, 0), fp=np.arange(N+1))) # MCMC 链的 PE configuration 初值 s0
+    ν = 0
+    for t in s: # 从空序列开始逐渐加 PE 以计算 s0 的 ν, cx, z
+        Δν, Δcx, Δz = move(*combine(A, cx, t), z, 1, mus, sig2s, A)
+        ν += Δν
+        cx += Δcx
+        z += Δz
+
+    # s 的记录方式：使用定长 compound array es_history 存储(存在 'loc' 里)，但由于 s 实际上变长，每一个有相同  'step' 的 'loc' 属于一个 s，si 作为临时变量用于分割成不定长片段，每一段是一个 s。
+    si = 0
+    es_history = np.zeros(TRIALS * (NPE0 + 5) * N, dtype=d_history)
+
+    wander_s = np.random.normal(size=TRIALS)
+
+    # step: +1 创生一个 PE， -1 消灭一个 PE， +2 向左或向右移动
+    flip = np.random.choice((-1, 1, 2), TRIALS, p=proposal)
+    Δν_history = np.zeros(TRIALS) # list of Δν's
+    log_mu = np.log(mu_t) # 猜测的 Poisson 流强度
+    T_list = []
+    c_star_list = []
+
+    for i, (t, step, home, wander, accept) in enumerate(zip(istar, flip, home_s, wander_s, np.log(np.random.rand(TRIALS)))):
+        # 不设左右边界
+        NPE = len(s)
+        if NPE == 0:
+            step = 1 # 只能创生
+            accept += np.log(1 / proposal[1]) # 惩罚
+        elif NPE == 1 and step == -1:
+            # 1 -> 0: 行动后从 0 脱出的几率大，需要鼓励
+            accept -= np.log(1 / proposal[0])
+
+        if step == 1: # 创生
+            if home >= 0.5 and home <= N - 0.5: 
+                Δν, Δcx, Δz = move(*combine(A, cx, home), z, 1, mus, sig2s, A)
+                Δν += log_mu - np.log(NPE + 1)
+                if Δν >= accept:
+                    s.append(home)
+            else: # p(w|s) 无定义
+                Δν = -np.inf
+        else:
+            op = int(t * NPE) # 操作的 PE 编号
+            loc = s[op] # 待操作 PE 的位置
+            Δν, Δcx, Δz = move(*combine(A, cx, loc), z, -1, mus, sig2s, A)
+            if step == -1: # 消灭
+                Δν -= log_mu - np.log(NPE)
+                if Δν >= accept:
+                    del s[op]
+            elif step == 2: # 移动
+                nloc = loc + wander # 待操作 PE 的新位置
+                if nloc >= 0.5 and nloc <= N - 0.5: # p(w|s) 无定义
+                    Δν1, Δcx1, Δz1 = move(*combine(A, cx + Δcx, nloc), z + Δz, 1, mus, sig2s, A)
+                    Δν += Δν1
+                    Δν += np.log(p_cha[int(nloc)]) - np.log(p_cha[int(loc)])
+                    if Δν >= accept:
+                        s[op] = nloc
+                        Δcx += Δcx1
+                        Δz += Δz1
+                else: # p(w|s) 无定义
+                    Δν = -np.inf
+
+        if Δν >= accept:
+            cx += Δcx
+            z += Δz
+            si1 = si + len(s)
+            es_history[si:si1]['step'] = i
+            es_history[si:si1]['loc'] = s
+            si = si1
+        else: # reject proposal
+            Δν = 0
+            step = 0
+        T_list.append(np.sort(np.digitize(s, bins=np.arange(N)) - 1))
+        t, c = np.unique(T_list[-1], return_counts=True)
+        c_star = np.zeros(N, dtype=int)
+        c_star[t] = c
+        c_star_list.append(c_star)
+
+        Δν_history[i] = Δν
+        flip[i] = step
+    return flip, [Δν_history, ν], es_history[:si1], c_star_list, T_list
+
+def metropolis_fsmp(y, A, sig2w, sig2s, mus, p1, p_cha, mu_t, TRIALS=2000):
     '''
     p1: prior probability for each bin.
     sig2w: variance of white noise.
@@ -205,92 +342,117 @@ def fbmpr_fxn_reduced(y, A, sig2w, sig2s, mus, p1):
     # M: length of the waveform clip
     M, N = A.shape
 
-    # nu: nu for all s_n=0.
-    ν = -0.5 * np.linalg.norm(y) ** 2 / sig2w - 0.5 * M * np.log(2 * np.pi)
-    ν -= 0.5 * M * np.log(sig2w)
-    ν += poisson.logpmf(0, p1).sum()
-
+    # nu_root: nu for all s_n=0.
+    nu_root = -0.5 * np.linalg.norm(y) ** 2 / sig2w - 0.5 * M * np.log(2 * np.pi)
+    nu_root -= 0.5 * M * np.log(sig2w)
+    nu_root += poisson.logpmf(0, p1).sum()
     # Eq. (29)
-    cx = A / sig2w
+    cx_root = A / sig2w
     # mu = 0 => (y - A * mu -> z)
-    z = y
-    # model selection vector
-    s = np.zeros(N)
+    z = y.copy()
 
-    # Metropolis
-    TRIALS = 10000
-    istar = np.random.choice(range(N), TRIALS)
-    flip = np.random.choice((-1, 1), TRIALS)
-    Δν_history = np.zeros(TRIALS) # list of Δν's
-    for i, accept in enumerate(np.log(np.random.uniform(size=TRIALS))):
-        t = istar[i] # the time bin
-        if s[t] == 0:
-            # Q(1->0) / Q(0->1) = 1 / 2
-            # 从 0 开始只有一种跳跃可能到 1，因此需要惩罚
-            flip[i] = 1
-            accept += np.log(2)
-        elif s[t] == 1 and flip[i] == -1:
-            # 1 -> 0: 与上一种情况相反，去 0 的路径较少，需要鼓励
-            accept -= np.log(2)
+    # Metropolis flow
+    flip, Δν_history, es_history, c_star_list, T_list = flow(cx_root, p1, z, N, sig2s, sig2w, mus, A, p_cha, mu_t, TRIALS=TRIALS)
+    num = len(T_list)
 
-        fsig2s = flip[i] * sig2s[t]
-        # Eq. (30) sig2s = 1 sigma^2 - 0 sigma^2
-        beta_under = (1 + fsig2s * np.dot(A[:, t], cx[:, t]))
-        beta = fsig2s / beta_under
+    c_star = np.vstack(c_star_list)
+    nu_star = np.cumsum(Δν_history[0]) + nu_root + Δν_history[1]
 
-        # Eq. (31) # sign of mus[t] and sig2s[t] cancels
-        Δν = 0.5 * (beta * (z @ cx[:, t] + mus[t] / sig2s[t]) ** 2 - mus[t] ** 2 / fsig2s)
-        Δν -= 0.5 * np.log(beta_under)
-        Δν += flip[i] * np.log(p1[t])
-        if flip[i] == 1:
-            Δν -= np.log(s[t] + 1)
-        else: # flip == -1
-            Δν += np.log(s[t])
+    burn = num // 5
+    nu_star = nu_star[burn:]
+    T_list = T_list[burn:]
+    c_star = c_star[burn:, :]
+    flip[np.abs(flip) == 2] = 0 # 平移不改变 PE 数
+    NPE_evo = np.cumsum(np.insert(flip, 0, int(mu_t + 0.5)))[burn:]
+    es_history = es_history[es_history['step'] >= burn]
 
-        if Δν >= accept:
-            # accept, prepare for the next
-            # Eq. (33) istar is now n_pre.  It crosses n_pre and n, thus is in vector form.
-            cx -= np.einsum('n,m,mp->np', beta * cx[:, t], cx[:, t], A, optimize=True)
-            # Eq. (34)
-            z -= flip[i] * A[:, t] * mus[t]
-            Δν_history[i] = Δν
+    return nu_star, T_list, c_star, es_history, NPE_evo
 
-            s[t] += flip[i] # update state
-        else:
-            # reject proposal
-            flip[i] = 0
-            Δν_history[i] = 0
-
-    burn = TRIALS // 10
-    # NPE = \sum_i z_i
-    NPE, counts = np.unique(np.cumsum(flip)[burn:], return_counts=True)
-    freq = counts / (TRIALS - burn)
-    
-    return freq, NPE
-
-def nu_direct(y, A, nx, mus, sig2s, sig2w, la, prior=True, space=True):
+def nu_direct(y, A, nx, mus, sig2s, sig2w, la):
     M, N = A.shape
-    Phi_s = Phi(y, A, nx, mus, sig2s, sig2w, la)
+    Phi_s = Phi(y, A, nx, mus, sig2s, sig2w)
     z = y - np.dot(A, (mus * nx))
     invPhi = np.linalg.inv(Phi_s)
-    # no Gaussian space factor
     nu = -0.5 * np.matmul(np.matmul(z, invPhi), z) - 0.5 * M * np.log(2 * np.pi)
-    if space:
-        nu -= 0.5 * np.log(np.linalg.det(Phi_s))
-    if prior:
-        nu = nu + poisson.logpmf(nx, mu=la).sum()
+    nu -= 0.5 * np.log(np.linalg.det(Phi_s))
+    nu = nu + poisson.logpmf(nx, mu=la).sum()
     return nu
 
-def Phi(y, A, nx, mus, sig2s, sig2w, la):
+def Phi(y, A, nx, mus, sig2s, sig2w):
     M, N = A.shape
     return np.matmul(np.matmul(A, np.diagflat(sig2s * nx)), A.T) + np.eye(M) * sig2w
 
 def elbo(nu_star_prior):
     q = np.exp(nu_star_prior - nu_star_prior.max()) / np.sum(np.exp(nu_star_prior - nu_star_prior.max()))
     e = np.sum(q * nu_star_prior) - np.sum(q * np.log(q))
-    e_star = special.logsumexp(nu_star_prior)
-    assert abs(e_star - e) < 1e-6
+    # e_star = special.logsumexp(nu_star_prior)
+    # assert abs(e_star - e) < 1e-4
     return e
+
+@njit(nogil=True, cache=True)
+def unique_with_indices(values):
+    unq = np.unique(values)
+    idx = np.zeros_like(unq, dtype=np.int_)
+    idx[0] = 0
+    i = 0
+    for j in range(1, len(values)):
+        if values[j] != unq[i]:
+            i += 1
+            idx[i] = j
+    return unq, idx
+
+@njit(nogil=True, cache=True)
+def group_by_sorted_count_sum(idx, a):
+    unique_idx, idx_of_idx = unique_with_indices(idx)
+    counts = np.zeros_like(unique_idx, dtype=np.int_)
+    sums = np.zeros_like(unique_idx, dtype=np.float64)
+    for i in range(0, len(idx_of_idx)):
+        start = idx_of_idx[i]
+        if i < len(idx_of_idx) - 1:
+            end = idx_of_idx[i + 1]
+        else:
+            end = len(idx)
+        counts[i] = end - start
+        sums[i] = np.sum(a[start:end])
+    return unique_idx, counts, sums
+
+@njit(nogil=True, cache=True)
+def jit_logsumexp(values, b):
+    a_max = np.max(values)
+    s = np.sum(b * np.exp(values - a_max))
+    return np.log(s) + a_max
+
+@njit(nogil=True, cache=True)
+def group_by_logsumexp(idx, a, b):
+    unique_idx, idx_of_idx = unique_with_indices(idx)
+    res = np.zeros_like(unique_idx, dtype=np.float64)
+    for i in range(0, len(idx_of_idx)):
+        start = idx_of_idx[i]
+        if i < len(idx_of_idx) - 1:
+            end = idx_of_idx[i + 1]
+        else:
+            end = len(idx)
+        res[i] = jit_logsumexp(a[start:end], b[start:end])
+    return unique_idx, res
+
+def jit_agg_NPE(step, f, size):
+    step, NPE, f_vec = group_by_sorted_count_sum(step, f)
+
+    f_vec_merged = np.zeros(
+        len(step),
+        dtype=np.dtype([("NPE", np.int_), ("f_vec", np.float64), ("repeat", np.int_)]),
+    )
+    f_vec_merged["NPE"] = NPE
+    f_vec_merged["f_vec"] = f_vec
+    f_vec_merged["repeat"] = np.diff(np.append(step, int(size)))
+
+    f_vec_merged = np.sort(f_vec_merged, order="NPE")
+
+    indices, NPE_vec = group_by_logsumexp(
+        f_vec_merged["NPE"], f_vec_merged["f_vec"], f_vec_merged["repeat"]
+    )
+
+    return indices, NPE_vec
 
 def rss_alpha(alpha, outputs, inputs, mnecpu):
     r = np.power(alpha * np.matmul(mnecpu, outputs) - inputs, 2).sum()
@@ -361,16 +523,28 @@ def time(n, tau, sigma):
         return np.sort(glow(n, tau) + transit(n, sigma))
 
 def convolve_exp_norm(x, tau, sigma):
-    if tau == 0.:
+    if tau == 0.0:
         y = norm.pdf(x, loc=0, scale=sigma)
-    elif sigma == 0.:
-        y = np.where(x >= 0., 1/tau * np.exp(-x/tau), 0.)
+    elif sigma == 0.0:
+        y = np.where(x >= 0.0, 1.0 / tau * np.exp(-x / tau), 0.0)
     else:
-        alpha = 1/tau
-        co = alpha/2. * np.exp(alpha*alpha*sigma*sigma/2.)
-        x_erf = (alpha*sigma*sigma - x)/(np.sqrt(2.)*sigma)
-        y = co * (1. - special.erf(x_erf)) * np.exp(-alpha*x)
+        alpha = 1 / tau
+        co = alpha / 2.0 * np.exp(alpha * alpha * sigma * sigma / 2.0)
+        x_erf = (alpha * sigma * sigma - x) / (np.sqrt(2.) * sigma)
+        y = co * (1.0 - special.erf(x_erf)) * np.exp(-alpha * x)
     return y
+
+def log_convolve_exp_norm(x, tau, sigma):
+    if tau == 0.0:
+        y = norm.logpdf(x, loc=0, scale=sigma)
+    elif sigma == 0.0:
+        y = np.where(x >= 0.0, -np.log(tau) - x / tau, -np.inf)
+    else:
+        alpha = 1.0 / tau
+        co = -np.log(2.0 * tau) + alpha * alpha * sigma * sigma / 2.0
+        x_erf = (alpha * sigma * sigma - x) / (np.sqrt(2.0) * sigma)
+        y = co + np.log(1.0 - special.erf(x_erf)) - alpha * x
+    return np.clip(y, np.log(np.finfo(np.float64).tiny), np.inf)
 
 def spe(t, tau, sigma, A, gmu=gmu, window=window):
     return A * np.exp(-1 / 2 * (np.log(t / tau) / sigma) ** 2)
@@ -378,7 +552,11 @@ def spe(t, tau, sigma, A, gmu=gmu, window=window):
     # return np.ones_like(t) / window * gmu
 
 def charge(n, gmu, gsigma, thres=0):
-    chargesam = norm.ppf(1 - uniform.rvs(scale=1-norm.cdf(thres, loc=gmu, scale=gsigma), size=n), loc=gmu, scale=gsigma)
+    chargesam = gamma.rvs(a=(gmu / gsigma) ** 2, loc=0, scale=gsigma**2/gmu, size=n)
+    # alpha = (gmu / gsigma) ** 2
+    # beta = gmu / gsigma ** 2
+    # chargesam = gamma.rvs(a=alpha, loc=0, scale=1/beta, size=n)
+    # chargesam = norm.rvs(loc=gmu, scale=gsigma, size=n)
     return chargesam
 
 def probcharhitt(t0, hitt, probcharge, Tau, Sigma, npe):
@@ -407,8 +585,12 @@ def likelihoodt0(hitt, char, gmu, Tau, Sigma, mode='charge', is_delta=False):
     return t0, t0delta
 
 def initial_params(wave, spe_pre, Tau, Sigma, gmu, Thres, p, nsp=4, nstd=3, is_t0=False, is_delta=False, n=1):
-    hitt, char = lucyddm(wave, spe_pre['spe'])
-    hitt, char = clip(hitt, char, Thres)
+    hitt_r, char_r = lucyddm(wave, spe_pre['spe'])
+    hitt_r, char_r = clip(hitt_r, char_r, Thres)
+    hitt = np.arange(hitt_r.min(), hitt_r.max() + 1)
+    hitt[np.isin(hitt, hitt_r)] = hitt_r
+    char = np.zeros(len(hitt))
+    char[np.isin(hitt, hitt_r)] = char_r
     char = char / char.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
     tlist = np.unique(np.clip(np.hstack(hitt[:, None] + np.arange(-nsp, nsp+1)), 0, len(wave) - 1))
 

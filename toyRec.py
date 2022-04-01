@@ -59,7 +59,7 @@ with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as ipt, h5py.File(args
     tc['TriggerNo'] = photoelectron['TriggerNo']
     tc['ChannelID'] = photoelectron['ChannelID']
     tc = np.unique(tc)
-    if method in ['fbmp', 'mcmc']:
+    if method in ['fsmp', 'mcmc']:
     # if 'starttime' in ipt:
     # if False:
         ts = ipt['starttime'][:]
@@ -82,42 +82,6 @@ with h5py.File(args.ipt, 'r', libver='latest', swmr=True) as ipt, h5py.File(args
         ts['tscharge'] = np.hstack(result)
         ts['tswave'] = np.full(N, np.nan)
         ts['mucharge'] = np.full(N, np.nan)
-    if method == 'fbmp':
-        mu = ipt['starttime'].attrs['mu']
-        sigmamu = ipt['starttime'].attrs['sigmamu']
-    else:
-        N_tot = round(N / (1 - poisson.cdf(0, Mu)))
-        charge = photoelectron['Charge'] / gmu
-        N_add = N_tot - N
-        dkl = lambda mu: -np.log(mu) * charge.sum() + mu * N_tot
-        # mu, fval, _ = opti.fmin_l_bfgs_b(dkl, x0=[Mu * 1.05], approx_grad=True, bounds=[[mulist[0], mulist[-1]]], maxfun=500000)
-        mulist = np.arange(max(1e-8, Mu - 2 * np.sqrt(Mu)), Mu + 2 * np.sqrt(Mu), 0.1)
-        mu = charge.sum() / N_tot
-        fval = dkl(mu)
-        sigmamu_est = np.sqrt(mu / N_tot)
-        mulist = np.sort(np.append(np.arange(max(1e-8, mu - 3 * sigmamu_est), mu + 3 * sigmamu_est, sigmamu_est / 50), mu))
-        dkl_mu = np.vectorize(dkl)(mulist)
-        # mu_func = interp1d(mulist, dkl_mu, bounds_error=False, fill_value='extrapolate')
-        # logLvdelta = np.vectorize(lambda mu_t: np.abs(mu_func(mu_t) - fval - 0.5))
-        # sigmamu = abs(opti.fmin_l_bfgs_b(logLvdelta, x0=[mulist[np.abs(dkl_mu - fval - 0.5).argmin()]], approx_grad=True, bounds=[[mulist[0], mulist[-1]]], maxfun=500000)[0] - mu) * np.sqrt(N_tot)
-
-        fig = plt.figure(figsize=(8, 6))
-        gs = gridspec.GridSpec(1, 1, figure=fig, left=0.15, right=0.95, top=0.95, bottom=0.1, wspace=0.3, hspace=0.3)
-        # fig.tight_layout()
-        ax = fig.add_subplot(gs[0, 0])
-        ax.plot(mulist, dkl_mu - fval, label=r'$D_{KL}$')
-        ax.axvline(x=mu, color='r')
-        ax.axhline(y=0.5, color='k', linestyle='dashed', alpha=0.5)
-        ax.axhline(y=0, color='k')
-        ax.grid()
-        ax.set_xlabel('mu')
-        ax.set_ylim(-0.1, 2)
-        ax.set_ylabel(r'$D_{KL}$')
-        ax.legend(loc='upper right')
-        fig.savefig(os.path.splitext(args.opt)[0] + '.png')
-
-        sigmamu = np.sqrt(charge.sum() / N_tot)
-print('mu is {0:.3f}, sigma_mu is {1:.3f}'.format(mu.item(), sigmamu.item()))
 
 with h5py.File(args.opt, 'w') as opt:
     dset = opt.create_dataset('starttime', data=ts, compression='gzip')
@@ -125,8 +89,6 @@ with h5py.File(args.opt, 'w') as opt:
     dset.attrs['mu'] = Mu
     dset.attrs['tau'] = Tau
     dset.attrs['sigma'] = Sigma
-    dset.attrs['mu'] = mu
-    dset.attrs['sigmamu'] = sigmamu
     if method == 'takara':
         dset = opt.create_dataset('starttime_cpu', data=ts_cpu, compression='gzip')
     print('The output file path is {}'.format(args.opt))

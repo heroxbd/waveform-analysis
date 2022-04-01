@@ -45,7 +45,7 @@ def sampling(a0, a1, mu, tau, sigma):
     t0 = np.random.uniform(100., 500., size=a1 - a0)
     sams = [np.vstack((wff.time(npe[i], tau, sigma) + t0[i], wff.charge(npe[i], gmu=gmu, gsigma=gsigma, thres=0))).T for i in range(a1 - a0)]
     # sams = [np.vstack((np.arange(npe[i]) + t0[i], wff.charge(npe[i], gmu=gmu, gsigma=gsigma, thres=0))).T for i in range(a1 - a0)]
-    wdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('Waveform', np.float, window * wff.nshannon)])
+    wdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('Npe', np.uint), ('Waveform', np.float, window * wff.nshannon)])
     waves = np.empty(a1 - a0).astype(wdtp)
     pan = np.arange(0, window, 1 / wff.nshannon)
     for i in range(a1 - a0):
@@ -60,6 +60,7 @@ def sampling(a0, a1, mu, tau, sigma):
     t['ChannelID'] = 0
     waves['TriggerNo'] = np.arange(a0, a1).astype(np.uint32)
     waves['ChannelID'] = 0
+    waves['Npe'] = npe
     sdtp = np.dtype([('TriggerNo', np.uint32), ('PMTId', np.uint32), ('HitPosInWindow', np.float64), ('Charge', np.float64)])
     pelist = np.empty(sum([len(sams[i]) for i in range(a1 - a0)])).astype(sdtp)
     pelist['TriggerNo'] = np.repeat(np.arange(a0, a1), [len(sams[i]) for i in range(a1 - a0)]).astype(np.uint32)
@@ -101,8 +102,25 @@ ts['tstruth'] = np.hstack(result)
 ts['ts1sttruth'] = np.array([np.min(pelist[i_pel[i]:i_pel[i+1]]['HitPosInWindow']) for i in range(len(e_pel))])
 t0 = recfunctions.join_by(('TriggerNo', 'ChannelID'), ts, t0, usemask=False)
 
+vali = np.full(len(waves), False)
+valit = []
+valit.append(np.sum(waves['Waveform'], axis=1) <= 0)
+valit.append(np.any(np.isnan(waves['Waveform']), axis=1))
+valit.append(np.isin(waves['TriggerNo'], pelist['TriggerNo'][pelist['HitPosInWindow'] > window - 1]))
 r = 7
-vali = np.logical_not((np.sum(waves['Waveform'], axis=1) <= 0) | np.any(np.isnan(waves['Waveform']), axis=1) | np.isin(waves['TriggerNo'], pelist['TriggerNo'][pelist['HitPosInWindow'] > window - 1]) | (np.abs(t0['tstruth'] - t0['T0'] - np.mean(t0['tstruth'] - t0['T0'])) > r * np.std(t0['tstruth'] - t0['T0'], ddof=-1)) | (np.sum(waves['Waveform'] > 5 * std, axis=1) <= 0))
+# valit.append(np.abs(t0['tstruth'] - t0['T0'] - np.mean(t0['tstruth'] - t0['T0'])) > r * np.std(t0['tstruth'] - t0['T0'], ddof=-1))
+valit.append(np.sum(waves['Waveform'] > 5 * std, axis=1) <= 0)
+valit.append(np.isin(waves['TriggerNo'], pelist['TriggerNo'][pelist['Charge'] <= 0]) & np.isin(waves['ChannelID'], pelist['PMTId'][pelist['Charge'] <= 0]))
+for i, t in enumerate(valit):
+    print(f'Loss {i} is {t.sum()}, {t.sum()/len(t):.2%}')
+    vali |= t
+npe_removed = waves['Npe'][vali]
+pelist_removed = pelist[np.isin(pelist['TriggerNo'], waves['TriggerNo']) & np.isin(pelist['PMTId'], waves['ChannelID'])]
+wavesum_removed = np.empty(vali.sum())
+for i, w in enumerate(waves[vali]):
+    wavesum_removed[i] = pelist_removed['Charge'][(pelist_removed['TriggerNo'] == w['TriggerNo']) & (pelist_removed['PMTId'] == w['ChannelID'])].sum()
+
+vali = np.logical_not(vali)
 if np.sum(vali) != args.N:
     t0 = t0[vali]
     waves = waves[vali]
@@ -121,6 +139,8 @@ with h5py.File(args.opt, 'w') as opt:
     dset.attrs['tau'] = Tau
     dset.attrs['sigma'] = Sigma
     dset.attrs['Std'] = std
+    dset.attrs['npe_removed'] = npe_removed
+    dset.attrs['wavesum_removed'] = wavesum_removed
 print(args.opt + ' saved, l =', int(np.sum(vali)))
 
 if not os.path.exists('spe.h5'):

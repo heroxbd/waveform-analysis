@@ -3,7 +3,7 @@
 
 Waveform analysis is to obtain $t_i$ and $q_i$ estimators $\hat{t}_i$ and $\hat{q}_i$ from waveform $w(t)$, where the output indices $i$ are from 1 to $\hat{N}_\mathrm{PE}$ and $\hat{N}_\mathrm{PE}$ is an estimator of $N_\mathrm{PE}$ in eq.~\eqref{eq:lc-sample}. Figure~\ref{fig:pile} illustrates the input waveform $w(t)$ and the outputs charge $\bm{\hat{t}}, \hat{\bm{q}}$ obtained from $w(t)$, where boldface $\hat{\bm{t}}$ denotes the vector $\hat{t}_i$. 
 
-The fluctuation of $q_i$ makes $\hat{t}_i$ ambiguous and $\hat{N}_\mathrm{PE}$ fail to estimate $N_\mathrm{PE}$. For example, 1, 2 and even 3~PEs can generate exactly the same charge as $1.6$ units.  A single PE charged $1$ may be mis-interpreted as 2~PEs at consecutive $\hat{t}_i$ and $\hat{t}_{i+1}$ with $\hat{q}_i=\hat{q}_{i+1}=0.5$.
+$\hat{N}_\mathrm{PE}$ fails to estimate $N_\mathrm{PE}$ due to the fluctuation of $q_i$ and the ambiguity of $\hat{t}_i$. For example, 1, 2 and even 3~PEs can generate the same charge as $1.6$ units.  A single PE charged $1$ might be misinterpreted as 2~PEs at consecutive $\hat{t}_i$ and $\hat{t}_{i+1}$ with $\hat{q}_i=\hat{q}_{i+1}=0.5$.
 
 \subsection{Evaluation criteria}
 \label{sec:criteria}
@@ -61,12 +61,12 @@ For a noise-free evaluation of $\hat{w}(t)$, residual sum of squares~(RSS) is a 
   \mathrm{RSS} \coloneqq\int\left[\hat{w}(t) - \tilde{w}(t)\right]^2\mathrm{d}t.
 \end{equation}
 
-Figure~\ref{fig:l2} demonstrates that if two functions do not overlap, the $\mathrm{RSS}$ of them remains constant regardless of their relative positions.  The sampled light curves $\hat{\phi}(t)$ and $\tilde{\phi}(t)$ consist with delta functions and hardly overlap, therefore the $\mathrm{RSS}$ of them is useless.  Futhermore, RSS cannot compare a discrete function with a continuous one.  We shall only consider the $\mathrm{RSS}$ of waveforms.
+Figure~\ref{fig:l2} demonstrates that if two functions do not overlap, their $\mathrm{RSS}$ remain constant regardless of relative positions.  The delta functions in the sampled light curves $\hat{\phi}(t)$ and $\tilde{\phi}(t)$ hardly overlap, rendering $\mathrm{RSS}$ useless.  Furthermore, RSS cannot compare a discrete function with a continuous one.  We shall only consider the $\mathrm{RSS}$ of waveforms.
 
 \begin{figure}[H]
   \centering
   \resizebox{0.6\textwidth}{!}{\input{figures/tab.pgf}}
-  \caption{\label{fig:l2} The $\mathrm{RSS}$ of red and blue curves is a function of the two shaded regions. It is a constant when the curves shift horizontally provided they do not overlap.  In contrast, the Wasserstein distance $D_\mathrm{w}$ of the two curves is associated with the distance between them.  It complements $\mathrm{RSS}$ and offers a time-sensitive metric suitable for the sparse PE space.}
+  \caption{\label{fig:l2} The $\mathrm{RSS}$ of red and blue curves is a function of the two shaded regions. It is a constant when the curves shift horizontally when they do not overlap.  In contrast, the Wasserstein distance $D_\mathrm{w}$ of the two curves is associated with their separation.  It complements $\mathrm{RSS}$ and offers a time-sensitive metric suitable for the sparse PE space.}
 \end{figure}
 
 \subsubsection{Wasserstein distance}
@@ -74,14 +74,14 @@ Figure~\ref{fig:l2} demonstrates that if two functions do not overlap, the $\mat
 
 \input{fom}
 
-In the following, we  evaluate the performance of waveform analysis algorithms ranging from heuristics, deconvolution, neuron network to regression, by the criteria discussed in this section.
+In the following, we  evaluate the performance of waveform analysis algorithms ranging from heuristics, deconvolution, neural network to regression by the criteria discussed in this section.
 
 \subsection{Heuristic methods}
 By directly extracting waveform features, heuristic methods are straightforward and widely used. 
 
 \subsubsection{Waveform shifting}
 \label{sec:shifting}
-By \textit{waveform shifting}, we extract more time information than TDC in a similar manner: select all the $t_i$ where the waveform $w(t_i)$ exceeds a threshold to suppress noise, shift them by $\Delta t$ according to the shape of single PE response $V_\mathrm{PE}(t)$ in eq.~\eqref{eq:dayaspe} to get $\hat{t}_i$, then take $\hat{q}_i \propto w(\hat{t}_i)$ so that the total charge $\sum \hat{q}_i$ aligns with the integration of the waveform $w(t)$.  Though the $\hat{q}_i$'s obtained are smaller than PE charges as in figure~\ref{fig:shifting}, waveform shifting does minimal analysis and serves as a baseline method.
+By \textit{waveform shifting}, we extract more time information than TDC: select all the $t_i$ where the waveform $w(t_i)$ exceeds a threshold to suppress noise, shift them by $\Delta t$ according to the shape of the single PE response $V_\mathrm{PE}(t)$ in eq.~\eqref{eq:dayaspe} to get $\hat{t}_i$, then take $\hat{q}_i \propto w(\hat{t}_i - \Delta t)$ so that the RSS is minimized.  Though the obtained $\hat{q}_i$'s are smaller than PE charges as in figure~\ref{fig:shifting}, waveform shifting does minimal analysis and serves as a baseline method.
 
 \begin{figure}[H]
   \begin{subfigure}{.5\textwidth}
@@ -100,11 +100,11 @@ By \textit{waveform shifting}, we extract more time information than TDC in a si
 \subsubsection{Peak finding}
 \label{sec:findpeak}
 
-\textit{Peak finding} is more effective than waveform shifting by exploiting PE pulses.  We smooth the waveforms by a low-pass Savitzky-Golay filter~\cite{savitzky_smoothing_1964} and find all the peaks at $t_i$.  The following resembles waveform shifting: apply a shift to get $\hat{t}_i$, take $\hat{q}_i \propto w(\hat{t}_i)$ and normalize to the waveform integration. As shown in figure~\ref{fig:peak}, peak finding outputs charges close to 1 and works well for lower PE counts.  But when PEs pile up closely, peaks overlap intensively, making this method unreliable.
+\textit{Peak finding} is more effective than waveform shifting by exploiting PE pulses.  We smooth the waveforms by a low-pass Savitzky-Golay filter~\cite{savitzky_smoothing_1964} and find all the peaks at $t_i$.  The following resembles waveform shifting: apply a shift $\Delta t$ to get $\hat{t}_i$, take $\hat{q}_i \propto w(\hat{t}_i - \Delta t)$ to minimize the RSS. As shown in figure~\ref{fig:peak}, peak finding outputs charges close to 1 and works well for lower PE counts.  But when PEs pile up closely, peaks overlap intensively, making this method unreliable.
 
 \subsection{Deconvolution}
 \label{sec:deconv}
-Deconvolution methods contribute more than heuristic ones by using the full shape of $V_\mathrm{PE}(t)$, thus can accommodate overshoots and pile-ups.  Smoothing is necessary since deconvolution does not model the white noise.
+Deconvolution methods contribute more than heuristic ones by using the entire shape of $V_\mathrm{PE}(t)$, thus can accommodate overshoots and pile-ups.  Smoothing is necessary since deconvolution does not model the white noise.
 
 \subsubsection{Fourier deconvolution}
 \textit{Fourier deconvolution} is an option considered by JUNO prototype~\cite{zhang_comparison_2019}. The deconvolution relation is evident in the Fourier transform $\mathcal{F}$ to eq.~\eqref{eq:1},
@@ -136,7 +136,7 @@ where $I(x)$ is the indicator function, and $\hat{\alpha}$ is a scaling factor t
 \end{equation*}
 $\tilde{w}(t)$ unknown in data analysis, we replace it in eq.~(\ref{eq:rss}) with $w(t)$.
 
-Figure~\ref{fig:fd} illustrates that Fourier deconvolution outperforms heuristic methods.  Meanwhile, noise and precision loss in the waveform lead to smaller and even negative $\hat{q}_i$. Those can be mitigated by thresholding and scaling in eq.~\eqref{eq:fdconv2}, but calls for a more elegant solution.
+Figure~\ref{fig:fd} illustrates that Fourier deconvolution outperforms heuristic methods.  Meanwhile, noise and precision loss in the waveform lead to smaller and even negative $\hat{q}_i$. Those can be mitigated by thresholding and scaling in eq.~\eqref{eq:fdconv2}, but call for a more elegant solution.
 
 \begin{figure}[H]
   \begin{subfigure}{0.5\textwidth}
@@ -155,7 +155,7 @@ Figure~\ref{fig:fd} illustrates that Fourier deconvolution outperforms heuristic
 \subsubsection{Richardson-Lucy direct demodulation}
 \label{sec:lucyddm}
 
-\textit{Richardson-Lucy direct demodulation}~(LucyDDM)~\cite{lucy_iterative_1974} with a non-linear iteration to calculate deconvolution has a wide application in astronomy~\cite{li_richardson-lucy_2019} and image processing. We view $V_{\mathrm{PE}*}(t-s)$ as a conditional probability distribution $p(t|s)$ where $t$ denotes PMT amplified electron time and $s$ denotes the given PE time. By the Bayesian rule,
+\textit{Richardson-Lucy direct demodulation}~(LucyDDM)~\cite{lucy_iterative_1974} with a non-linear iteration to calculate deconvolution has a wide application in astronomy~\cite{li_richardson-lucy_2019} and image processing. We view $V_{\mathrm{PE}*}(t-s)$ as a conditional probability distribution $p(t|s)$ where $t$ denotes PMT amplified electron time, and $s$ represents the given PE time. By the Bayesian rule,
 \begin{equation}
   \label{eq:lucy}
   \tilde{\phi}_*(s) V_{\mathrm{PE}*}(t-s) = \tilde{\phi}_*(s)p(t|s) = p(t,s) = \tilde{w}_*(t)p(s|t),
@@ -173,19 +173,19 @@ Then a recurrence relation $\phi_*$ is,
     \implies \hat{\phi}^{n+1}(s) & = \int \frac{\hat{\phi}^n(s) V_{\mathrm{PE}*}(t-s)}{\int\hat{\phi}^n(s') V_{\mathrm{PE}}(t-s')\mathrm{d}s'} \tilde{w}(t) \mathrm{d}t,
   \end{aligned}
 \end{equation}
-where only $V_{\mathrm{PE}*}$ in the numerator is normalized and superscript $n$ denotes the iteration step.
-Like Fourier deconvolution in eq.~\eqref{eq:fdconv2}, we threshold and scale the converged $\hat{\phi}^\infty$ to get $\hat{\phi}$.  As shown in figure~\ref{fig:lucy} the positive constraint of $\hat{\phi}$ makes LucyDDM more resilient to noise.
+where only $V_{\mathrm{PE}*}$ in the numerator is normalized, and superscript $n$ denotes the iteration step.
+Like Fourier deconvolution in eq.~\eqref{eq:fdconv2}, we threshold and scale the converged $\hat{\phi}^\infty$ to get $\hat{\phi}$.  As shown in figure~\ref{fig:lucy}, the positive constraint of $\hat{\phi}$ makes LucyDDM more resilient to noise.
 
-The remaining noise in the smoothed $\tilde{w}$ crucially influence deconvolution.  A probablistic method will correctly model the noise term $\epsilon$, as we shall see in section \ref{sec:regression}.  Before that let's try something different.
+The remaining noise in the smoothed $\tilde{w}$ crucially influences deconvolution.  A probabilistic method will correctly model the noise term $\epsilon$, as we shall see in section \ref{sec:regression}.  Before that, let us try something different.
 
 \subsection{Convolutional neural network}
 \label{sec:cnn}
 % Network structure
 Convolutional neural networks~(CNN) made breakthroughs in various fields like computer vision~\cite{he_deep_2016} and natural language processing~\cite{vaswani_attention_2017}. As an efficient composition of weighted additions and non-linear functions, neural networks outperform many traditional algorithms.
 
-We choose a shallow network structure of 5 layers to recognize patterns as shown in figure~\ref{fig:struct} motivated by the pulse shape and universality of $V_\mathrm{PE}(t)$ for all the PEs.  The convolutional widths are selected considering the localized nature of $V_\mathrm{PE}(t)$.
+We choose a shallow network structure of 5 layers to recognize patterns as shown in figure~\ref{fig:struct}, motivated by the pulse shape and universality of $V_\mathrm{PE}(t)$ for all the PEs.  The convolutional widths are selected considering the localized nature of $V_\mathrm{PE}(t)$.
 
-The workflow of data processing consists of training and predicting. We find a mapping from waveform $w(t)$ to PE $\tilde{\phi}(t)$ with backpropagation method and supervised learning. We formulate the training loss as optimizing $D_\mathrm{w}[\hat{\phi}, \tilde{\phi}] $, the Wasserstein distance between the truth $\tilde{\phi}$ and predicted $\hat{\phi}$. As discussed in section~\ref{sec:W-dist}, $D_w$ can handle the PE sparsity in training iterations. Figure~\ref{fig:loss} shows the convergence of Wasserstein distance during training.
+The workflow of data processing consists of training and predicting. We find a mapping from waveform $w(t)$ to PE $\tilde{\phi}(t)$ with the backpropagation method and supervised learning. We formulate the training loss as optimizing $D_\mathrm{w}[\hat{\phi}, \tilde{\phi}] $, the Wasserstein distance between the truth $\tilde{\phi}$ and predicted $\hat{\phi}$. As discussed in section~\ref{sec:W-dist}, $D_w$ can handle the PE sparsity in training iterations. Figure~\ref{fig:loss} shows the convergence of Wasserstein distance during training.
 
 The output of CNN is scaled by $\hat{\alpha}$ following eq.~\eqref{eq:fdconv2} to get $\hat{\phi}$.
 
@@ -202,11 +202,11 @@ The output of CNN is scaled by $\hat{\alpha}$ following eq.~\eqref{eq:fdconv2} t
     \resizebox{\textwidth}{!}{\input{figures/epoch.pgf}}
     \caption{\label{fig:loss} Evolution of loss.}
   \end{subfigure}
-  \caption{\label{fig:CNN} Training process of a CNN. A shallow network structure of 5 layers in~\subref{fig:struct} is trained to converge in Wasserstein distance as shown in~\subref{fig:loss}.}
+  \caption{\label{fig:CNN} Training process of a CNN. A shallow network structure of 5 layers in~\subref{fig:struct} is trained to converge in Wasserstein distance as shown in~\subref{fig:loss}.  ``kernel=21'' stands for a 1 dimensional convolutional kernel of length 21. ``1029'' is the number of voltage samples in a waveform.  $1\times$ represents the number of channels in each layer.}
 \end{figure}
 
 \vspace{-0.5cm}
-In figure~\ref{fig:cnn-npe}, we use box plot to describe $D_\mathrm{w}$ distributions. From figure~\ref{fig:cnn-npe}, we find $D_w$ is the smallest for one PE.  $D_w$ stops increasing with $N_\mathrm{PE}$ at about 6 PEs, where the PE times are the most challenging to extract.  When $N_\mathrm{PE}$ is more than 6, pile-ups tend to produce a continuous waveform and the average PE time accuracy stays flat. Thus waveform analysis is the most important in recovering time accuracy for PEs less than 10.
+In figure~\ref{fig:cnn-npe}, we use box-plots to describe $D_\mathrm{w}$ distributions. In figure~\ref{fig:cnn-npe}, $D_w$ is the smallest for one PE.  $D_w$ stops increasing with $N_\mathrm{PE}$ at about 6 PEs, where the PE times are the most challenging to extract.  When $N_\mathrm{PE}$ is more than 6, pile-ups tend to produce a continuous waveform and the average PE time accuracy stays flat. Thus waveform analysis is the most important in recovering time accuracy for PEs less than 10.
 
 Such small $D_\mathrm{w}$ in figure~\ref{fig:cnn-npe} provides a precise matching of waveforms horizontally to guarantee effective $\hat{\alpha}$ scaling, explaining why $\mathrm{RSS}$ is also small in figure~\ref{fig:cnn}.
 
@@ -221,7 +221,7 @@ Such small $D_\mathrm{w}$ in figure~\ref{fig:cnn-npe} provides a precise matchin
     \resizebox{\textwidth}{!}{\input{figures/takara.pgf}}
     \caption{\label{fig:cnn}An example giving \\ $\Delta t_0=\SI{-3.05}{ns}$, $\mathrm{RSS}=\SI{10.0}{mV^2}$, $D_\mathrm{w}=\SI{0.64}{ns}$.}
   \end{subfigure}
-  \caption{\label{fig:cnn-performance}Demonstration of CNN on $\num[retain-unity-mantissa=false]{1e4}$ waveforms in~\subref{fig:cnn-npe} and one waveform in~\subref{fig:cnn} sampled from the same setup as figure~\ref{fig:method}.  In figure~\subref{fig:cnn-npe}, the middle line is the median of distribution. The upper and lower hinge are the first quartile $Q_1$ at \SI{25}{\percent} and the third quartile $Q_3$ at \SI{75}{\percent}. The upper and lower whiskers are $Q_1 \pm 1.5(Q_3-Q_1)$. }
+  \caption{\label{fig:cnn-performance}Demonstration of CNN on $\num[retain-unity-mantissa=false]{1e4}$ waveforms in~\subref{fig:cnn-npe} and one waveform in~\subref{fig:cnn} sampled from the same setup as figure~\ref{fig:method}.  In figure~\subref{fig:cnn-npe}, the middle line is the median of the distribution. The upper and lower hinges are the first percentile $Q_1$ at \SI{25}{\percent} and the third percentile $Q_3$ at \SI{75}{\percent}. The upper and lower whiskers are $Q_1 \pm 1.5(Q_3-Q_1)$. }
 \end{figure}
 
 \subsection{Regression analysis}
@@ -241,7 +241,7 @@ When $\{t'_i\}$ is dense enough, $\{\hat{q}_i\}$ determines the inferred PE dist
 From the output $\hat{\phi}_\mathrm{dec}(t)$ of a deconvolution method in section~\ref{sec:lucyddm}, we confidently leave out all the $t'_i$ that $\hat{\phi}_\mathrm{dec}(t_i')=0$ in eq.~\eqref{eq:gd-phi} to reduce the number of parameters and the complexity.
 
 
-We attempted to replace the dense $\bm{t'}$ grid in eq.~\eqref{eq:gd} with a length-varying vector of sparse PEs. However, the truth $N_\mathrm{PE}$ is unknown and formulating an explicit trans-dimensional model is expansive.  We shall leave this possibility to the future.
+We attempted to replace the dense $\bm{t'}$ grid in eq.~\eqref{eq:gd} with a length-varying vector of sparse PEs. However, the truth $N_\mathrm{PE}$ is unknown and formulating an explicit trans-dimensional model is expansive.  We shall leave it to section~\ref{subsec:fsmp}.
 
 \subsubsection{Direct charge fitting}
 \label{sec:dcf}
@@ -251,13 +251,13 @@ Fitting the charges $q'_i$ in eq.~\eqref{eq:gd} directly by minimizing RSS of $w
   \label{eq:gd-q}
   \bm{\hat{q}} = \arg \underset{q'_i \ge 0}{\min}~\mathrm{RSS}\left[w'(t),w(t)\right].
 \end{equation}
-Slawski and Hein~\cite{slawski_non-negative_2013} prove that in deconvolution problems, the non-negative least squares formulation in eq.~\eqref{eq:gd-q} is self-regularized and gives sparse solutions of $q'_i$.  We optimize eq.~\eqref{eq:gd-q} by Broyden-Fletcher-Goldfarb-Shanno algorithm with a bound constraint~\cite{byrd_limited_1995}.  In figure~\ref{fig:fitting-npe} charge fitting is consistent in $D_\mathrm{w}$ for different $N_\mathrm{PE}$'s, showing its resilience to pile-up.
+Slawski and Hein~\cite{slawski_non-negative_2013} prove that in deconvolution problems, the non-negative least-squares formulation in eq.~\eqref{eq:gd-q} is self-regularized and gives sparse solutions of $q'_i$.  We optimize eq.~\eqref{eq:gd-q} by Broyden-Fletcher-\allowbreak{}Goldfarb-Shanno algorithm with a bound constraint~\cite{byrd_limited_1995}.  In figure~\ref{fig:fitting-npe}, charge fitting is consistent in $D_\mathrm{w}$ for different $N_\mathrm{PE}$'s, showing its resilience to pile-up.
 
 \begin{figure}[H]
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/xiaopeipchargestats.pgf}}
-    \caption{\label{fig:fitting-npe} $D_\mathrm{w}$ histogram and its distributions conditioned \\ on $N_{\mathrm{PE}}$, boxplot explained in figure~\ref{fig:cnn-performance}.}
+    \caption{\label{fig:fitting-npe} $D_\mathrm{w}$ histogram and its distributions conditioned \\ on $N_{\mathrm{PE}}$, box-plot explained in figure~\ref{fig:cnn-performance}.}
   \end{subfigure}
   \begin{subfigure}{.5\textwidth}
     \centering
@@ -267,7 +267,7 @@ Slawski and Hein~\cite{slawski_non-negative_2013} prove that in deconvolution pr
   \caption{\label{fig:dcf}Demonstration of direct charge fitting with $\num[retain-unity-mantissa=false]{1e4}$ waveforms in~\subref{fig:fitting-npe} and one waveform in~\subref{fig:fitting} sampled from the same setup as figure~\ref{fig:method}.  Direct charge fitting shows a better performance than LucyDDM in figure~\ref{fig:lucy} and a comparable $D_\mathrm{w}$ to CNN in figure~\ref{fig:cnn}.}
 \end{figure}
 
-In figure~\ref{fig:fitting}, sparsity of $q'_i$ is evident as speculated.  However, the majority of the results $\hat{q}_i$ is less than 1.  That motivates us to incorporate prior knowledge of $q'_i$ towards a sparser and performant model than directly fitting charges.
+The sparsity of $q'_i$ is evident in figure~\ref{fig:fitting}.  However, the majority of the $\hat{q}_i$ are less than 1.  This feature motivates us to incorporate prior knowledge of $q'_i$ towards a more dedicated model than directly fitting charges.
 
 
 \subsubsection{Markov chain Monte Carlo}
@@ -279,16 +279,16 @@ Chaining the $q'_i$ distribution~(section~\ref{subsec:spe}), the charge fitting 
     \mu_i &= \mu \int_{t'_i-\frac{\Delta t'}{2}}^{t'_i+\frac{\Delta t'}{2}} \phi(t' - t_0)\mathrm{d}t' \approx \mu\phi(t'_i - t_0)\Delta{t'} \\
     z_i &\sim \mathcal{B}(\mu_i) \\
     q'_{i,0}&=0\\
-    q'_{i,1}& \sim \mathcal{N}(1, \sigma_\mathrm{q})\\
+    q'_{i,1}& \sim \mathcal{N}(1, \sigma_\mathrm{q}^2)\\
     q'_i &= q'_{i,z_i}\\
     w'(t) & = \sum_{i=1}^{N_\mathrm{s}}q'_iV_\mathrm{PE}(t-t'_i)\\
-    w(t) &\sim \mathcal{N}(w'(t), \sigma_\epsilon)
+    w(t) &\sim \mathcal{N}(w'(t), \sigma_\epsilon^2)
   \end{aligned}
   \label{eq:mixnormal}
 \end{equation}
-where $\mathcal{U}$ and $\mathcal{B}$ stands for uniform and Bernoulli distributions, $\overline{t_0}$ is an upper bound of $t_0$, and $q'_i$ is a mixture of 0 (no PE) and normally distributed $q'_{i,1}$ (1 PE). When expection $\mu_i$ of a PE hitting $(t'_{i} - \frac{\Delta t'}{2}, t'_{i} + \frac{\Delta t'}{2})$ is small enough, that 0-1 approximation is valid.  The inferred waveform $w'(t)$ differs from observable $w(t)$ by a white noise $\epsilon(t) \sim \mathcal{N}(0, \sigma_\epsilon)$ motivated by eq.~\eqref{eq:1}.  When an indicator $z_i=0$, it turns off $q'_i$, reducing the number of parameters by one.  That is how eq.~\eqref{eq:mixnormal} achieves sparsity.
+where $\mathcal{U}$ and $\mathcal{B}$ stand for uniform and Bernoulli distributions, $\overline{t_0}$ is an upper bound of $t_0$, and $q'_i$ is a mixture of 0 (no PE) and normally distributed $q'_{i,1}$ (1 PE). When the expectation $\mu_i$ of a PE hitting $(t'_{i} - \frac{\Delta t'}{2}, t'_{i} + \frac{\Delta t'}{2})$ is small enough, that 0-1 approximation is valid.  The inferred waveform $w'(t)$ differs from observable $w(t)$ by a white noise $\epsilon(t) \sim \mathcal{N}(0, \sigma_\epsilon^2)$ motivated by eq.~\eqref{eq:1}.  When an indicator $z_i=0$, it turns off $q'_i$, reducing the number of parameters by one.  That is how eq.~\eqref{eq:mixnormal} achieves sparsity.
 
-We generate posterior samples of $t_0$ and $\bm{q'}$ by Hamiltonian Monte Carlo~(HMC)~\cite{neal_mcmc_2012}, a variant of Markov chain Monte Carlo that is suitable to high-dimensional problems. Construct $\hat{t}$ and $\hat{q}_i$ as the mean estimators of posterior samples $t_0$ and $q'_i$ at $z_i=1$.  Unlike the $\hat{t}_\mathrm{KL}$ discussed in section~\ref{sec:pseudo}, $\hat{t}_0$ is a direct Bayesian estimator from eq.~\eqref{eq:mixnormal}.  We construct $\hat{\phi}(t)$ by eq.~\eqref{eq:gd-phi} and $\hat{w}(t)$ by
+We generate posterior samples of $t_0$ and $\bm{q'}$ by Hamiltonian Monte Carlo~(HMC)~\cite{neal_mcmc_2012}, a variant of Markov chain Monte Carlo suitable for high-dimensional problems. Construct $\hat{t}$ and $\hat{q}_i$ as the mean estimators of posterior samples $t_0$ and $q'_i$ at $z_i=1$.  Unlike the $\hat{t}_\mathrm{KL}$ discussed in section~\ref{sec:pseudo}, $\hat{t}_0$ is a direct Bayesian estimator from eq.~\eqref{eq:mixnormal}.  We construct $\hat{\phi}(t)$ by eq.~\eqref{eq:gd-phi} and $\hat{w}(t)$ by
 \begin{equation}
   \label{eq:mcmc-w}
   \hat{w}(t) = \sum_{i=1}^{N_\mathrm{s}}\hat{q}_iV_\mathrm{PE}(t-t'_i).
@@ -299,95 +299,66 @@ RSS and $D_\mathrm{w}$ are then calculated according to eqs.~(\ref{eq:rss}) and 
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/mcmcchargestats.pgf}}
-    \caption{\label{fig:mcmc-npe} $D_\mathrm{w}$ histogram and its distributions conditioned \\ on $N_{\mathrm{PE}}$, boxplot explained in figure~\ref{fig:cnn-performance}.}
+    \caption{\label{fig:mcmc-npe} $D_\mathrm{w}$ histogram and its distributions conditioned \\ on $N_{\mathrm{PE}}$, box-plot explained in figure~\ref{fig:cnn-performance}.}
   \end{subfigure}
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/mcmc.pgf}}
     \caption{\label{fig:mcmc}An example with \\ $\Delta{t_0}=\SI{-2.48}{ns}$, $\mathrm{RSS}=\SI{16.25}{mV^2}$, $D_\mathrm{w}=\SI{0.76}{ns}$.}
   \end{subfigure}
-  \caption{\label{fig:mcmc-performance}Demonstration of MCMC with $\num[retain-unity-mantissa=false]{1e4}$ waveforms in~\subref{fig:mcmc-npe} and one waveform in~\subref{fig:mcmc} sampled from the same setup as figure~\ref{fig:method}.  Although using a more dedicated model, MCMC performs worse than direct charge fitting in figure~\ref{fig:dcf}. We suspect the Markov chain is not long enough.}
+  \caption{\label{fig:mcmc-performance}Demonstration of MCMC with $\num[retain-unity-mantissa=false]{1e4}$ waveforms in~\subref{fig:mcmc-npe} and one waveform in~\subref{fig:mcmc} sampled from the same setup as figure~\ref{fig:method}.  Although using a more dedicated model, MCMC performs worse than the direct charge fitting in figure~\ref{fig:dcf}. We suspect the Markov chain is not long enough.}
 \end{figure}
-Although we imposed a $\mathcal{N}(1, \sigma_\mathrm{q})$ prior, The charges $\hat{q}_i$ in figure~\ref{fig:fitting} are still less than 1.  The $D_\mathrm{w}$ marginal distribution in figure~\ref{fig:mcmc-npe} is less smooth than that of direct charge fitting in figure~\ref{fig:fitting-npe}.  Similarly, RSS in figure~\ref{fig:mcmc} is slightly worse than that in figure~\ref{fig:fitting}.  We suspect the markov chain has not finally converged due to the trans-dimensional property of eq.~\eqref{eq:mixnormal}.  Enlonging the burning and chain is not a solution because MCMC is already much slower than direct fitting in section~\ref{sec:dcf}.  We need an algorithm that pertains the model of eq.~\eqref{eq:mixnormal} but much faster than MCMC.
+Although we imposed a $\mathcal{N}(1, \sigma_\mathrm{q}^2)$ prior, The charges $\hat{q}_i$ in figure~\ref{fig:fitting} are still less than 1.  The $D_\mathrm{w}$ marginal distribution in figure~\ref{fig:mcmc-npe} is less smooth than that of the direct charge fitting in figure~\ref{fig:fitting-npe}.  Similarly, RSS in figure~\ref{fig:mcmc} is slightly worse than that in figure~\ref{fig:fitting}.  We suspect the Markov chain has not finally converged due to the trans-dimensional property of eq.~\eqref{eq:mixnormal}.  Extending the chain is not a solution because MCMC is already much slower than direct fitting in section~\ref{sec:dcf}.  We need an algorithm that pertains to the model of eq.~\eqref{eq:mixnormal} but much faster than MCMC.
 
-\subsubsection{Fast Bayesian matching pursuit}
-\label{subsec:fbmp}
-If we discretize waveform variable $t$ in eq.~\eqref{eq:mixnormal} into $t_j$, $w(t)$ becomes a vector $w_j \coloneqq w(t_j)$ and $V_\mathrm{PE}(t - t'_i)$ a matrix $V_{\mathrm{PE},ji} \coloneqq V_\mathrm{PE}(t_j - t'_i)$.  Such a formulation unveils a joint multivariate normal distribution of $\bm{w}$ and $\bm{q}'$ subject to $\bm{z}$,
+\subsubsection{Fast stochastic matching pursuit}
+\label{subsec:fsmp}
+In reality, $w(t)$ is discretized as $\bm{w}$. If we rewrite the hierarchical model (\ref{eq:mixnormal}) into a joint distribution, marginalizing out $\bm{q}'$ and $\bm{z}$ gives a flattened model,
 \begin{equation}
-  \label{eq:mgauss}
+  \label{eq:universe}
   \begin{aligned}
-    \left.
-      \begin{bmatrix}
-        \bm{w} \\
-        \bm{q}'
-      \end{bmatrix}
-    \right\vert\bm{z}
-    &\sim \mathcal{N}\left(
-      \begin{bmatrix}
-        \bm{V}_\mathrm{PE}\bm{z} \\
-        \bm{z}
-      \end{bmatrix}, 
-      \begin{bmatrix}
-        \bm{\Sigma} & \bm{V}_\mathrm{PE}\bm{Z} \\
-        \bm{Z}\bm{V}_\mathrm{PE}^\intercal & \bm{Z}
-      \end{bmatrix}
-    \right) \\
-    \bm{Z} &= \sigma_\mathrm{q}^2 \begin{bmatrix}
-      z_1 & & \\
-      & \ddots \\
-      && z_{N_\mathrm{s}}
-    \end{bmatrix}\\
-    \bm{\Sigma} &= \bm{V}_\mathrm{PE}\bm{Z}\bm{V}_\mathrm{PE}^\intercal+\sigma_\epsilon^2\bm{I}\\
-    z_i &\sim \mathcal{P}(\mu_i) \\
-    \mu_i &= \mu \int_{t'_i-\frac{\Delta t'}{2}}^{t'_i+\frac{\Delta t'}{2}} \phi(t' - t_0)\mathrm{d}t' \\
+    p(\bm{w}, t_0, \mu) &= \sum_{\bm{z}} \int \mathrm{d}\bm{q}' p(\bm{w}, \bm{q}', \bm{z}, t_0, \mu) \\
+    &= p(t_0, \mu) \sum_{\bm{z}} \left[\int \mathrm{d}\bm{q}' p(\bm{w}|\bm{q}') p(\bm{q}'|\bm{z}) \right] p(\bm{z}|t_0, \mu) \\
+    &= p(t_0, \mu) \sum_{\bm{z}} p(\bm{w}|\bm{z}) p(\bm{z}|t_0, \mu) \\
+    &= p(t_0, \mu) p(\bm{w}|t_0, \mu) \\
   \end{aligned}
 \end{equation}
-where $\mathcal{P}$ stands for Poisson distribution.  Unlike eq.~\eqref{eq:mixnormal}, $z_i$ can take non-negative integers larger than 1, encoding the number of PE's in the $i$-th time bin.  Marginalizing out $\bm{z}$,
-\begin{equation}
-  \label{eq:bayesianinter}
-  p(\bm{w}|t_0, \mu) = \sum_{\bm{z}}p(\bm{w}, \bm{z}|t_0,\mu) = \sum_{\bm{z}}p(\bm{w}|\bm{z})p(\bm{z}|t_0,\mu),
-\end{equation}
-gives the probability of $\bm{w}$ subject to $\mu$ and $t_0$. $p(\bm{w}|z)$ is in place of $p(\bm{w}|z, t_0, \mu)$ because $\bm{w}$ does not depend on $t_0$ or $\mu$ if $\bm{z}$ is given.  The summation over $\bm{z}$, however, takes exploding number of combinations. Only a few $\bm{z}$'s contribute significantly in eq.~\eqref{eq:bayesianinter}.  Schniter~et al.~\cite{schniter_fast_2008} propose fast Bayesian matching pursuit~(FBMP) to construct a dominating set $\Omega$ of $\bm{z}$ with non-negligible $p(\bm{w}|\bm{z})$.  In terms of variational inference~(e.g.~\cite{mackay_information_2003}), the dominating set $\Omega$ defines an approximation $p_\Omega(\bm{z})$ to $p(\bm{z}|\bm{w})$, dropping the context $t_0$ and $\mu$ for simplicity,
+The integration over $\bm{q}'$ is the probability density of a multi-normal distribution $p(\bm{w}|\bm{z})$, with a fast algorithm to iteratively compute by Schniter~et al.~\cite{schniter_fast_2008}. The summation over $\bm{z}$, however, takes an exploding number of combinations.
 
+Let's approximate the summation with a sample from $S = (\bm{s}_1, \bm{s}_2, \cdots, \bm{s}_M)$ by Metropolis-Hasings~\cite{metropolis_equation_1953, hastings_monte_1970, mackay_information_2003} from $p(\bm{z}) = C p(\bm{w} | \bm{z}) h( \bm{z})$. $C$ is independent of $\bm{z}$, and $h(\bm{z})$ is an educated guess for $p(\bm{z}|t_0, \mu)$ from a previous method like LucyDDM~(section~\ref{sec:lucyddm}). Then,
 \begin{equation}
-  \label{eq:VI}
+  \label{eq:mh}
   \begin{aligned}
-    p_\Omega(\bm{z}) &= \begin{cases}
-      \frac{p(\bm{w},\bm{z})}{\sum_{z' \in \Omega} p(\bm{w},\bm{z}')} & \text{ if } \bm{z} \in \Omega \\ 
-      0 & \text{ if } \bm{z} \notin \Omega
-    \end{cases}\\
-    \log p(\bm{w}) - D_\mathrm{KL}\left[p_\Omega(\bm{z}) \parallel p(\bm{z}|\bm{w})\right] &= \sum_{\bm{z}} p_\Omega(\bm{z}) \log \frac{p(\bm{w}) p(\bm{z}|\bm{w})}{p_\Omega(\bm{z})} \\
-    &= \left[\sum_{\bm{z}} p_\Omega(\bm{z})\right]\left[\log \sum_{\bm{z}' \in \Omega} p(\bm{w}, \bm{z'}) \right] \\
-    &= \log \sum_{\bm{z} \in \Omega} p(\bm{w}, \bm{z}).
+    p(\bm{w}|\mu, t_0) &= \sum_{\bm{z}} p(\bm{w}|\bm{z}) p(\bm{z}|t_0, \mu) = \frac{1}{C}\sum_{\bm{z}} p(\bm{z}) \frac{p(\bm{z} | \mu, t_0)}{h(\bm{z})} \\
+    &= \frac{1}{C} \E_{\bm{z}}\left[ \frac{p(\bm{z} | \mu, t_0)}{h(\bm{z})} \right] \approx \frac{1}{CM} \sum_{i=1}^M \frac{p(\bm{s}_i | \mu, t_0)}{h(\bm{s}_i)}. \\
   \end{aligned}
 \end{equation}
-Since the KL divergence is non-negative, $\log \sum_{\bm{z} \in \Omega} p(\bm{w}, \bm{z})$ is the evidence lower bound~(ELBO) to $\log p(\bm{w})$.  Schniter et al.~\cite{schniter_fast_2008} construct $\Omega$ by repeated greedy search~(RGS) of $\bm{z}$'s with largest $p(\bm{w}, \bm{z})$.  But we find RGS on $p(\bm{w}, \bm{z}) \times \sqrt{(2\pi)^N\det\bm{\Sigma}}$ gives the best ELBO.  The multiplier eliminates the normalization factor of the multivariate Gaussian in eq.~\eqref{eq:mgauss}, and thus encourages RGS to find $\bm{z}$'s with larger $\hat{N}_\mathrm{PE}$.  An iteration scheme~\cite{schniter_fast_2008} efficiently computes $p(\bm{w}|\bm{z})$ in eq.~(\ref{eq:mgauss}) and overcomes the difficulty of MCMC~(section~\ref{subsec:mcmc}) to make FBMP practical.
-
-Using the ELBO as an approximation to $p(\bm{w})$ in eq.~\eqref{eq:bayesianinter} we have $t_0$ and $\mu$ estimators.  Take the maximum a posteriori estimation $\hat{\bm{z}}$ and the expectation estimation of $\hat{\bm{q}}$,
+Construct approximate MLEs for $t_0$, $\mu$ and $\bm{z}$, and the expectation estimation of $\hat{\bm{q}}$,
 \begin{equation}
-  \label{eq:fbmpcharge}
+  \label{eq:fsmpcharge}
   \begin{aligned}
-    \left(\hat{t}_0, \hat{\mu}\right) &= \arg\underset{t_0,\mu}{\max} \sum_{\bm{z} \in \Omega} p(\bm{w}|\bm{z})p(\bm{z}|t_0,\mu) \\
-    \hat{\bm{z}} &= \arg \underset{\bm{z} \in \Omega}{\max} p(\bm{w}|\bm{z}) \\
-    \hat{\bm{q}}_{\hat{\bm{z}}} &= E(\bm{q}'|\bm{w},\hat{\bm{z}}) = \hat{\bm{z}} + \bm{Z}\bm{V}_\mathrm{PE}^\intercal\bm{\Sigma}^{-1}(\bm{w}-\bm{V}_\mathrm{PE}\hat{\bm{z}})
+    \left(\hat{t}_0, \hat{\mu}\right) &= \arg\underset{t_0,\mu}{\max}~p(\bm{w}|\mu, t_0) = \arg\underset{t_0,\mu}{\max} \sum_{i=1}^M \frac{p(\bm{s}_i | \mu, t_0)}{h(\bm{s}_i)}\\
+    \hat{\bm{z}} &= \arg \underset{\bm{s}_i \in S}{\max}~p(\bm{w}|\bm{s}_i) h(\bm{s}_i) \\
+    \hat{\bm{q}}|{\hat{\bm{z}}} &= \E(\bm{q}'|\bm{w},\hat{\bm{z}})
   \end{aligned}
 \end{equation}
-and calculate RSS and $D_\mathrm{w}$ by eqs.~\eqref{eq:rss}, \eqref{eq:numerical}, \eqref{eq:gd-phi} and \eqref{eq:mcmc-w}.
+RSS and $D_\mathrm{w}$ are calculated by eqs.~\eqref{eq:rss}, \eqref{eq:numerical}, \eqref{eq:gd-phi} and \eqref{eq:mcmc-w}.
+
+We name the method \emph{fast stochastic matching pursuit}~(FSMP) after \emph{fast Bayesian matching pursuit}~(FBMP) by Schniter~et al.~\cite{schniter_fast_2008} and \emph{Bayesian stochastic matching pursuit} by Chen~et al.~\cite{chen_stochastic_2011}.  Here FSMP replaces the greedy search routine in FBMP with stochastic sampling.  With the help of Ekanadham~et al.'s function interpolation~\cite{ekanadham_recovery_2011}, FSMP straightforwardly extends $\bm{z}$ into an unbinned vector of PE locations $t_i$.  Geyer and Møller~\cite{geyer_simulation_1994} developed a similar sampler to handle trans-dimensionality in a Poisson point process.  $h(\bm{z})$ and the proposal distribution in Metropolis-Hastings steps could be tuned to improve sampling efficiency.  We shall leave the detailed study of the Markov chain convergence to our future publications.
 
 \begin{figure}[H]
   \begin{subfigure}[b]{.45\textwidth}
     \centering
-    \resizebox{1.05\textwidth}{!}{\input{figures/fbmpchargestats.pgf}}
-    \caption{\label{fig:fbmp-npe} $D_\mathrm{w}$ histogram and distributions conditioned on $N_{\mathrm{PE}}$, boxplot explained in figure~\ref{fig:cnn-performance}.}
+    \resizebox{1.05\textwidth}{!}{\input{figures/fsmpchargestats.pgf}}
+    \caption{\label{fig:fsmp-npe} $D_\mathrm{w}$ histogram and distributions conditioned on $N_{\mathrm{PE}}$, box-plot explained in figure~\ref{fig:cnn-performance}.}
   \end{subfigure}
   \hspace{0.5em}
   \begin{subfigure}[b]{.55\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/demoe2c0.pgf}}
-    \caption{\label{fig:fbmp} An example giving \\ $\Delta{t_0}=\SI{-3.54}{ns}$, $\mathrm{RSS}=\SI{15.8}{mV^2}$, $D_\mathrm{w}=\SI{0.59}{ns}$.}
+    \caption{\label{fig:fsmp} An example giving \\ $\Delta{t_0}=\SI{-3.97}{ns}$, $\mathrm{RSS}=\SI{17.8}{mV^2}$, $D_\mathrm{w}=\SI{0.64}{ns}$.}
   \end{subfigure}
-  \caption{\label{fig:fbmp-performance}Demonstration of FBMP with $\num[retain-unity-mantissa=false]{1e4}$ waveforms in~\subref{fig:fbmp-npe} and one waveform in~\subref{fig:fbmp} sampled from the same setup as figure~\ref{fig:method}.  FBMP reconstructs the waveform and charges flawlessly.}
+  \caption{\label{fig:fsmp-performance}Demonstration of FSMP with $\num[retain-unity-mantissa=false]{1e4}$ waveforms in~\subref{fig:fsmp-npe} and one waveform in~\subref{fig:fsmp} sampled from the same setup as figure~\ref{fig:method}.  FSMP reconstructs the waveform and charges flawlessly.}
 \end{figure}
-In terms of $D_\mathrm{w}$, figure~\ref{fig:fbmp-npe} show that FBMP is on par with CNN in figure~\ref{fig:cnn-npe}.  Figure~\ref{fig:fbmp} demonstrates a perfect reconstruction example where the true and reconstructed charges and waveforms overlap.  A bias of $\Delta{t_0}=\SI{-3.54}{ns}$ aligns with $\hat{t}_\mathrm{ALL}$ in eq.~\eqref{eq:2}, which will be covered in section~\ref{subsec:timeresolution}.  The superior performance of FBMP attributes to sparsity and positiveness of $q'_i$, correct modeling of $V_\mathrm{PE}$, $q'$ distribution and white noise.
+In terms of $D_\mathrm{w}$, figure~\ref{fig:fsmp-npe} shows that FSMP is on par with CNN in figure~\ref{fig:cnn-npe}.  Figure~\ref{fig:fsmp} is a perfect reconstruction example where the true and reconstructed charges and waveforms overlap.  A bias of $\Delta{t_0}=\SI{-3.97}{ns}$ aligns with $\hat{t}_\mathrm{ALL}$ in eq.~\eqref{eq:2}, which will be covered in section~\ref{subsec:timeresolution}.  The superior performance of FSMP attributes to sparsity and positiveness of $q'_i$, correct modeling of $V_\mathrm{PE}$, $q'$ distribution and white noise.
 
-Estimators for $t_0$ and $\mu$ in eq.~\eqref{eq:fbmpcharge} is an elegant interface to event reconstruction, eliminating the need of $\hat{t}_\mathrm{KL}$ and $\hat{\mu}_\mathrm{KL}$ in section~\ref{sec:pseudo}.
+Estimators for $t_0$ and $\mu$ in eq.~\eqref{eq:fsmpcharge} is an elegant interface to event reconstruction, eliminating the need of $\hat{t}_\mathrm{KL}$ and $\hat{\mu}_\mathrm{KL}$ in section~\ref{sec:pseudo}.

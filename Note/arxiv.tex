@@ -1,0 +1,90 @@
+\pdfoutput=1
+\documentclass[11pt,a4paper]{article}
+
+\usepackage{geometry}
+\newgeometry{textwidth=0.8\paperwidth,top=0.05\paperheight,headheight=0.02\paperheight,headsep=0.03\paperheight,footskip=0.07\paperheight}
+\usepackage{float}
+\usepackage[utf8]{inputenc}
+\usepackage{listings}
+\usepackage{caption}
+\usepackage{url}
+\usepackage{hyperref}
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows}
+\usepackage[subrefformat=parens]{subcaption}
+\usepackage[none]{hyphenat}
+\usepackage[binary-units=true,per-mode=symbol]{siunitx}
+\usepackage{textcomp}
+\usepackage{adjustbox}
+\usepackage{pgfplots}
+\usepackage{bm}
+\usepackage[bottom]{footmisc}
+\usepackage{mathtools}
+\usepackage{tablefootnote}
+\usepackage{lineno}
+\usepackage[affil-it]{authblk}
+\usepackage{amssymb}
+\pgfplotsset{
+    tick label style = {font = {\fontsize{6 pt}{12 pt}\selectfont}},
+    label style = {font = {\fontsize{8 pt}{12 pt}\selectfont}},
+    legend style = {font = {\fontsize{8 pt}{12 pt}\selectfont}},  
+}
+\newcommand{\ud}{\mathrm{d}}
+\DeclareMathOperator{\E}{E}
+\DeclareMathOperator{\erf}{erf}
+\DeclareMathOperator{\Var}{Var}
+\newcommand\acknowledgments{\section*{Acknowledgments}}
+
+\title{Towards the ultimate PMT waveform analysis}
+\date{}
+
+\begin{document}
+
+\author[a,b,c]{Dacheng~Xu}
+\author[a,b,c,d]{Benda~Xu\footnote{Corresponding author. orv@tsinghua.edu.cn}}
+\author[e,f]{Erjin~Bao}
+\author[a,b,c]{Yiyang~Wu}
+\author[a,b,c]{Aiqiang~Zhang}
+\author[a,b,c]{Yuyi~Wang}
+\author[g]{Geliang~Zhang}
+\author[h]{Yu~Xu}
+\author[a,b,c]{Ziyi~Guo}
+\author[i,2]{Jihui~Pei\footnote{Current address: School of Physics, Peking University, Beijing, China.}}
+\author[j]{Hanyang~Mao}
+\author[j]{Jiashuo~Liu}
+\author[a,b,c]{Zhe~Wang}
+\author[a,b,c]{Shaomin~Chen}
+
+\affil[a]{\footnotesize Department of Engineering Physics, Tsinghua University, Beijing, China}
+\affil[b]{Center for High Energy Physics, Tsinghua University, Beijing, China}
+\affil[c]{Key Laboratory of Particle \& Radiation Imaging (Tsinghua University), Ministry of Education, China}
+\affil[d]{Kavli Institute for the Physics and Mathematics of the Universe, UTIAS, the University of Tokyo, Japan}
+\affil[e]{National Institute of Informatics, Tokyo, Japan}
+\affil[f]{Department of Informatics, The Graduate University for Advanced Studies (SOKENDAI), Tokyo, Japan}
+\affil[g]{School of Securities and Futures, Southwestern University of Finance and Economics, Chengdu, China}
+\affil[h]{School of Physics, Sun Yat-Sen Univesrity, Guangdong, China}
+\affil[i]{Department of Physics, Tsinghua University, Beijing, China}
+\affil[j]{Department of Computer Science and Technology, Tsinghua University, Beijing, China}
+
+\maketitle
+
+\begin{abstract}
+    \input{Abstract}\\
+    \\
+    \textsc{Keywords:} PMT, Neutrino detector, Data analysis
+\end{abstract}
+
+% \newpage
+\tableofcontents
+
+\input{Introduction}
+\input{toyMC}
+\input{Algorithm}
+\input{Discussion}
+\input{Conclusion}
+\input{Acknowledgement}
+
+\bibliographystyle{JHEP}
+\bibliography{ref}
+
+\end{document}

@@ -19,7 +19,7 @@ else
 ifeq ($(method), mcmc)
 	predict:=bayesian
 else
-ifeq ($(method), fbmp)
+ifeq ($(method), fsmp)
 	predict:=bayesian
 else
     predict:=fit
