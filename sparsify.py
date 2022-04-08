@@ -56,6 +56,8 @@ d_index = [
     ("mu0", np.float32),
     ("NPE", np.uint32),
     ("l_t", np.uint32),
+    ("a_wave", np.uint32),
+    ("b_wave", np.uint32),
     ("l_wave", np.uint32),
     ("mus", np.float32),
     ("sig2s", np.float32),
@@ -65,6 +67,8 @@ d_index = [
 t_l = []
 q_l = []
 cq_l = [] # cumulative q
+a_w = []
+b_w = []
 mu_l = []
 NPE_l = []
 mus_l = []
@@ -158,6 +162,8 @@ for ie, e in enumerate(ent):
     t_l.append(tlist)
     q_l.append(p_cha)
     cq_l.append(cq)
+    a_w.append(left_wave)
+    b_w.append(right_wave)
     mu_l.append(mu0)
     NPE_l.append(NPE)
     mus_l.append(mus)
@@ -212,5 +218,7 @@ with h5py.File(fopt, "w") as opt:
     index["mus"] = mus_l
     index["sig2s"] = sig2s_l
     index["sig2w"] = sig2w_l
+    index["a_wave"] = a_w
+    index["b_wave"] = b_w
     index["l_wave"] = A_shape[:, 0]
     index["l_t"] = A_shape[:, 1]

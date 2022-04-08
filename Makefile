@@ -5,9 +5,7 @@ mu:=$(shell seq -f '%0.1f' 0.5 0.5 3.5 && seq -f '%0.1f' 4 2 10 && seq -f '%0.1f
 tau:=$(shell awk -F',' 'NR == 1 { print $1 }' rc.csv)
 sigma:=$(shell awk -F',' 'NR == 2 { print $1 }' rc.csv)
 
-config:=20-5
-
-method:=fbmp
+erg:=$(filter-out %-00-00,$(shell for i in $(mu); do for j in $(tau); do for k in $(sigma); do echo $${i}-$${j}-$${k}; done; done; done))
 sim:=$(erg:%=waveform/%.h5)
 char:=$(patsubst waveform/%.h5,result/$(method)/char/%.h5,$(sim))
 solu:=$(patsubst waveform/%.h5,result/$(method)/solu/%.h5,$(sim))
@@ -20,7 +18,8 @@ ifeq ($(method), mcmc)
 	predict:=bayesian
 else
 ifeq ($(method), fsmp)
-	predict:=bayesian
+	predict:=gibbs
+	sparsify:=$(patsubst waveform/%.h5,result/$(method)/sparsify/%.h5,$(sim))
 else
     predict:=fit
 endif
@@ -32,7 +31,7 @@ Nets:=$(channelN:%=result/takara/char/Nets/Channel%.torch_net)
 
 .PHONY : all
 
-all : $(config:%=bias/%.pdf)
+all : test
 
 char : $(char)
 
@@ -40,30 +39,38 @@ test : $(hist)
 
 solu : $(solu)
 
+sparsify : $(sparsify)
+
 sim : $(sim)
 
-sparsify/%.h5: waveform/%.h5 spe.h5
-	mkdir -p $(dir $@)
-	python3 sparsify.py $< --ref $(word 2,$^) -o $@
+define gibbs
+result/$(method)/sparsify/%.h5: waveform/%.h5 spe.h5
+	@mkdir -p $$(dir $$@)
+	python3 sparsify.py $$< --ref $$(word 2,$$^) -o $$@ > $$@.log 2>&1
 
-batch/%.h5: sparsify/%.h5
-	mkdir -p $(dir $@)
-	sem --fg python3 batch.py $^ -o $@ --size 5000
+result/$(method)/batch/%.h5: result/$(method)/sparsify/%.h5 waveform/%.h5
+	@mkdir -p $$(dir $$@)
+	sem --fg python3 batch.py $$< --ref $$(word 2,$$^) -o $$@ --size 5000 > $$@.log 2>&1
 
-mu/%.h5: batch/%.h5 sparsify/%.h5 waveform/%.h5 
-	mkdir -p $(dir $@)
-	python3 mu.py $< --sparse $(word 2,$^) --ref $(word 3,$^) -o $@
+result/$(method)/mu/%.h5: result/$(method)/batch/%.h5 result/$(method)/sparsify/%.h5 waveform/%.h5
+	@mkdir -p $$(dir $$@)
+	python3 mu.py $$< --sparse $$(word 2,$$^) --ref $$(word 3,$$^) -o $$@ > $$@.log 2>&1
+
+result/$(method)/char/%.h5: result/$(method)/batch/%.h5 result/$(method)/mu/%.h5 result/$(method)/sparsify/%.h5 waveform/%.h5
+	@mkdir -p $$(dir $$@)
+	python3 collect.py $$< --mu $$(word 2,$$^) --sparse $$(word 3,$$^) --ref $$(word 4,$$^) -N 100 -o $$@ > $$@.log 2>&1
+endef
 
 define bayesian
 result/$(method)/char/%.h5 : waveform/%.h5 spe.h5
 	@mkdir -p $$(dir $$@)
-	OMP_NUM_THREADS=2 python3 bayesian.py $$< --met $(method) -N 1 --ref $$(word 2,$$^) -o $$@ > $$@.log 2>&1
+	OMP_NUM_THREADS=2 python3 bayesian.py $$< --met $(method) -N 100 --ref $$(word 2,$$^) -o $$@ > $$@.log 2>&1
 endef
 
 define fit
 result/$(method)/char/%.h5 : waveform/%.h5 spe.h5
 	@mkdir -p $$(dir $$@)
-	OMP_NUM_THREADS=2 python3 fit.py $$< --met $(method) -N 1 --ref $$(wordlist 2,3,$$^) -o $$@ > $$@.log 2>&1
+	OMP_NUM_THREADS=2 python3 fit.py $$< --met $(method) -N 100 --ref $$(wordlist 2,3,$$^) -o $$@ > $$@.log 2>&1
 endef
 
 define nn
@@ -73,15 +80,15 @@ result/takara/char/%.h5 : waveform/%.h5 spe.h5 $(Nets)
 endef
 $(eval $(call $(predict)))
 
-result/$(method)/hist/%.pdf : result/$(method)/dist/%.h5 waveform/%.h5 result/$(method)/solu/%.h5 result/$(method)/char/%.h5
-	@mkdir -p $(dir $@)
-	python3 draw_dist.py $< --ref $(wordlist 2,4,$^) -o $@ > $@.log 2>&1
 result/$(method)/dist/%.h5 : waveform/%.h5 result/$(method)/char/%.h5 spe.h5
 	@mkdir -p $(dir $@)
 	OMP_NUM_THREADS=2 python3 test_dist.py $(word 2,$^) --ref $< $(word 3,$^) -o $@ > $@.log 2>&1
 result/$(method)/solu/%.h5 : result/$(method)/char/%.h5 waveform/%.h5 spe.h5
 	@mkdir -p $(dir $@)
 	OMP_NUM_THREADS=2 python3 toyRec.py $< --ref $(wordlist 2,3,$^) -o $@ > $@.log 2>&1
+result/$(method)/hist/%.pdf : result/$(method)/dist/%.h5 waveform/%.h5 result/$(method)/solu/%.h5 result/$(method)/char/%.h5
+	@mkdir -p $(dir $@)
+	python3 draw_dist.py $< --ref $(wordlist 2,4,$^) -o $@ > $@.log 2>&1
 
 vs : rc.csv
 	python3 vs.py --conf $^
@@ -110,11 +117,6 @@ waveform/%.h5 :
 	python3 toySim.py --mts $* --noi -N 10000 -o $@ > $@.log 2>&1
 
 spe.h5 : $(sim) ;
-
-.SECONDEXPANSION:
-bias/%.pdf: $$(foreach i,$(mu),mu/$$(i)-%.h5)
-	mkdir -p $(dir $@)
-	./bias.R $^ -o $@
 
 .DELETE_ON_ERROR: 
 

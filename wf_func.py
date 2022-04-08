@@ -49,6 +49,7 @@ p = [8., 0.5, 24.]
 Thres = {'mcmc':std / gsigma, 'xiaopeip':0, 'lucyddm':0.2, 'fsmp':0, 'fftrans':0.1, 'findpeak':0.1, 'threshold':0, 'firstthres':0, 'omp':0}
 d_history = [('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('step', np.uint32), ('loc', np.float32)]
 proposal = np.array((1, 1, 2)) / 4
+TRIALS = 5000
 
 def xiaopeip_old(wave, spe_pre, eta=0):
     l = len(wave)
@@ -258,7 +259,7 @@ def flow(cx, p1, z, N, sig2s, sig2w, mus, A, p_cha, mu_t, TRIALS=2000):
         cx += Δcx
         z += Δz
 
-    # s 的记录方式：使用定长 compound array es_history 存储(存在 'loc' 里)，但由于 s 实际上变长，每一个有相同  'step' 的 'loc' 属于一个 s，si 作为临时变量用于分割成不定长片段，每一段是一个 s。
+    # s 的记录方式：使用定长 compound array es_history 存储(存在 'loc' 里)，但由于 s 实际上变长，每一个有相同 'step' 的 'loc' 属于一个 s，si 作为临时变量用于分割成不定长片段，每一段是一个 s。
     si = 0
     es_history = np.zeros(TRIALS * (NPE0 + 5) * N, dtype=d_history)
 
@@ -585,12 +586,8 @@ def likelihoodt0(hitt, char, gmu, Tau, Sigma, mode='charge', is_delta=False):
     return t0, t0delta
 
 def initial_params(wave, spe_pre, Tau, Sigma, gmu, Thres, p, nsp=4, nstd=3, is_t0=False, is_delta=False, n=1):
-    hitt_r, char_r = lucyddm(wave, spe_pre['spe'])
-    hitt_r, char_r = clip(hitt_r, char_r, Thres)
-    hitt = np.arange(hitt_r.min(), hitt_r.max() + 1)
-    hitt[np.isin(hitt, hitt_r)] = hitt_r
-    char = np.zeros(len(hitt))
-    char[np.isin(hitt, hitt_r)] = char_r
+    hitt, char = lucyddm(wave, spe_pre['spe'])
+    hitt, char = clip(hitt, char, Thres)
     char = char / char.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
     tlist = np.unique(np.clip(np.hstack(hitt[:, None] + np.arange(-nsp, nsp+1)), 0, len(wave) - 1))
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import time
 import argparse
+import itertools as it
 
 import h5py
 import numpy as np
@@ -9,18 +10,19 @@ import cupy as cp
 from scipy.special import erf
 from scipy.stats import norm
 
-import itertools as it
+import wf_func as wff
 
 psr = argparse.ArgumentParser()
 psr.add_argument("-o", dest="opt", type=str, help="output file")
 psr.add_argument("ipt", type=str, help="input file")
+psr.add_argument("--ref", type=str, help="truth file")
 psr.add_argument("--size", type=int, default=100, help="batch size")
 args = psr.parse_args()
 
 fipt = args.ipt
 fopt = args.opt
 
-TRIALS = 5000
+TRIALS = wff.TRIALS
 
 #profile
 def vcombine(A, cx, t, w_all):
@@ -83,21 +85,40 @@ def v_rt(_s, _ts, w_all):
     ti = np.array(ti, np.int32)
     return (1 - frac) * _ts[w_all, ti] + frac * _ts[w_all, ti+1]
 
-tau=20
-sigma=5
-alpha = 1 / tau
-co = -np.log(2.0 * tau) + alpha * alpha * sigma * sigma / 2.0
-ass = alpha * sigma * sigma
-s2s = np.sqrt(2.0) * sigma
+with h5py.File(args.ref, 'r', libver='latest', swmr=True) as ipt:
+    tau = ipt['Readout/Waveform'].attrs['tau'].item()
+    sigma = ipt['Readout/Waveform'].attrs['sigma'].item()
+
+pi = np.pi
+
+# def lc(t):
+#     return co + np.log(1.0 - erf((ass - t)/s2s)) - alpha*t
 
 def lc(t):
-    return co + np.log(1.0 - erf((ass - t)/s2s)) - alpha*t
+    return wff.log_convolve_exp_norm(t, tau, sigma)
 
-sel_lc = cp.ElementwiseKernel(
-    'float32 t, bool sel',
-    'float32 lprob',
-    f"lprob = sel ? {co} + log(1.0 - erf(({ass} - t)/{s2s})) - {alpha}*t : 0",
-    'sel_lc')
+if tau == 0.0:
+    sel_lc = cp.ElementwiseKernel(
+        'float32 t, bool sel',
+        'float32 lprob',
+        f"lprob = sel ? -log({sigma}) - 0.5 * log(2.0 * {pi}) - 0.5 * (t / {sigma}) * (t / {sigma}) : 0",
+        'sel_lc')
+elif sigma == 0.0:
+    sel_lc = cp.ElementwiseKernel(
+        'float32 t, bool sel',
+        'float32 lprob',
+        f"lprob = sel ? (t > 0 ? -log({tau}) - t / {tau} : -1e4) : 0",
+        'sel_lc')
+else:
+    alpha = 1 / tau
+    co = -np.log(2.0 * tau) + alpha * alpha * sigma * sigma / 2.0
+    ass = alpha * sigma * sigma
+    s2s = np.sqrt(2.0) * sigma
+    sel_lc = cp.ElementwiseKernel(
+        'float32 t, bool sel',
+        'float32 lprob',
+        f"lprob = sel ? {co} + log(1.0 - erf(({ass} - t) / {s2s})) - {alpha} * t : 0",
+        'sel_lc')
 
 sel_add = cp.ElementwiseKernel('float32 delta, bool sel', 'float32 dest', "if(sel) dest += delta", "sel_add")
 sel_assign = cp.ElementwiseKernel('float32 value, bool sel', 'float32 dest', "if(sel) dest = value", "sel_assign")
@@ -141,7 +162,7 @@ def batch(A, cx, index, tq, s, z):
 
     # 根据 p_cha 采样得到的 PE 序列。供以后的产生过程使用。这两行是使用了 InverseCDF 算法进行的MC采样。
     fp = np.arange(l_t)
-    home_s = np.array([ np.interp(_is, xp=_xp[:_lt], fp=fp[:_lt]) for _is, _xp, _lt in zip(istar, tq["cq"], index["l_t"])])
+    home_s = np.array([np.interp(_is, xp=_xp[:_lt], fp=fp[:_lt]) for _is, _xp, _lt in zip(istar, tq["cq"], index["l_t"])])
 
     t0 = np.zeros(l_e, np.float32)
     e_hit = NPE > 0
@@ -154,6 +175,8 @@ def batch(A, cx, index, tq, s, z):
     flip = np.random.choice((-1, 1, 2), (l_e, TRIALS), p=np.array((1, 1, 2)) / 4)
     Δν_g = cp.zeros(l_e, dtype=np.float32)
     Δν = np.zeros(l_e, dtype=np.float32)
+    ν = np.zeros(l_e, dtype=np.float32)
+    ν_max = np.zeros(l_e, dtype=np.float32)
     Δν_history = np.zeros((l_e, TRIALS), dtype=np.float32) # list of Δν's
     annihilations = np.zeros((l_e, TRIALS)) # float64
     creations = np.zeros((l_e, TRIALS)) # float64
@@ -165,6 +188,9 @@ def batch(A, cx, index, tq, s, z):
     fsig2s_inv = cp.diag(vstep)[None, :, :] * (1/sig2s)[:, None, None]
     det_fsig2s_inv = cp.linalg.det(fsig2s_inv)
     fmu = vstep[None, :] * mus[:, None]
+
+    last_max_s = s.copy()
+    s_max_index = np.zeros(l_e, dtype=np.uint32)
 
     for i, (t, step, home, wander, wt, accept, acct) in enumerate(
         zip(
@@ -240,7 +266,7 @@ def batch(A, cx, index, tq, s, z):
         creations[ea_plus, i] = loc[ea_plus, 1]
 
         s[ea_create, NPE[ea_create]] = loc[ea_create, 1]
-        NPE[ea_create] = NPE[ea_create] + 1
+        NPE[ea_create] += 1
         # 减少
         ea_annihilate = np.logical_and(e_accept, step == -1)
         ea_minus = np.logical_and(e_accept, e_minus)
@@ -255,10 +281,15 @@ def batch(A, cx, index, tq, s, z):
         Δν[~e_accept] = 0
         step[~e_accept] = 0
 
+        ν += Δν
+        breakthrough = ν > ν_max
+        ν_max[breakthrough] = ν[breakthrough]
+        s_max_index[breakthrough] = i
+        last_max_s[breakthrough] = s[breakthrough]
         Δν_history[:, i] = Δν
         flip[:, i] = step
         s0_history[:, i] = NPE
-    return flip, s0_history, t0_history, Δν_history, annihilations, creations
+    return flip, s0_history, t0_history, Δν_history, s_max_index, last_max_s, annihilations, creations
 
 with h5py.File(fipt, "r", libver="latest", swmr=True) as ipt:
     A = ipt["A"][:]
@@ -277,6 +308,9 @@ sample = np.zeros((l_e * TRIALS), dtype=[("TriggerNo", "u4"), ("ChannelID", "u4"
                                          ("delta_nu", "f4")])
 sample["TriggerNo"] = np.repeat(index["TriggerNo"], TRIALS)
 sample["ChannelID"] = np.repeat(index["ChannelID"], TRIALS)
+s_max = np.zeros(l_e, dtype=[("TriggerNo", "u4"), ("ChannelID", "u4"), ("s_max_index", "u4"), ("s_max", "f4", index['l_t'].max())])
+s_max["TriggerNo"] = index["TriggerNo"]
+s_max["ChannelID"] = index["ChannelID"]
 
 for part in range(l_e // args.size + 1):
     i_part = s_t[part * args.size:(part + 1) * args.size]
@@ -290,7 +324,7 @@ for part in range(l_e // args.size + 1):
 
         null = np.zeros((l_part, lp_wave, 1), np.float32) # cx, A[:, :, -1] = 0  用于 +- 的空白维度
         s_null = np.zeros((l_part, lp_NPE * 2), np.float32) # 富余的 PE 活动空间
-        (flip, s0_history, t0_history, Δν_history, annihilations, creations,
+        (flip, s0_history, t0_history, Δν_history, s_max_index, last_max_s, annihilations, creations,
          ) = batch(cp.asarray(np.append(A[i_part, :lp_wave, :lp_t], null, axis=2), np.float32),
                    cp.asarray(np.append(cx[i_part, :lp_wave, :lp_t], null, axis=2), np.float32),
                    index[i_part], tq[i_part, :lp_t], 
@@ -304,6 +338,10 @@ for part in range(l_e // args.size + 1):
         sample["annihilation"][fip] = annihilations.flatten()
         sample["creation"][fip] = creations.flatten()
         sample["delta_nu"][fip] = Δν_history.flatten()
+        s_max["s_max_index"][i_part] = s_max_index
+        min_col = min(last_max_s.shape[1], index['l_t'].max())
+        s_max["s_max"][i_part, :min_col] = last_max_s[:, :min_col]
 
 with h5py.File(fopt, "w") as opt:
     opt.create_dataset("sample", data=sample, compression="gzip", shuffle=True)
+    opt.create_dataset("s_max", data=s_max, compression="gzip", shuffle=True)
