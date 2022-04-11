@@ -63,7 +63,7 @@ def vmove2(A_vec, c_vec, fmu, A, beta):
     "eij, eiv, ejw, ewt->evt"
     beta c_vec c_vec A
     '''
-    Δcx = -np.transpose(beta @ c_vec, (0, 2, 1)) @ (c_vec @ A)
+    Δcx = -cp.transpose(beta @ c_vec, (0, 2, 1)) @ (c_vec @ A)
     Δz = -(fmu[:, None, :] @ A_vec).squeeze()
     return Δcx, Δz
 
@@ -240,7 +240,7 @@ def batch(A, cx, index, tq, s, z):
         creations[ea_plus, i] = loc[ea_plus, 1]
 
         s[ea_create, NPE[ea_create]] = loc[ea_create, 1]
-        NPE[ea_create] = NPE[ea_create] + 1
+        NPE[ea_create] += 1
         # 减少
         ea_annihilate = np.logical_and(e_accept, step == -1)
         ea_minus = np.logical_and(e_accept, e_minus)
