@@ -82,6 +82,8 @@ By directly extracting waveform features, heuristic methods are straightforward 
 
 \subsubsection{Waveform shifting}
 \label{sec:shifting}
+Some Experiments directly use waveforms as input of following analysis. For example, proton decay search at KamLAND\cite{kamland_proton_decay_2015} shifted waveforms by photon time of flight (TOF), and sum up all PMT waveforms for each candidate vertex. The total waveform shape is used for $\chi^2$ based particle identification (PID). Samani et al.\cite{samani_pulse_2020} extracted pulse width from raw waveform and use it as a discriminator for PID. Such techniques are widely used for neurtino and dark matter experiments with PMT waveform readout. The method is straightforward, but the smearing effect of charge variation $\sigma_\mathrm{q}$ and single PE response remains, which shall be discussed in \ref{subsec:timeresolution}. It is equivalent to use shifted waveform as the approximated PE hit pattern, so in the waveform analysis scope we name it as \textit{waveform shifting} method.
+
 By \textit{waveform shifting}, we extract more time information than TDC: select all the $t_i$ where the waveform $w(t_i)$ exceeds a threshold to suppress noise, shift them by $\Delta t$ according to the shape of the single PE response $V_\mathrm{PE}(t)$ in eq.~\eqref{eq:dayaspe} to get $\hat{t}_i$, then take $\hat{q}_i \propto w(\hat{t}_i - \Delta t)$ so that the RSS is minimized.  Though the obtained $\hat{q}_i$'s are smaller than PE charges as in figure~\ref{fig:shifting}, waveform shifting does minimal analysis and serves as a baseline method.
 
 \begin{figure}[H]
