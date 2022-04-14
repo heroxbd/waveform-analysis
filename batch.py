@@ -65,7 +65,7 @@ def vmove2(A_vec, c_vec, fmu, A, beta):
     "eij, eiv, ejw, ewt->evt"
     beta c_vec c_vec A
     '''
-    Δcx = -np.transpose(beta @ c_vec, (0, 2, 1)) @ (c_vec @ A)
+    Δcx = -cp.transpose(beta @ c_vec, (0, 2, 1)) @ (c_vec @ A)
     Δz = -(fmu[:, None, :] @ A_vec).squeeze()
     return Δcx, Δz
 
