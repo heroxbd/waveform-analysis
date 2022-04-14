@@ -6,11 +6,9 @@
 %% Make sure the required packages are loaded in your preamble
 %%   \usepackage{pgf}
 %%
-%% and, on pdftex
-%%   \usepackage[utf8]{inputenc}\DeclareUnicodeCharacter{2212}{-}
-%%
-%% or, on luatex and xetex
-%%   \usepackage{unicode-math}
+%% Also ensure that all the required font packages are loaded; for instance,
+%% the lmodern package is sometimes necessary when using math font.
+%%   \usepackage{lmodern}
 %%
 %% Figures using additional raster images can only be included by \input if
 %% they are in the same directory as the main LaTeX file. For loading figures
@@ -41,6 +39,7 @@
 \pgfpathlineto{\pgfqpoint{8.000000in}{0.000000in}}%
 \pgfpathlineto{\pgfqpoint{8.000000in}{4.000000in}}%
 \pgfpathlineto{\pgfqpoint{0.000000in}{4.000000in}}%
+\pgfpathlineto{\pgfqpoint{0.000000in}{0.000000in}}%
 \pgfpathclose%
 \pgfusepath{fill}%
 \end{pgfscope}%
@@ -58,6 +57,7 @@
 \pgfpathlineto{\pgfqpoint{7.760000in}{0.400000in}}%
 \pgfpathlineto{\pgfqpoint{7.760000in}{3.880000in}}%
 \pgfpathlineto{\pgfqpoint{0.400000in}{3.880000in}}%
+\pgfpathlineto{\pgfqpoint{0.400000in}{0.400000in}}%
 \pgfpathclose%
 \pgfusepath{fill}%
 \end{pgfscope}%
@@ -478,6 +478,7 @@
 \pgfpathlineto{\pgfqpoint{0.510400in}{0.397613in}}%
 \pgfpathlineto{\pgfqpoint{0.473600in}{0.397613in}}%
 \pgfpathlineto{\pgfqpoint{0.436800in}{0.397613in}}%
+\pgfpathlineto{\pgfqpoint{0.400000in}{0.397613in}}%
 \pgfpathlineto{\pgfqpoint{0.400000in}{0.397613in}}%
 \pgfpathclose%
 \pgfusepath{stroke,fill}%
@@ -905,6 +906,7 @@
 \pgfpathlineto{\pgfqpoint{0.473600in}{0.397613in}}%
 \pgfpathlineto{\pgfqpoint{0.436800in}{0.397613in}}%
 \pgfpathlineto{\pgfqpoint{0.400000in}{0.397613in}}%
+\pgfpathlineto{\pgfqpoint{0.400000in}{0.397613in}}%
 \pgfpathclose%
 \pgfusepath{stroke,fill}%
 }%
@@ -938,6 +940,7 @@
 \pgfpathmoveto{\pgfqpoint{0.027778in}{-0.000000in}}%
 \pgfpathlineto{\pgfqpoint{-0.027778in}{0.027778in}}%
 \pgfpathlineto{\pgfqpoint{-0.027778in}{-0.027778in}}%
+\pgfpathlineto{\pgfqpoint{0.027778in}{-0.000000in}}%
 \pgfpathclose%
 \pgfusepath{stroke,fill}%
 }%
@@ -959,6 +962,7 @@
 \pgfpathmoveto{\pgfqpoint{0.000000in}{0.027778in}}%
 \pgfpathlineto{\pgfqpoint{-0.027778in}{-0.027778in}}%
 \pgfpathlineto{\pgfqpoint{0.027778in}{-0.027778in}}%
+\pgfpathlineto{\pgfqpoint{0.000000in}{0.027778in}}%
 \pgfpathclose%
 \pgfusepath{stroke,fill}%
 }%

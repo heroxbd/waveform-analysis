@@ -6,11 +6,9 @@
 %% Make sure the required packages are loaded in your preamble
 %%   \usepackage{pgf}
 %%
-%% and, on pdftex
-%%   \usepackage[utf8]{inputenc}\DeclareUnicodeCharacter{2212}{-}
-%%
-%% or, on luatex and xetex
-%%   \usepackage{unicode-math}
+%% Also ensure that all the required font packages are loaded; for instance,
+%% the lmodern package is sometimes necessary when using math font.
+%%   \usepackage{lmodern}
 %%
 %% Figures using additional raster images can only be included by \input if
 %% they are in the same directory as the main LaTeX file. For loading figures
@@ -41,6 +39,7 @@
 \pgfpathlineto{\pgfqpoint{8.000000in}{0.000000in}}%
 \pgfpathlineto{\pgfqpoint{8.000000in}{6.000000in}}%
 \pgfpathlineto{\pgfqpoint{0.000000in}{6.000000in}}%
+\pgfpathlineto{\pgfqpoint{0.000000in}{0.000000in}}%
 \pgfpathclose%
 \pgfusepath{fill}%
 \end{pgfscope}%
@@ -58,6 +57,7 @@
 \pgfpathlineto{\pgfqpoint{7.200000in}{0.720000in}}%
 \pgfpathlineto{\pgfqpoint{7.200000in}{5.340000in}}%
 \pgfpathlineto{\pgfqpoint{1.000000in}{5.340000in}}%
+\pgfpathlineto{\pgfqpoint{1.000000in}{0.720000in}}%
 \pgfpathclose%
 \pgfusepath{fill}%
 \end{pgfscope}%
@@ -872,6 +872,7 @@
 \pgfpathquadraticcurveto{\pgfqpoint{5.334414in}{5.201111in}}{\pgfqpoint{5.334414in}{5.145556in}}%
 \pgfpathlineto{\pgfqpoint{5.334414in}{3.467056in}}%
 \pgfpathquadraticcurveto{\pgfqpoint{5.334414in}{3.411501in}}{\pgfqpoint{5.389969in}{3.411501in}}%
+\pgfpathlineto{\pgfqpoint{5.389969in}{3.411501in}}%
 \pgfpathclose%
 \pgfusepath{stroke,fill}%
 \end{pgfscope}%
@@ -889,6 +890,7 @@
 \pgfsetstrokecolor{currentstroke}%
 \pgfsetdash{}{0pt}%
 \pgfpathmoveto{\pgfqpoint{5.445525in}{4.544495in}}%
+\pgfpathlineto{\pgfqpoint{5.723302in}{4.544495in}}%
 \pgfpathlineto{\pgfqpoint{6.001080in}{4.544495in}}%
 \pgfusepath{stroke}%
 \end{pgfscope}%
@@ -906,6 +908,7 @@
 \pgfsetstrokecolor{currentstroke}%
 \pgfsetdash{}{0pt}%
 \pgfpathmoveto{\pgfqpoint{5.445525in}{4.118051in}}%
+\pgfpathlineto{\pgfqpoint{5.723302in}{4.118051in}}%
 \pgfpathlineto{\pgfqpoint{6.001080in}{4.118051in}}%
 \pgfusepath{stroke}%
 \end{pgfscope}%
@@ -923,6 +926,7 @@
 \pgfsetstrokecolor{currentstroke}%
 \pgfsetdash{}{0pt}%
 \pgfpathmoveto{\pgfqpoint{5.445525in}{3.691607in}}%
+\pgfpathlineto{\pgfqpoint{5.723302in}{3.691607in}}%
 \pgfpathlineto{\pgfqpoint{6.001080in}{3.691607in}}%
 \pgfusepath{stroke}%
 \end{pgfscope}%
