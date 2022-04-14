@@ -96,7 +96,7 @@ def collect(a0, a1):
         ts['tscharge'][i - a0] = t0_i
         ts['TriggerNo'][i - a0] = ent[i]['TriggerNo']
         ts['ChannelID'][i - a0] = ent[i]['ChannelID']
-        ts['consumption'][i - a0] = 1 # TODO
+        ts['consumption'][i - a0] = s_max[i]['consumption']
 
         dt['HitPosInWindow'][start:end] = pet
         dt['Charge'][start:end] = cha

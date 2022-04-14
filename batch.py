@@ -346,7 +346,7 @@ for part in range(l_e // args.size + 1):
         s_max["s_max_index"][i_part] = s_max_index
         min_col = min(last_max_s.shape[1], index['l_t'].max())
         s_max["s_max"][i_part, :min_col] = last_max_s[:, :min_col]
-        s_max["consumption"][i_part] = (time.time() - time_start) / i_part.sum()
+        s_max["consumption"][i_part] = (time.time() - time_start) / l_part
 print(f"FSMP finished, real time {s_max['consumption'].sum():.02f}s")
 
 with h5py.File(fopt, "w") as opt:
