@@ -385,13 +385,20 @@ for i, (cc, ll, kk) in enumerate(zip(bar_colors, labels, keys)):
             consumption_dy_i = np.array([consumption_i[1] - consumption_i[0], consumption_i[2] - consumption_i[1]])
             ax.errorbar(consumption_i[1], wdist[i, 1], xerr=consumption_dy_i[:, None], yerr=wdist_dy[:, i][:, None], fmt='o', elinewidth=1, capsize=3, c=color[kk], label='$\mathrm{CNN(CPU)}$')
         else:
-            ax.errorbar(consumption[i, 1], wdist[i, 1], xerr=consumption_dy[:, i][:, None], yerr=wdist_dy[:, i][:, None], fmt='o', ecolor=color[kk], c=color[kk], elinewidth=1, capsize=3, label=ll)
+            if kk == 'fsmp':
+                eb = ax.errorbar(consumption[i, 1], wdist[i, 1], xerr=consumption_dy[:, i][:, None], yerr=wdist_dy[:, i][:, None], fmt='o', ecolor=color[kk], c=color[kk], elinewidth=1, capsize=3, label='$\mathrm{FSMP(GPU)}$')
+                eb[-1][0].set_linestyle('--')
+                eb[-1][1].set_linestyle('--')
+            else:
+                ax.errorbar(consumption[i, 1], wdist[i, 1], xerr=consumption_dy[:, i][:, None], yerr=wdist_dy[:, i][:, None], fmt='o', ecolor=color[kk], c=color[kk], elinewidth=1, capsize=3, label=ll)
     except:
         pass
     ax.text(np.exp(np.log(consumption[i, 1]) + 0.05), wdist[i, 1] + 0.05, s=ll)
-ax.plot(np.logspace(-5, 2, 301), 2 - 0.5 * np.logspace(-5, 2, 301), color='k', alpha=0.5, linestyle='dashed')
-ax.fill_between(np.logspace(-5, 2, 301), y1=2 - 0.5 * np.logspace(-5, 2, 301), y2=10, color='k', alpha=0.2)
-ax.set_xlim(1e-3, 20)
+min_consumption = np.min(consumption[~np.isnan(consumption)]) / 2
+x = np.logspace(np.log10(min_consumption), 2, 301)
+ax.plot(x, 2 - 0.5 * x, color='k', alpha=0.5, linestyle='dashed')
+ax.fill_between(x, y1=2 - 0.5 * x, y2=10, color='k', alpha=0.2)
+ax.set_xlim(min_consumption, 20)
 ax.set_ylim(0, 4)
 ax.set_xscale('log')
 ax.set_xlabel(r'$\mathrm{Time\ consumption\ per\ waveform}/\si{s}$')

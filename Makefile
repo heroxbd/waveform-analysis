@@ -18,7 +18,8 @@ ifeq ($(method), mcmc)
 	predict:=bayesian
 else
 ifeq ($(method), fsmp)
-	predict:=bayesian
+	predict:=gibbs
+	sparsify:=$(patsubst waveform/%.h5,result/$(method)/sparsify/%.h5,$(sim))
 else
     predict:=fit
 endif
@@ -38,7 +39,27 @@ test : $(hist)
 
 solu : $(solu)
 
+sparsify : $(sparsify)
+
 sim : $(sim)
+
+define gibbs
+result/$(method)/sparsify/%.h5: waveform/%.h5 spe.h5
+	@mkdir -p $$(dir $$@)
+	python3 sparsify.py $$< --ref $$(word 2,$$^) -o $$@ > $$@.log 2>&1
+
+result/$(method)/batch/%.h5: result/$(method)/sparsify/%.h5 waveform/%.h5
+	@mkdir -p $$(dir $$@)
+	sem --fg python3 batch.py $$< --ref $$(word 2,$$^) -o $$@ --size 5000 > $$@.log 2>&1
+
+result/$(method)/mu/%.h5: result/$(method)/batch/%.h5 result/$(method)/sparsify/%.h5 waveform/%.h5
+	@mkdir -p $$(dir $$@)
+	python3 mu.py $$< --sparse $$(word 2,$$^) --ref $$(word 3,$$^) -o $$@ > $$@.log 2>&1
+
+result/$(method)/char/%.h5: result/$(method)/batch/%.h5 result/$(method)/mu/%.h5 result/$(method)/sparsify/%.h5 waveform/%.h5
+	@mkdir -p $$(dir $$@)
+	python3 collect.py $$< --mu $$(word 2,$$^) --sparse $$(word 3,$$^) --ref $$(word 4,$$^) -N 100 -o $$@ > $$@.log 2>&1
+endef
 
 define bayesian
 result/$(method)/char/%.h5 : waveform/%.h5 spe.h5
@@ -59,15 +80,15 @@ result/takara/char/%.h5 : waveform/%.h5 spe.h5 $(Nets)
 endef
 $(eval $(call $(predict)))
 
-result/$(method)/hist/%.pdf : result/$(method)/dist/%.h5 waveform/%.h5 result/$(method)/solu/%.h5 result/$(method)/char/%.h5
-	@mkdir -p $(dir $@)
-	python3 draw_dist.py $< --ref $(wordlist 2,4,$^) -o $@ > $@.log 2>&1
 result/$(method)/dist/%.h5 : waveform/%.h5 result/$(method)/char/%.h5 spe.h5
 	@mkdir -p $(dir $@)
 	OMP_NUM_THREADS=2 python3 test_dist.py $(word 2,$^) --ref $< $(word 3,$^) -o $@ > $@.log 2>&1
 result/$(method)/solu/%.h5 : result/$(method)/char/%.h5 waveform/%.h5 spe.h5
 	@mkdir -p $(dir $@)
 	OMP_NUM_THREADS=2 python3 toyRec.py $< --ref $(wordlist 2,3,$^) -o $@ > $@.log 2>&1
+result/$(method)/hist/%.pdf : result/$(method)/dist/%.h5 waveform/%.h5 result/$(method)/solu/%.h5 result/$(method)/char/%.h5
+	@mkdir -p $(dir $@)
+	python3 draw_dist.py $< --ref $(wordlist 2,4,$^) -o $@ > $@.log 2>&1
 
 vs : rc.csv
 	python3 vs.py --conf $^

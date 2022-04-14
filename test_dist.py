@@ -77,7 +77,7 @@ e_sub = df_sub['TriggerNo']*Chnum + df_sub['ChannelID']
 df_sub = df_sub[np.isin(e_sub, e_ans)]
 e_sub, i_sub = np.unique(df_sub['TriggerNo'] * Chnum + df_sub['ChannelID'], return_index=True)
 i_sub = np.append(i_sub, len(df_sub))
-assert len(e_ans) ==  len(e_wav) and len(e_ans) == len(e_sub), 'Incomplete Submission'
+assert len(e_ans) == len(e_wav) and len(e_ans) == len(e_sub), 'Incomplete Submission'
 
 l = len(e_sub)
 chunk = l // Ncpu + 1

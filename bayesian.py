@@ -115,6 +115,7 @@ def time_numpyro(a0, a1):
     rng_key, rng_key_ = jax.random.split(rng_key)
     stime_t0 = np.empty(a1 - a0)
     stime_cha = np.empty(a1 - a0)
+    mu_wav = np.full(a1 - a0, np.nan)
     accep = np.full(a1 - a0, np.nan)
     mix0ratio = np.full(a1 - a0, np.nan)
     dt = np.zeros((a1 - a0) * Awindow * 2, dtype=opdt)
@@ -142,7 +143,7 @@ def time_numpyro(a0, a1):
 
         mu = abs(wave.sum() / gmu)
         n = ndict[min(math.ceil(mu), max(mu0))]
-        AV, wave, tlist, t0_init, t0_init_delta, A_init, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[cid], Tau, Sigma, gmu, Thres['lucyddm'], p, is_t0=True, n=n, nshannon=1)
+        AV, wave, tlist, t0_init, t0_init_delta, A_init, left_wave, right_wave = wff.initial_params(wave[::wff.nshannon], spe_pre[cid], Tau, Sigma, gmu, Thres['lucyddm'], p, is_t0=True, n=n)
         mu = abs(wave.sum() / gmu)
         AV = jnp.array(AV)
         wave = jnp.array(wave)
@@ -172,6 +173,7 @@ def time_numpyro(a0, a1):
         cha = np.mean(A, axis=0)
         mix0ratio[i - a0] = (np.abs(cha) < 5 * mix0sigma).sum() / len(cha)
         pet, cha = wff.clip(pet, cha, 0)
+        mu_wav[i - a0] = cha.sum()
         cha = cha * gmu
         t0_cha, _ = wff.likelihoodt0(pet, char=cha, gmu=gmu, Tau=Tau, Sigma=Sigma, mode='charge')
         stime_t0[i - a0] = np.mean(t0_t0)
@@ -184,7 +186,7 @@ def time_numpyro(a0, a1):
         start = end
     dt = dt[:end]
     dt = np.sort(dt, kind='stable', order=['TriggerNo', 'ChannelID'])
-    return stime_t0, stime_cha, time_mcmc, dt, count, accep, mix0ratio
+    return stime_t0, stime_cha, time_mcmc, dt, count, accep, mix0ratio, mu_wav
 
 n = 1
 b_t0 = [0., 600.]
@@ -325,7 +327,7 @@ else:
     slices = np.vstack((np.arange(0, N, chunk), np.append(np.arange(chunk, N, chunk), N))).T.astype(int).tolist()
 
 if method == 'mcmc':
-    sdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('tscharge', np.float64), ('tswave', np.float64), ('consumption', np.float64)])
+    sdtp = np.dtype([('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('tscharge', np.float64), ('tswave', np.float64), ('mucharge', np.float64), ('muwave', np.float64), ('consumption', np.float64)])
     ts = np.zeros(N, dtype=sdtp)
     ts['TriggerNo'] = ent['TriggerNo']
     ts['ChannelID'] = ent['ChannelID']
@@ -339,6 +341,8 @@ if method == 'mcmc':
     count = np.sum([result[i][4] for i in range(len(slices))])
     accep = np.hstack([result[i][5] for i in range(len(slices))])
     mix0ratio = np.hstack([result[i][6] for i in range(len(slices))])
+    ts['muwave'] = np.hstack([result[i][7] for i in range(len(slices))])
+    ts['mucharge'] = np.nan
 
     matplotlib.use('Agg')
     matplotlib.rcParams.update(matplotlib.rcParamsDefault)

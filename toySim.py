@@ -21,7 +21,7 @@ import wf_func as wff
 
 psr = argparse.ArgumentParser()
 psr.add_argument('-o', dest='opt', type=str, help='output file')
-psr.add_argument('--Ncpu', dest='Ncpu', type=int, default=50)
+psr.add_argument('--Ncpu', dest='Ncpu', type=int, default=2)
 psr.add_argument('-N', dest='N', type=int, default=1e5)
 psr.add_argument('--mts', dest='mts', type=str, help='mu & tau & sigma')
 psr.add_argument('--noi', dest='noi', action='store_true', help='noise bool', default=False)
