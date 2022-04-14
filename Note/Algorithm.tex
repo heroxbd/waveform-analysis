@@ -22,9 +22,9 @@ Consider the non-normalized Kullback-Leibler~(KL) divergence~\cite{mihoko_robust
 \begin{equation}
   \begin{aligned}
     D_\mathrm{KL}\left[\hat{\phi}(t) \parallel \mu\phi(t-t_0)\right] & =\int \left[\hat{\phi}(t) \log\frac{\hat{\phi}(t)}{\mu\phi(t-t_0)} + \mu\phi(t-t_0) - \hat{\phi}(t) \right]\mathrm{d}t \\
-    & = - \int \hat{\phi}(t) \log\phi(t-t_0)\mathrm{d}t - \log\mu\int\hat{\phi}(t)\mathrm{d}t + \mu + \int \left[\hat{\phi}(t) \log\hat{\phi}(t) - \hat{\phi}(t) \right]\mathrm{d}t \\
-    & = - \sum_{i=1}^{\hat{N}_\mathrm{PE}}\int \hat{q}_i\delta(t-\hat{t_i}) \log\phi(t-t_0)\mathrm{d}t - \log\mu\int\hat{q}_i\delta(t-\hat{t_i})\mathrm{d}t + \mu +  C \\
-    & = -\log \prod_{i=1}^{\hat{N}_\mathrm{PE}} \left[\phi(\hat{t}_i-t_0)\right]^{\hat{q}_i} - \log\mu\sum_{i=1}^{\hat{N}_\mathrm{PE}} \hat{q}_i + \mu + C
+    & = - \int \hat{\phi}(t) \log\phi(t-t_0)\mathrm{d}t - \log(\mu)\int\hat{\phi}(t)\mathrm{d}t + \mu + \int \left[\hat{\phi}(t) \log\hat{\phi}(t) - \hat{\phi}(t) \right]\mathrm{d}t \\
+    & = - \sum_{i=1}^{\hat{N}_\mathrm{PE}}\left[\int \hat{q}_i\delta(t-\hat{t_i}) \log\phi(t-t_0)\mathrm{d}t - \log(\mu)\int\hat{q}_i\delta(t-\hat{t_i})\mathrm{d}t\right] + \mu +  C \\
+    & = -\log \left\{\prod_{i=1}^{\hat{N}_\mathrm{PE}} \left[\phi(\hat{t}_i-t_0)\right]^{\hat{q}_i}\right\} - \log(\mu)\sum_{i=1}^{\hat{N}_\mathrm{PE}} \hat{q}_i + \mu + C
   \label{eq:kl}
   \end{aligned}
 \end{equation}
