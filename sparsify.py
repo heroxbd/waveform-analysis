@@ -100,6 +100,7 @@ d_index = [
     ("mus", np.float32),
     ("sig2s", np.float32),
     ("sig2w", np.float32),
+    ("consumption", np.float32),
 ]
 
 t_l = []
@@ -116,6 +117,7 @@ z_l = []
 A_l = []
 cx_l = []
 s_l = []
+consumption = []
 
 cid = ent["ChannelID"]
 assert np.all(cid == 0)
@@ -125,6 +127,7 @@ wave_deconv = lucyddm(cp.asarray(waves), cp.asarray(spe_pre[0]["spe"]), gmu)
 n_wave = len(ent)  # number of waveforms
 
 for ie, (e, wave, char) in enumerate(zip(ent, waves, cp.asnumpy(wave_deconv))):
+    time_start = time.time()
     eid = e["TriggerNo"]
     cid = e["ChannelID"]
 
@@ -200,6 +203,7 @@ for ie, (e, wave, char) in enumerate(zip(ent, waves, cp.asnumpy(wave_deconv))):
     A_l.append(A)
     cx_l.append(cx)
     s_l.append(s)
+    consumption.append(time.time() - time_start)
 
 A_shape = np.array([x.shape for x in A_l])
 # lengths of waveform and tlist
@@ -255,3 +259,5 @@ with h5.File(fopt, "w") as opt:
     index["b_wave"] = b_w
     index["l_wave"] = A_shape[:, 0]
     index["l_t"] = A_shape[:, 1]
+    index["consumption"] = consumption
+print(f"Sparsify finished, real time {np.sum(consumption):.02f}s")

@@ -308,11 +308,16 @@ sample = np.zeros((l_e * TRIALS), dtype=[("TriggerNo", "u4"), ("ChannelID", "u4"
                                          ("delta_nu", "f4")])
 sample["TriggerNo"] = np.repeat(index["TriggerNo"], TRIALS)
 sample["ChannelID"] = np.repeat(index["ChannelID"], TRIALS)
-s_max = np.zeros(l_e, dtype=[("TriggerNo", "u4"), ("ChannelID", "u4"), ("s_max_index", "u4"), ("s_max", "f4", index['l_t'].max())])
+s_max = np.zeros(l_e, dtype=[("TriggerNo", "u4"),
+                             ("ChannelID", "u4"),
+                             ("s_max_index", "u4"),
+                             ("s_max", "f4", index['l_t'].max()),
+                             ("consumption", "f8"),])
 s_max["TriggerNo"] = index["TriggerNo"]
 s_max["ChannelID"] = index["ChannelID"]
 
 for part in range(l_e // args.size + 1):
+    time_start = time.time()
     i_part = s_t[part * args.size:(part + 1) * args.size]
     l_part = len(i_part)
     if l_part:
@@ -341,6 +346,8 @@ for part in range(l_e // args.size + 1):
         s_max["s_max_index"][i_part] = s_max_index
         min_col = min(last_max_s.shape[1], index['l_t'].max())
         s_max["s_max"][i_part, :min_col] = last_max_s[:, :min_col]
+        s_max["consumption"][i_part] = (time.time() - time_start) / i_part.sum()
+print(f"FSMP finished, real time {s_max['consumption'].sum():.02f}s")
 
 with h5py.File(fopt, "w") as opt:
     opt.create_dataset("sample", data=sample, compression="gzip", shuffle=True)
