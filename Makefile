@@ -44,11 +44,23 @@ sim : $(sim)
 
 sparsify/%.h5: waveform/%.h5 spe.h5
 	mkdir -p $(dir $@)
-	python3 sparsify.py $< --ref $(word 2,$^) -o $@
+	sem --fg python3 sparsify.py $< --ref $(word 2,$^) -o $@
 
 batch/%.h5: sparsify/%.h5
 	mkdir -p $(dir $@)
 	sem --fg python3 batch.py $^ -o $@ --size 5000
+
+batch2/%.h5: sparsify/%.h5
+	mkdir -p $(dir $@)
+	sem --fg python3 batch.py $^ -o $@ --size 5000
+
+conv/%.pdf: batch/%.h5 batch2/%.h5
+	mkdir -p $(dir $@)
+	python3 conv.py $^ -o $@
+
+tensorbatch/%.h5: sparsify/%.h5
+	mkdir -p $(dir $@)
+	sem --fg python3 tensorbatch.py $^ -o $@ --size 1000
 
 mu/%.h5: batch/%.h5 sparsify/%.h5 waveform/%.h5 
 	mkdir -p $(dir $@)

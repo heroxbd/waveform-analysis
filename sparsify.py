@@ -14,7 +14,7 @@ def lucyddm(waveform, spe_pre, gmu):
     waveform /= gmu
     wave_deconv = waveform.copy()
     spe_mirror = spe[:, ::-1]
-    for i in range(2000):
+    for i in range(4000):
         relative_blur = waveform / fftconvolve(wave_deconv, spe, mode="same", axes=1)
         wave_deconv *= fftconvolve(relative_blur, spe_mirror, mode="same", axes=1)
     return wave_deconv
