@@ -141,6 +141,7 @@ with h5py.File(args.ref[0], 'r', libver='latest', swmr=True) as wavef, h5py.File
     pelist = wavef['SimTriggerInfo/PEList'][:]
     start = wavef['SimTruth/T'][:]
     time = soluf['starttime'][:]
+    Npe = wavef['Readout/Waveform']['Npe']
     charge = charf['photoelectron'][:]
     chargewavesnum = charge['ChannelID'] + len(np.unique(charge['ChannelID'])) * charge['TriggerNo']
     gmu = wavef['SimTriggerInfo/PEList'].attrs['gmu']
@@ -189,6 +190,22 @@ if not np.all(np.isnan(time['tswave'])):
     s = np.std(time['tswave'] - start['T0'], ddof=-1)
     m = np.mean(time['tswave'] - start['T0'])
     ax3.set_title(fr'$\sigma_{{wave}}={s:.02f},\mathrm{{bias}}={m:.02f}$')
+
+pdf.savefig(fig)
+plt.close(fig)
+
+fig = plt.figure()
+gs = gridspec.GridSpec(2, 2, figure=fig, left=0.1, right=0.95, top=0.9, bottom=0.1, wspace=0.2, hspace=0.3)
+
+ax0 = fig.add_subplot(gs[0, 0])
+ax0.hist(start['ts1sttruth'] - start['tstruth'], bins=100, label=r'$t_{1sttru} - t_{alltru}$')
+ax0.set_xlabel(r'$t_{1sttru} - t_{alltru}/\mathrm{ns}$')
+ax0.set_ylabel(r'$Count$')
+ax0.set_yscale('log')
+ax0.legend()
+s = np.std(start['ts1sttruth'] - start['tstruth'], ddof=-1)
+m = np.mean(start['ts1sttruth'] - start['tstruth'])
+ax0.set_title(fr'$\sigma={s:.02f},\mathrm{{bias}}={m:.02f}$')
 
 pdf.savefig(fig)
 plt.close(fig)

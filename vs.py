@@ -80,21 +80,31 @@ for key in tqdm(mts.keys()):
         try:
             with h5py.File(os.path.join('result', key, 'solu', f), 'r', libver='latest', swmr=True) as soluf, h5py.File(os.path.join('result', key, 'dist', f), 'r', libver='latest', swmr=True) as distf, h5py.File(os.path.join('waveform', f), 'r', libver='latest', swmr=True) as wavef:
                 time = soluf['starttime'][:]
+                if key != 'fsmp':
+                    mu_hat = time['muwave']
+                else:
+                    mu_hat = np.inf
                 record = distf['Record'][:]
                 start = wavef['SimTruth/T'][:]
                 gmu = wavef['SimTriggerInfo/PEList'].attrs['gmu']
+                Npe = wavef['Readout/Waveform']['Npe']
                 gsigma = wavef['SimTriggerInfo/PEList'].attrs['gsigma']
                 # r = wavef['SimTruth/T'].attrs['r']
                 r = np.inf
             mts[key][i]['N'] = len(start)
             vali = np.abs(time['tscharge'] - start['T0'] - np.mean(time['tscharge'] - start['T0'])) <= r * np.std(time['tscharge'] - start['T0'], ddof=-1)
-            # vali = np.full(start['T0'].shape, True)
             mts[key][i]['std1sttruth'] = np.std(start['ts1sttruth'] - start['T0'], ddof=-1)
             mts[key][i]['stdtruth'] = np.std(start['tstruth'] - start['T0'], ddof=-1)
             mts[key][i]['std'], mts[key][i]['stdsuccess'] = wff.stdrmoutlier(time['tscharge'] - start['T0'], r)
             mts[key][i]['bias1sttruth'] = np.mean(start['ts1sttruth'] - start['T0'])
             mts[key][i]['biastruth'] = np.mean(start['tstruth'] - start['T0'])
             mts[key][i]['bias'] = np.mean(time['tscharge'][vali] - start['T0'][vali])
+            # mts[key][i]['std1sttruth'] = np.std(start['ts1sttruth'] - start['T0'] - tau / Npe, ddof=-1)
+            # mts[key][i]['stdtruth'] = np.std(start['tstruth'] - start['T0'] - tau / Npe, ddof=-1)
+            # mts[key][i]['std'], mts[key][i]['stdsuccess'] = wff.stdrmoutlier(time['tscharge'] - start['T0'] - tau / mu_hat, r)
+            # mts[key][i]['bias1sttruth'] = np.mean(start['ts1sttruth'] - start['T0'] - tau / Npe)
+            # mts[key][i]['biastruth'] = np.mean(start['tstruth'] - start['T0'] - tau / Npe)
+            # mts[key][i]['bias'] = np.mean(time['tscharge'][vali] - start['T0'][vali] - tau / mu_hat)
             mts[key][i]['wdist'] = np.insert(np.percentile(record['wdist'][vali], [alpha * 100, 100 - alpha * 100]), 1, record['wdist'][vali].mean())
             mts[key][i]['RSS'] = np.insert(np.percentile(record['RSS'][vali], [alpha * 100, 100 - alpha * 100]), 1, record['RSS'][vali].mean())
             if not np.any(np.isnan(time['tswave'][vali])):
@@ -172,7 +182,7 @@ for i, sigma in enumerate(Sigma):
             stdlist = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
             yerrcha = np.vstack([-t.ppf(alpha, stdlist['N'])*stdlist['std']/np.sqrt(stdlist['N']), t.ppf(1-alpha, stdlist['N'])*stdlist['std']/np.sqrt(stdlist['N'])])
             ax.errorbar(stdlist['mu'] + jitter[key], stdlist['bias'], yerr=yerrcha, c=color[key], label='$'+deltalabel[key]+'$', marker=marker[key])
-        ax.set_ylim(-0.5, 12)
+        # ax.set_ylim(-0.5, 12)
         ax.set_xlabel(r'$\mu$')
         ax.set_ylabel(r'$\mathrm{bias}/\si{ns}$')
         ax.set_title(fr'$\tau_l={tau}\si{{ns}},\,\sigma_l={sigma}\si{{ns}}$')
