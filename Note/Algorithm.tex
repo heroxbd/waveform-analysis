@@ -18,7 +18,8 @@ We construct a light curve estimator $\hat{\phi}(t)$ from $\bm{\hat{t}}$, $\bm{\
   \hat{\phi}(t) = \sum_{i=1}^{\hat{N}_\mathrm{PE}} \hat{q}_i\delta(t-\hat{t}_i),
 \end{equation}
 which resembles eq.~\eqref{eq:lc-sample}.
-Consider the non-normalized Kullback-Leibler~(KL) divergence~\cite{mihoko_robust_2002} between $\hat{\phi}(t)$ and $\mu \phi(t-t_{0})$,
+
+Basu et al.'s \textit{density power divergence}~\cite{basu_robust_1998} contains the classical Kullback-Leibler~(KL) divergence~\cite{kullback_information_1951} as a special case.  Non-normalized KL divergence is defined accordingly if we do not normalize $\hat{\phi}(t)$ and $\mu \phi(t-t_{0})$ to 1 when considering their divergence in eq.~\eqref{eq:kl},
 \begin{equation}
   \begin{aligned}
     D_\mathrm{KL}\left[\hat{\phi}(t) \parallel \mu\phi(t-t_0)\right] & =\int \left[\hat{\phi}(t) \log\frac{\hat{\phi}(t)}{\mu\phi(t-t_0)} + \mu\phi(t-t_0) - \hat{\phi}(t) \right]\mathrm{d}t \\
