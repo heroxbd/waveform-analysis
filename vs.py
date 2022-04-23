@@ -485,6 +485,7 @@ for key in tqdm(mts.keys()):
             N = len(start) + len(npe_removed)
             N_add = N / (1 - poisson.cdf(0, mu)) - N
             mu_add = np.hstack([np.zeros(round(N_add)), wavesum_removed / gmu])
+            # mu_add = np.hstack([np.zeros(round(N_add)), npe_removed])
             mts[key][i]['N'] = N + round(N_add)
             s_npe = np.sqrt(mu)
             wave_sum_recovered = np.append(wave_sum[vali], mu_add)

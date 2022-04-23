@@ -259,7 +259,7 @@ def fsmp_inference(a0, a1):
         es_history['loc'] = np.interp(es_history['loc'], xp=np.arange(0.5, len(tlist)), fp=tlist)
         ans = opti.fmin_l_bfgs_b(lambda x: -np.sum(wff.log_convolve_exp_norm(es_history['loc'] - x, Tau, Sigma)), x0=[t0_t], approx_grad=True, bounds=[b_t0], maxfun=500000)
         t00 = ans[0].item() if ans[-1]['warnflag'] == 0 else t0_t
-        t00 = t0_truth['T0'][i]
+        # t00 = t0_truth['T0'][i]
         # mu = mu_t
         b_mu = [max(1e-8, mu_t - 5 * np.sqrt(mu_t)), mu_t + 5 * np.sqrt(mu_t)]
         t0, mu = wff.fit_t0mu(es_history['loc'], es_history['step'], Tau, Sigma, guess, mu_t, t00, b_mu, b_t0)
