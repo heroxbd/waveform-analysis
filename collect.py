@@ -91,8 +91,9 @@ def collect(a0, a1):
         end = start + len(cha)
 
         ts['muwave'][i - a0] = mu['mu'][i]
+        # ts['tswave'][i - a0] = mu['t0'][i] # use Gibbs sampled t0
+        ts['tswave'][i - a0] = s_max['t0'][i] # use MLE fitted t0 
         ts['mucharge'][i - a0] = mu_i
-        ts['tswave'][i - a0] = mu['t0'][i]
         ts['tscharge'][i - a0] = t0_i
         ts['TriggerNo'][i - a0] = ent[i]['TriggerNo']
         ts['ChannelID'][i - a0] = ent[i]['ChannelID']

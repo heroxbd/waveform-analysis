@@ -6,7 +6,7 @@ import numpy as np
 import cupy as cp
 from scipy.signal import savgol_filter
 from cupyx.scipy.signal import fftconvolve
-from wf_func import clip, spe, read_model, Thres
+from wf_func import clip, spe, read_model, Thres, likelihoodt0
 
 
 def lucyddm(waveform, spe_pre, gmu):
@@ -22,7 +22,7 @@ def lucyddm(waveform, spe_pre, gmu):
     return wave_deconv
 
 
-def initial_params(wave, char, spe_pre, gmu, Thres, p, nsp=4, nstd=3):
+def initial_params(wave, char, spe_pre, gmu, Thres, p, nsp=4, nstd=3, is_t0=False, is_delta=False):
     hitt, char = clip(np.arange(len(wave)), char, Thres)
     char = char / char.sum() * np.clip(np.abs(wave.sum()), 1e-6, np.inf)
     tlist = np.unique(
@@ -51,6 +51,8 @@ def initial_params(wave, char, spe_pre, gmu, Thres, p, nsp=4, nstd=3):
 
     t0_init = None
     t0_init_delta = None
+    if is_t0:
+        t0_init, t0_init_delta = likelihoodt0(hitt=hitt, char=char, gmu=gmu, Tau=Tau, Sigma=Sigma, mode='charge', is_delta=is_delta)
     return A, wave, tlist, t0_init, t0_init_delta, npe_init, left_wave, right_wave
 
 psr = argparse.ArgumentParser()
@@ -92,6 +94,7 @@ d_index = [
     ("TriggerNo", np.uint32),
     ("ChannelID", np.uint32),
     ("mu0", np.float32),
+    ("t0", np.float32),
     ("NPE", np.uint32),
     ("l_t", np.uint32),
     ("a_wave", np.uint32),
@@ -109,6 +112,7 @@ cq_l = []  # cumulative q
 a_w = []
 b_w = []
 mu_l = []
+t0_l = []
 NPE_l = []
 mus_l = []
 sig2s_l = []
@@ -132,7 +136,7 @@ for ie, (e, wave, char) in enumerate(zip(ent, waves, cp.asnumpy(wave_deconv))):
     cid = e["ChannelID"]
 
     A, y, tlist, t0_t, t0_delta, cha, left_wave, right_wave = initial_params(
-        wave, char, spe_pre[cid], gmu, Thres["lucyddm"], p
+        wave, char, spe_pre[cid], gmu, Thres["lucyddm"], p, is_t0=False
     )
 
     s_cha = np.cumsum(cha)
@@ -195,6 +199,7 @@ for ie, (e, wave, char) in enumerate(zip(ent, waves, cp.asnumpy(wave_deconv))):
     a_w.append(left_wave)
     b_w.append(right_wave)
     mu_l.append(mu0)
+    t0_l.append(t0_t)
     NPE_l.append(NPE)
     mus_l.append(mus)
     sig2s_l.append(sig2s)
@@ -251,6 +256,7 @@ with h5.File(fopt, "w") as opt:
     index["TriggerNo"] = ent["TriggerNo"]
     index["ChannelID"] = ent["ChannelID"]
     index["mu0"] = mu_l
+    index["t0"] = np.array(t0_l).flatten()
     index["NPE"] = NPE_l
     index["mus"] = mus_l
     index["sig2s"] = sig2s_l

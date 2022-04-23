@@ -12,6 +12,8 @@ from scipy.stats import norm
 
 import wf_func as wff
 
+np.random.seed(32)
+
 psr = argparse.ArgumentParser()
 psr.add_argument("-o", dest="opt", type=str, help="output file")
 psr.add_argument("ipt", type=str, help="input file")
@@ -88,6 +90,7 @@ def v_rt(_s, _ts, w_all):
 with h5py.File(args.ref, 'r', libver='latest', swmr=True) as ipt:
     tau = ipt['Readout/Waveform'].attrs['tau'].item()
     sigma = ipt['Readout/Waveform'].attrs['sigma'].item()
+    start = ipt['SimTruth/T'][:]
 
 pi = np.pi
 
@@ -154,6 +157,7 @@ def batch(A, cx, index, tq, s, z):
     b0 = 1 + sig2s * (a0[:, None, :] @ a0[:, :, None]).squeeze() / sig2w
 
     l_e = len(index)
+    l_s = s.shape[1]
     w_all = cp.arange(l_e) # index of all the waveforms
 
     l_t = tq.shape[1]
@@ -182,6 +186,7 @@ def batch(A, cx, index, tq, s, z):
     creations = np.zeros((l_e, TRIALS)) # float64
     t0_history = np.zeros((l_e, TRIALS), dtype=np.float32)
     s0_history = np.zeros((l_e, TRIALS), dtype=np.uint32) # 0-norm of s
+    s_history = np.zeros((l_e, TRIALS * l_s), dtype=np.float32)
 
     log_mu = np.log(index["mu0"])  # 猜测的 Poisson 流强度
     loc = np.zeros((l_e, 2)) # float64
@@ -289,7 +294,33 @@ def batch(A, cx, index, tq, s, z):
         Δν_history[:, i] = Δν
         flip[:, i] = step
         s0_history[:, i] = NPE
-    return flip, s0_history, t0_history, Δν_history, s_max_index, last_max_s, annihilations, creations
+        s_history[:, i*l_s:(i+1)*l_s] = s
+    return flip, s0_history, t0_history, Δν_history, s_max_index, last_max_s, annihilations, creations, s_history
+
+b_t0 = [0., 600.]
+def get_t0(s0_history, loc, flip, index, tq, t00_l):
+    l_e = s0_history.shape[0]
+    l_s = loc.shape[1] // TRIALS
+    t0_l = np.empty(l_e)
+    mu_l = np.empty(l_e)
+    for i in range(l_e):
+        accept = flip[i] != 0
+        NPE = s0_history[i]
+        step = np.repeat(np.arange(TRIALS)[accept], NPE[accept])
+        idx_base = np.arange(TRIALS)[accept] * l_s
+        idx = np.hstack([i_b + np.arange(npe) for i_b, npe in zip(idx_base, NPE[accept])])
+        mu_t = index["mu0"][i]
+        b_mu = [max(1e-8, mu_t - 5 * np.sqrt(mu_t)), mu_t + 5 * np.sqrt(mu_t)]
+        l_t = index["l_t"][i]
+        loc_i = loc[i][idx]
+        ilp_cha = np.log(1 / tq["q_s"][i][:l_t])
+        guess = ilp_cha[loc[i][idx].astype(int)]
+        loc_i = np.interp(loc_i, xp=np.arange(0.5, l_t), fp=tq["t_s"][i][:l_t])
+        # t00 = index["t0"][i]
+        # t00 = loc_i.mean() + 1
+        t00 = t00_l[i]
+        t0_l[i], mu_l[i] = wff.fit_t0mu(loc_i, step, tau, sigma, guess, mu_t, t00, b_mu, b_t0)
+    return t0_l, mu_l
 
 with h5py.File(fipt, "r", libver="latest", swmr=True) as ipt:
     A = ipt["A"][:]
@@ -312,7 +343,9 @@ s_max = np.zeros(l_e, dtype=[("TriggerNo", "u4"),
                              ("ChannelID", "u4"),
                              ("s_max_index", "u4"),
                              ("s_max", "f4", index['l_t'].max()),
-                             ("consumption", "f8"),])
+                             ("consumption", "f8"),
+                             ("t0", "f8"),
+                             ("mu", "f8"),])
 s_max["TriggerNo"] = index["TriggerNo"]
 s_max["ChannelID"] = index["ChannelID"]
 
@@ -329,12 +362,14 @@ for part in range(l_e // args.size + 1):
 
         null = np.zeros((l_part, lp_wave, 1), np.float32) # cx, A[:, :, -1] = 0  用于 +- 的空白维度
         s_null = np.zeros((l_part, lp_NPE * 2), np.float32) # 富余的 PE 活动空间
-        (flip, s0_history, t0_history, Δν_history, s_max_index, last_max_s, annihilations, creations,
+        (flip, s0_history, t0_history, Δν_history, s_max_index, last_max_s, annihilations, creations, loc
          ) = batch(cp.asarray(np.append(A[i_part, :lp_wave, :lp_t], null, axis=2), np.float32),
                    cp.asarray(np.append(cx[i_part, :lp_wave, :lp_t], null, axis=2), np.float32),
-                   index[i_part], tq[i_part, :lp_t], 
+                   index[i_part], 
+                   tq[i_part, :lp_t], 
                    np.append(s[i_part, :lp_NPE], s_null, axis=1),
                    cp.asarray(z[i_part, :lp_wave], np.float32))
+        t0, mu = get_t0(s0_history, loc, flip, index[i_part], tq[i_part, :lp_t], start['T0'][i_part])
         fi_part = (i_part * TRIALS)[:, None] + np.arange(TRIALS)[None, :]
         fip = fi_part.flatten()
         sample["flip"][fip] = flip.flatten()
@@ -347,6 +382,8 @@ for part in range(l_e // args.size + 1):
         min_col = min(last_max_s.shape[1], index['l_t'].max())
         s_max["s_max"][i_part, :min_col] = last_max_s[:, :min_col]
         s_max["consumption"][i_part] = (time.time() - time_start) / l_part
+        s_max["t0"][i_part] = t0
+        s_max["mu"][i_part] = mu
 print(f"FSMP finished, real time {s_max['consumption'].sum():.02f}s")
 
 with h5py.File(fopt, "w") as opt:

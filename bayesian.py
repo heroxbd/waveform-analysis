@@ -259,21 +259,10 @@ def fsmp_inference(a0, a1):
         es_history['loc'] = np.interp(es_history['loc'], xp=np.arange(0.5, len(tlist)), fp=tlist)
         ans = opti.fmin_l_bfgs_b(lambda x: -np.sum(wff.log_convolve_exp_norm(es_history['loc'] - x, Tau, Sigma)), x0=[t0_t], approx_grad=True, bounds=[b_t0], maxfun=500000)
         t00 = ans[0].item() if ans[-1]['warnflag'] == 0 else t0_t
-        mu = mu_t
-        b_mu = [max(1e-8, mu - 5 * np.sqrt(mu)), mu + 5 * np.sqrt(mu)]
-        def agg_NPE(t0):
-            log_f = wff.log_convolve_exp_norm(es_history['loc'] - t0, Tau, Sigma) + guess
-            return wff.jit_agg_NPE(es_history['step'], log_f, TRIALS)
-
-        def t_t0(t0):
-            nonlocal mu
-            NPE, f_agg = agg_NPE(t0)
-            ans = opti.fmin_l_bfgs_b(lambda μ: μ - special.logsumexp(NPE * np.log(μ / mu) + f_agg), x0=[mu], approx_grad=True, bounds=[b_mu], maxfun=500000)
-            mu = ans[0].item()
-            return ans[1]
-
-        ans = opti.fmin_l_bfgs_b(t_t0, x0=[t00], approx_grad=True, bounds=[b_t0], maxfun=500000)
-        t0 = ans[0].item()
+        t00 = t0_truth['T0'][i]
+        # mu = mu_t
+        b_mu = [max(1e-8, mu_t - 5 * np.sqrt(mu_t)), mu_t + 5 * np.sqrt(mu_t)]
+        t0, mu = wff.fit_t0mu(es_history['loc'], es_history['step'], Tau, Sigma, guess, mu_t, t00, b_mu, b_t0)
 
         j = 0
         xmmse_most = np.zeros(len(tlist))

@@ -20,6 +20,7 @@ else
 ifeq ($(method), fsmp)
 	predict:=gibbs
 	sparsify:=$(patsubst waveform/%.h5,result/$(method)/sparsify/%.h5,$(sim))
+	# predict:=bayesian
 else
     predict:=fit
 endif
