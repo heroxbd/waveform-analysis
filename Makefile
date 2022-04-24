@@ -50,11 +50,18 @@ batch/%.h5: sparsify/%.h5
 	mkdir -p $(dir $@)
 	sem --fg python3 batch.py $^ -o $@ --size 5000
 
-batch2/%.h5: sparsify/%.h5
-	mkdir -p $(dir $@)
-	sem --fg python3 batch.py $^ -o $@ --size 5000
+define batches
+batch/$(1)/%.h5: sparsify/%.h5
+	mkdir -p $$(dir $$@)
+	sem --fg python3 batch.py $$^ -o $$@ --size 5000
 
-conv/%.pdf: batch/%.h5 batch2/%.h5
+endef
+
+batch_id:=$(shell seq 1 4)
+
+$(eval $(foreach i,$(batch_id),$(call batches,$(i))))
+
+conv/%.pdf: batch/%.h5 $(foreach i,$(batch_id),batch/$(i)/%.h5)
 	mkdir -p $(dir $@)
 	python3 conv.py $^ -o $@
 

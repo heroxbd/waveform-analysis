@@ -6,8 +6,8 @@ import h5py
 import numpy as np
 import tensorflow as tf
 
+tf.experimental.numpy.experimental_enable_numpy_behavior(True)
 tf.config.experimental.enable_tensor_float_32_execution(False)
-# import cupy as cp
 
 
 psr = argparse.ArgumentParser()
@@ -27,7 +27,15 @@ def bool_inplace_add(x, b, y):
     return tf.raw_ops.InplaceAdd(x=x, i=i, v=tf.gather(y, i))
 
 
-# tf.function(jit_compile=True)
+def bool_inplace_add_3(x, b, y):
+    return tf.where(b[:, None, None], x + y, x)
+
+
+def bool_inplace_add_2(x, b, y):
+    return tf.where(b[:, None], x + y, x)
+
+
+@tf.function(jit_compile=True)
 def vcombine(A, cx, t):
     frac = tf.math.floormod(t, 1)
     ti = tf.cast(tf.floor(t), tf.int32)
@@ -46,22 +54,25 @@ vstep = tf.constant([-1, 1], dtype=tf.float32)
 
 
 # tf.function(jit_compile=True)
-def vmove1(A_vec, c_vec, z, fmu, fsig2s_inv, det_fsig2s_inv, b0):
+def vmove1(A_vec, c_vec, z, fmu, fsig2s_inv):
     ac = A_vec @ tf.transpose(c_vec, (0, 2, 1))
     beta_inv = fsig2s_inv + (ac + tf.transpose(ac, (0, 2, 1))) / 2
     beta = tf.linalg.inv(beta_inv)
-    # beta = tf.constant(cp.asnumpy(cp.linalg.inv(cp.array(beta_inv))))
 
     zc = tf.squeeze(c_vec @ z[:, :, None]) + tf.squeeze(fmu[:, None, :] @ fsig2s_inv)
     Δν = 0.5 * tf.squeeze(zc[:, None, :] @ beta @ zc[:, :, None])
 
-    Δν += 0.5 * tf.math.log(
-        tf.clip_by_value(tf.linalg.det(beta) * det_fsig2s_inv, 1 / b0, b0)
-    )
     return Δν, beta
 
 
-# tf.function(jit_compile=True)
+def vmove1_2(beta, det_fsig2s_inv, b0):
+    Δν = 0.5 * tf.math.log(
+        tf.clip_by_value(tf.linalg.det(beta) * det_fsig2s_inv, 1 / b0, b0)
+    )
+    return Δν
+
+
+@tf.function(jit_compile=True)
 def vmove2(A_vec, c_vec, fmu, A, beta):
     Δcx = -tf.transpose(beta @ c_vec, (0, 2, 1)) @ (c_vec @ A)
     Δz = -tf.squeeze(fmu[:, None, :] @ A_vec)
@@ -97,6 +108,7 @@ def lc(t):
 
 
 # tf.function(jit_compile=True)
+# profile
 def batch(A, cx, index, tq, s, z):
     sig2w = tf.constant(index["sig2w"], dtype=tf.float32)
     sig2s = tf.constant(index["sig2s"], dtype=tf.float32)
@@ -130,7 +142,7 @@ def batch(A, cx, index, tq, s, z):
 
     # step: +1 创生一个 PE， -1 消灭一个 PE， +2 向左或向右移动
     flip = np.random.choice((-1, 1, 2), (l_e, TRIALS), p=np.array((1, 1, 2)) / 4)
-    Δν_g = tf.zeros(l_e, dtype=np.float32)
+    # Δν_g = tf.zeros(l_e, dtype=np.float32)
     Δν = np.zeros(l_e, dtype=np.float32)
     Δν_history = np.zeros((l_e, TRIALS), dtype=np.float32)  # list of Δν's
     annihilations = np.zeros((l_e, TRIALS), dtype=np.float64)  # float64
@@ -188,7 +200,8 @@ def batch(A, cx, index, tq, s, z):
 
         # 矩阵 Δν 计算
         vA, vc = vcombine(A, cx, tf.constant(loc, dtype=tf.float32))
-        Δν_g, beta = vmove1(vA, vc, z, fmu, fsig2s_inv, det_fsig2s_inv, b0)
+        Δν_g, beta = vmove1(vA, vc, z, fmu, fsig2s_inv)
+        Δν_g += vmove1_2(beta, det_fsig2s_inv, b0)
 
         # -1 cases, step == 2, -1
         Δν[e_minus] -= lc(v_rt(loc[e_minus, 0], tq["t_s"], e_minus) - t0[e_minus])
@@ -211,8 +224,10 @@ def batch(A, cx, index, tq, s, z):
         # 计算 Δcx, Δz, 更新 cx 和 z。对 accept 进行特别处理
         e_accept = Δν >= accept
         Δcx, Δz = vmove2(vA, vc, fmu, A, beta)
-        cx = bool_inplace_add(cx, e_accept, Δcx)
-        z = bool_inplace_add(z, e_accept, Δz)
+        # cx = tf.where(e_accept[:, None, None], Δcx + cx, cx)
+        # z = tf.where(e_accept[:, None], Δz + z, z)
+        cx = bool_inplace_add_3(cx, e_accept, Δcx)
+        z = bool_inplace_add_2(z, e_accept, Δz)
         ########
 
         # 增加

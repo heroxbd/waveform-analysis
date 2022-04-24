@@ -20,7 +20,7 @@ args = psr.parse_args()
 fipt = args.ipt
 fopt = args.opt
 
-TRIALS = 5000
+TRIALS = 20000
 
 #profile
 def vcombine(A, cx, t, w_all):
