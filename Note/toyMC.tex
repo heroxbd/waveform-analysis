@@ -3,8 +3,27 @@
 
 In this section, we discuss the vital importance of waveform analysis for incident light measurements in PMT-based experiments.
 
+Like figure~\ref{fig:detector}, a typical neutrino or dark matter detector has a large-volumed target medium surrounded by an array of PMTs. In a \textit{event}, a particle interacts with the target medium and deposits energy when passing through the detector. Part of such energy converts into visible Cherenkov or scintillation photons. A photon propagates to the boundary of the detector and converts into a PE by about \SIrange{20}{30}{\percent} quantum efficiency if it hits a PMT.
+
+The larger the detector, the smaller the solid angle each PMT covers.  The light intensity seen by a PMT can be extremely low.  A PMT works in \textit{photon counting} or \textit{digital mode}, where it is viable to count individual PEs.  \textit{Analog mode} is the opposite, where there are so many PE pulses overlapping that the output is a continuous electric current.  Even in one event of the same detector, PMTs can operate in different modes, depending on the proximity of them to the event vertex.  A unified waveform algorithm should handle both extremes, as well as the intermediate ``overlap, but distinguishable'' mode with an example in figure~\ref{fig:pile}.  In this study,  we cover most of cases with PE occupancy from 0.5 to 30.
+
+
+\begin{figure}[!ht]
+  \begin{subfigure}{0.44\textwidth}
+  \includegraphics[width=\linewidth]{figures/detector.pdf}
+  \caption{\label{fig:detector} Schematics of a typical PMT-based neutrino or dark matter detector.}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.54\textwidth}
+  \resizebox{\linewidth}{!}{\input{figures/profile.pgf}}
+  \caption{\label{fig:time-pro} Effective light curves in the three target medium and PMT configuration settings.}
+\end{subfigure}
+  \caption{\subref{fig:detector} The target volume maybe of cylinder or polyhedra shapes.  The PMTs' size varies from several to tens of \si{cm}.  The target medium could be pure water or ice, organic or inorganic scintillators. The principle of PMT photon counting remains the same. \subref{fig:time-pro} A scintillator paired with ultra-fast photo-sensors gives the green curve with $\tau_\ell \gg \sigma_\ell$.  A fast Cherenkov detector by the red curve has $\tau_\ell \ll \sigma_\ell$.  The blue curve combining $\tau_\ell=\SI{20}{ns}$ and $\sigma_\ell=\SI{5}{ns}$ represents a typical scintillation detector.  We can regard $\phi(t)\mathrm{d}t$ as a probability density function~(PDF at the vertical axis) of PE times.}
+
+\end{figure}
+
 \subsection{Light curve}
-A particle interacts with matter and deposits energy when passing through the detector. Part of such energy converts into visible Cherenkov or scintillation photons. The \textit{light curve} is the time evolution of light intensity at a PMT,
+The \textit{light curve} is the time evolution of light intensity illuminating a PMT,
 \begin{equation}
   \label{eq:light-curve}
   \mu\phi(t-t_0)
@@ -16,14 +35,8 @@ where $\mu$ is the intensity factor, $t_0$ is the time shift factor, and $\phi(\
 \end{align}
 where subscript $\ell$ stands for ``light curve'' and $\sigma_\ell$ encodes the timing uncertainty mainly from TTS. $\phi(t)$ of Cherenkov light is a pure Gaussian by taking $\tau_\ell \rightarrow 0$. Figure~\ref{fig:time-pro} illustrates 3 examples of $\phi(t)$. 
 
-\begin{figure}[!htb]
-  \centering
-  \resizebox{0.5\textwidth}{!}{\input{figures/profile.pgf}}
-  \caption{\label{fig:time-pro} Effective light curves in the three settings.  A scintillator paired with ultra-fast photo-sensors gives the green curve with $\tau_\ell \gg \sigma_\ell$.  A fast Cherenkov detector by the red curve has $\tau_\ell \ll \sigma_\ell$.  The blue curve combining $\tau_\ell=\SI{20}{ns}$ and $\sigma_\ell=\SI{5}{ns}$ represents a typical scintillation detector.  We can regard $\phi(t)\mathrm{d}t$ as a probability density function~(PDF at the vertical axis) of PE times.}
-\end{figure}
 
-
-\subsection{Single PE response}
+\subsection{Single PE pulse}
 \label{subsec:spe}
 
 A PE induced by a photon at the PMT photocathode is then accelerated, collected, and amplified into $\num[retain-unity-mantissa=false]{\sim 1e7}$ electrons, forming a voltage pulse $V_\mathrm{PE}(t)$ in the PMT output.
