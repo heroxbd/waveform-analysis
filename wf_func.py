@@ -414,6 +414,7 @@ def fit_t0mu(loc, step, Tau, Sigma, guess, mu, t00, b_mu, b_t0):
     t0_list = np.linspace(b_t0[0], b_t0[-1], 501)
     fval = np.array([t_t0(t_i) for t_i in t0_list])
     t0 = t0_list[fval.argmin()]
+    t_t0(t0)
     # print(ans[2]['task'])
     # print(ans[2]['warnflag'])
     return t0, mu
