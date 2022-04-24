@@ -182,7 +182,7 @@ for i, sigma in enumerate(Sigma):
             stdlist = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
             yerrcha = np.vstack([-t.ppf(alpha, stdlist['N'])*stdlist['std']/np.sqrt(stdlist['N']), t.ppf(1-alpha, stdlist['N'])*stdlist['std']/np.sqrt(stdlist['N'])])
             ax.errorbar(stdlist['mu'] + jitter[key], stdlist['bias'], yerr=yerrcha, c=color[key], label='$'+deltalabel[key]+'$', marker=marker[key])
-        # ax.set_ylim(-0.5, 12)
+        ax.set_ylim(-0.5, 12)
         ax.set_xlabel(r'$\mu$')
         ax.set_ylabel(r'$\mathrm{bias}/\si{ns}$')
         ax.set_title(fr'$\tau_l={tau}\si{{ns}},\,\sigma_l={sigma}\si{{ns}}$')

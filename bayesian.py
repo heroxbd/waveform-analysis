@@ -82,10 +82,7 @@ n_t = np.arange(1, 20)
 p_t = special.comb(mu0, 2)[:, None] * np.power(wff.convolve_exp_norm(np.arange(1029) - 200, Tau, Sigma) / n_t[:, None], 2).sum(axis=1)
 n0 = np.array([n_t[p_t[i] < max(1e-1, np.sort(p_t[i])[1])].min() for i in range(len(mu0))])
 ndict = dict(zip(mu0, n0))
-if Mu >= 15.0:
-    TRIALS = 8000
-else:
-    TRIALS = 2000
+TRIALS = 5000
 
 class mNormal(numpyro.distributions.distribution.Distribution):
     arg_constraints = {'pl': numpyro.distributions.constraints.real}
@@ -262,7 +259,7 @@ def fsmp_inference(a0, a1):
         # t00 = t0_truth['T0'][i]
         # mu = mu_t
         b_mu = [max(1e-8, mu_t - 5 * np.sqrt(mu_t)), mu_t + 5 * np.sqrt(mu_t)]
-        t0, mu = wff.fit_t0mu(es_history['loc'], es_history['step'], Tau, Sigma, guess, mu_t, t00, b_mu, b_t0)
+        t0, mu = wff.fit_t0mu(es_history['loc'], es_history['step'], Tau, Sigma, guess, mu_t, t00, b_mu, b_t0, TRIALS)
 
         j = 0
         xmmse_most = np.zeros(len(tlist))

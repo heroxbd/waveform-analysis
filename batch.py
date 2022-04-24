@@ -24,7 +24,7 @@ args = psr.parse_args()
 fipt = args.ipt
 fopt = args.opt
 
-TRIALS = wff.TRIALS
+TRIALS = 5000
 
 #profile
 def vcombine(A, cx, t, w_all):
@@ -319,7 +319,7 @@ def get_t0(s0_history, loc, flip, index, tq, t00_l):
         # t00 = index["t0"][i]
         # t00 = loc_i.mean() + 1
         t00 = t00_l[i]
-        t0_l[i], mu_l[i] = wff.fit_t0mu(loc_i, step, tau, sigma, guess, mu_t, t00, b_mu, b_t0)
+        t0_l[i], mu_l[i] = wff.fit_t0mu(loc_i, step, tau, sigma, guess, mu_t, t00, b_mu, b_t0, TRIALS)
     return t0_l, mu_l
 
 with h5py.File(fipt, "r", libver="latest", swmr=True) as ipt:

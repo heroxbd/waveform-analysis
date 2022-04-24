@@ -49,7 +49,6 @@ p = [8., 0.5, 24.]
 Thres = {'mcmc':std / gsigma, 'xiaopeip':0, 'lucyddm':0.2, 'fsmp':0, 'fftrans':0.1, 'findpeak':0.1, 'threshold':0, 'firstthres':0, 'omp':0}
 d_history = [('TriggerNo', np.uint32), ('ChannelID', np.uint32), ('step', np.uint32), ('loc', np.float32)]
 proposal = np.array((1, 1, 2)) / 4
-TRIALS = 5000
 
 def xiaopeip_old(wave, spe_pre, eta=0):
     l = len(wave)
@@ -390,7 +389,7 @@ def elbo(nu_star_prior):
     # assert abs(e_star - e) < 1e-4
     return e
 
-def fit_t0mu(loc, step, Tau, Sigma, guess, mu, t00, b_mu, b_t0):
+def fit_t0mu(loc, step, Tau, Sigma, guess, mu, t00, b_mu, b_t0, TRIALS):
     def agg_NPE(t0):
         # log_f = log_convolve_exp_norm(es_history['loc'] - t0, Tau, Sigma) + guess
         log_f = log_convolve_exp_norm(loc - t0, Tau, Sigma) + guess
@@ -475,6 +474,7 @@ def jit_agg_NPE(step, f, size):
     f_vec_merged["NPE"] = NPE
     f_vec_merged["f_vec"] = f_vec
     f_vec_merged["repeat"] = np.diff(np.append(step, int(size)))
+    assert np.all(f_vec_merged["repeat"]) > 0
 
     f_vec_merged = np.sort(f_vec_merged, order="NPE")
 
