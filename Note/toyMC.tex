@@ -25,34 +25,55 @@ The PE, waveform and their estimators are hierarchical and intercorellated.  We 
 
 \begin{table}[!ht]
   \centering
-  \caption{random variables}
-  \begin{tabular}{ccccc}
-    variable & estimator & related & type & meaning \\
+  \caption{definitions of symbols}
+  \begin{tabular}{cll}
+    \hline\hline
+    variable & meaning (r.v. for random variable) & first appearance in section \\
     \hline
-    $\mu$ & $\hat{\mu}$ & $\hat{\mu}_\mathrm{KL}, \hat{\mu}_Q$ & random & light intensity \\
-    $t_0$ & $\hat{t}$ & $\hat{t}_\mathrm{ALL}, \hat{t}_\mathrm{KL}, \hat{t}_\mathrm{1st}, \Delta{t_0}$ & random & time shift of the light curve \\
-    $\phi(\cdot)$ & $\hat{\phi}$ & $\tilde{\phi}, \hat{\phi}_*, \hat{\Phi}, \tilde{\phi}_*, \tilde{\Phi}$ & constant & normalized light curve \\
-    $(\sigma_\ell, \tau_\ell)$ & & & constant & light curve shape parameters \\
-    $V_\mathrm{PE}(\cdot)$ & & $V_{\mathrm{PE}*}$& constant & waveform pulse of a single PE \\
-    $(V_0, \tau_\mathrm{PE}, \sigma_\mathrm{PE})$ & & & constant & shape parameters of $V_\mathrm{PE}(\cdot)$ \\
-    $Q_0$ & & & constant & $\int V_\mathrm{PE}(\cdot) \mathrm{d}t$ \\
-    $w(\cdot)$ & $\hat{w}$ & $\bm{w}, w'$ & random & PMT waveform \\
-    $\tilde{w}$ & & $\tilde{w}_*$ & random & smoothed $w$ \\
-    $\epsilon(\cdot)$ & & & random & white noise \\
-    $\sigma^2_\epsilon$ & & & constant & variance of the white noise \\
-    $(t_i, q_i)$ & $(\hat{t}_i, \hat{q}_i)$ & $\bm{\hat{t}}, \hat{\bm{q}}$ & random & location and amplitude of the i-th PE \\
-    $\sigma_\mathrm{1st}$ & & & & $\sqrt{\Var[\hat{t}_\mathrm{1st}]}$ \\
-    $N_\mathrm{PE}$ & $\hat{N}_\mathrm{PE}$ & & random & number of PEs \\
-    $\sigma_q^2$ & & & constant & relative variance of the charge of a single PE \\
-    $D_w$ & & & random & Wasserstein distance \\
-    RSS &&&& rasidual sum of squares \\
-    $t'_i$ &&& constant & grid of PE location candidates \\
-    $q'_i$ &&& random & charge of PE at location $t'_i$ \\
-    $N_s$ &&& constant & number of grid locations
+    $\mu$ & light intensity~(r.v.) & \secref{sec:lc} \\
+    $\hat{\mu}_Q$ & charge estimator for $\mu$ & \secref{sec:intensity-mu}\\
+    $t_0$ & time shift of the light curve~(r.v.) & \secref{sec:lc} \\
+    $\hat{t}_\mathrm{ALL}$ & ideal estimator for $t_0$ by truth $\bm{t}$ & \secref{sec:time-shift-t_0} \\
+    $\hat{t}_\mathrm{1st}$ & first PE estimator for $t_0$ & \secref{sec:time-shift-t_0} \\
+    $\hat{t}_\mathrm{KL}$, $\hat{\mu}_\mathrm{KL}$ & KL estimators for $t_0$ and $\mu$ & \secref{sec:pseudo} \\
+    $\Delta{t_0}$ & bias of a $t_0$ estimator & \secref{sec:time-shift-t_0} \\
+    $\phi(t)$ & normalized light curve & \secref{sec:lc} \\
+    $\tilde{\phi}$ & PE-sampled light curve & \secref{subsec:spe} \\
+    $\hat{\phi}$ & waveform estimator for $\tilde{\phi}$ & \secref{sec:pseudo} \\
+    $\tilde{\phi}_*, \hat{\phi}_*$ & normalized $\tilde{\phi}$ and $\hat{\phi}$ & \secref{sec:W-dist} \\
+    $\tilde{\Phi}(t), \hat{\Phi}(t)$ & $\int_{-\infty}^t\tilde{\phi}_*(s)\mathrm{d}s$ and $\int_{-\infty}^t\hat{\phi}_*(s)\mathrm{d}s$ & \secref{sec:W-dist}\\
+    \hline
+    $V_\mathrm{PE}(t)$ & shape of a single PE pulse & \secref{subsec:spe} \\
+    $w(t), \epsilon(t)$ & PMT waveform and white noise & \secref{subsec:spe} \\
+    $\bm{w}$ & vector notion of discretized $w(t)$ & \secref{subsec:fsmp} \\
+    $\tilde{w}$ & smoothed $w$, approximating $w - \epsilon$ & \secref{sec:fourier} \\
+    $\tilde{w}_*$, $V_{\mathrm{PE}*}$ & normalized $\tilde{w}$ and $V_\mathrm{PE}$ & \secref{sec:lucyddm} \\
+    $\hat{w}$ & $\hat{\phi} \otimes V_\mathrm{PE}$ for estimating $w$ & \secref{sec:rss} \\
+    \hline
+    $t_i, q_i$ & time and charge of the $i$-th PE (r.v.) & \secref{subsec:spe} \\
+    $\bm{t}, \bm{q}$ & vector notions for sets $\{t_i\}$ and $\{q_i\}$ & \secref{sec:algorithm} \\
+    $N_\mathrm{PE}$ & number of PEs (r.v.) & \secref{subsec:spe} \\
+    $\hat{t}_i, \hat{q}_i$ & estimators for $t_i, q_i$ & \secref{sec:algorithm} \\
+    $\hat{N}_\mathrm{PE}$ & estimator for $N_\mathrm{PE}$ & \secref{sec:time} \\
+    $t'_i, N_s$ & grid of PE candidate times and its size & \secref{sec:regression} \\
+    $q'_i, \bm{q}'$ & total charge at $t'_i$ and its vector (r.v.) & \secref{sec:regression} \\
+    $\alpha, \hat{\alpha}$ & scaling factor of $\bm{q}'$ and its estimator & \secref{sec:fourier} \\
+    $q_\mathrm{th}$ & threshold regularizer of $\bm{q}'$ & \secref{sec:fourier} \\
+    $z_i, \bm{z}$ & number of PEs at $t'_i$ and its vector (r.v.) & \secref{subsec:mcmc} \\
+    \hline\hline
   \end{tabular}
   \label{tab:symbol}
 \end{table}
-
+    %  &  & $\bm{w}, w'$ & random & PMT waveform \\
+    % $D_w$ & & & random & Wasserstein distance \\
+    % RSS &&&& rasidual sum of squares \\
+    % $(\sigma_\ell, \tau_\ell)$ & & & constant & light curve shape parameters \\
+    % $(V_0, \tau_\mathrm{PE}, \sigma_\mathrm{PE})$ & & & constant & shape parameters of $V_\mathrm{PE}(\cdot)$ \\
+    % $Q_0$ & & & constant & $\int V_\mathrm{PE}(\cdot) \mathrm{d}t$ \\
+    % $\sigma^2_\epsilon$ & & & constant & variance of the white noise \\
+    % $\bm{\hat{t}}, \hat{\bm{q}}$ 
+    % $\sigma_\mathrm{1st}$ & & & & $\sqrt{\Var[\hat{t}_\mathrm{1st}]}$ \\
+    % $\sigma_q^2$ & & & constant & relative variance of the charge of a single PE \\
 \subsection{Light curve}
 The \textit{light curve} is the time evolution of light intensity illuminating a PMT,
 \begin{equation}

@@ -18,6 +18,7 @@
 \usepackage[bottom]{footmisc}
 \usepackage{mathtools}
 \usepackage{tablefootnote}
+\usepackage{nameref}
 \usepackage{lineno}
 \pgfplotsset{
     tick label style = {font = {\fontsize{6 pt}{12 pt}\selectfont}},
@@ -29,6 +30,7 @@
 \DeclareMathOperator{\E}{E}
 \DeclareMathOperator{\erf}{erf}
 \DeclareMathOperator{\Var}{Var}
+\def\secref#1{\ref{#1}~\nameref{#1}}
 
 \title{Towards the ultimate PMT waveform analysis}
 
