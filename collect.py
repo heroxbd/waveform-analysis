@@ -8,7 +8,7 @@ from multiprocessing import Pool, cpu_count
 
 import wf_func as wff
 
-TRIALS = wff.TRIALS
+TRIALS = 5000
 
 psr = argparse.ArgumentParser()
 psr.add_argument('-o', dest='opt', type=str, help='output file')

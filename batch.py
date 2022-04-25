@@ -2,6 +2,8 @@
 import time
 import argparse
 import itertools as it
+from functools import partial
+from multiprocessing import Pool, cpu_count
 
 import h5py
 import numpy as np
@@ -19,6 +21,7 @@ psr.add_argument("-o", dest="opt", type=str, help="output file")
 psr.add_argument("ipt", type=str, help="input file")
 psr.add_argument("--ref", type=str, help="truth file")
 psr.add_argument("--size", type=int, default=100, help="batch size")
+psr.add_argument('-N', '--Ncpu', dest='Ncpu', type=int, default=50)
 args = psr.parse_args()
 
 fipt = args.ipt
@@ -298,12 +301,12 @@ def batch(A, cx, index, tq, s, z):
     return flip, s0_history, t0_history, Δν_history, s_max_index, last_max_s, annihilations, creations, s_history
 
 b_t0 = [0., 600.]
-def get_t0(s0_history, loc, flip, index, tq, t00_l):
-    l_e = s0_history.shape[0]
+def get_t0(a0, a1, s0_history, loc, flip, index, tq, t00_l):
+    l_e = a1 - a0
     l_s = loc.shape[1] // TRIALS
     t0_l = np.empty(l_e)
     mu_l = np.empty(l_e)
-    for i in range(l_e):
+    for i in range(a0, a1):
         accept = flip[i] != 0
         NPE = s0_history[i]
         step = np.repeat(np.arange(TRIALS)[accept], NPE[accept])
@@ -319,7 +322,7 @@ def get_t0(s0_history, loc, flip, index, tq, t00_l):
         # t00 = index["t0"][i]
         # t00 = loc_i.mean() + 1
         t00 = t00_l[i]
-        t0_l[i], mu_l[i] = wff.fit_t0mu(loc_i, step, tau, sigma, guess, mu_t, t00, b_mu, b_t0, TRIALS)
+        t0_l[i - a0], mu_l[i - a0] = wff.fit_t0mu(loc_i, step, tau, sigma, guess, mu_t, t00, b_mu, b_t0, TRIALS)
     return t0_l, mu_l
 
 with h5py.File(fipt, "r", libver="latest", swmr=True) as ipt:
@@ -349,6 +352,20 @@ s_max = np.zeros(l_e, dtype=[("TriggerNo", "u4"),
 s_max["TriggerNo"] = index["TriggerNo"]
 s_max["ChannelID"] = index["ChannelID"]
 
+def get_t0_pool(s0_history, loc, flip, index, tq, t00_l):
+    N = s0_history.shape[0]
+    if args.Ncpu == 1:
+        slices = [[0, N]]
+    else:
+        chunk = N // args.Ncpu + 1
+        slices = np.vstack((np.arange(0, N, chunk), np.append(np.arange(chunk, N, chunk), N))).T.astype(int).tolist()
+    # result = (lambda a0, a1: get_t0(a0, a1, s0_history, loc, flip, index, tq, t00_l))(*slices[0])
+    with Pool(min(args.Ncpu, cpu_count())) as pool:
+        result = pool.starmap(partial(get_t0, s0_history=s0_history, loc=loc, flip=flip, index=index, tq=tq, t00_l=t00_l), slices)
+    t0 = np.hstack([result[i][0] for i in range(len(slices))])
+    mu = np.hstack([result[i][1] for i in range(len(slices))])
+    return t0, mu
+
 for part in range(l_e // args.size + 1):
     time_start = time.time()
     i_part = s_t[part * args.size:(part + 1) * args.size]
@@ -369,7 +386,7 @@ for part in range(l_e // args.size + 1):
                    tq[i_part, :lp_t], 
                    np.append(s[i_part, :lp_NPE], s_null, axis=1),
                    cp.asarray(z[i_part, :lp_wave], np.float32))
-        t0, mu = get_t0(s0_history, loc, flip, index[i_part], tq[i_part, :lp_t], start['T0'][i_part])
+        t0, mu = get_t0_pool(s0_history, loc, flip, index[i_part], tq[i_part, :lp_t], start['T0'][i_part])
         fi_part = (i_part * TRIALS)[:, None] + np.arange(TRIALS)[None, :]
         fip = fi_part.flatten()
         sample["flip"][fip] = flip.flatten()
