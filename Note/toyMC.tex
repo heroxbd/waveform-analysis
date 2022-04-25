@@ -5,9 +5,6 @@ In this section, we discuss the vital importance of waveform analysis for incide
 
 Like figure~\ref{fig:detector}, a typical neutrino or dark matter detector has a large-volumed target medium surrounded by an array of PMTs. In a \textit{event}, a particle interacts with the target medium and deposits energy when passing through the detector. Part of such energy converts into visible Cherenkov or scintillation photons. A photon propagates to the boundary of the detector and converts into a PE by about \SIrange{20}{30}{\percent} quantum efficiency if it hits a PMT.
 
-The larger the detector, the smaller the solid angle each PMT covers.  The light intensity seen by a PMT can be extremely low.  A PMT works in \textit{photon counting} or \textit{digital mode}, where it is viable to count individual PEs.  \textit{Analog mode} is the opposite, where there are so many PE pulses overlapping that the output is a continuous electric current.  Even in one event of the same detector, PMTs can operate in different modes, depending on the proximity of them to the event vertex.  A unified waveform algorithm should handle both extremes, as well as the intermediate ``overlap, but distinguishable'' mode with an example in figure~\ref{fig:pile}.  In this study,  we cover most of cases with PE occupancy from 0.5 to 30.
-
-
 \begin{figure}[!ht]
   \begin{subfigure}{0.44\textwidth}
   \includegraphics[width=\linewidth]{figures/detector.pdf}
@@ -22,6 +19,40 @@ The larger the detector, the smaller the solid angle each PMT covers.  The light
 
 \end{figure}
 
+The larger the detector, the smaller the solid angle each PMT covers.  The light intensity seen by a PMT can be extremely low.  A PMT works in \textit{photon counting} or \textit{digital mode}, where it is viable to count individual PEs.  \textit{Analog mode} is the opposite, where there are so many PE pulses overlapping that the output is a continuous electric current.  Even in one event of the same detector, PMTs can operate in different modes, depending on the proximity of them to the event vertex.  A unified waveform algorithm should handle both extremes, as well as the intermediate ``overlap, but distinguishable'' mode with an example in figure~\ref{fig:pile}.  In this study,  we cover most of cases with PE occupancy from 0.5 to 30.
+
+The PE, waveform and their estimators are hierarchical and intercorellated.  We explicitly summarize the symbol conventions of this article in table~\ref{tab:symbol}.
+
+\begin{table}[!ht]
+  \centering
+  \caption{random variables}
+  \begin{tabular}{ccccc}
+    variable & estimator & related & type & meaning \\
+    \hline
+    $\mu$ & $\hat{\mu}$ & $\hat{\mu}_\mathrm{KL}, \hat{\mu}_Q$ & random & light intensity \\
+    $t_0$ & $\hat{t}$ & $\hat{t}_\mathrm{ALL}, \hat{t}_\mathrm{KL}, \hat{t}_\mathrm{1st}, \Delta{t_0}$ & random & time shift of the light curve \\
+    $\phi(\cdot)$ & $\hat{\phi}$ & $\tilde{\phi}, \hat{\phi}_*, \hat{\Phi}, \tilde{\phi}_*, \tilde{\Phi}$ & constant & normalized light curve \\
+    $(\sigma_\ell, \tau_\ell)$ & & & constant & light curve shape parameters \\
+    $V_\mathrm{PE}(\cdot)$ & & $V_{\mathrm{PE}*}$& constant & waveform pulse of a single PE \\
+    $(V_0, \tau_\mathrm{PE}, \sigma_\mathrm{PE})$ & & & constant & shape parameters of $V_\mathrm{PE}(\cdot)$ \\
+    $Q_0$ & & & constant & $\int V_\mathrm{PE}(\cdot) \mathrm{d}t$ \\
+    $w(\cdot)$ & $\hat{w}$ & $\bm{w}, w'$ & random & PMT waveform \\
+    $\tilde{w}$ & & $\tilde{w}_*$ & random & smoothed $w$ \\
+    $\epsilon(\cdot)$ & & & random & white noise \\
+    $\sigma^2_\epsilon$ & & & constant & variance of the white noise \\
+    $(t_i, q_i)$ & $(\hat{t}_i, \hat{q}_i)$ & $\bm{\hat{t}}, \hat{\bm{q}}$ & random & location and amplitude of the i-th PE \\
+    $\sigma_\mathrm{1st}$ & & & & $\sqrt{\Var[\hat{t}_\mathrm{1st}]}$ \\
+    $N_\mathrm{PE}$ & $\hat{N}_\mathrm{PE}$ & & random & number of PEs \\
+    $\sigma_q^2$ & & & constant & relative variance of the charge of a single PE \\
+    $D_w$ & & & random & Wasserstein distance \\
+    RSS &&&& rasidual sum of squares \\
+    $t'_i$ &&& constant & grid of PE location candidates \\
+    $q'_i$ &&& random & charge of PE at location $t'_i$ \\
+    $N_s$ &&& constant & number of grid locations
+  \end{tabular}
+  \label{tab:symbol}
+\end{table}
+
 \subsection{Light curve}
 The \textit{light curve} is the time evolution of light intensity illuminating a PMT,
 \begin{equation}
@@ -34,7 +65,6 @@ where $\mu$ is the intensity factor, $t_0$ is the time shift factor, and $\phi(\
     \label{eq:time-pro}
 \end{align}
 where subscript $\ell$ stands for ``light curve'' and $\sigma_\ell$ encodes the timing uncertainty mainly from TTS. $\phi(t)$ of Cherenkov light is a pure Gaussian by taking $\tau_\ell \rightarrow 0$. Figure~\ref{fig:time-pro} illustrates 3 examples of $\phi(t)$. 
-
 
 \subsection{Single PE pulse}
 \label{subsec:spe}
