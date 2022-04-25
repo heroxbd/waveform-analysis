@@ -19,9 +19,9 @@ Like figure~\ref{fig:detector}, a typical neutrino or dark matter detector has a
 
 \end{figure}
 
-The larger the detector, the smaller the solid angle each PMT covers.  The light intensity seen by a PMT can be extremely low.  A PMT works in \textit{photon counting} or \textit{digital mode}, where it is viable to count individual PEs.  \textit{Analog mode} is the opposite, where there are so many PE pulses overlapping that the output is a continuous electric current.  Even in one event of the same detector, PMTs can operate in different modes, depending on the proximity of them to the event vertex.  A unified waveform algorithm should handle both extremes, as well as the intermediate ``overlap, but distinguishable'' mode with an example in figure~\ref{fig:pile}.  In this study,  we cover most of cases with PE occupancy from 0.5 to 30.
+The larger the detector, the smaller the solid angle each PMT covers.  The light intensity seen by a PMT can be extremely low.  A PMT works in \textit{photon counting} or \textit{digital mode}, where it is viable to count individual PEs.  \textit{Analog mode} is the opposite, where there are so many PE pulses overlapping that the output is a continuous electric current.  Even in one event of the same detector, PMTs can operate in different modes, depending on the proximity of them to the event vertex.  A unified waveform algorithm should handle both extremes, and the intermediate ``overlap, but distinguishable'' mode with an example in figure~\ref{fig:pile}.  In this study,  we cover most of the cases with PE occupancy from 0.5 to 30.
 
-The PE, waveform and their estimators are hierarchical and intercorellated.  We explicitly summarize the symbol conventions of this article in table~\ref{tab:symbol}.
+The PE, waveform and their estimators are hierarchical and intercorelated.  We explicitly summarize the symbol conventions of this article in table~\ref{tab:symbol}.
 
 \begin{table}[!ht]
   \centering
@@ -29,6 +29,17 @@ The PE, waveform and their estimators are hierarchical and intercorellated.  We 
   \begin{tabular}{cll}
     \hline\hline
     variable & meaning (r.v. for random variable) & first appearance in section \\
+    \hline
+    $t_i, q_i$ & time and charge of the $i$-th PE (r.v.) & \secref{subsec:spe} \\
+    $\bm{t}, \bm{q}$ & vector notions for sets $\{t_i\}$ and $\{q_i\}$ & \secref{sec:algorithm} \\
+    $N_\mathrm{PE}$ & number of PEs (r.v.) & \secref{subsec:spe} \\
+    $\hat{t}_i, \hat{q}_i$ & estimators for $t_i, q_i$ & \secref{sec:algorithm} \\
+    $\hat{N}_\mathrm{PE}$ & estimator for $N_\mathrm{PE}$ & \secref{sec:time} \\
+    $t'_i, N_s$ & grid of PE candidate times and its size & \secref{sec:regression} \\
+    $q'_i, \bm{q}'$ & total charge at $t'_i$ and its vector (r.v.) & \secref{sec:regression} \\
+    $\alpha, \hat{\alpha}$ & scaling factor of $\bm{q}'$ and its estimator & \secref{sec:fourier} \\
+    $q_\mathrm{th}$ & threshold regularizer of $\bm{q}'$ & \secref{sec:fourier} \\
+    $z_i, \bm{z}$ & number of PEs at $t'_i$ and its vector (r.v.) & \secref{subsec:mcmc} \\
     \hline
     $\mu$ & light intensity~(r.v.) & \secref{sec:lc} \\
     $\hat{\mu}_Q$ & charge estimator for $\mu$ & \secref{sec:intensity-mu}\\
@@ -49,17 +60,6 @@ The PE, waveform and their estimators are hierarchical and intercorellated.  We 
     $\tilde{w}$ & smoothed $w$, approximating $w - \epsilon$ & \secref{sec:fourier} \\
     $\tilde{w}_*$, $V_{\mathrm{PE}*}$ & normalized $\tilde{w}$ and $V_\mathrm{PE}$ & \secref{sec:lucyddm} \\
     $\hat{w}$ & $\hat{\phi} \otimes V_\mathrm{PE}$ for estimating $w$ & \secref{sec:rss} \\
-    \hline
-    $t_i, q_i$ & time and charge of the $i$-th PE (r.v.) & \secref{subsec:spe} \\
-    $\bm{t}, \bm{q}$ & vector notions for sets $\{t_i\}$ and $\{q_i\}$ & \secref{sec:algorithm} \\
-    $N_\mathrm{PE}$ & number of PEs (r.v.) & \secref{subsec:spe} \\
-    $\hat{t}_i, \hat{q}_i$ & estimators for $t_i, q_i$ & \secref{sec:algorithm} \\
-    $\hat{N}_\mathrm{PE}$ & estimator for $N_\mathrm{PE}$ & \secref{sec:time} \\
-    $t'_i, N_s$ & grid of PE candidate times and its size & \secref{sec:regression} \\
-    $q'_i, \bm{q}'$ & total charge at $t'_i$ and its vector (r.v.) & \secref{sec:regression} \\
-    $\alpha, \hat{\alpha}$ & scaling factor of $\bm{q}'$ and its estimator & \secref{sec:fourier} \\
-    $q_\mathrm{th}$ & threshold regularizer of $\bm{q}'$ & \secref{sec:fourier} \\
-    $z_i, \bm{z}$ & number of PEs at $t'_i$ and its vector (r.v.) & \secref{subsec:mcmc} \\
     \hline\hline
   \end{tabular}
   \label{tab:symbol}
@@ -75,6 +75,7 @@ The PE, waveform and their estimators are hierarchical and intercorellated.  We 
     % $\sigma_\mathrm{1st}$ & & & & $\sqrt{\Var[\hat{t}_\mathrm{1st}]}$ \\
     % $\sigma_q^2$ & & & constant & relative variance of the charge of a single PE \\
 \subsection{Light curve}
+\label{sec:lc}
 The \textit{light curve} is the time evolution of light intensity illuminating a PMT,
 \begin{equation}
   \label{eq:light-curve}
