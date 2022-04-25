@@ -409,13 +409,20 @@ def fit_t0mu(loc, step, Tau, Sigma, guess, mu, t00, b_mu, b_t0, TRIALS):
 
     # ans = opti.fmin_l_bfgs_b(t_t0, x0=[t00], approx_grad=True, bounds=[b_t0], maxfun=10000)
     # t0 = ans[0].item()
+    # fval_old = ans[1].item()
+    # print(ans[2]['task'])
+    # print(ans[2]['warnflag'])
 
     t0_list = np.linspace(b_t0[0], b_t0[-1], 501)
     fval = np.array([t_t0(t_i) for t_i in t0_list])
     t0 = t0_list[fval.argmin()]
-    t_t0(t0)
-    # print(ans[2]['task'])
-    # print(ans[2]['warnflag'])
+    fval_new = t_t0(t0).item()
+
+    # print(f'Old minLL is {fval_old:.4f}, new minLL is {fval_new:.4f}')
+    # label = 0
+    # if fval_old > fval_new:
+    #     label = 1
+    # print(f'Label is {label}')
     return t0, mu
 
 @njit(nogil=True, cache=True)
