@@ -40,7 +40,9 @@ with open(args.conf) as f:
     Sigma = next(f_csv)
     Sigma = [float(i) for i in Sigma]
 
-filelist = os.listdir('result/lucyddm/solu')
+default_method = 'lucyddm'
+
+filelist = os.listdir(f'result/{default_method}/solu')
 filelist = [f for f in filelist if f[0] != '.' and os.path.splitext(f)[-1] == '.h5']
 numbers = [[float(i) for i in f[:-3].split('-')] for f in filelist]
 stype = np.dtype([('mu', np.float64), ('tau', np.float64), ('sigma', np.float64), ('n', np.uint), ('std1sttruth', np.float64), ('stdtruth', np.float64), ('std', np.float64), ('stdone', np.float64), ('bias1sttruth', np.float64), ('biastruth', np.float64), ('bias', np.float64), ('biasone', np.float64), ('wdist', np.float64, 3), ('RSS', np.float64, 3), ('N', np.uint), ('consumption', np.float64, 3), ('stdsuccess', np.uint), ('stdonesuccess', np.uint)])
@@ -144,7 +146,7 @@ badkey = ['findpeak', 'threshold', 'fftrans', 'mcmc', 'firstthres']
 for i, sigma in enumerate(Sigma):
     for j, tau in enumerate(Tau):
         ax = fig_t0_resolution.add_subplot(gs_t0_resolution[i, j])
-        stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == tau) & (mts['lucyddm']['sigma'] == sigma)]
+        stdlist = mts[default_method][(mts[default_method]['tau'] == tau) & (mts[default_method]['sigma'] == sigma)]
         yerr1st = np.vstack([stdlist['std1sttruth']-np.sqrt(np.power(stdlist['std1sttruth'],2)*stdlist['N']/chi2.ppf(1-alpha, stdlist['N'])), np.sqrt(np.power(stdlist['std1sttruth'],2)*stdlist['N']/chi2.ppf(alpha, stdlist['N']))-stdlist['std1sttruth']])
         yerrall = np.vstack([stdlist['stdtruth']-np.sqrt(np.power(stdlist['stdtruth'],2)*stdlist['N']/chi2.ppf(1-alpha, stdlist['N'])), 
                              np.sqrt(np.power(stdlist['stdtruth'],2)*stdlist['N']/chi2.ppf(alpha, stdlist['N']))-stdlist['stdtruth']])
@@ -170,7 +172,7 @@ for i, sigma in enumerate(Sigma):
         # bias of t_0 estimation
         # 
         ax = fig_t0_bias.add_subplot(gs_t0_bias[i, j])
-        stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == tau) & (mts['lucyddm']['sigma'] == sigma)]
+        stdlist = mts[default_method][(mts[default_method]['tau'] == tau) & (mts[default_method]['sigma'] == sigma)]
         # yerr1st = np.vstack([-t.ppf(alpha, stdlist['N'])*stdlist['std1sttruth']/np.sqrt(stdlist['N']), t.ppf(1-alpha, stdlist['N'])*stdlist['std1sttruth']/np.sqrt(stdlist['N'])])
         yerrall = np.vstack([-t.ppf(alpha, stdlist['N'])*stdlist['stdtruth']/np.sqrt(stdlist['N']), 
                              t.ppf(1-alpha, stdlist['N'])*stdlist['stdtruth']/np.sqrt(stdlist['N'])])
@@ -206,7 +208,7 @@ for i, sigma in enumerate(Sigma):
                               (1/np.sqrt(stats.f.ppf(alpha, stdlist['N']-1, stdlist['N']-1))-1)*stdlist['std']/stdlist['stdtruth']])
             ax.errorbar(stdlist['mu'] + jitter[key], stdlist['std'] / stdlist['stdtruth'], yerr=yerr, label='$'+deltalabel[key]+'$', c=color[key], marker=marker[key])
         temp_ylim = ax.get_ylim()
-        stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == tau) & (mts['lucyddm']['sigma'] == sigma)]
+        stdlist = mts[default_method][(mts[default_method]['tau'] == tau) & (mts[default_method]['sigma'] == sigma)]
         yerr = np.vstack([stdlist['std'] / stdlist['stdtruth']*(1-1/np.sqrt(stats.f.ppf(1-alpha, stdlist['N']-1, stdlist['N']-1))), (1/np.sqrt(stats.f.ppf(alpha, stdlist['N']-1, stdlist['N']-1))-1)*stdlist['std']/stdlist['stdtruth']])
         ax.errorbar(stdlist['mu'] + jitter['1st'], stdlist['std1sttruth'] / stdlist['stdtruth'], yerr=yerr, label='$'+deltalabel['1st']+'$', c=color['1st'], marker=marker['1st'])
         ax.set_ylim(temp_ylim)
@@ -446,7 +448,7 @@ mtsi['biasmumax'] = np.nan
 mtsi['biasmu'] = np.nan
 mtsi = np.sort(mtsi, kind='stable', order=['mu', 'tau', 'sigma'])
 
-mu_list = np.unique(mts['lucyddm']['mu'])
+mu_list = np.unique(mts[default_method]['mu'])
 mu_std_tru_list = np.sqrt(mu_list)
 
 mts = {'lucyddm':mtsi.copy(), 'takara':mtsi.copy(), 'xiaopeip':mtsi.copy(), 'fsmp':mtsi.copy()}
@@ -525,7 +527,7 @@ for i, sigma in enumerate(Sigma):
         #
         # related intensity resolution comparison
         #
-        stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == tau) & (mts['lucyddm']['sigma'] == sigma)]
+        stdlist = mts[default_method][(mts[default_method]['tau'] == tau) & (mts[default_method]['sigma'] == sigma)]
         ax = fig_mu_resolution_ratio.add_subplot(gs_mu_resolution_ratio[i, j])
         yerr = np.vstack([stdlist['stdmuint']-np.sqrt(np.power(stdlist['stdmuint'],2)*stdlist['N']/chi2.ppf(1-alpha, stdlist['N'])), 
                           np.sqrt(np.power(stdlist['stdmuint'],2)*stdlist['N']/chi2.ppf(alpha, stdlist['N']))-stdlist['stdmuint']]) / (stdlist['biasmuint'][:, 1] + stdlist['meanmutru'])
@@ -558,7 +560,7 @@ for i, sigma in enumerate(Sigma):
         #
         # intensity resolution comparison
         #
-        stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == tau) & (mts['lucyddm']['sigma'] == sigma)]
+        stdlist = mts[default_method][(mts[default_method]['tau'] == tau) & (mts[default_method]['sigma'] == sigma)]
         ax = fig_mu_resolution.add_subplot(gs_mu_resolution[i, j])
         yerr = np.vstack([stdlist['stdmuint']-np.sqrt(np.power(stdlist['stdmuint'],2)*stdlist['N']/chi2.ppf(1-alpha, stdlist['N'])), 
                           np.sqrt(np.power(stdlist['stdmuint'],2)*stdlist['N']/chi2.ppf(alpha, stdlist['N']))-stdlist['stdmuint']]) / (stdlist['biasmuint'][:, 1] + stdlist['meanmutru'])
@@ -581,7 +583,7 @@ for i, sigma in enumerate(Sigma):
         #
         # relative charge bias
         #
-        stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == tau) & (mts['lucyddm']['sigma'] == sigma)]
+        stdlist = mts[default_method][(mts[default_method]['tau'] == tau) & (mts[default_method]['sigma'] == sigma)]
         ax = fig_mu_bias_ratio.add_subplot(gs_mu_bias_ratio[i, j])
         yerr = np.vstack([-t.ppf(alpha, stdlist['N'])*stdlist['stdmuint']/np.sqrt(stdlist['N']), 
                           t.ppf(1-alpha, stdlist['N'])*stdlist['stdmuint']/np.sqrt(stdlist['N'])]) / stdlist['meanmutru']
@@ -611,7 +613,7 @@ for i, sigma in enumerate(Sigma):
         #
         # charge bias
         #
-        stdlist = mts['lucyddm'][(mts['lucyddm']['tau'] == tau) & (mts['lucyddm']['sigma'] == sigma)]
+        stdlist = mts[default_method][(mts[default_method]['tau'] == tau) & (mts[default_method]['sigma'] == sigma)]
         ax = fig_mu_bias.add_subplot(gs_mu_bias[i, j])
         yerr = np.vstack([-t.ppf(alpha, stdlist['N'])*stdlist['stdmuint']/np.sqrt(stdlist['N']), t.ppf(1-alpha, stdlist['N'])*stdlist['stdmuint']/np.sqrt(stdlist['N'])])
         ax.errorbar(stdlist['mu'] + jitter['tru'], stdlist['biasmuint'][:, 1], yerr=yerr, label='$\mathrm{int}$', c=color['1st'], marker=marker['1st'])
