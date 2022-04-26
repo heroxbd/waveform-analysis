@@ -192,6 +192,8 @@ def batch(A, cx, index, tq, s, z, t0_min=100, t0_max=500):
     s0_history = np.zeros((l_e, TRIALS), dtype=np.uint32) # 0-norm of s
     s_history = np.zeros((l_e, TRIALS * l_s), dtype=np.float32)
 
+    # t0_accept = 0
+
     log_mu = np.log(index["mu0"])  # 猜测的 Poisson 流强度
     loc = np.zeros((l_e, 2)) # float64
     fsig2s_inv = cp.diag(vstep)[None, :, :] * (1/sig2s)[:, None, None]
@@ -206,7 +208,8 @@ def batch(A, cx, index, tq, s, z, t0_min=100, t0_max=500):
             istar.T,
             flip.T,
             home_s.T,
-            *np.random.normal(size=(2, TRIALS, l_e)),
+            np.random.normal(size=(TRIALS, l_e)),
+            np.random.normal(scale=5, size=(TRIALS, l_e)),
             *np.log(np.random.rand(2, TRIALS, l_e)),
         )
     ):
@@ -219,7 +222,9 @@ def batch(A, cx, index, tq, s, z, t0_min=100, t0_max=500):
         sel = cp.asarray(np.arange(mNPE)[None, :] < NPE[:, None])
         lc0 = cp.sum(sel_lc(cp.asarray(rt - t0[:, None]), sel), axis=1)
         lc1 = cp.sum(sel_lc(cp.asarray(rt - nt0[:, None]), sel), axis=1)
-        np.putmask(t0, np.logical_and(cp.asnumpy(lc1 - lc0) >= acct, np.logical_and(nt0 >= t0_min, nt0 <= t0_max)), nt0)
+        t0_acceptance = np.logical_and(cp.asnumpy(lc1 - lc0) >= acct, np.logical_and(nt0 >= t0_min, nt0 <= t0_max))
+        # t0_accept += np.sum(t0_acceptance) / len(t0_acceptance)
+        np.putmask(t0, t0_acceptance, nt0)
         t0_history[:, i] = t0
 
         ### 光变曲线和移动计算
@@ -299,6 +304,7 @@ def batch(A, cx, index, tq, s, z, t0_min=100, t0_max=500):
         flip[:, i] = step
         s0_history[:, i] = NPE
         s_history[:, i*l_s:(i+1)*l_s] = s
+    # print("t0 acceptance:", t0_accept / TRIALS)
     return flip, s0_history, t0_history, Δν_history, s_max_index, last_max_s, annihilations, creations, s_history
 
 b_t0 = [0., 600.]
