@@ -18,9 +18,9 @@ ifeq ($(method), mcmc)
 	predict:=bayesian
 else
 ifeq ($(method), fsmp)
-	# predict:=gibbs
-	# sparsify:=$(patsubst waveform/%.h5,result/$(method)/sparsify/%.h5,$(sim))
-	predict:=bayesian
+	predict:=gibbs
+	sparsify:=$(patsubst waveform/%.h5,result/$(method)/sparsify/%.h5,$(sim))
+	# predict:=bayesian
 else
     predict:=fit
 endif
@@ -47,7 +47,7 @@ sim : $(sim)
 define gibbs
 result/$(method)/sparsify/%.h5: waveform/%.h5 spe.h5
 	@mkdir -p $$(dir $$@)
-	python3 sparsify.py $$< --ref $$(word 2,$$^) -o $$@ > $$@.log 2>&1
+	sem --fg python3 sparsify.py $$< --ref $$(word 2,$$^) -o $$@ > $$@.log 2>&1
 
 result/$(method)/batch/%.h5: result/$(method)/sparsify/%.h5 waveform/%.h5
 	@mkdir -p $$(dir $$@)
@@ -118,6 +118,21 @@ waveform/%.h5 :
 	python3 toySim.py --mts $* --noi -N 10000 -o $@ > $@.log 2>&1
 
 spe.h5 : $(sim) ;
+
+define batches
+batch/$(1)/%.h5: result/fsmp/sparsify/%.h5 waveform/%.h5
+	mkdir -p $$(dir $$@)
+	CUDA_VISIBLE_DEVICES=$(1) python3 batch.py $$< --ref $$(word 2,$$^) -o $$@ --size 5000
+
+endef
+
+batch_id:=$(shell seq 0 4)
+
+$(eval $(foreach i,$(batch_id),$(call batches,$(i))))
+
+conv/%.pdf: $(foreach i,$(batch_id),batch/$(i)/%.h5)
+	mkdir -p $(dir $@)
+	python3 conv.py $^ -o $@
 
 .DELETE_ON_ERROR: 
 
