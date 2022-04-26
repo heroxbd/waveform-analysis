@@ -259,7 +259,7 @@ def fsmp_inference(a0, a1):
         # t00 = t0_truth['T0'][i]
         # mu = mu_t
         b_mu = [max(1e-8, mu_t - 5 * np.sqrt(mu_t)), mu_t + 5 * np.sqrt(mu_t)]
-        t0, mu = wff.fit_t0mu(es_history['loc'], es_history['step'], Tau, Sigma, guess, mu_t, t00, b_mu, b_t0, TRIALS)
+        t0, mu = wff.fit_t0mu_guess(es_history['loc'], es_history['step'], Tau, Sigma, guess, mu_t, t00, b_mu, b_t0, TRIALS)
 
         j = 0
         xmmse_most = np.zeros(len(tlist))
