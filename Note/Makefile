@@ -1,5 +1,8 @@
 .PHONY: arxiv
 
+arxiv: submission.tar.gz
+jinst: jinst.tar.gz
+
 submission.tar.gz:
 	pdflatex arxiv.tex
 	bibtex arxiv.aux
