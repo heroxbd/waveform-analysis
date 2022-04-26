@@ -389,11 +389,9 @@ def elbo(nu_star_prior):
     # assert abs(e_star - e) < 1e-4
     return e
 
-def fit_t0mu(loc, step, Tau, Sigma, guess, mu, t00, b_mu, b_t0, TRIALS):
+def fit_t0mu_guess(loc, step, Tau, Sigma, guess, mu, t00, b_mu, b_t0, TRIALS):
     def agg_NPE(t0):
-        # log_f = log_convolve_exp_norm(es_history['loc'] - t0, Tau, Sigma) + guess
         log_f = log_convolve_exp_norm(loc - t0, Tau, Sigma) + guess
-        # return jit_agg_NPE(es_history['step'], log_f, TRIALS)
         return jit_agg_NPE(step, log_f, TRIALS)
 
     def t_t0(t0):
@@ -423,6 +421,28 @@ def fit_t0mu(loc, step, Tau, Sigma, guess, mu, t00, b_mu, b_t0, TRIALS):
     # if fval_old > fval_new:
     #     label = 1
     # print(f'Label is {label}')
+    return t0, mu
+
+def fit_t0mu_gibbs(loc, t00_list, step, Tau, Sigma, mu, t00, b_mu, b_t0, TRIALS):
+    def agg_NPE(t0):
+        log_f = log_convolve_exp_norm(loc - t0, Tau, Sigma) - log_convolve_exp_norm(loc - t00_list, Tau, Sigma)
+        return jit_agg_NPE(step, log_f, TRIALS)
+
+    def t_t0(t0):
+        nonlocal mu
+        NPE, f_agg = agg_NPE(t0)
+        ans = opti.fmin_l_bfgs_b(lambda μ: μ - special.logsumexp(NPE * np.log(μ / mu) + f_agg), 
+                                 x0=[mu], 
+                                 approx_grad=True, 
+                                 bounds=[b_mu], 
+                                 maxfun=10000)
+        mu = ans[0].item()
+        return ans[1]
+
+    t0_list = np.linspace(b_t0[0], b_t0[-1], 501)
+    fval = np.array([t_t0(t_i) for t_i in t0_list])
+    t0 = t0_list[fval.argmin()]
+    fval_new = t_t0(t0)
     return t0, mu
 
 @njit(nogil=True, cache=True)
