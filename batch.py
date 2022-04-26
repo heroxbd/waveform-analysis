@@ -130,7 +130,7 @@ sel_add = cp.ElementwiseKernel('float32 delta, bool sel', 'float32 dest', "if(se
 sel_assign = cp.ElementwiseKernel('float32 value, bool sel', 'float32 dest', "if(sel) dest = value", "sel_assign")
 
 #profile
-def batch(A, cx, index, tq, s, z, t0_max=100, t0_min=500):
+def batch(A, cx, index, tq, s, z, t0_min=100, t0_max=500):
     """
     batch
     ====
@@ -174,9 +174,10 @@ def batch(A, cx, index, tq, s, z, t0_max=100, t0_min=500):
     t0 = np.zeros(l_e, np.float32)
     e_hit = NPE > 0
 
-    t0[e_hit] = np.clip(v_rt(s[e_hit, 0], tq["t_s"], e_hit), t0_min, t0_max)
+    t0[e_hit] = v_rt(s[e_hit, 0], tq["t_s"], e_hit)
     e_nonhit = ~e_hit
     t0[e_nonhit] = tq["t_s"][e_nonhit, 0]
+    t0 = np.clip(t0, t0_min, t0_max)
 
     # step: +1 创生一个 PE， -1 消灭一个 PE， +2 向左或向右移动
     flip = np.random.choice((-1, 1, 2), (l_e, TRIALS), p=np.array((1, 1, 2)) / 4)
