@@ -75,14 +75,14 @@ Figure~\ref{fig:l2} demonstrates that if two functions do not overlap, their $\m
 
 \input{fom}
 
-In the following, we  evaluate the performance of waveform analysis algorithms ranging from heuristics, deconvolution, neural network to regression by the criteria discussed in this section.
+In the following, we evaluate the performance of waveform analysis algorithms ranging from heuristics, deconvolution, neural network to regression by the criteria discussed in this section.
 
 \subsection{Heuristic methods}
 By directly extracting the patterns in the waveforms, \textit{heuristics} refer to the methods making minimal assumptions of the instrumental and statistical features.  Straightforward to implement and widely deployed in neutrino and dark matter experiments~\cite{students22}, they are poorly documented in the literature.  In this section, we try to formulate the heuristics actually have been used in the experiments so as to make an objective comparison with more advanced techniques.
 
 \subsubsection{Waveform shifting}
 \label{sec:shifting}
-Some Experiments use waveforms as direct input of analysis. Proton decay search at KamLAND~\cite{kamland_collaboration_search_2015} sums up all the PMT waveforms after shifting by time-of-flight for each event candidate.  The total waveform shape is used for a $\chi^2$-based particle identification (PID). The Double Chooz experiment also superposes waveforms to extract PID information by Fourier transformation~\cite{chooz_2018}. Samani et al.\cite{samani_pulse_2020} extracts pulse width from a raw waveform and use it as a PID discriminator.  Such techniques are extensions of pulse shape discrimination~(PSD) to large neutrino and dark matter experiments.  In the view of this study, extended PSD uses shifted waveform to approximate PE hit pattern, thus named \textit{waveform shifting}.
+Some experiments use waveforms as direct input of analysis. Proton decay search at KamLAND~\cite{kamland_collaboration_search_2015} sums up all the PMT waveforms after shifting by time-of-flight for each event candidate.  The total waveform shape is used for a $\chi^2$-based particle identification (PID). The Double Chooz experiment also superposes waveforms to extract PID information by Fourier transformation~\cite{chooz_2018}. Samani et al.\cite{samani_pulse_2020} extracts pulse width from a raw waveform and use it as a PID discriminator.  Such techniques are extensions of pulse shape discrimination~(PSD) to large neutrino and dark matter experiments.  In the view of this study, extended PSD uses shifted waveform to approximate PE hit pattern, thus named \textit{waveform shifting}.
 
 First, we select all the $t_i$ where the waveform $w(t_i)$ exceeds a threshold to suppress noise, shift them by $\Delta t$ according to the shape of the single PE response $V_\mathrm{PE}(t)$ in eq.~\eqref{eq:dayaspe} to get $\hat{t}_i$, then take $\hat{q}_i \propto w(\hat{t}_i - \Delta t)$ so that the RSS is minimized.  Though the obtained $\hat{q}_i$'s are smaller than PE charges as in figure~\ref{fig:shifting}, waveform shifting does minimal analysis and serves as a baseline method.
 
@@ -107,11 +107,11 @@ First, we select all the $t_i$ where the waveform $w(t_i)$ exceeds a threshold t
 
 \subsection{Deconvolution}
 \label{sec:deconv}
-Deconvolution methods contribute more than heuristic ones by using the entire shape of $V_\mathrm{PE}(t)$, thus can accommodate overshoots and pile-ups.  Smoothing is necessary since deconvolution does not model the white noise.
+Deconvolution is motivated by viewing the waveform as a convolution of sparse spike train $\tilde{\phi}$ and $V_\mathrm{PE}$ in eq.~\eqref{eq:1}.  Huang et al.~\cite{huang_flash_2018} from DayaBay and Grassi et al.~\cite{grassi_charge_2018} introduced deconvolution-based waveform analysis in charge reconstruction and linearity studies.  Zhang et al.~\cite{zhang_comparison_2019} then applied it to JUNO prototype.  Deconvolution methods are better than heuristic ones by using the full shape of $V_\mathrm{PE}(t)$, thus can accommodate overshoots and pile-ups.  Noise and Nyquist limit make deconvolution sensitive to fluctuations in real-world applications.  A very careful selection of low-pass filter mitigates the difficulty but might introduce Gibbs ringing artifects in the smoothed waveforms and the deconvoluted results. Despite such draw-backs, deconvolution algorithms are fast and useful to give initial crude solutions for the more advanced algorithms.  Deployed in running experiments, they are discussed in this section to make an objective evaluation. 
 
 \subsubsection{Fourier deconvolution}
 \label{sec:fourier}
-\textit{Fourier deconvolution} is an option considered by JUNO prototype~\cite{zhang_comparison_2019}. The deconvolution relation is evident in the Fourier transform $\mathcal{F}$ to eq.~\eqref{eq:1},
+The deconvolution relation is evident in the Fourier transform $\mathcal{F}$ to eq.~\eqref{eq:1},
 \begin{equation}
   \label{eq:fourier}
   %\begin{aligned}
