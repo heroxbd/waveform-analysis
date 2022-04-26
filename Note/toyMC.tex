@@ -54,7 +54,7 @@ The PE, waveform and their estimators are hierarchical and intercorelated.  We e
     $\tilde{\phi}_*, \hat{\phi}_*$ & normalized $\tilde{\phi}$ and $\hat{\phi}$ & \secref{sec:W-dist} \\
     $\tilde{\Phi}(t), \hat{\Phi}(t)$ & $\int_{-\infty}^t\tilde{\phi}_*(s)\mathrm{d}s$ and $\int_{-\infty}^t\hat{\phi}_*(s)\mathrm{d}s$ & \secref{sec:W-dist}\\
     \hline
-    $V_\mathrm{PE}(t)$ & shape of a single PE pulse & \secref{subsec:spe} \\
+    $V_\mathrm{PE}(t)$ & shape of a single electron response & \secref{subsec:spe} \\
     $w(t), \epsilon(t)$ & PMT waveform and white noise & \secref{subsec:spe} \\
     $\bm{w}$ & vector notion of discretized $w(t)$ & \secref{subsec:fsmp} \\
     $\tilde{w}$ & smoothed $w$, approximating $w - \epsilon$ & \secref{sec:fourier} \\
@@ -88,10 +88,25 @@ where $\mu$ is the intensity factor, $t_0$ is the time shift factor, and $\phi(\
 \end{align}
 where subscript $\ell$ stands for ``light curve'' and $\sigma_\ell$ encodes the timing uncertainty mainly from TTS. $\phi(t)$ of Cherenkov light is a pure Gaussian by taking $\tau_\ell \rightarrow 0$. Figure~\ref{fig:time-pro} illustrates 3 examples of $\phi(t)$. 
 
-\subsection{Single PE pulse}
+\subsection{Single electron response}
 \label{subsec:spe}
 
-A PE induced by a photon at the PMT photocathode is then accelerated, collected, and amplified into $\num[retain-unity-mantissa=false]{\sim 1e7}$ electrons, forming a voltage pulse $V_\mathrm{PE}(t)$ in the PMT output.
+A PE induced by a photon at the PMT photocathode is accelerated, collected, and amplified by several stages into $\num[retain-unity-mantissa=false]{\sim 1e7}$ electrons, forming a voltage pulse $V_\mathrm{PE}(t)$ in the PMT output.  Wright~et~al.~\cite{wright_low_1954} formulated the cascade multiplication of secondary electrons assuming the amplification of each stage following Poisson distribution.  Breitenberger~\cite{breitenberger_scintillation_1955} compared the statistical model with a summary of laboratory measurements arguing that the gain variance to be larger than predicted. Percott~\cite{prescott_statistical_1966} used Polya distribution to account for extra variance of Poisson rate non-uniformity.  With modern high gain PMTs ($\num[retain-unity-mantissa=false]{\sim 1e7}$), Caldwell et al.~\cite{caldwell_characterization_2013} from MiniCLEAN and Amaudruz et al.~\cite{amaudruz_-situ_2019} from DEAP-3600 suggested Gamma distribution as the continuous counterpart of the Polya.  Neves et al.~\cite{neves_calibration_2010} from ZEPLIN-III did a survey of the literature but prefer to model the gain in a data-driven way by calibration, without assuming any well-known probability distributions.  We use Gamma distributions in this work.
+
+A sample of PEs from the light curve $\phi(t)$ in eq.~\eqref{eq:time-pro} can be formulated as several delta functions, also known as sparse spike train~\cite{levy_reconstruction_1981}, 
+\begin{equation}
+  \label{eq:lc-sample}
+  \tilde{\phi}(t) = \sum_{i=1}^{N_{\mathrm{PE}}} q_i \delta(t-t_i),
+\end{equation}
+where $N_\mathrm{PE}$ is the number of PEs following Poisson distribution with parameter $\mu$.  $t_i$ is the hit time of the $i$-th PE, $q_i$ is the relative charge of the $i$-th PE from Gamma distribution.  We set the shape and scale parameters of Gamma so that $\E[q_i] = 1$ and $\Var[q_i] = 0.4^2$, corresponding to a typical first-stage amplification of 6--7.
+
+Birks~\cite{birks_theory_1967} summaried laboratory measurements of single-electron-response~(SER) pulse shape and indicated a crude assumption of Gaussian shape is adequate, but also mentioned asymmetric model of $t e^{-bt}$ having a faster rise than decay by Hamilton and Wright~\cite{hamilton_transit_1956}.  To better model the rising edge curvature than Hamilton and Wright, S.~Jetter~et al.~\cite{jetter_pmt_2012} from DayaBay used log-normal shape as a convienent phenomenological representation of the SER pulse.  As in figure~\ref{fig:spe}, the smooth rising curve of log-normal fits measurements better and decaying component captures the exponential decay characteristics of RC circuit in the electronics readout.  Caldwell et al.~\cite{caldwell_characterization_2013}, Caravaca et al.~\cite{caravaca_experiment_2017} from CHESS and Kaptanoglu~\cite{kaptanoglu_characterization_2018} used the same parameterization and found reasonable match with experimental data.  A better model enbracing underlying physics mechanism may be developed in the future, but for this waveform analysis study, we adopt the log-normal SER pulse as eq.~\eqref{eq:dayaspe} without loss of generality.
+\begin{equation}
+  V_\mathrm{PE}(t) = V_{0}\exp\left[-\frac{1}{2}\left(\frac{\log(t/\tau_\mathrm{PE})}{\sigma_\mathrm{PE}}\right)^{2}\right],
+  \label{eq:dayaspe}
+\end{equation}
+where shape parameters $\tau_\mathrm{PE}=\SI{8}{ns}$, $\sigma_\mathrm{PE}=\SI{0.5}{ns}$ and $V_{0}=\SI{14.08}{mV}$, see figure~\ref{fig:spe}.
+
 \begin{figure}[H]
   \begin{subfigure}{.49\textwidth}
     \centering
@@ -106,18 +121,6 @@ A PE induced by a photon at the PMT photocathode is then accelerated, collected,
   \caption{A single PE from a PMT induces a voltage pulse in \subref{fig:spe}. Multiple PEs pile up at a PMT form an input waveform $w(t)$ in \subref{fig:pile}, when PEs are barely visually separable from each other. Output charge $\hat{\bm{t}}, \hat{\bm{q}}$ also in \subref{fig:pile}, which we will discuss in section~\ref{sec:algorithm}. }
 \end{figure}
 
-S.~Jetter~et al.~\cite{jetter_pmt_2012} parameterize $V_\mathrm{PE}(t)$ as,
-\begin{equation}
-  V_\mathrm{PE}(t) = V_{0}\exp\left[-\frac{1}{2}\left(\frac{\log(t/\tau_\mathrm{PE})}{\sigma_\mathrm{PE}}\right)^{2}\right],
-  \label{eq:dayaspe}
-\end{equation}
-where shape parameters $\tau_\mathrm{PE}=\SI{8}{ns}$, $\sigma_\mathrm{PE}=\SI{0.5}{ns}$ and $V_{0}=\SI{14.08}{mV}$, see figure~\ref{fig:spe}.  A sample of PEs from the light curve $\phi(t)$ in eq.~\eqref{eq:time-pro} can be formulated as several delta functions, also known as sparse spike train~\cite{levy_reconstruction_1981}, 
-\begin{equation}
-  \label{eq:lc-sample}
-  \tilde{\phi}(t) = \sum_{i=1}^{N_{\mathrm{PE}}} q_i \delta(t-t_i),
-\end{equation}
-where $N_\mathrm{PE}$ is the number of PEs following Poisson distribution with parameter $\mu$.  $t_i$ is the hit time of the $i$-th PE, $q_i$ is the relative charge of the $i$-th PE from charge distribution $\mathcal{N}(1,\sigma_\mathrm{q}^2)$.  $\sigma_\mathrm{q}$ is set to $0.25$ in our simulation.
-
 A noise-free waveform $\tilde{w}(t)$ is a convolution of $\tilde{\phi}(t)$ and $V_\mathrm{PE}(t)$, and the PMT voltage output waveform $w(t)$ is a time series modeled by the sum of $\tilde{w}(t)$ and a Gaussian white noise $\epsilon(t)$,
 \begin{equation}
   \label{eq:1}
@@ -128,7 +131,7 @@ A noise-free waveform $\tilde{w}(t)$ is a convolution of $\tilde{\phi}(t)$ and $
 \end{equation}
 See figure~\ref{fig:pile} for an example.
 
-We do not dive into pedestals or saturation for simplicity.  We also assumed the single PE response $V_\mathrm{PE}(t)$, the variance of charge $\sigma_q^2$ and the distribution of noise $\epsilon(t)$ are known.  Otherwise, they should be measured by PMT calibrations and modeled with uncertainty.
+We do not dive into pedestals or saturation for simplicity.  We also assume the single PE pulse $V_\mathrm{PE}(t)$, the variance of charge $\Var[q_i]$ and the distribution of noise $\epsilon(t)$ are known.  Otherwise, they should be measured by PMT calibrations and modeled with uncertainty.
 
 
 \subsection{Measurement of incident light}
