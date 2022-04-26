@@ -180,12 +180,11 @@ Then a recurrence relation $\phi_*$ is,
 where only $V_{\mathrm{PE}*}$ in the numerator is normalized, and superscript $n$ denotes the iteration step.
 Like Fourier deconvolution in eq.~\eqref{eq:fdconv2}, we threshold and scale the converged $\hat{\phi}^\infty$ to get $\hat{\phi}$.  As shown in figure~\ref{fig:lucy}, the positive constraint of $\hat{\phi}$ makes LucyDDM more resilient to noise.
 
-The remaining noise in the smoothed $\tilde{w}$ crucially influences deconvolution.  A probabilistic method will correctly model the noise term $\epsilon$, as we shall see in section \ref{sec:regression}.  Before that, let us try something different.
+The remaining noise in the smoothed $\tilde{w}$ crucially influences deconvolution.  A probabilistic method will correctly model the noise term $\epsilon$, as we shall see in section \ref{sec:regression}.
 
 \subsection{Convolutional neural network}
 \label{sec:cnn}
-% Network structure
-Convolutional neural networks~(CNN) made breakthroughs in various fields like computer vision~\cite{he_deep_2016} and natural language processing~\cite{vaswani_attention_2017}. As an efficient composition of weighted additions and non-linear functions, neural networks outperform many traditional algorithms.
+Convolutional neural networks~(CNN) made breakthroughs in various fields like computer vision~\cite{he_deep_2016} and natural language processing~\cite{vaswani_attention_2017}.  As an efficient composition of weighted additions and non-linear functions, neural networks outperform many traditional algorithms.  The success of CNN induces many ongoing efforts to apply it to waveform analysis~\cite{students22}.  It is thus interesting and insightful to make a comparison of CNN with the remaining traditional methods.
 
 We choose a shallow network structure of 5 layers to recognize patterns as shown in figure~\ref{fig:struct}, motivated by the pulse shape and universality of $V_\mathrm{PE}(t)$ for all the PEs.  The convolutional widths are selected considering the localized nature of $V_\mathrm{PE}(t)$.
 
