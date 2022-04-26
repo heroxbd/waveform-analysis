@@ -130,7 +130,7 @@ sel_add = cp.ElementwiseKernel('float32 delta, bool sel', 'float32 dest', "if(se
 sel_assign = cp.ElementwiseKernel('float32 value, bool sel', 'float32 dest', "if(sel) dest = value", "sel_assign")
 
 #profile
-def batch(A, cx, index, tq, s, z):
+def batch(A, cx, index, tq, s, z, t0_max=100, t0_min=500):
     """
     batch
     ====
@@ -174,7 +174,7 @@ def batch(A, cx, index, tq, s, z):
     t0 = np.zeros(l_e, np.float32)
     e_hit = NPE > 0
 
-    t0[e_hit] = v_rt(s[e_hit, 0], tq["t_s"], e_hit)
+    t0[e_hit] = np.clip(v_rt(s[e_hit, 0], tq["t_s"], e_hit), t0_min, t0_max)
     e_nonhit = ~e_hit
     t0[e_nonhit] = tq["t_s"][e_nonhit, 0]
 
@@ -218,7 +218,7 @@ def batch(A, cx, index, tq, s, z):
         sel = cp.asarray(np.arange(mNPE)[None, :] < NPE[:, None])
         lc0 = cp.sum(sel_lc(cp.asarray(rt - t0[:, None]), sel), axis=1)
         lc1 = cp.sum(sel_lc(cp.asarray(rt - nt0[:, None]), sel), axis=1)
-        np.putmask(t0, cp.asnumpy(lc1 - lc0) >= acct, nt0)
+        np.putmask(t0, np.logical_and(cp.asnumpy(lc1 - lc0) >= acct, np.logical_and(nt0 >= t0_min, nt0 <= t0_max)), nt0)
         t0_history[:, i] = t0
 
         ### 光变曲线和移动计算
