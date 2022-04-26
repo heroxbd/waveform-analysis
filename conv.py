@@ -30,7 +30,7 @@ s0 = np.array(s0)
 t0 = az.convert_to_dataset(t0)
 s0 = az.convert_to_dataset(s0)
 
-trials = range(100, 10000)
+trials = range(100, 2500, 100)
 res_t0 = []
 res_s0 = []
 for i in trials:
