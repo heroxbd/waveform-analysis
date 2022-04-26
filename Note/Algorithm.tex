@@ -84,7 +84,24 @@ By directly extracting the patterns in the waveforms, \textit{heuristics} refer 
 \label{sec:shifting}
 Some Experiments use waveforms as direct input of analysis. Proton decay search at KamLAND~\cite{kamland_collaboration_search_2015} sums up all the PMT waveforms after shifting by time-of-flight for each event candidate.  The total waveform shape is used for a $\chi^2$-based particle identification (PID). The Double Chooz experiment also superposes waveforms to extract PID information by Fourier transformation~\cite{chooz_2018}. Samani et al.\cite{samani_pulse_2020} extracts pulse width from a raw waveform and use it as a PID discriminator.  Such techniques are extensions of pulse shape discrimination~(PSD) to large neutrino and dark matter experiments.  In the view of this study, extended PSD uses shifted waveform to approximate PE hit pattern, thus named \textit{waveform shifting}.
 
-First, we select all the $t_i$ where the waveform $w(t_i)$ exceeds a threshold to suppress noise, shift them by $\Delta t$ according to the shape of the single PE response $V_\mathrm{PE}(t)$ in eq.~\eqref{eq:dayaspe} to get $\hat{t}_i$, then take $\hat{q}_i \propto w(\hat{t}_i - \Delta t)$ so that the RSS is minimized.  Though the obtained $\hat{q}_i$'s are smaller than PE charges as in figure~\ref{fig:shifting}, waveform shifting does minimal analysis and serves as a baseline method.
+First, we select all the $t_i$ where the waveform $w(t_i)$ exceeds a threshold $q_\mathrm{th}$ to suppress noise, shift them by a constant $\Delta t$. For a single PE response $V_\mathrm{PE}(t)$ whose truth PE time is $t=0$, $\Delta t$ should minimize the Wasserstein distance $D_\mathrm{W}$. Thus,
+
+\begin{equation}
+  \begin{aligned}
+    & \Delta t \equiv \arg\underset{\Delta t}{\min} D_\mathrm{w}\left[ V_\mathrm{PE}(t), \delta(t-\Delta t) \right] \\
+    & \Delta t \text{ satisfies } \int_{0}^{\Delta t} V_\mathrm{PE}(t) \mathrm{d}t = \frac{1}{2} \int_{0}^{\infty} V_\mathrm{PE}(t) \mathrm{d}.
+  \end{aligned}
+  \label{eq:waveform-shift-dt}
+\end{equation}
+After shifting $w(\hat{t}_i - \Delta t)$ is multiplied by $\alpha$ to minimize RSS: 
+
+\begin{equation}
+  \alpha = \int \arg\underset{\alpha}{\min}\ \left| w(t) - \sum_{i\in\{w(t_i)>q_\mathrm{th}\}}\alpha w(t_i) V_\mathrm{PE}(t-(t_i-\Delta t)) \right|^2 \mathrm{d}t .
+  \label{eq:waveform-shift-alpha}
+\end{equation}
+The final analysis output is $\hat{q}_i = \alpha w(t_i)$, $\hat{t_i} = t_i - \Delta t$.
+
+Though the obtained $\hat{q}_i = \alpha w(t_i)$  are smaller than PE charges as in figure~\ref{fig:shifting}, waveform shifting does minimal analysis and serves as a baseline method.
 
 \begin{figure}[H]
   \begin{subfigure}{.5\textwidth}
@@ -103,7 +120,7 @@ First, we select all the $t_i$ where the waveform $w(t_i)$ exceeds a threshold t
 \subsubsection{Peak finding}
 \label{sec:findpeak}
 
-\textit{Peak finding} is more effective than waveform shifting by exploiting PE pulses.  We smooth the waveforms by a low-pass Savitzky-Golay filter~\cite{savitzky_smoothing_1964} and find all the peaks at $t_i$.  The following resembles waveform shifting: apply a shift $\Delta t$ to get $\hat{t}_i$, take $\hat{q}_i \propto w(\hat{t}_i - \Delta t)$ to minimize the RSS. As shown in figure~\ref{fig:peak}, peak finding outputs charges close to 1 and works well for lower PE counts.  But when PEs pile up closely, peaks overlap intensively, making this method unreliable.
+\textit{Peak finding} is more effective than waveform shifting by exploiting PE pulses.  We smooth the waveforms by a low-pass Savitzky-Golay filter~\cite{savitzky_smoothing_1964} and find all the peaks at $t_i$.  The following resembles waveform shifting: apply a constant shift $\Delta t$ to get $\hat{t_i} = t_i - \Delta t$, and calculate a scaling factor $\alpha$ and get $\hat{q_i}=\alpha w(t_i)$.  Similar to \ref{eq:waveform-shift-dt}, $\displaystyle\Delta t \equiv \arg\underset{\Delta t}{\min} D_\mathrm{w}\left[ \delta(t-\arg\underset{t'}{\max} V_\mathrm{PE}(t')) , \delta(t-\Delta t) \right] = \arg\underset{t}{\max} V_\mathrm{PE}(t)$. $\alpha$ is determined nearly the same as \ref{eq:waveform-shift-alpha}, except $i \in \{\text{peak index}\}$. As shown in figure~\ref{fig:peak}, peak finding outputs charges close to 1 and works well for lower PE counts.  But when PEs pile up closely, peaks overlap intensively, making this method unreliable.
 
 \subsection{Deconvolution}
 \label{sec:deconv}
