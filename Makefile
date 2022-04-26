@@ -44,14 +44,16 @@ sparsify : $(sparsify)
 
 sim : $(sim)
 
+$(file > $(HOME)/GPU_occupied)
+
 define gibbs
 result/$(method)/sparsify/%.h5: waveform/%.h5 spe.h5
 	@mkdir -p $$(dir $$@)
-	sem --fg python3 sparsify.py $$< --ref $$(word 2,$$^) -o $$@ > $$@.log 2>&1
+	./sel_GPU python3 sparsify.py $$< --ref $$(word 2,$$^) -o $$@ > $$@.log 2>&1
 
 result/$(method)/batch/%.h5: result/$(method)/sparsify/%.h5 waveform/%.h5
 	@mkdir -p $$(dir $$@)
-	sem --fg python3 batch.py $$< --ref $$(word 2,$$^) -o $$@ --size 5000 > $$@.log 2>&1
+	./sel_GPU python3 batch.py $$< --ref $$(word 2,$$^) -o $$@ --size 5000 > $$@.log 2>&1
 
 result/$(method)/mu/%.h5: result/$(method)/batch/%.h5 result/$(method)/sparsify/%.h5 waveform/%.h5
 	@mkdir -p $$(dir $$@)
@@ -122,7 +124,7 @@ spe.h5 : $(sim) ;
 define batches
 batch/$(1)/%.h5: result/fsmp/sparsify/%.h5 waveform/%.h5
 	mkdir -p $$(dir $$@)
-	CUDA_VISIBLE_DEVICES=$(1) python3 batch.py $$< --ref $$(word 2,$$^) -o $$@ --size 5000
+	./sel_GPU python3 batch.py $$< --ref $$(word 2,$$^) -o $$@ --size 5000
 
 endef
 

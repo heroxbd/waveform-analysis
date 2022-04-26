@@ -1,0 +1,31 @@
+#!/bin/bash -exv
+# run program on an available GPU
+
+TN=${MAKE_SOURCE1}
+if [[ $(hostname) = a100 ]]; then
+    TN=/data/probe/$(basename ${MAKE_SOURCE1})
+    [[ -f ${TN} ]] || cp ${MAKE_SOURCE1} ${TN}
+fi
+CMD=$(echo ${@} | sed "s,${MAKE_SOURCE1},${TN},")
+
+exec 200>~/GPU_occupied.lock
+
+while true; do
+	flock 200
+	avail=$(comm -23 <(seq 0 7 | tr ' ' '\n') <(sort ~/GPU_occupied) | head -n1)
+        [[ -n ${avail} ]] && echo ${avail} >> ~/GPU_occupied
+	flock -u 200
+	[[ -n ${avail} ]] && break
+	echo "wait for GPUs available for 10 seconds..."
+	sleep 10
+done
+
+cleanup() {
+	flock 200
+	sed -e "/${avail}/d" -i ~/GPU_occupied
+	flock -u 200
+	exit
+}
+trap cleanup EXIT
+
+CUDA_VISIBLE_DEVICES=${avail} NVIDIA_TF32_OVERRIDE=0 XLA_PYTHON_CLIENT_MEM_FRACTION=.99 XLA_FLAGS=--xla_gpu_force_compilation_parallelism=1 ${CMD}

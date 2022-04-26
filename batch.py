@@ -210,7 +210,7 @@ def batch(A, cx, index, tq, s, z, t0_min=100, t0_max=500):
             flip.T,
             home_s.T,
             np.random.normal(size=(TRIALS, l_e)),
-            np.random.normal(scale=5, size=(TRIALS, l_e)),
+            np.random.normal(scale=10, size=(TRIALS, l_e)),
             *np.log(np.random.rand(2, TRIALS, l_e)),
         )
     ):
