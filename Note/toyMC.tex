@@ -3,7 +3,7 @@
 
 In this section, we discuss the vital importance of waveform analysis for incident light measurements in PMT-based experiments.
 
-Like figure~\ref{fig:detector}, a typical neutrino or dark matter detector has a large-volumed target medium surrounded by an array of PMTs. In a \textit{event}, a particle interacts with the target medium and deposits energy when passing through the detector. Part of such energy converts into visible Cherenkov or scintillation photons. A photon propagates to the boundary of the detector and converts into a PE by about \SIrange{20}{30}{\percent} quantum efficiency if it hits a PMT.
+Like figure~\ref{fig:detector}, a typical neutrino or dark matter detector has a large-volumed target medium surrounded by an array of PMTs. In an \textit{event}, a particle interacts with the target medium and deposits energy when passing through the detector. Part of such energy converts into visible Cherenkov or scintillation photons. A photon propagates to the boundary of the detector and converts into a PE by about \SIrange{20}{30}{\percent} quantum efficiency if it hits a PMT.
 
 \begin{figure}[!ht]
   \begin{subfigure}{0.44\textwidth}
@@ -16,7 +16,6 @@ Like figure~\ref{fig:detector}, a typical neutrino or dark matter detector has a
   \caption{\label{fig:time-pro} Effective light curves in the three target medium and PMT configuration settings.}
 \end{subfigure}
   \caption{\subref{fig:detector} The target volume maybe of cylinder or polyhedra shapes.  The PMTs' size varies from several to tens of \si{cm}.  The target medium could be pure water or ice, organic or inorganic scintillators. The principle of PMT photon counting remains the same. \subref{fig:time-pro} A scintillator paired with ultra-fast photo-sensors gives the green curve with $\tau_\ell \gg \sigma_\ell$.  A fast Cherenkov detector by the red curve has $\tau_\ell \ll \sigma_\ell$.  The blue curve combining $\tau_\ell=\SI{20}{ns}$ and $\sigma_\ell=\SI{5}{ns}$ represents a typical scintillation detector.  We can regard $\phi(t)\mathrm{d}t$ as a probability density function~(PDF at the vertical axis) of PE times.}
-
 \end{figure}
 
 The larger the detector, the smaller the solid angle each PMT covers.  The light intensity seen by a PMT can be extremely low.  A PMT works in \textit{photon counting} or \textit{digital mode}, where it is viable to count individual PEs.  \textit{Analog mode} is the opposite, where there are so many PE pulses overlapping that the output is a continuous electric current.  Even in one event of the same detector, PMTs can operate in different modes, depending on the proximity of them to the event vertex.  A unified waveform algorithm should handle both extremes, and the intermediate ``overlap, but distinguishable'' mode with an example in figure~\ref{fig:pile}.  In this study,  we cover most of the cases with PE occupancy from 0.5 to 30.
@@ -136,7 +135,7 @@ We do not dive into pedestals or saturation for simplicity.  We also assume the 
 
 \subsection{Measurement of incident light}
 \label{sec:time}
-We see in figure~\ref{fig:pile} that pile-ups and noises hinder the time $t_i$ and charge $q_i$ of the PEs. Fortunately, event reconstruction only takes the time shift $t_0$ and the intensity $\mu$ in eq.~\eqref{eq:light-curve} as inputs, where $t_0$ carries the time of flight information and $\mu$ is the expected $N_\mathrm{PE}$ in a real detector.  All the uncertainties of $\hat{t}_i$, $\hat{q}_i$ and $\hat{N}_\mathrm{PE}$ are reflected in $\hat{t}_0$ and $\hat{\mu}$. In this article, we denote $\hat{x}$ as an estimator for the corresponding variable $x$ if not otherwise specified.  Classical TDC extracts the waveform's threshold crossing time $\hat{t}_\mathrm{1st}$ to approximate the hit time of the first PE, while QDC extracts total charge $Q$ from waveform integration to estimate $\mu$ by $\hat{\mu}_Q$.
+We see in figure~\ref{fig:pile} that pile-ups and noises hinder the time $t_i$ and charge $q_i$ of the PEs. Fortunately, event reconstruction only takes the time shift $t_0$ and the intensity $\mu$ in eq.~\eqref{eq:light-curve} as inputs, where $t_0$ carries the time of flight information and $\mu$ is the expected $N_\mathrm{PE}$ in a real detector. The former directly translate into position resolution by multiplying speed-of-light, while the latter dominates energy resolution.  All the uncertainties of $\hat{t}_i$, $\hat{q}_i$ and $\hat{N}_\mathrm{PE}$ are reflected in $\hat{t}_0$ and $\hat{\mu}$. Classical TDC extracts the waveform's threshold crossing time $\hat{t}_\mathrm{1st}$ to approximate the hit time of the first PE, while QDC extracts total charge $Q$ from waveform integration to estimate $\mu$ by $\hat{\mu}_Q$.
 
 \subsubsection{Time $t_0$}
 \label{sec:time-shift-t_0}
