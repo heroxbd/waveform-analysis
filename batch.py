@@ -308,7 +308,8 @@ def get_t0(a0, a1, s0_history, t0_history, loc, flip, index, tq, t00_l):
     t0_l = np.empty(l_e)
     mu_l = np.empty(l_e)
     for i in range(a0, a1):
-        accept = flip[i] != 0
+        # accept = flip[i] != 0
+        accept = np.full(len(flip[i]), True)
         NPE = s0_history[i]
         t00_list = np.repeat(t0_history[i][accept], NPE[accept])
         step = np.repeat(np.arange(TRIALS)[accept], NPE[accept])
