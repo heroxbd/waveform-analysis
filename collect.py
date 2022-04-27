@@ -74,6 +74,8 @@ def collect(a0, a1):
         y = ent[i]['Waveform'][index['a_wave'][i]:index['b_wave'][i]]
         A_i = A[i][:index['b_wave'][i]-index['a_wave'][i], :l_t]
 
+        if s_index[i] == 0:
+            s_index[i] += 1
         s = s_max['s_max'][i][:s_index[i]]
         t, c = np.unique(np.sort(np.digitize(s, bins=np.arange(l_t)) - 1), return_counts=True)
         c_star = np.zeros(l_t, dtype=int)
@@ -114,7 +116,7 @@ else:
     chunk = N // args.Ncpu + 1
     slices = np.vstack((np.arange(0, N, chunk), np.append(np.arange(chunk, N, chunk), N))).T.astype(int).tolist()
 
-collect(0, 200)
+# collect(3532, 3540)
 with Pool(min(args.Ncpu, cpu_count())) as pool:
     result = pool.starmap(partial(collect), slices)
 

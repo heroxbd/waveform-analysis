@@ -272,21 +272,24 @@ if ~np.all(np.isnan(time['mucharge'])):
     # ax2.set_xlim(-Mu, dt['NPE'].max() - Mu)
     ax2.set_title(fr'$\sigma_{{cha}}={s:.02f},\mathrm{{bias}}={m:.02f},\eta={eta:.02%}$%')
 
-ax3 = fig.add_subplot(gs[1, 1])
-ax3.hist(time['muwave'] - Mu, bins=100, label=r'$\mu_{wave} - \mu$')
-ax3.set_xlabel(r'$\mu_{wave} - \mu$')
-ax3.set_ylabel(r'$Count$')
-ax3.set_yscale('log')
-ax3.legend()
-s = np.std(np.append(time['muwave'], np.zeros(round(N_add))), ddof=-1)
-mu = np.mean(np.append(time['muwave'], np.zeros(round(N_add))))
-m = mu - Mu
-eta = m / Mu
-# ax3.set_xlim(-v, dt['NPE'].max() - Mu)
-ax3.set_title(fr'$\sigma_{{wave}}={s:.02f},\mathrm{{bias}}={m:.02f},\eta={eta:.02%}$%')
+try:
+    ax3 = fig.add_subplot(gs[1, 1])
+    ax3.hist(time['muwave'] - Mu, bins=100, label=r'$\mu_{wave} - \mu$')
+    ax3.set_xlabel(r'$\mu_{wave} - \mu$')
+    ax3.set_ylabel(r'$Count$')
+    ax3.set_yscale('log')
+    ax3.legend()
+    s = np.std(np.append(time['muwave'], np.zeros(round(N_add))), ddof=-1)
+    mu = np.mean(np.append(time['muwave'], np.zeros(round(N_add))))
+    m = mu - Mu
+    eta = m / Mu
+    # ax3.set_xlim(-v, dt['NPE'].max() - Mu)
+    ax3.set_title(fr'$\sigma_{{wave}}={s:.02f},\mathrm{{bias}}={m:.02f},\eta={eta:.02%}$%')
 
-pdf.savefig(fig)
-plt.close(fig)
+    pdf.savefig(fig)
+    plt.close(fig)
+except:
+    pass
 
 fig = plt.figure()
 ax = fig.add_subplot(111)
