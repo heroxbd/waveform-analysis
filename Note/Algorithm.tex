@@ -61,6 +61,7 @@ For a noise-free evaluation of $\hat{w}(t)$, residual sum of squares~(RSS) is a 
   \label{eq:rss}
   \mathrm{RSS} \coloneqq\int\left[\hat{w}(t) - \tilde{w}(t)\right]^2\mathrm{d}t.
 \end{equation}
+We choose $\tilde{w}(t)$ for evaluating algorithms because otherwise with the raw waveform $w(t)$ RSS will be dominated by the white noise term $\epsilon(t)$.
 
 Figure~\ref{fig:l2} demonstrates that if two functions do not overlap, their $\mathrm{RSS}$ remain constant regardless of relative positions.  The delta functions in the sampled light curves $\hat{\phi}(t)$ and $\tilde{\phi}(t)$ hardly overlap, rendering $\mathrm{RSS}$ useless.  Furthermore, RSS cannot compare a discrete function with a continuous one.  We shall only consider the $\mathrm{RSS}$ of waveforms.
 
@@ -89,12 +90,12 @@ As illustrated in figure~\ref{fig:shifting}, we firstly select all the $t_i$'s w
     \Delta t \equiv \arg\underset{\Delta t'}{\min} D_\mathrm{w}\left[ V_\mathrm{PE*}(t), \delta(t-\Delta t') \right] \implies \int_{0}^{\Delta t} V_\mathrm{PE}(t) \mathrm{d}t = \frac{1}{2} \int_{0}^{\infty} V_\mathrm{PE}(t) \mathrm{d}t.
   \label{eq:waveform-shift-dt}
 \end{equation}
-The PE times are infered as $\hat{t}_i = t_i - \Delta t$.  Corresponding $w(t_i)$'s are scaled by $\alpha$ to minimize RSS:
+The PE times are inferred as $\hat{t}_i = t_i - \Delta t$.  Corresponding $w(t_i)$'s are scaled by $\alpha$ to minimize RSS:
 \begin{equation}
-  \alpha = \arg\underset{\alpha'}{\min}~\mathrm{RSS}\left[ \alpha' \sum_iw(t_i) \otimes V_\mathrm{PE}(t-\hat{t}_i), w(t) \right] .
-  \label{eq:waveform-shift-alpha}
+  \hat{\alpha} = \arg\underset{\alpha}{\min}~\mathrm{RSS}\left[ \alpha \sum_iw(t_i) \otimes V_\mathrm{PE}(t-\hat{t}_i), w(t) \right] .
+  \label{eq:alpha}
 \end{equation}
-The charges are determined as $\hat{q}_i = \alpha w(t_i)$.
+The charges are determined as $\hat{q}_i = \hat{\alpha} w(t_i)$.  Notice the difference from eq.~\eqref{eq:rss}: $\tilde{w}(t)$ unknown in data analysis, we replace it with $w(t)$.
 
 Since the whole over-threshold waveform sample points are treated as PEs, one PE can be split into many. Thus, the obtained $\hat{q}_i$ are smaller than truth PE charges. The waveform shifting model formulated above captures the logic behind waveform superposition methods.  The underlying assumption to treat a waveform as PEs is simply not true and time precision suffers.  It works only if the width of $V_\mathrm{PE}$ is negligible for the purpose, sometimes when classifying events.
 
@@ -115,7 +116,7 @@ Since the whole over-threshold waveform sample points are treated as PEs, one PE
 \subsubsection{Peak finding}
 \label{sec:findpeak}
 
-The peak of $V_\mathrm{PE}$ is a distinct feature in waveforms, making \textit{Peak finding} more effective than waveform shifting.  We smooth a waveform by a low-pass Savitzky-Golay filter~\cite{savitzky_smoothing_1964} and find all the peaks at $t_i$'s.  The following resembles waveform shifting: apply a constant shift $\Delta t \equiv \arg\underset{t}{\max} V_\mathrm{PE}(t)$ to get $\hat{t}_i = t_i - \Delta t$, and calculate a scaling factor $\alpha$ to get $\hat{q_i}=\alpha w(t_i)$ in the same way as eq.~\eqref{eq:waveform-shift-alpha}.  As shown in figure~\ref{fig:peak}, peak finding outputs charges close to 1 and works well for lower PE counts.  But when PEs pile up closely, peaks overlap intensively, making this method unreliable.  Peak finding is usually too trivial to be documented but found almost everywhere~\cite{students22}.
+The peak of $V_\mathrm{PE}$ is a distinct feature in waveforms, making \textit{Peak finding} more effective than waveform shifting.  We smooth a waveform by a low-pass Savitzky-Golay filter~\cite{savitzky_smoothing_1964} and find all the peaks at $t_i$'s.  The following resembles waveform shifting: apply a constant shift $\Delta t \equiv \arg\underset{t}{\max} V_\mathrm{PE}(t)$ to get $\hat{t}_i = t_i - \Delta t$, and calculate a scaling factor $\alpha$ to get $\hat{q_i}=\hat{\alpha} w(t_i)$ in the same way as eq.~\eqref{eq:alpha}.  As shown in figure~\ref{fig:peak}, peak finding outputs charges close to 1 and works well for lower PE counts.  But when PEs pile up closely, peaks overlap intensively, making this method unreliable.  Peak finding is usually too trivial to be documented but found almost everywhere~\cite{students22}.
 
 \subsection{Deconvolution}
 \label{sec:deconv}
@@ -129,12 +130,12 @@ The deconvolution relation is evident in the Fourier transform $\mathcal{F}$ to 
   \mathcal{F}[w]  = \mathcal{F}[\tilde{\phi}]\mathcal{F}[V_\mathrm{PE}] + \mathcal{F}[\epsilon]
   \implies \mathcal{F}[\tilde{\phi}]  = \frac{\mathcal{F}[w]}{\mathcal{F}[V_\mathrm{PE}]} - \frac{\mathcal{F}[\epsilon]}{\mathcal{F}[V_\mathrm{PE}]}.
 \end{equation}
-By low-pass filtering the waveform $w(t)$ to get $\tilde{w}(t)$, we suppress the noise term $\epsilon$, take the inverse Fourier transform $\hat{\phi}_1(t) = \mathcal{F}^{-1}\left[\frac{\mathcal{F}[\tilde{w}]}{\mathcal{F}[V_\mathrm{PE}]}\right](t),$ and compute $\hat{\phi}(t)$ as the over-threshold $q_\mathrm{th}$ part of $\hat{\phi}_1(t)$,
+By low-pass filtering the waveform $w(t)$ to get $\tilde{w}(t)$, we suppress the noise term $\epsilon$.  In the inverse Fourier transform $\hat{\phi}_1(t) = \mathcal{F}^{-1}\left[\frac{\mathcal{F}[\tilde{w}]}{\mathcal{F}[V_\mathrm{PE}]}\right](t)$, remaining noise and limited bandwidth lead to smaller and even negative $\hat{q}_i$.  We apply a $q_\mathrm{th}$ threshold regularizer to cut off the unphysical parts of $\hat{\phi}_1(t)$,
 \begin{equation}
   \label{eq:fdconv2}
     \hat{\phi}(t) = \hat{\alpha}\underbrace{\hat{\phi}_1(t) I\left(\hat{\phi}_1(t) - q_\mathrm{th}\right)}_{\text{over-threshold part of} \hat{\phi}_1(t)}  
 \end{equation}
-where $I(x)$ is the indicator function, and $\hat{\alpha}$ is a scaling factor to minimize $\mathrm{RSS}$,
+where $I(x)$ is the indicator function, and $\hat{\alpha}$ is the scaling factor to minimize $\mathrm{RSS}$ like in eq.~\eqref{eq:alpha},
 \begin{equation*}
   \begin{aligned}
   \label{eq:id}
@@ -145,12 +146,11 @@ where $I(x)$ is the indicator function, and $\hat{\alpha}$ is a scaling factor t
     \end{array}
     \right.
     \quad~~~
-    \hat{\alpha} = \arg \underset{\alpha}{\min}\mathrm{RSS}\left[\alpha\hat{w}(t),w(t)\right]. \\
+    \hat{\alpha} = \arg \underset{\alpha}{\min}\mathrm{RSS}\left[\alpha \hat{\phi} \otimes V_\mathrm{PE}, w\right]. \\
   \end{aligned}
 \end{equation*}
-$\tilde{w}(t)$ unknown in data analysis, we replace it in eq.~\eqref{eq:rss} with $w(t)$.
 
-Figure~\ref{fig:fd} illustrates that Fourier deconvolution outperforms heuristic methods.  Meanwhile, noise and precision loss in the waveform lead to smaller and even negative $\hat{q}_i$. Those can be mitigated by thresholding and scaling in eq.~\eqref{eq:fdconv2}, but call for a more elegant solution.
+Figure~\ref{fig:fd} illustrates that Fourier deconvolution outperforms heuristic methods, but still with a lot of small-charged PEs.
 
 \begin{figure}[H]
   \begin{subfigure}{0.5\textwidth}
