@@ -75,16 +75,28 @@ Figure~\ref{fig:l2} demonstrates that if two functions do not overlap, their $\m
 
 \input{fom}
 
-In the following, we  evaluate the performance of waveform analysis algorithms ranging from heuristics, deconvolution, neural network to regression by the criteria discussed in this section.
+In the following, we assess the performance of waveform analysis algorithms ranging from heuristics, deconvolution, neural network to regression by the criteria discussed in this section.
 
 \subsection{Heuristic methods}
 By directly extracting the patterns in the waveforms, \textit{heuristics} refer to the methods making minimal assumptions of the instrumental and statistical features.  Straightforward to implement and widely deployed in neutrino and dark matter experiments~\cite{students22}, they are poorly documented in the literature.  In this section, we try to formulate the heuristics actually have been used in the experiments so as to make an objective comparison with more advanced techniques.
 
 \subsubsection{Waveform shifting}
 \label{sec:shifting}
-Some Experiments use waveforms as direct input of analysis. Proton decay search at KamLAND~\cite{kamland_collaboration_search_2015} sums up all the PMT waveforms after shifting by time-of-flight for each event candidate.  The total waveform shape is used for a $\chi^2$-based particle identification (PID). The Double Chooz experiment also superposes waveforms to extract PID information by Fourier transformation~\cite{chooz_2018}. Samani et al.\cite{samani_pulse_2020} extracts pulse width from a raw waveform and use it as a PID discriminator.  Such techniques are extensions of pulse shape discrimination~(PSD) to large neutrino and dark matter experiments.  In the view of this study, extended PSD uses shifted waveform to approximate PE hit pattern, thus named \textit{waveform shifting}.
+Some experiments use waveforms as direct input of analysis. Proton decay search at KamLAND~\cite{kamland_collaboration_search_2015} sums up all the PMT waveforms after shifting by time-of-flight for each event candidate.  The total waveform shape is used for a $\chi^2$-based particle identification (PID). The Double Chooz experiment also superposes waveforms to extract PID information by Fourier transformation~\cite{chooz_2018}. Samani~et~al.\cite{samani_pulse_2020} extracts pulse width from a raw waveform and use it as a PID discriminator.  Such techniques are extensions of pulse shape discrimination~(PSD) to large neutrino and dark matter experiments.  In the view of this study, extended PSD uses shifted waveform to approximate PE hit pattern, thus named \textit{waveform shifting}.
 
-First, we select all the $t_i$ where the waveform $w(t_i)$ exceeds a threshold to suppress noise, shift them by $\Delta t$ according to the shape of the single PE response $V_\mathrm{PE}(t)$ in eq.~\eqref{eq:dayaspe} to get $\hat{t}_i$, then take $\hat{q}_i \propto w(\hat{t}_i - \Delta t)$ so that the RSS is minimized.  Though the obtained $\hat{q}_i$'s are smaller than PE charges as in figure~\ref{fig:shifting}, waveform shifting does minimal analysis and serves as a baseline method.
+As illustrated in figure~\ref{fig:shifting}, we firstly select all the $t_i$'s where the waveform $w(t_i)$ exceeds a threshold $q_\mathrm{th}$ to suppress noise, shift them by a constant $\Delta t$. For a SER pulse $V_\mathrm{PE}(t)$ whose truth PE time is $t=0$, $\Delta t$ should minimize the Wasserstein distance $D_\mathrm{W}$. Thus,
+\begin{equation}
+    \Delta t \equiv \arg\underset{\Delta t'}{\min} D_\mathrm{w}\left[ V_\mathrm{PE*}(t), \delta(t-\Delta t') \right] \implies \int_{0}^{\Delta t} V_\mathrm{PE}(t) \mathrm{d}t = \frac{1}{2} \int_{0}^{\infty} V_\mathrm{PE}(t) \mathrm{d}t.
+  \label{eq:waveform-shift-dt}
+\end{equation}
+The PE times are infered as $\hat{t}_i = t_i - \Delta t$.  Corresponding $w(t_i)$'s are scaled by $\alpha$ to minimize RSS:
+\begin{equation}
+  \alpha = \arg\underset{\alpha'}{\min}~\mathrm{RSS}\left[ \alpha' \sum_iw(t_i) \otimes V_\mathrm{PE}(t-\hat{t}_i), w(t) \right] .
+  \label{eq:waveform-shift-alpha}
+\end{equation}
+The charges are determined as $\hat{q}_i = \alpha w(t_i)$.
+
+Since the whole over-threshold waveform sample points are treated as PEs, one PE can be split into many. Thus, the obtained $\hat{q}_i$ are smaller than truth PE charges. The waveform shifting model formulated above captures the logic behind waveform superposition methods.  The underlying assumption to treat a waveform as PEs is simply not true and time precision suffers.  It works only if the width of $V_\mathrm{PE}$ is negligible for the purpose, sometimes when classifying events.
 
 \begin{figure}[H]
   \begin{subfigure}{.5\textwidth}
@@ -97,27 +109,25 @@ First, we select all the $t_i$ where the waveform $w(t_i)$ exceeds a threshold t
     \resizebox{\textwidth}{!}{\input{figures/findpeak.pgf}}
     \caption{\label{fig:peak} A peak finding example gives \\ $\Delta t_0=\SI{-1.93}{ns}$, $\mathrm{RSS}=\SI{266.9}{mV^2}$, $D_\mathrm{w}=\SI{2.40}{ns}$.}
   \end{subfigure}
-  \caption{\label{fig:method}Demonstrations of heuristic methods on a waveform sampled from $\mu=4$, $\tau_\ell=\SI{20}{ns}$, $\sigma_\ell=\SI{5}{ns}$ light curve conditions.  Peak finding in~\subref{fig:peak} handles charges more realistically than waveform shifting in~\subref{fig:shifting}, giving better numbers by the $\mathrm{RSS}$ and $D_\mathrm{w}$ criteria in section \ref{sec:criteria}.}
+  \caption{\label{fig:method}Demonstrations of heuristic methods on a waveform sampled from $\mu=4$, $\tau_\ell=\SI{20}{ns}$, $\sigma_\ell=\SI{5}{ns}$ light curve conditions.  Peak finding in~\subref{fig:peak} handles charges more realistically than waveform shifting in~\subref{fig:shifting}, giving better numbers by the $\mathrm{RSS}$ and $D_\mathrm{w}$ criteria in section \ref{sec:criteria}. $\Delta t_0$ is the bias of the $\hat{t}_\mathrm{KL}$ estimator.}
 \end{figure}
 
 \subsubsection{Peak finding}
 \label{sec:findpeak}
 
-\textit{Peak finding} is more effective than waveform shifting by exploiting PE pulses.  We smooth the waveforms by a low-pass Savitzky-Golay filter~\cite{savitzky_smoothing_1964} and find all the peaks at $t_i$.  The following resembles waveform shifting: apply a shift $\Delta t$ to get $\hat{t}_i$, take $\hat{q}_i \propto w(\hat{t}_i - \Delta t)$ to minimize the RSS. As shown in figure~\ref{fig:peak}, peak finding outputs charges close to 1 and works well for lower PE counts.  But when PEs pile up closely, peaks overlap intensively, making this method unreliable.
+The peak of $V_\mathrm{PE}$ is a distinct feature in waveforms, making \textit{Peak finding} more effective than waveform shifting.  We smooth a waveform by a low-pass Savitzky-Golay filter~\cite{savitzky_smoothing_1964} and find all the peaks at $t_i$'s.  The following resembles waveform shifting: apply a constant shift $\Delta t \equiv \arg\underset{t}{\max} V_\mathrm{PE}(t)$ to get $\hat{t}_i = t_i - \Delta t$, and calculate a scaling factor $\alpha$ to get $\hat{q_i}=\alpha w(t_i)$ in the same way as eq.~\eqref{eq:waveform-shift-alpha}.  As shown in figure~\ref{fig:peak}, peak finding outputs charges close to 1 and works well for lower PE counts.  But when PEs pile up closely, peaks overlap intensively, making this method unreliable.  Peak finding is usually too trivial to be documented but found almost everywhere~\cite{students22}.
 
 \subsection{Deconvolution}
 \label{sec:deconv}
-Deconvolution methods contribute more than heuristic ones by using the entire shape of $V_\mathrm{PE}(t)$, thus can accommodate overshoots and pile-ups.  Smoothing is necessary since deconvolution does not model the white noise.
+Deconvolution is motivated by viewing the waveform as a convolution of sparse spike train $\tilde{\phi}$ and $V_\mathrm{PE}$ in eq.~\eqref{eq:1}.  Huang et al.~\cite{huang_flash_2018} from DayaBay and Grassi et al.~\cite{grassi_charge_2018} introduced deconvolution-based waveform analysis in charge reconstruction and linearity studies.  Zhang et al.~\cite{zhang_comparison_2019} then applied it to the JUNO prototype.  Deconvolution methods are better than heuristic ones by using the full shape of $V_\mathrm{PE}(t)$, thus can accommodate overshoots and pile-ups.  Noise and Nyquist limit make deconvolution sensitive to fluctuations in real-world applications.  A carefully selected low-pass filter mitigates the difficulty but might introduce Gibbs ringing artifacts in the smoothed waveforms and the deconvoluted results. Despite such drawbacks, deconvolution algorithms are fast and useful to give initial crude solutions for the more advanced algorithms.  Deployed in running experiments, they are discussed in this section to make an objective evaluation. 
 
 \subsubsection{Fourier deconvolution}
 \label{sec:fourier}
-\textit{Fourier deconvolution} is an option considered by JUNO prototype~\cite{zhang_comparison_2019}. The deconvolution relation is evident in the Fourier transform $\mathcal{F}$ to eq.~\eqref{eq:1},
+The deconvolution relation is evident in the Fourier transform $\mathcal{F}$ to eq.~\eqref{eq:1},
 \begin{equation}
   \label{eq:fourier}
-  %\begin{aligned}
   \mathcal{F}[w]  = \mathcal{F}[\tilde{\phi}]\mathcal{F}[V_\mathrm{PE}] + \mathcal{F}[\epsilon]
   \implies \mathcal{F}[\tilde{\phi}]  = \frac{\mathcal{F}[w]}{\mathcal{F}[V_\mathrm{PE}]} - \frac{\mathcal{F}[\epsilon]}{\mathcal{F}[V_\mathrm{PE}]}.
-  %\end{aligned}
 \end{equation}
 By low-pass filtering the waveform $w(t)$ to get $\tilde{w}(t)$, we suppress the noise term $\epsilon$, take the inverse Fourier transform $\hat{\phi}_1(t) = \mathcal{F}^{-1}\left[\frac{\mathcal{F}[\tilde{w}]}{\mathcal{F}[V_\mathrm{PE}]}\right](t),$ and compute $\hat{\phi}(t)$ as the over-threshold $q_\mathrm{th}$ part of $\hat{\phi}_1(t)$,
 \begin{equation}
@@ -138,7 +148,7 @@ where $I(x)$ is the indicator function, and $\hat{\alpha}$ is a scaling factor t
     \hat{\alpha} = \arg \underset{\alpha}{\min}\mathrm{RSS}\left[\alpha\hat{w}(t),w(t)\right]. \\
   \end{aligned}
 \end{equation*}
-$\tilde{w}(t)$ unknown in data analysis, we replace it in eq.~(\ref{eq:rss}) with $w(t)$.
+$\tilde{w}(t)$ unknown in data analysis, we replace it in eq.~(\eqref{eq:rss}) with $w(t)$.
 
 Figure~\ref{fig:fd} illustrates that Fourier deconvolution outperforms heuristic methods.  Meanwhile, noise and precision loss in the waveform lead to smaller and even negative $\hat{q}_i$. Those can be mitigated by thresholding and scaling in eq.~\eqref{eq:fdconv2}, but call for a more elegant solution.
 
@@ -296,7 +306,7 @@ We generate posterior samples of $t_0$ and $\bm{q'}$ by Hamiltonian Monte Carlo~
   \label{eq:mcmc-w}
   \hat{w}(t) = \sum_{i=1}^{N_\mathrm{s}}\hat{q}_iV_\mathrm{PE}(t-t'_i).
 \end{equation}
-RSS and $D_\mathrm{w}$ are then calculated according to eqs.~(\ref{eq:rss}) and (\ref{eq:numerical}).
+RSS and $D_\mathrm{w}$ are then calculated according to eqs.~(\eqref{eq:rss}) and (\eqref{eq:numerical}).
 
 \begin{figure}[H]
   \begin{subfigure}{.5\textwidth}
@@ -315,7 +325,7 @@ Although we imposed a $\mathcal{N}(1, \sigma_\mathrm{q}^2)$ prior, The charges $
 
 \subsubsection{Fast stochastic matching pursuit}
 \label{subsec:fsmp}
-In reality, $w(t)$ is discretized as $\bm{w}$. If we rewrite the hierarchical model (\ref{eq:mixnormal}) into a joint distribution, marginalizing out $\bm{q}'$ and $\bm{z}$ gives a flattened model,
+In reality, $w(t)$ is discretized as $\bm{w}$. If we rewrite the hierarchical model (eq.~\eqref{eq:mixnormal}) into a joint distribution, marginalizing out $\bm{q}'$ and $\bm{z}$ gives a flattened model,
 \begin{equation}
   \label{eq:universe}
   \begin{aligned}
