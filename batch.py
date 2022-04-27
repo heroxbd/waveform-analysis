@@ -321,8 +321,7 @@ def get_t0(a0, a1, s0_history, t0_history, loc, flip, index, tq, t00_l):
         # accept = flip[i] != 0
         accept = np.full(len(flip[i]), True)
         NPE = s0_history[i]
-        if np.all(NPE == 0):
-            NPE[0] = 1
+        number_sample_zero = np.sum(NPE == 0)
         t00_list = np.repeat(t0_history[i][accept], NPE[accept])
         step = np.repeat(np.arange(TRIALS)[accept], NPE[accept])
         idx_base = np.arange(TRIALS)[accept] * l_s
@@ -337,7 +336,7 @@ def get_t0(a0, a1, s0_history, t0_history, loc, flip, index, tq, t00_l):
         # t00 = index["t0"][i]
         # t00 = loc_i.mean() + 1
         t00 = t00_l[i]
-        t0_l[i - a0], mu_l[i - a0] = wff.fit_t0mu_gibbs(loc_i, t00_list, step, tau, sigma, mu_t, t00, b_mu, b_t0, TRIALS)
+        t0_l[i - a0], mu_l[i - a0] = wff.fit_t0mu_gibbs(loc_i, t00_list, step, number_sample_zero, tau, sigma, mu_t, t00, b_mu, b_t0, TRIALS)
     return t0_l, mu_l
 
 with h5py.File(fipt, "r", libver="latest", swmr=True) as ipt:

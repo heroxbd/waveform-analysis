@@ -407,8 +407,9 @@ def fit_t0mu_guess(loc, step, number_sample_zero, Tau, Sigma, guess, mu, t00, b_
     def t_t0(t0):
         nonlocal mu
         NPE, f_agg = agg_NPE(t0)
-        NPE = np.insert(NPE, 0, 0)
-        f_agg = np.insert(f_agg, 0, np.log(number_sample_zero))
+        if number_sample_zero != 0:
+            NPE = np.insert(NPE, 0, 0)
+            f_agg = np.insert(f_agg, 0, np.log(number_sample_zero))
         ans = opti.fmin_l_bfgs_b(lambda μ: μ - special.logsumexp(NPE * np.log(μ / mu) + f_agg), 
                                  x0=[mu], 
                                  approx_grad=True, 
@@ -420,8 +421,6 @@ def fit_t0mu_guess(loc, step, number_sample_zero, Tau, Sigma, guess, mu, t00, b_
     # ans = opti.fmin_l_bfgs_b(t_t0, x0=[t00], approx_grad=True, bounds=[b_t0], maxfun=10000)
     # t0 = ans[0].item()
     # fval_old = ans[1].item()
-    # print(ans[2]['task'])
-    # print(ans[2]['warnflag'])
 
     t0_list = np.linspace(b_t0[0], b_t0[-1], 501)
     fval = np.array([t_t0(t_i) for t_i in t0_list])
@@ -430,15 +429,9 @@ def fit_t0mu_guess(loc, step, number_sample_zero, Tau, Sigma, guess, mu, t00, b_
     else:
         t0 = t0_list[fval.argmin()]
     fval_new = t_t0(t0)
-
-    # print(f'Old minLL is {fval_old:.4f}, new minLL is {fval_new:.4f}')
-    # label = 0
-    # if fval_old > fval_new:
-    #     label = 1
-    # print(f'Label is {label}')
     return t0, mu
 
-def fit_t0mu_gibbs(loc, t00_list, step, Tau, Sigma, mu, t00, b_mu, b_t0, TRIALS):
+def fit_t0mu_gibbs(loc, t00_list, step, number_sample_zero, Tau, Sigma, mu, t00, b_mu, b_t0, TRIALS):
     def agg_NPE(t0):
         log_f = log_convolve_exp_norm(loc - t0, Tau, Sigma) - log_convolve_exp_norm(loc - t00_list, Tau, Sigma)
         return jit_agg_NPE(step, log_f, TRIALS)
@@ -446,6 +439,8 @@ def fit_t0mu_gibbs(loc, t00_list, step, Tau, Sigma, mu, t00, b_mu, b_t0, TRIALS)
     def t_t0(t0):
         nonlocal mu
         NPE, f_agg = agg_NPE(t0)
+        NPE = np.insert(NPE, 0, 0)
+        f_agg = np.insert(f_agg, 0, np.log(number_sample_zero))
         ans = opti.fmin_l_bfgs_b(lambda μ: μ - special.logsumexp(NPE * np.log(μ / mu) + f_agg), 
                                  x0=[mu], 
                                  approx_grad=True, 
@@ -456,7 +451,10 @@ def fit_t0mu_gibbs(loc, t00_list, step, Tau, Sigma, mu, t00, b_mu, b_t0, TRIALS)
 
     t0_list = np.linspace(b_t0[0], b_t0[-1], 501)
     fval = np.array([t_t0(t_i) for t_i in t0_list])
-    t0 = t0_list[fval.argmin()]
+    if np.std(fval) < 1e-4:
+        t0 = np.mean(b_t0)
+    else:
+        t0 = t0_list[fval.argmin()]
     fval_new = t_t0(t0)
     return t0, mu
 
