@@ -89,7 +89,7 @@ As illustrated in figure~\ref{fig:shifting}, we firstly select all the $t_i$'s w
     \Delta t \equiv \arg\underset{\Delta t'}{\min} D_\mathrm{w}\left[ V_\mathrm{PE*}(t), \delta(t-\Delta t') \right] \implies \int_{0}^{\Delta t} V_\mathrm{PE}(t) \mathrm{d}t = \frac{1}{2} \int_{0}^{\infty} V_\mathrm{PE}(t) \mathrm{d}t.
   \label{eq:waveform-shift-dt}
 \end{equation}
-The PE times are infered as $\hat{t}_i = t_i - \Delta t$.  Corresponding $w(t_i)$'s are scaled by $\alpha$ to minimize RSS:
+The PE times are inferred as $\hat{t}_i = t_i - \Delta t$.  Corresponding $w(t_i)$'s are scaled by $\alpha$ to minimize RSS:
 \begin{equation}
   \alpha = \arg\underset{\alpha'}{\min}~\mathrm{RSS}\left[ \alpha' \sum_iw(t_i) \otimes V_\mathrm{PE}(t-\hat{t}_i), w(t) \right] .
   \label{eq:waveform-shift-alpha}
@@ -129,12 +129,12 @@ The deconvolution relation is evident in the Fourier transform $\mathcal{F}$ to 
   \mathcal{F}[w]  = \mathcal{F}[\tilde{\phi}]\mathcal{F}[V_\mathrm{PE}] + \mathcal{F}[\epsilon]
   \implies \mathcal{F}[\tilde{\phi}]  = \frac{\mathcal{F}[w]}{\mathcal{F}[V_\mathrm{PE}]} - \frac{\mathcal{F}[\epsilon]}{\mathcal{F}[V_\mathrm{PE}]}.
 \end{equation}
-By low-pass filtering the waveform $w(t)$ to get $\tilde{w}(t)$, we suppress the noise term $\epsilon$, take the inverse Fourier transform $\hat{\phi}_1(t) = \mathcal{F}^{-1}\left[\frac{\mathcal{F}[\tilde{w}]}{\mathcal{F}[V_\mathrm{PE}]}\right](t),$ and compute $\hat{\phi}(t)$ as the over-threshold $q_\mathrm{th}$ part of $\hat{\phi}_1(t)$,
+By low-pass filtering the waveform $w(t)$ to get $\tilde{w}(t)$, we suppress the noise term $\epsilon$, take the inverse Fourier transform $\hat{\phi}_1(t) = \mathcal{F}^{-1}\left[\frac{\mathcal{F}[\tilde{w}]}{\mathcal{F}[V_\mathrm{PE}]}\right](t)$.  Due to remaining noise, $\hat{\phi}_1(t)$ may contain small and even negative values which is nonphysical.  Therefore, a threshold $q_\mathrm{th}$ is introduced to eliminate those values. Then we apply the similar $\hat{\alpha}$ scaling to minimize RSS similar in eq.~\eqref{eq:waveform-shift-alpha}.
 \begin{equation}
   \label{eq:fdconv2}
     \hat{\phi}(t) = \hat{\alpha}\underbrace{\hat{\phi}_1(t) I\left(\hat{\phi}_1(t) - q_\mathrm{th}\right)}_{\text{over-threshold part of} \hat{\phi}_1(t)}  
 \end{equation}
-where $I(x)$ is the indicator function, and $\hat{\alpha}$ is a scaling factor to minimize $\mathrm{RSS}$,
+where $I(x)$ is the indicator function
 \begin{equation*}
   \begin{aligned}
   \label{eq:id}
