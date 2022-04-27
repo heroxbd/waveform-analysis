@@ -34,7 +34,7 @@ The PE, waveform and their estimators are hierarchical and intercorelated.  We e
     $N_\mathrm{PE}$ & number of PEs (r.v.) & \secref{subsec:spe} \\
     $\hat{t}_i, \hat{q}_i$ & estimators for $t_i, q_i$ & \secref{sec:algorithm} \\
     $\hat{N}_\mathrm{PE}$ & estimator for $N_\mathrm{PE}$ & \secref{sec:time} \\
-    $t'_i, N_s$ & grid of PE candidate times and its size & \secref{sec:regression} \\
+    $t'_i, N_\mathrm{s}$ & grid of PE candidate times and its size & \secref{sec:regression} \\
     $q'_i, \bm{q}'$ & total charge at $t'_i$ and its vector (r.v.) & \secref{sec:regression} \\
     $\alpha, \hat{\alpha}$ & scaling factor of $\bm{q}'$ and its estimator & \secref{sec:fourier} \\
     $q_\mathrm{th}$ & threshold regularizer of $\bm{q}'$ & \secref{sec:fourier} \\
@@ -60,6 +60,7 @@ The PE, waveform and their estimators are hierarchical and intercorelated.  We e
     $\tilde{w}$ & smoothed $w$, approximating $w - \epsilon$ & \secref{sec:fourier} \\
     $\tilde{w}_*$, $V_{\mathrm{PE}*}$ & normalized $\tilde{w}$ and $V_\mathrm{PE}$ & \secref{sec:lucyddm} \\
     $\hat{w}$ & $\hat{\phi} \otimes V_\mathrm{PE}$ for estimating $w$ & \secref{sec:rss} \\
+    $w'$ & $\sum_{i=1}^{N_\mathrm{s}}q'_iV_\mathrm{PE}(t-t'_i)$ from grid $\bm{t}'$ & \secref{sec:regression} \\
     \hline\hline
   \end{tabular}
   \label{tab:symbol}
