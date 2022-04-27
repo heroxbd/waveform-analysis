@@ -317,6 +317,8 @@ def get_t0(a0, a1, s0_history, t0_history, loc, flip, index, tq, t00_l):
         # accept = flip[i] != 0
         accept = np.full(len(flip[i]), True)
         NPE = s0_history[i]
+        if np.all(NPE == 0):
+            NPE[0] = 1
         t00_list = np.repeat(t0_history[i][accept], NPE[accept])
         step = np.repeat(np.arange(TRIALS)[accept], NPE[accept])
         idx_base = np.arange(TRIALS)[accept] * l_s

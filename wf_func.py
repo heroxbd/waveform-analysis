@@ -414,7 +414,7 @@ def fit_t0mu_guess(loc, step, Tau, Sigma, guess, mu, t00, b_mu, b_t0, TRIALS):
     t0_list = np.linspace(b_t0[0], b_t0[-1], 501)
     fval = np.array([t_t0(t_i) for t_i in t0_list])
     t0 = t0_list[fval.argmin()]
-    fval_new = t_t0(t0).item()
+    fval_new = t_t0(t0)
 
     # print(f'Old minLL is {fval_old:.4f}, new minLL is {fval_new:.4f}')
     # label = 0
