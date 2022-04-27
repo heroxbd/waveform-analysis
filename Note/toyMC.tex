@@ -34,7 +34,7 @@ The PE, waveform and their estimators are hierarchical and intercorelated.  We e
     $N_\mathrm{PE}$ & number of PEs (r.v.) & \secref{subsec:spe} \\
     $\hat{t}_i, \hat{q}_i$ & estimators for $t_i, q_i$ & \secref{sec:algorithm} \\
     $\hat{N}_\mathrm{PE}$ & estimator for $N_\mathrm{PE}$ & \secref{sec:time} \\
-    $t'_i, N_s$ & grid of PE candidate times and its size & \secref{sec:regression} \\
+    $t'_i, N_\mathrm{s}$ & grid of PE candidate times and its size & \secref{sec:regression} \\
     $q'_i, \bm{q}'$ & total charge at $t'_i$ and its vector (r.v.) & \secref{sec:regression} \\
     $\alpha, \hat{\alpha}$ & scaling factor of $\bm{q}'$ and its estimator & \secref{sec:fourier} \\
     $q_\mathrm{th}$ & threshold regularizer of $\bm{q}'$ & \secref{sec:fourier} \\
@@ -55,10 +55,12 @@ The PE, waveform and their estimators are hierarchical and intercorelated.  We e
     \hline
     $V_\mathrm{PE}(t)$ & shape of a single electron response & \secref{subsec:spe} \\
     $w(t), \epsilon(t)$ & PMT waveform and white noise & \secref{subsec:spe} \\
+    $V_\mathrm{th}$ & threshold regularizer of $w(t)$ & \secref{sec:shifting} \\
     $\bm{w}$ & vector notion of discretized $w(t)$ & \secref{subsec:fsmp} \\
     $\tilde{w}$ & smoothed $w$, approximating $w - \epsilon$ & \secref{sec:fourier} \\
     $\tilde{w}_*$, $V_{\mathrm{PE}*}$ & normalized $\tilde{w}$ and $V_\mathrm{PE}$ & \secref{sec:lucyddm} \\
     $\hat{w}$ & $\hat{\phi} \otimes V_\mathrm{PE}$ for estimating $w$ & \secref{sec:rss} \\
+    $w'$ & $\sum_{i=1}^{N_\mathrm{s}}q'_iV_\mathrm{PE}(t-t'_i)$ from grid $\bm{t}'$ & \secref{sec:regression} \\
     \hline\hline
   \end{tabular}
   \label{tab:symbol}
@@ -90,14 +92,14 @@ where subscript $\ell$ stands for ``light curve'' and $\sigma_\ell$ encodes the 
 \subsection{Single electron response}
 \label{subsec:spe}
 
-A PE induced by a photon at the PMT photocathode is accelerated, collected, and amplified by several stages into $\num[retain-unity-mantissa=false]{\sim 1e7}$ electrons, forming a voltage pulse $V_\mathrm{PE}(t)$ in the PMT output.  Wright~et~al.~\cite{wright_low_1954} formulated the cascade multiplication of secondary electrons assuming the amplification of each stage following Poisson distribution.  Breitenberger~\cite{breitenberger_scintillation_1955} compared the statistical model with a summary of laboratory measurements observing the gain variance to be larger than predicted. Percott~\cite{prescott_statistical_1966} used Polya distribution to account for extra variance of Poisson rate non-uniformity.  With modern high gain PMTs ($\num[retain-unity-mantissa=false]{\sim 1e7}$), Caldwell et al.~\cite{caldwell_characterization_2013} from MiniCLEAN and Amaudruz et al.~\cite{amaudruz_-situ_2019} from DEAP-3600 suggested Gamma distribution as the continuous counterpart of the Polya.  Neves et al.~\cite{neves_calibration_2010} from ZEPLIN-III did a survey of the literature but prefer to model the gain in a data-driven way by calibration, without assuming any well-known probability distributions.  We choose Gamma distribution in this work over Gaussian because the amplification is always positive.
+A PE induced by a photon at the PMT photocathode is accelerated, collected, and amplified by several stages into $\num[retain-unity-mantissa=false]{\sim 1e7}$ electrons, forming a voltage pulse $V_\mathrm{PE}(t)$ in the PMT output.  Wright~et~al.~\cite{wright_low_1954} formulated the cascade multiplication of secondary electrons assuming the amplification of each stage following Poisson distribution.  Breitenberger~\cite{breitenberger_scintillation_1955} compared the statistical model with a summary of laboratory measurements observing the gain variance to be larger than predicted. Percott~\cite{prescott_statistical_1966} used Polya distribution to account for extra variance of Poisson rate non-uniformity.  With modern high gain PMTs ($\num[retain-unity-mantissa=false]{\sim 1e7}$), Caldwell et al.~\cite{caldwell_characterization_2013} from MiniCLEAN and Amaudruz et al.~\cite{amaudruz_-situ_2019} from DEAP-3600 suggested gamma distribution as the continuous counterpart of the Polya.  Neves et al.~\cite{neves_calibration_2010} from ZEPLIN-III did a survey of the literature but prefer to model the gain in a data-driven way by calibration, without assuming any well-known probability distributions.  We choose gamma distribution in this work over Gaussian because the amplification is always positive.
 
 A sample of PEs from the light curve $\phi(t)$ in eq.~\eqref{eq:time-pro} can be formulated as several delta functions, also known as sparse spike train~\cite{levy_reconstruction_1981}, 
 \begin{equation}
   \label{eq:lc-sample}
   \tilde{\phi}(t) = \sum_{i=1}^{N_{\mathrm{PE}}} q_i \delta(t-t_i),
 \end{equation}
-where $N_\mathrm{PE}$ is the number of PEs following Poisson distribution with parameter $\mu$.  $t_i$ is the hit time of the $i$-th PE, $q_i$ is the relative charge of the $i$-th PE from Gamma distribution.  We set the shape and scale parameters of Gamma so that $\E[q_i] = 1$ and $\Var[q_i] = 0.4^2$, corresponding to a typical first-stage amplification of 7--8\footnote{For large gain and Poisson-distributed first-stage amplicication $M_1$, $\Var[q_i] \approx \frac{1}{M_1-1}$.}.
+where $N_\mathrm{PE}$ is the number of PEs following Poisson distribution with parameter $\mu$.  $t_i$ is the hit time of the $i$-th PE, $q_i$ is the relative charge of the $i$-th PE from gamma distribution.  We set the shape ($k=1/0.4^2$) and scale ($\theta=0.4^2$) parameters of gamma so that $\E[q_i] = 1$ and $\Var[q_i] = 0.4^2$, corresponding to a typical first-stage amplification of 7--8\footnote{For large gain and Poisson-distributed first-stage amplicication $M_1$, $\Var[q_i] \approx \frac{1}{M_1-1}$.}.
 
 Birks~\cite{birks_theory_1967} summarized laboratory measurements of single-electron-response~(SER) pulse shape and indicated a crude assumption of Gaussian shape is adequate, but also mentioned asymmetric model of $t e^{-bt}$ having a faster rise than decay by Hamilton and Wright~\cite{hamilton_transit_1956}.  To better model the rising edge curvature than Hamilton and Wright, S.~Jetter~et al.~\cite{jetter_pmt_2012} from DayaBay used log-normal as a convenient phenomenological representation of the SER pulse.  As in figure~\ref{fig:spe}, the smooth rising curve of log-normal fits measurements better and the falling component captures the exponential decay characteristics of RC circuit in the electronics readout.  Caldwell~et~al.~\cite{caldwell_characterization_2013}, Caravaca et al.~\cite{caravaca_experiment_2017} from CHESS and Kaptanoglu~\cite{kaptanoglu_characterization_2018} used the same parameterization and found reasonable match with experimental data.  A better model embracing underlying physics mechanism may be developed in the future, but for this waveform analysis study, we adopt the log-normal SER pulse as eq.~\eqref{eq:dayaspe} without loss of generality.
 \begin{equation}
