@@ -306,6 +306,7 @@ def batch(A, cx, index, tq, s, z, t0_min=100, t0_max=500):
         s0_history[:, i] = NPE
         s_history[:, i*l_s:(i+1)*l_s] = s
     # print("t0 acceptance:", t0_accept / TRIALS)
+    # Assign one PE to the waveform without any PE
     s_init = np.full(l_s, 0.)
     s_init[0] = 1.
     last_max_s[last_max_s.sum(axis=1) == 0] = s_init
@@ -408,6 +409,8 @@ for part in range(l_e // args.size + 1):
                    np.append(s[i_part, :lp_NPE], s_null, axis=1),
                    cp.asarray(z[i_part, :lp_wave], np.float32))
         t0, mu = get_t0_pool(s0_history, t0_history, loc, flip, index[i_part], tq[i_part, :lp_t], start['T0'][i_part])
+        # t0 = np.full(l_part, np.nan)
+        # mu = np.full(l_part, np.nan)
         fi_part = (i_part * TRIALS)[:, None] + np.arange(TRIALS)[None, :]
         fip = fi_part.flatten()
         sample["flip"][fip] = flip.flatten()

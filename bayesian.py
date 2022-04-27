@@ -244,7 +244,7 @@ def fsmp_inference(a0, a1):
         sig2w = spe_pre[cid]['std'] ** 2
         sig2s = (gsigma * mus / gmu) ** 2
 
-        nu_star, T_star, c_star, es_history, NPE_evo = wff.metropolis_fsmp(y, A, sig2w, sig2s, mus, p1, p_cha, mu_t, TRIALS=TRIALS)
+        nu_star, T_star, c_star, es_history, NPE_evo, number_sample_zero = wff.metropolis_fsmp(y, A, sig2w, sig2s, mus, p1, p_cha, mu_t, TRIALS=TRIALS)
         time_fsmp[i - a0] = time.time() - time_fsmp_start
         num = len(nu_star)
 
@@ -254,15 +254,15 @@ def fsmp_inference(a0, a1):
         nu_space_prior = np.array([wff.nu_direct(y, A, c_star[j], mus, sig2s, sig2w, p1_truth) for j in range(num)])
         elbo_i = wff.elbo(nu_space_prior)
 
-        ilp_cha = np.log(cha.sum()) - np.log(cha)
-        guess = ilp_cha[es_history['loc'].astype(int)]
+        ilp_cha = interp1d(np.arange(len(cha)), np.log(cha.sum()) - np.log(cha))
+        guess = ilp_cha(es_history['loc'])
         es_history['loc'] = np.interp(es_history['loc'], xp=np.arange(0.5, len(tlist)), fp=tlist)
         ans = opti.fmin_l_bfgs_b(lambda x: -np.sum(wff.log_convolve_exp_norm(es_history['loc'] - x, Tau, Sigma)), x0=[t0_t], approx_grad=True, bounds=[b_t0], maxfun=500000)
         t00 = ans[0].item() if ans[-1]['warnflag'] == 0 else t0_t
         # t00 = t0_truth['T0'][i]
         # mu = mu_t
         b_mu = [max(1e-8, mu_t - 5 * np.sqrt(mu_t)), mu_t + 5 * np.sqrt(mu_t)]
-        t0, mu = wff.fit_t0mu_guess(es_history['loc'], es_history['step'], Tau, Sigma, guess, mu_t, t00, b_mu, b_t0, TRIALS)
+        t0, mu = wff.fit_t0mu_guess(es_history['loc'], es_history['step'], number_sample_zero, Tau, Sigma, guess, mu_t, t00, b_mu, b_t0, TRIALS)
 
         j = 0
         xmmse_most = np.zeros(len(tlist))
@@ -356,7 +356,7 @@ elif method == 'fsmp':
     ts = np.zeros(N, dtype=sdtp)
     ts['TriggerNo'] = ent['TriggerNo'][:N]
     ts['ChannelID'] = ent['ChannelID'][:N]
-    # fsmp_inference(0, 200)
+    # fsmp_inference(3532, 3540)
     # import sys
     # sys.exit()
     with Pool(min(args.Ncpu, cpu_count())) as pool:
