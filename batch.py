@@ -306,6 +306,9 @@ def batch(A, cx, index, tq, s, z, t0_min=100, t0_max=500):
         s0_history[:, i] = NPE
         s_history[:, i*l_s:(i+1)*l_s] = s
     # print("t0 acceptance:", t0_accept / TRIALS)
+    s_init = np.full(l_s, 0.)
+    s_init[0] = 1.
+    last_max_s[last_max_s.sum(axis=1) == 0] = s_init
     return flip, s0_history, t0_history, Δν_history, s_max_index, last_max_s, annihilations, creations, s_history
 
 def get_t0(a0, a1, s0_history, t0_history, loc, flip, index, tq, t00_l):
