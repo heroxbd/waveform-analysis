@@ -82,26 +82,21 @@ By directly extracting the patterns in the waveforms, \textit{heuristics} refer 
 
 \subsubsection{Waveform shifting}
 \label{sec:shifting}
-Some experiments use waveforms as direct input of analysis. Proton decay search at KamLAND~\cite{kamland_collaboration_search_2015} sums up all the PMT waveforms after shifting by time-of-flight for each event candidate.  The total waveform shape is used for a $\chi^2$-based particle identification (PID). The Double Chooz experiment also superposes waveforms to extract PID information by Fourier transformation~\cite{chooz_2018}. Samani et al.\cite{samani_pulse_2020} extracts pulse width from a raw waveform and use it as a PID discriminator.  Such techniques are extensions of pulse shape discrimination~(PSD) to large neutrino and dark matter experiments.  In the view of this study, extended PSD uses shifted waveform to approximate PE hit pattern, thus named \textit{waveform shifting}.
+Some experiments use waveforms as direct input of analysis. Proton decay search at KamLAND~\cite{kamland_collaboration_search_2015} sums up all the PMT waveforms after shifting by time-of-flight for each event candidate.  The total waveform shape is used for a $\chi^2$-based particle identification (PID). The Double Chooz experiment also superposes waveforms to extract PID information by Fourier transformation~\cite{chooz_2018}. Samani~et~al.\cite{samani_pulse_2020} extracts pulse width from a raw waveform and use it as a PID discriminator.  Such techniques are extensions of pulse shape discrimination~(PSD) to large neutrino and dark matter experiments.  In the view of this study, extended PSD uses shifted waveform to approximate PE hit pattern, thus named \textit{waveform shifting}.
 
-First, we select all the $t_i$ where the waveform $w(t_i)$ exceeds a threshold $q_\mathrm{th}$ to suppress noise, shift them by a constant $\Delta t$. For a single PE response $V_\mathrm{PE}(t)$ whose truth PE time is $t=0$, $\Delta t$ should minimize the Wasserstein distance $D_\mathrm{W}$. Thus,
-
+As illustrated in figure~\ref{fig:shifting}, we firstly select all the $t_i$'s where the waveform $w(t_i)$ exceeds a threshold $q_\mathrm{th}$ to suppress noise, shift them by a constant $\Delta t$. For a SER pulse $V_\mathrm{PE}(t)$ whose truth PE time is $t=0$, $\Delta t$ should minimize the Wasserstein distance $D_\mathrm{W}$. Thus,
 \begin{equation}
-  \begin{aligned}
-    & \Delta t \equiv \arg\underset{\Delta t'}{\min} D_\mathrm{w}\left[ V_\mathrm{PE}(t), \delta(t-\Delta t') \right] \\
-    & \Delta t \text{ satisfies } \int_{0}^{\Delta t} V_\mathrm{PE}(t) \mathrm{d}t = \frac{1}{2} \int_{0}^{\infty} V_\mathrm{PE}(t) \mathrm{d}.
-  \end{aligned}
+    \Delta t \equiv \arg\underset{\Delta t'}{\min} D_\mathrm{w}\left[ V_\mathrm{PE*}(t), \delta(t-\Delta t') \right] \implies \int_{0}^{\Delta t} V_\mathrm{PE}(t) \mathrm{d}t = \frac{1}{2} \int_{0}^{\infty} V_\mathrm{PE}(t) \mathrm{d}t.
   \label{eq:waveform-shift-dt}
 \end{equation}
-After shifting, this method gives $\hat{q}_i = w(t_i)$, $\hat{t_i} = t_i - \Delta t$. $\hat{q}_i$ is multiplied by $\alpha$ to minimize RSS: 
-
+The PE times are infered as $\hat{t}_i = t_i - \Delta t$.  Corresponding $w(t_i)$'s are scaled by $\alpha$ to minimize RSS:
 \begin{equation}
-  \alpha = \arg\underset{\alpha'}{\min}~\mathrm{RSS}\left[ \alpha' \hat{w}(t), w(t) \right] .
+  \alpha = \arg\underset{\alpha'}{\min}~\mathrm{RSS}\left[ \alpha' \sum_iw(t_i) \otimes V_\mathrm{PE}(t-\hat{t}_i), w(t) \right] .
   \label{eq:waveform-shift-alpha}
 \end{equation}
-The final analysis output is $\hat{q}_i = \alpha w(t_i)$, $\hat{t_i} = t_i - \Delta t$.
+The charges are determined as $\hat{q}_i = \alpha w(t_i)$.
 
-Since the whole over-threshold waveform sample points are treated as PEs, one PE can be split into many. Thus, the obtained $\hat{q}_i$ are smaller than PE charges as in figure~\ref{fig:shifting}. Nevertheless, waveform shifting does minimal analysis and serves as a baseline method.
+Since the whole over-threshold waveform sample points are treated as PEs, one PE can be split into many. Thus, the obtained $\hat{q}_i$ are smaller than truth PE charges. The waveform shifting model formulated above captures the logic behind waveform superposition methods.  The underlying assumption to treat a waveform as PEs is simply not true and time precision suffers.  It works only if the width of $V_\mathrm{PE}$ is negligible for the purpose, sometimes when classifying events.
 
 \begin{figure}[H]
   \begin{subfigure}{.5\textwidth}
@@ -114,19 +109,13 @@ Since the whole over-threshold waveform sample points are treated as PEs, one PE
     \resizebox{\textwidth}{!}{\input{figures/findpeak.pgf}}
     \caption{\label{fig:peak} A peak finding example gives \\ $\Delta t_0=\SI{-1.93}{ns}$, $\mathrm{RSS}=\SI{266.9}{mV^2}$, $D_\mathrm{w}=\SI{2.40}{ns}$.}
   \end{subfigure}
-  \caption{\label{fig:method}Demonstrations of heuristic methods on a waveform sampled from $\mu=4$, $\tau_\ell=\SI{20}{ns}$, $\sigma_\ell=\SI{5}{ns}$ light curve conditions.  Peak finding in~\subref{fig:peak} handles charges more realistically than waveform shifting in~\subref{fig:shifting}, giving better numbers by the $\mathrm{RSS}$ and $D_\mathrm{w}$ criteria in section \ref{sec:criteria}.}
+  \caption{\label{fig:method}Demonstrations of heuristic methods on a waveform sampled from $\mu=4$, $\tau_\ell=\SI{20}{ns}$, $\sigma_\ell=\SI{5}{ns}$ light curve conditions.  Peak finding in~\subref{fig:peak} handles charges more realistically than waveform shifting in~\subref{fig:shifting}, giving better numbers by the $\mathrm{RSS}$ and $D_\mathrm{w}$ criteria in section \ref{sec:criteria}. $\Delta t_0$ is the bias of the $\hat{t}_\mathrm{KL}$ estimator.}
 \end{figure}
 
 \subsubsection{Peak finding}
 \label{sec:findpeak}
 
-\textit{Peak finding} is more effective than waveform shifting by exploiting PE pulses.  We smooth the waveforms by a low-pass Savitzky-Golay filter~\cite{savitzky_smoothing_1964} and find all the peaks at $t_i$.  The following resembles waveform shifting: apply a constant shift $\Delta t$ to get $\hat{t_i} = t_i - \Delta t$, and calculate a scaling factor $\alpha$ to get $\hat{q_i}=\alpha w(t_i)$.  Similar to eq.~\eqref{eq:waveform-shift-dt},
-
-\begin{equation}
-  \Delta t \equiv \arg\underset{\Delta t'}{\min} D_\mathrm{w}\left[ \delta(t-\arg\underset{t'}{\max} V_\mathrm{PE}(t')) , \delta(t-\Delta t') \right] = \arg\underset{t}{\max} V_\mathrm{PE}(t)
-  \label{eq:peak-finding-dt}
-\end{equation}
-$\alpha$ is determined the same way as eq.~\eqref{eq:waveform-shift-alpha}. As shown in figure~\ref{fig:peak}, peak finding outputs charges close to 1 and works well for lower PE counts.  But when PEs pile up closely, peaks overlap intensively, making this method unreliable.
+The peak of $V_\mathrm{PE}$ is a distinct feature in waveforms, making \textit{Peak finding} more effective than waveform shifting.  We smooth a waveform by a low-pass Savitzky-Golay filter~\cite{savitzky_smoothing_1964} and find all the peaks at $t_i$'s.  The following resembles waveform shifting: apply a constant shift $\Delta t \equiv \arg\underset{t}{\max} V_\mathrm{PE}(t)$ to get $\hat{t}_i = t_i - \Delta t$, and calculate a scaling factor $\alpha$ to get $\hat{q_i}=\alpha w(t_i)$ in the same way as eq.~\eqref{eq:waveform-shift-alpha}.  As shown in figure~\ref{fig:peak}, peak finding outputs charges close to 1 and works well for lower PE counts.  But when PEs pile up closely, peaks overlap intensively, making this method unreliable.  Peak finding is usually too trivial to be documented but found almost everywhere~\cite{students22}.
 
 \subsection{Deconvolution}
 \label{sec:deconv}
@@ -137,10 +126,8 @@ Deconvolution is motivated by viewing the waveform as a convolution of sparse sp
 The deconvolution relation is evident in the Fourier transform $\mathcal{F}$ to eq.~\eqref{eq:1},
 \begin{equation}
   \label{eq:fourier}
-  %\begin{aligned}
   \mathcal{F}[w]  = \mathcal{F}[\tilde{\phi}]\mathcal{F}[V_\mathrm{PE}] + \mathcal{F}[\epsilon]
   \implies \mathcal{F}[\tilde{\phi}]  = \frac{\mathcal{F}[w]}{\mathcal{F}[V_\mathrm{PE}]} - \frac{\mathcal{F}[\epsilon]}{\mathcal{F}[V_\mathrm{PE}]}.
-  %\end{aligned}
 \end{equation}
 By low-pass filtering the waveform $w(t)$ to get $\tilde{w}(t)$, we suppress the noise term $\epsilon$, take the inverse Fourier transform $\hat{\phi}_1(t) = \mathcal{F}^{-1}\left[\frac{\mathcal{F}[\tilde{w}]}{\mathcal{F}[V_\mathrm{PE}]}\right](t),$ and compute $\hat{\phi}(t)$ as the over-threshold $q_\mathrm{th}$ part of $\hat{\phi}_1(t)$,
 \begin{equation}
