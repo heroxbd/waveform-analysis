@@ -248,11 +248,11 @@ def fsmp_inference(a0, a1):
         time_fsmp[i - a0] = time.time() - time_fsmp_start
         num = len(nu_star)
 
+        elbo_i = 0
         # Extra calculation to test
-        # elbo_i = 0
-        p1_truth = Mu * wff.convolve_exp_norm(tlist - t0_truth[i]['T0'], Tau, Sigma) / n + 1e-8
-        nu_space_prior = np.array([wff.nu_direct(y, A, c_star[j], mus, sig2s, sig2w, p1_truth) for j in range(num)])
-        elbo_i = wff.elbo(nu_space_prior)
+        # p1_truth = Mu * wff.convolve_exp_norm(tlist - t0_truth[i]['T0'], Tau, Sigma) / n + 1e-8
+        # nu_space_prior = np.array([wff.nu_direct(y, A, c_star[j], mus, sig2s, sig2w, p1_truth) for j in range(num)])
+        # elbo_i = wff.elbo(nu_space_prior)
 
         ilp_cha = interp1d(np.arange(len(cha)), np.log(cha.sum()) - np.log(cha))
         guess = ilp_cha(np.clip(es_history['loc'], 0, len(cha) - 1))
@@ -356,7 +356,7 @@ elif method == 'fsmp':
     ts = np.zeros(N, dtype=sdtp)
     ts['TriggerNo'] = ent['TriggerNo'][:N]
     ts['ChannelID'] = ent['ChannelID'][:N]
-    # fsmp_inference(3532, 3540)
+    fsmp_inference(0, 200)
     # import sys
     # sys.exit()
     with Pool(min(args.Ncpu, cpu_count())) as pool:
