@@ -264,7 +264,7 @@ Fitting the charges $q'_i$ in eq.~\eqref{eq:gd} directly by minimizing RSS of $w
   \label{eq:gd-q}
   \bm{\hat{q}} = \arg \underset{q'_i \ge 0}{\min}~\mathrm{RSS}\left[w'(t),w(t)\right].
 \end{equation}
-RSS of eq.~\eqref{eq:gd_q} does not suffer at the sparse configuration in figure~\ref{fig:l2} provided that the dense grid in eq.~\eqref{eq:gd} covers all the PEs.
+RSS of eq.~\eqref{eq:gd-q} does not suffer at the sparse configuration in figure~\ref{fig:l2} provided that the dense grid in eq.~\eqref{eq:gd} covers all the PEs.
 
 Slawski and Hein~\cite{slawski_non-negative_2013} proved that in deconvolution problems, the non-negative least-squares formulation in eq.~\eqref{eq:gd-q} is self-regularized and gives sparse solutions of $q'_i$.  Peterson~\cite{peterson_developments_2021} from IceCube used this technique for waveform analysis.  We optimize eq.~\eqref{eq:gd-q} by Broyden-Fletcher-\allowbreak{}Goldfarb-Shanno algorithm with a bound constraint~\cite{byrd_limited_1995}.  In figure~\ref{fig:fitting-npe}, charge fitting is consistent in $D_\mathrm{w}$ for different $N_\mathrm{PE}$'s, showing its resilience to pile-up.
 
