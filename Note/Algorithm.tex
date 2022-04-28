@@ -253,6 +253,8 @@ After 5 layers, 1D-CNN gives the desired output, a one channel vector $q'_j$, an
 
 In figure~\ref{fig:cnn-npe}, $D_\mathrm{w}$ is the smallest for one PE.  $D_\mathrm{w}$ stops increasing with $N_\mathrm{PE}$ at about 6 PEs, where the PE times are the most challenging to extract.  When $N_\mathrm{PE}$ is more than 6, pile-ups tend to produce a continuous waveform and the average PE time accuracy stays flat. Thus, waveform analysis is the most important in recovering time accuracy for PEs less than 10.
 
+As explained in figure~\ref{fig:l2}, $D_\mathrm{w}$ can naturally measure the horizontal (time) distance between different sparse $({q}_i,{t}_i)$'s. Unlike deconvolution methods discussed in \ref{sec:deconv} and direct charge fitting in \ref{sec:dcf}, $D_\mathrm{w}$ orientated 1D-CNN does not have to split PE into smaller ones to fit fluctuations in waveforms. Thus, it can give slightly more sparse result than those methods, which can be inferred in figure~\ref{fig:recchargehist}. But without the constraints of knowing charge distribution, 1D-CNN still splits PE.
+
 Similar to eq.~\eqref{eq:fdconv2}, the output of CNN should be scaled by $\hat{\alpha}$ to get $\hat{\phi}$. Such small $D_\mathrm{w}$ in figure~\ref{fig:cnn-npe} provides a precise matching of waveforms horizontally to guarantee effective $\hat{\alpha}$ scaling, explaining why $\mathrm{RSS}$ is also small in figure~\ref{fig:cnn}.
 
 \begin{figure}[H]
