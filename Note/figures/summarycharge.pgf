@@ -2618,8 +2618,8 @@
 \definecolor{currentstroke}{rgb}{1.000000,0.000000,0.000000}%
 \pgfsetstrokecolor{currentstroke}%
 \pgfsetdash{{3.700000pt}{1.600000pt}}{0.000000pt}%
-\pgfpathmoveto{\pgfqpoint{6.094125in}{1.511711in}}%
-\pgfpathlineto{\pgfqpoint{6.316513in}{1.511711in}}%
+\pgfpathmoveto{\pgfqpoint{2.591952in}{1.775997in}}%
+\pgfpathlineto{\pgfqpoint{2.785849in}{1.775997in}}%
 \pgfusepath{stroke}%
 \end{pgfscope}%
 \begin{pgfscope}%
@@ -2631,8 +2631,8 @@
 \definecolor{currentstroke}{rgb}{1.000000,0.000000,0.000000}%
 \pgfsetstrokecolor{currentstroke}%
 \pgfsetdash{{3.700000pt}{1.600000pt}}{0.000000pt}%
-\pgfpathmoveto{\pgfqpoint{6.193633in}{0.859715in}}%
-\pgfpathlineto{\pgfqpoint{6.193633in}{2.348626in}}%
+\pgfpathmoveto{\pgfqpoint{2.695668in}{1.049035in}}%
+\pgfpathlineto{\pgfqpoint{2.695668in}{2.562871in}}%
 \pgfusepath{stroke}%
 \end{pgfscope}%
 \begin{pgfscope}%
@@ -2652,7 +2652,7 @@
 \pgfusepath{stroke,fill}%
 }%
 \begin{pgfscope}%
-\pgfsys@transformshift{6.094125in}{1.511711in}%
+\pgfsys@transformshift{2.591952in}{1.775997in}%
 \pgfsys@useobject{currentmarker}{}%
 \end{pgfscope}%
 \end{pgfscope}%
@@ -2673,7 +2673,7 @@
 \pgfusepath{stroke,fill}%
 }%
 \begin{pgfscope}%
-\pgfsys@transformshift{6.316513in}{1.511711in}%
+\pgfsys@transformshift{2.785849in}{1.775997in}%
 \pgfsys@useobject{currentmarker}{}%
 \end{pgfscope}%
 \end{pgfscope}%
@@ -2694,7 +2694,7 @@
 \pgfusepath{stroke,fill}%
 }%
 \begin{pgfscope}%
-\pgfsys@transformshift{6.193633in}{0.859715in}%
+\pgfsys@transformshift{2.695668in}{1.049035in}%
 \pgfsys@useobject{currentmarker}{}%
 \end{pgfscope}%
 \end{pgfscope}%
@@ -2715,7 +2715,7 @@
 \pgfusepath{stroke,fill}%
 }%
 \begin{pgfscope}%
-\pgfsys@transformshift{6.193633in}{2.348626in}%
+\pgfsys@transformshift{2.695668in}{2.562871in}%
 \pgfsys@useobject{currentmarker}{}%
 \end{pgfscope}%
 \end{pgfscope}%
@@ -3040,7 +3040,7 @@
 \pgfusepath{stroke,fill}%
 }%
 \begin{pgfscope}%
-\pgfsys@transformshift{6.193633in}{1.511711in}%
+\pgfsys@transformshift{2.695668in}{1.775997in}%
 \pgfsys@useobject{currentmarker}{}%
 \end{pgfscope}%
 \end{pgfscope}%
@@ -3122,7 +3122,7 @@
 \definecolor{textcolor}{rgb}{0.000000,0.000000,0.000000}%
 \pgfsetstrokecolor{textcolor}%
 \pgfsetfillcolor{textcolor}%
-\pgftext[x=6.227612in,y=1.575461in,left,base]{\color{textcolor}\sffamily\fontsize{12.000000}{14.400000}\selectfont \(\displaystyle \mathrm{FSMP}\)}%
+\pgftext[x=2.729646in,y=1.839747in,left,base]{\color{textcolor}\sffamily\fontsize{12.000000}{14.400000}\selectfont \(\displaystyle \mathrm{FSMP}\)}%
 \end{pgfscope}%
 \end{pgfpicture}%
 \makeatother%

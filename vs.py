@@ -79,8 +79,11 @@ for key in tqdm(mts.keys()):
         mu = mts[key][i]['mu']
         tau = mts[key][i]['tau']
         sigma = mts[key][i]['sigma']
+        waveform = 'waveform'
+        if key == 'fsmp':
+            waveform = 'waveform_fsmp'
         try:
-            with h5py.File(os.path.join('result', key, 'solu', f), 'r', libver='latest', swmr=True) as soluf, h5py.File(os.path.join('result', key, 'dist', f), 'r', libver='latest', swmr=True) as distf, h5py.File(os.path.join('waveform', f), 'r', libver='latest', swmr=True) as wavef:
+            with h5py.File(os.path.join('result', key, 'solu', f), 'r', libver='latest', swmr=True) as soluf, h5py.File(os.path.join('result', key, 'dist', f), 'r', libver='latest', swmr=True) as distf, h5py.File(os.path.join(waveform, f), 'r', libver='latest', swmr=True) as wavef:
                 time = soluf['starttime'][:]
                 if key != 'fsmp':
                     mu_hat = time['muwave']
@@ -469,9 +472,11 @@ for key in tqdm(mts.keys()):
         mu = mts[key][i]['mu']
         tau = mts[key][i]['tau']
         sigma = mts[key][i]['sigma']
-
+        waveform = 'waveform'
+        if key == 'fsmp':
+            waveform = 'waveform_fsmp'
         try:
-            with h5py.File(os.path.join('result', key, 'solu', f), 'r', libver='latest', swmr=True) as soluf, h5py.File(os.path.join('result', key, 'dist', f), 'r', libver='latest', swmr=True) as distf, h5py.File(os.path.join('waveform', f), 'r', libver='latest', swmr=True) as wavef:
+            with h5py.File(os.path.join('result', key, 'solu', f), 'r', libver='latest', swmr=True) as soluf, h5py.File(os.path.join('result', key, 'dist', f), 'r', libver='latest', swmr=True) as distf, h5py.File(os.path.join(waveform, f), 'r', libver='latest', swmr=True) as wavef:
                 time = soluf['starttime'][:]
                 starttime_attrs = dict(soluf['starttime'].attrs)
                 start = wavef['SimTruth/T'][:]
