@@ -49,6 +49,7 @@ The PE, waveform and their estimators are hierarchical and intercorelated.  We e
     $\Delta{t_0}$ & bias of a $t_0$ estimator & \secref{sec:time-shift-t_0} \\
     $\phi(t)$ & normalized light curve & \secref{sec:lc} \\
     $\tilde{\phi}$ & PE-sampled light curve & \secref{subsec:spe} \\
+    $\phi'$ & $\sum_{j=1}^{N_\mathrm{s}}q'_j\delta(t-t'_j)$ from grid $\bm{t}'$ & \secref{sec:cnn} \\
     $\hat{\phi}$ & waveform estimator for $\tilde{\phi}$ & \secref{sec:pseudo} \\
     $\tilde{\phi}_*, \hat{\phi}_*$ & normalized $\tilde{\phi}$ and $\hat{\phi}$ & \secref{sec:W-dist} \\
     $\tilde{\Phi}(t), \hat{\Phi}(t)$ & $\int_{-\infty}^t\tilde{\phi}_*(s)\mathrm{d}s$ and $\int_{-\infty}^t\hat{\phi}_*(s)\mathrm{d}s$ & \secref{sec:W-dist}\\
@@ -60,7 +61,7 @@ The PE, waveform and their estimators are hierarchical and intercorelated.  We e
     $\tilde{w}$ & smoothed $w$, approximating $w - \epsilon$ & \secref{sec:fourier} \\
     $\tilde{w}_*$, $V_{\mathrm{PE}*}$ & normalized $\tilde{w}$ and $V_\mathrm{PE}$ & \secref{sec:lucyddm} \\
     $\hat{w}$ & $\hat{\phi} \otimes V_\mathrm{PE}$ for estimating $w$ & \secref{sec:rss} \\
-    $w'$ & $\sum_{j=1}^{N_\mathrm{s}}q'_jV_\mathrm{PE}(t-t'_j)$ from grid $\bm{t}'$ & \secref{sec:regression} \\
+    $w'$ & $\phi' \otimes V_\mathrm{PE}$ from grid $\bm{t}'$ & \secref{sec:regression} \\
     \hline\hline
   \end{tabular}
   \label{tab:symbol}

@@ -188,7 +188,7 @@ Then a recurrence relation $\phi_*$ is,
   \end{aligned}
 \end{equation}
 where only $V_{\mathrm{PE}*}$ in the numerator is normalized, and superscript $n$ denotes the iteration step.
-Like Fourier deconvolution in eq.~\eqref{eq:fdconv2}, we cut off and scale the converged $\hat{\phi}^\infty$ to get $\hat{\phi}$.  As shown in figure~\ref{fig:lucy}, the positive constraint of $\hat{\phi}$ makes LucyDDM more resilient to noise.
+Like Fourier deconvolution in eq.~\eqref{eq:fdconv2}, we threshold and scale the converged $\hat{\phi}^\infty$ to get $\hat{\phi}$.  As shown in figure~\ref{fig:lucy}, the positive constraint of $\hat{\phi}$ makes LucyDDM more resilient to noise.
 
 The remaining noise in the smoothed $\tilde{w}$ crucially influences deconvolution.  A probabilistic method will correctly model the noise term $\epsilon$, as we shall see in section \ref{sec:regression}.
 
@@ -196,16 +196,16 @@ The remaining noise in the smoothed $\tilde{w}$ crucially influences deconvoluti
 \label{sec:cnn}
 Convolutional neural networks~(CNN) made breakthroughs in various fields like computer vision~\cite{he_deep_2016} and natural language processing~\cite{vaswani_attention_2017}.  As an efficient composition of weighted additions and non-linear functions, neural networks outperform many traditional algorithms.  The success of CNN induces many ongoing efforts to apply it to waveform analysis~\cite{students22}.  It is thus interesting and insightful to make a comparison of CNN with the remaining traditional methods.
 
-The input discretized waveform $\bm{w}$ is an 1 dimensional vector.  However, $\hat{q}_i$ and $\hat{t}_i$ are two variable length ($\hat{N}_\mathrm{PE}$) vectors, which is not a well-defined output for a 1 dimensional CNN (1D-CNN).  Instead, we replace $\hat{N}_\mathrm{PE}$ with a fixed sample size $N_\mathrm{s}$ and $\hat{t}_i$ with a fixed grid of times $t'_j$ and associating $q'_j$. For most $j$, $q'_j = 0$, which means there is no PE on time grid $t'_j$. By stripping out $j$ where $q'_j=0$, the remaining $q'_j$, $t'_j$ are $\hat{q}_i$ and $\hat{t}_i$.  Now $q'_j$ is a 1D vector with fixed length $N_\mathrm{s}$, suitable for 1D-CNN.
+The input discretized waveform $\bm{w}$ is an 1 dimensional vector.  However, $\hat{q}_i$ and $\hat{t}_i$ are two variable length ($\hat{N}_\mathrm{PE}$) vectors, which is not a well-defined output for a 1 dimensional CNN~(1D-CNN).  Instead, we replace $\hat{N}_\mathrm{PE}$ with a fixed sample size $N_\mathrm{s}$ and $\hat{t}_i$ with a fixed grid of times $t'_j$ and associating $q'_j$. For most $j$, $q'_j = 0$, meaning there is no PE on time grid $t'_j$. By stripping out $j$ where $q'_j=0$, the remaining $q'_j$, $t'_j$ are $\hat{q}_i$ and $\hat{t}_i$.  Now $q'_j$ is a 1D vector with fixed length $N_\mathrm{s}$, suitable for 1D-CNN.
 
 We choose a shallow network structure of 5 layers to recognize patterns as shown in figure~\ref{fig:struct}, motivated by the pulse shape and universality of $V_\mathrm{PE}(t)$ for all the PEs. The input waveform vector $\bm{w}$ is convoluted by several kernels $\bm{K}^{(1)}_m$ into new vectors $v_m$:
 \begin{equation}
   \bm{v}^{(1)}_m = \bm{K}^{(1)}_m \otimes \bm{w},\ m\in \{1,\ldots,M\}
   \label{eq:1DCNN-11}
 \end{equation}
-As 1D vectors, $\bm{K}^{(1)}_m$ share the same length $||\bm{K}^{(1)}_m||_0$, which is called ``kernel size''. $M$ is the ``number of channels''. As shown in figure~\ref{fig:struct}, we choose $||\bm{K}^{(1)}_m||_0 = 21$ and $M=25$. The kernel sizes are selected considering the localized nature of $V_\mathrm{PE}(t)$.
+As 1D vectors, $\bm{K}^{(1)}_m$ share the same length called \textit{kernel size}.  $M$ is the \textit{number of channels}. As shown in figure~\ref{fig:struct}, considering the localized nature of $V_\mathrm{PE}(t)$,  we choose the kernel size to be $21$ and $M=25$.
 
-After this linear operation called ``links'', a point-wise nonlinear transformation called ``activation'' is applied. In the network we constructed, leaky rectified linear function $\mathrm{LReL}$\cite{leakyReLU} is used:
+After the above linear \textit{link} operations, a point-wise nonlinear \textit{activation} transformation, leaky rectified linear function $\mathrm{LReL}(\cdot)$\cite{leakyReLU} is used:
 \begin{equation}
   \begin{aligned}
     & \bm{v'}^{(1)}_m = \mathrm{LReL}(\bm{v}^{(1)}_m) \\
@@ -216,16 +216,12 @@ After this linear operation called ``links'', a point-wise nonlinear transformat
   \end{aligned}
   \label{eq:1DCNN-12}
 \end{equation}
-Together the two operation forms the first layer. The second layer is similar:
+The two operations form the first layer. The second layer is similar,
 \begin{equation}
-  \begin{aligned}
-    & \bm{v}^{(2)}_n = \sum_{m=1}^{M} \bm{K}^{(2)}_{nm} \otimes \bm{v'}^{(1)}_m,\ n\in \{1,\ldots,N\} \\
-    & \bm{v'}^{(2)}_n = \mathrm{LReL}(\bm{v}^{(2)}_n) \\
-  \end{aligned}
+  \bm{v}'^{(2)}_n = \mathrm{LReL}\left(\sum_{m=1}^{M} \bm{K}^{(2)}_{nm} \otimes \bm{v'}^{(1)}_m\right),\ n\in \{1,\ldots,N\}
   \label{eq:1DCNN-2}
 \end{equation}
-
-Turning $M$-channel $\bm{v'}^{(1)}_m$ to $N$-channel $\bm{v'}^{(2)}_n$.
+mapping $M$-channelled $\bm{v'}^{(1)}_m$ to $N$-channelled $\bm{v'}^{(2)}_n$.
 
 \begin{figure}[H]
   \begin{subfigure}{.4\textwidth}
@@ -242,20 +238,21 @@ Turning $M$-channel $\bm{v'}^{(1)}_m$ to $N$-channel $\bm{v'}^{(2)}_n$.
   \end{subfigure}
   \caption{\label{fig:CNN} Training process of a CNN. A shallow network structure of 5 layers in~\subref{fig:struct} is trained to converge in Wasserstein distance as shown in~\subref{fig:loss}.  ``kernel=21'' stands for a 1-D convolutional kernel size 21. ``1029'' is the number of voltage samples in a waveform.  $1\times$ represents the number of channels in each layer.}
 \end{figure}
-\vspace{-0.8cm}
 
+At the bottom of figure~\ref{fig:struct}, 1D-CNN gives the desired output, a one-channelled vector $q'_j$, which determines the PE distribution $\phi'(t)$ by
 \begin{equation}
-  \bm{K}^{(1\cdots 5)}_{m,n,\cdots} = \arg\underset{\bm{K'}^{(1\cdots 5)}_{m,n,\cdots}}{\min} D_\mathrm{w}(\mathrm{CNN}(\bm{w}; \bm{K'}^{(1\cdots 5)}_{m,n,\cdots}), \tilde{\phi})
-  \label{eq:CNN-train}
+  \label{eq:gd-phi}
+  \phi'(t) = \sum_{j=1}^{N_\mathrm{s}}q'_j\delta(t-t'_j).
 \end{equation}
 
-After 5 layers, 1D-CNN gives the desired output, a one channel vector $q'_j$, and the network itself is a non-linear function $\mathrm{CNN}(\bm{w})$ with numerous free parameters $\bm{K}^{(1\cdots5)}_{m,n,\cdots}$. As shown in eq.~\eqref{eq:CNN-train}, we fitted $\hat{\phi}=\bm{q}'=\mathrm{CNN}(\bm{w})$ using truth $\tilde{\phi}$ and $D_\mathrm{w}$ as loss function. Backpropagation method is used to adjust $\bm{K}^{(1\cdots5)}_{m,n,\cdots}$ in minimization, and figure~\ref{fig:loss} shows the convergence of Wasserstein distance during training. Such fitting process is called ``supervised learning''.
+The whole network is a non-linear function $\mathrm{CNN}(\cdot)$ from $\bm{w}$ to $\phi'$ with numerous free parameters $\bm{K}^{(1)}_m, \bm{K}^{(2)}_{mn}, \ldots$ which we denote as $\mathcal{K}$. We \textit{train} to fit the parameters against true $\tilde{\phi}$,
+\begin{equation}
+  \hat{\mathcal{K}} = \arg\underset{\mathcal{K}}{\min} D_\mathrm{w}\left[\mathrm{CNN}(\bm{w}; \mathcal{K}), \tilde{\phi}\right]
+  \label{eq:CNN-train}
+\end{equation}
+by back-propagation. Figure~\ref{fig:loss} shows the convergence of Wasserstein distance during training. Such fitting process is an example of \textit{supervised learning}. As explained in figure~\ref{fig:l2}, $D_\mathrm{w}$ can naturally measure the time difference between two sparse $\phi'$ and $\tilde{\phi}$ in eq.~\eqref{eq:CNN-train}, making 1D-CNN not need to split a PE into smaller ones to fit waveform fluctuations.  This gives sparser results in contrast to deconvolution methods in section~\ref{sec:deconv} and direct charge fitting in section~\ref{sec:dcf}, which we shall discuss in section~\ref{sec:sparsity}.
 
-In figure~\ref{fig:cnn-npe}, $D_\mathrm{w}$ is the smallest for one PE.  $D_\mathrm{w}$ stops increasing with $N_\mathrm{PE}$ at about 6 PEs, where the PE times are the most challenging to extract.  When $N_\mathrm{PE}$ is more than 6, pile-ups tend to produce a continuous waveform and the average PE time accuracy stays flat. Thus, waveform analysis is the most important in recovering time accuracy for PEs less than 10.
-
-As explained in figure~\ref{fig:l2}, $D_\mathrm{w}$ can naturally measure the horizontal (time) distance between different sparse $({q}_i,{t}_i)$'s. Unlike deconvolution methods discussed in \ref{sec:deconv} and direct charge fitting in \ref{sec:dcf}, $D_\mathrm{w}$ orientated 1D-CNN does not have to split PE into smaller ones to fit fluctuations in waveforms. Thus, it can give slightly more sparse result than those methods, which can be inferred in figure~\ref{fig:recchargehist}. But without the constraints of knowing charge distribution, 1D-CNN still splits PE.
-
-Similar to eq.~\eqref{eq:fdconv2}, the output of CNN should be scaled by $\hat{\alpha}$ to get $\hat{\phi}$. Such small $D_\mathrm{w}$ in figure~\ref{fig:cnn-npe} provides a precise matching of waveforms horizontally to guarantee effective $\hat{\alpha}$ scaling, explaining why $\mathrm{RSS}$ is also small in figure~\ref{fig:cnn}.
+In figure~\ref{fig:cnn-npe}, $D_\mathrm{w}$ is the smallest for one PE.  $D_\mathrm{w}$ stops increasing with $N_\mathrm{PE}$ at about 6 PEs, where the PE times are the most challenging to extract.  When $N_\mathrm{PE}$ is more than 6, pile-ups tend to produce a continuous waveform and the average PE time accuracy stays flat. Similar to eq.~\eqref{eq:fdconv2}, the output of CNN should be scaled by $\hat{\alpha}$ to get $\hat{\phi}$. Such small $D_\mathrm{w}$ in figure~\ref{fig:cnn-npe} provides a precise matching of waveforms horizontally to guarantee effective $\hat{\alpha}$ scaling, explaining why $\mathrm{RSS}$ is also small in figure~\ref{fig:cnn}.
 
 \begin{figure}[H]
   \begin{subfigure}{.5\textwidth}
@@ -282,11 +279,7 @@ Regression methods adjust $\{q'_j\}$ to fit eq.~\eqref{eq:gd}:
   \label{eq:gd}
   w'(t) = \sum_{j=1}^{N_\mathrm{s}}q'_jV_\mathrm{PE}(t-t'_j).
 \end{equation}
-When $\{t'_i\}$ is dense enough, $\{\hat{q}_j\}$ determines the inferred PE distribution $\hat{\phi}(t)$,
-\begin{equation}
-  \label{eq:gd-phi}
-  \hat{\phi}(t) = \sum_{j=1}^{N_\mathrm{s}}\hat{q}_j\delta(t-t'_j).
-\end{equation}
+
 From the output $\hat{\phi}_\mathrm{dec}(t)$ of a deconvolution method in section~\ref{sec:lucyddm}, we confidently leave out all the $t'_j$ that $\hat{\phi}_\mathrm{dec}(t_j')=0$ in eq.~\eqref{eq:gd-phi} to reduce the number of parameters and the complexity.
 
 \subsubsection{Direct charge fitting}
@@ -388,7 +381,7 @@ RSS and $D_\mathrm{w}$ are calculated by eqs.~\eqref{eq:rss}, \eqref{eq:numerica
 
 We name the method \emph{fast stochastic matching pursuit}~(FSMP) after \emph{fast Bayesian matching pursuit}~(FBMP) by Schniter~et al.~\cite{schniter_fast_2008} and \emph{Bayesian stochastic matching pursuit} by Chen~et al.~\cite{chen_stochastic_2011}.  Here FSMP replaces the greedy search routine in FBMP with stochastic sampling.  With the help of Ekanadham~et al.'s function interpolation~\cite{ekanadham_recovery_2011}, FSMP straightforwardly extends $\bm{z}$ into an unbinned vector of PE locations $t_i$.  Geyer and Møller~\cite{geyer_simulation_1994} developed a similar sampler to handle trans-dimensionality in a Poisson point process.  $h(\bm{z})$ and the proposal distribution in Metropolis-Hastings steps could be tuned to improve sampling efficiency.  We shall leave the detailed study of the Markov chain convergence to our future publications.
 
-\begin{figure}[H]
+\begin{figure}[h]
   \begin{subfigure}[b]{.45\textwidth}
     \centering
     \resizebox{1.05\textwidth}{!}{\input{figures/fsmpchargestats.pgf}}
