@@ -200,7 +200,7 @@ The input discretized waveform $\bm{w}$ is an 1 dimensional vector.  However, $\
 
 We choose a shallow network structure of 5 layers to recognize patterns as shown in figure~\ref{fig:struct}, motivated by the pulse shape and universality of $V_\mathrm{PE}(t)$ for all the PEs. The input waveform vector $\bm{w}$ is convoluted by several kernels $\bm{K}^{(1)}_m$ into new vectors $v_m$:
 \begin{equation}
-  \bm{v}^{(1)}_m = \bm{K}^{(1)}_m \otimes \bm{w},\ m\in \{1,\ldots,M\}
+  \bm{v}^{(1)}_m = \bm{K}^{(1)}_m \otimes \bm{w},\ m\in \{1,\ldots,M\}.
   \label{eq:1DCNN-11}
 \end{equation}
 As 1D vectors, $\bm{K}^{(1)}_m$ share the same length called \textit{kernel size}.  $M$ is the \textit{number of channels}. As shown in figure~\ref{fig:struct}, considering the localized nature of $V_\mathrm{PE}(t)$,  we choose the kernel size to be $21$ and $M=25$.
@@ -218,7 +218,7 @@ After the above linear \textit{link} operations, a point-wise nonlinear \textit{
 \end{equation}
 The two operations form the first layer. The second layer is similar,
 \begin{equation}
-  \bm{v}'^{(2)}_n = \mathrm{LReL}\left(\sum_{m=1}^{M} \bm{K}^{(2)}_{nm} \otimes \bm{v'}^{(1)}_m\right),\ n\in \{1,\ldots,N\}
+  \bm{v}'^{(2)}_n = \mathrm{LReL}\left(\sum_{m=1}^{M} \bm{K}^{(2)}_{nm} \otimes \bm{v'}^{(1)}_m\right),\ n\in \{1,\ldots,N\},
   \label{eq:1DCNN-2}
 \end{equation}
 mapping $M$-channelled $\bm{v'}^{(1)}_m$ to $N$-channelled $\bm{v'}^{(2)}_n$.
