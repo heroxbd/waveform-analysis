@@ -219,7 +219,7 @@ The output of CNN is scaled by $\hat{\alpha}$ following eq.~\eqref{eq:fdconv2} t
 \end{figure}
 
 \vspace{-0.5cm}
-In figure~\ref{fig:cnn-npe}, we use box-plots to describe $D_\mathrm{w}$ distributions. In figure~\ref{fig:cnn-npe}, $D_w$ is the smallest for one PE.  $D_w$ stops increasing with $N_\mathrm{PE}$ at about 6 PEs, where the PE times are the most challenging to extract.  When $N_\mathrm{PE}$ is more than 6, pile-ups tend to produce a continuous waveform and the average PE time accuracy stays flat. Thus waveform analysis is the most important in recovering time accuracy for PEs less than 10.
+In figure~\ref{fig:cnn-npe}, $D_w$ is the smallest for one PE.  $D_w$ stops increasing with $N_\mathrm{PE}$ at about 6 PEs, where the PE times are the most challenging to extract.  When $N_\mathrm{PE}$ is more than 6, pile-ups tend to produce a continuous waveform and the average PE time accuracy stays flat. Thus waveform analysis is the most important in recovering time accuracy for PEs less than 10.
 
 Such small $D_\mathrm{w}$ in figure~\ref{fig:cnn-npe} provides a precise matching of waveforms horizontally to guarantee effective $\hat{\alpha}$ scaling, explaining why $\mathrm{RSS}$ is also small in figure~\ref{fig:cnn}.
 
@@ -272,7 +272,7 @@ Slawski and Hein~\cite{slawski_non-negative_2013} proved that in deconvolution p
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/xiaopeipchargestats.pgf}}
-    \caption{\label{fig:fitting-npe} $D_\mathrm{w}$ histogram and its distributions conditioned \\ on $N_{\mathrm{PE}}$, box-plot explained in figure~\ref{fig:cnn-performance}.}
+    \caption{\label{fig:fitting-npe} $D_\mathrm{w}$ histogram and its distributions conditioned \\ on $N_{\mathrm{PE}}$, errorbar explained in figure~\ref{fig:cnn-performance}.}
   \end{subfigure}
   \begin{subfigure}{.5\textwidth}
     \centering
@@ -309,7 +309,7 @@ We generate posterior samples of $t_0$ and $\bm{q'}$ by Hamiltonian Monte Carlo~
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/mcmcchargestats.pgf}}
-    \caption{\label{fig:mcmc-npe} $D_\mathrm{w}$ histogram and its distributions conditioned \\ on $N_{\mathrm{PE}}$, box-plot explained in figure~\ref{fig:cnn-performance}.}
+    \caption{\label{fig:mcmc-npe} $D_\mathrm{w}$ histogram and its distributions conditioned \\ on $N_{\mathrm{PE}}$, errorbar explained in figure~\ref{fig:cnn-performance}.}
   \end{subfigure}
   \begin{subfigure}{.5\textwidth}
     \centering
@@ -359,7 +359,7 @@ We name the method \emph{fast stochastic matching pursuit}~(FSMP) after \emph{fa
   \begin{subfigure}[b]{.45\textwidth}
     \centering
     \resizebox{1.05\textwidth}{!}{\input{figures/fsmpchargestats.pgf}}
-    \caption{\label{fig:fsmp-npe} $D_\mathrm{w}$ histogram and distributions conditioned on $N_{\mathrm{PE}}$, box-plot explained in figure~\ref{fig:cnn-performance}.}
+    \caption{\label{fig:fsmp-npe} $D_\mathrm{w}$ histogram and distributions conditioned on $N_{\mathrm{PE}}$, errorbar explained in figure~\ref{fig:cnn-performance}.}
   \end{subfigure}
   \hspace{0.5em}
   \begin{subfigure}[b]{.55\textwidth}
