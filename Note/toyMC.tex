@@ -158,17 +158,17 @@ To characterize the difference between $\hat{t}_\mathrm{1st}$ and $\hat{t}_\math
   \begin{subfigure}{.49\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/vs-deltadiv.pgf}}
-    \caption{\label{fig:reso-diff} Absolute time resolution}
+    \caption{\label{fig:reso-diff} Absolute time resolutions.}
   \end{subfigure}
   \begin{subfigure}{.49\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/vs-deltadiv-r.pgf}}
-    \caption{\label{fig:reso-diff-r} Relative time resolution, $\sigma_{\mathrm{1st}}/\sigma_{\mathrm{ALL}}$}
+    \caption{\label{fig:reso-diff-r} Relative time resolutions $\sqrt{\frac{\Var[\hat{t}_{\mathrm{1st}} - t_0]}{\Var[\hat{t}_\mathrm{ALL} - t_0]}}$.}
   \end{subfigure}
-  \caption{Time resolution comparisons between $\hat{t}_{\mathrm{ALL}}$~(solid lines, when using the information of all PEs) and $\hat{t}_\mathrm{1st}$~(dashed lines, using the first PE instead of the threshold crossing time to eliminate the influence from TDC).  The difference is manifested especially when $\sigma_\ell$ and $\mu$ are large. The three colors are different cases of $(\tau_\ell, \sigma_\ell)/\si{ns}$ representing the scintillation with ultra-fast PMTs~$(20, 0)$, Cherenkov~$(0, 5)$ and scintillation coupled with PMT TTS~$(20, 5)$. The performance of waveform analysis lies between $\sigma_{\mathrm{1st}}$ and $\sigma_{\mathrm{ALL}}$. }
+  \caption{Time resolution comparisons between $\hat{t}_{\mathrm{ALL}}$~(solid lines, when using the information of all PEs) and $\hat{t}_\mathrm{1st}$~(dashed lines, using the first PE instead of the threshold crossing time to eliminate the influence from TDC).  The difference is manifested especially when $\sigma_\ell$ and $\mu$ are large. The three colors are different cases of $(\tau_\ell, \sigma_\ell)/\si{ns}$ representing the scintillation with ultra-fast PMTs~$(20, 0)$, Cherenkov~$(0, 5)$ and scintillation coupled with PMT TTS~$(20, 5)$.}
 \end{figure}
 
-Nevertheless, in general for $\sigma_\ell > 0$ and $\mu >0$, we notice that TDC or equivalent algorithms to $\hat{t}_\mathrm{1st}$ imposes significant resolution losses.  For Cherenkov and scintillation experiments with non-negligible PMT TTS and occupancy, we shall explore more sophisticated waveform analysis algorithms to go beyond $\hat{t}_{\mathrm{1st}}$ and recover the accuracy of $\hat{t}_\mathrm{ALL}$ in eq.~\eqref{eq:2} from waveform in eq.~\eqref{eq:1}.
+Nevertheless, in general for $\sigma_\ell > 0$ and $\mu >0$, we notice that TDC or equivalent algorithms to $\hat{t}_\mathrm{1st}$ imposes significant resolution loss.  For Cherenkov and scintillation experiments with non-negligible PMT TTS and occupancy, we shall explore more sophisticated waveform analysis algorithms to go beyond $\hat{t}_{\mathrm{1st}}$ and recover the accuracy of $\hat{t}_\mathrm{ALL}$ in eq.~\eqref{eq:2} from waveform in eq.~\eqref{eq:1}.
 
 \subsubsection{Intensity $\mu$}
 \label{sec:intensity-mu}
