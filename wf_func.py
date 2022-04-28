@@ -252,8 +252,11 @@ def flow(cx, p1, z, N, sig2s, sig2w, mus, A, p_cha, mu_t, TRIALS=2000):
     c_cha = np.cumsum(p_cha) # cha: charge; p_cha: pdf of LucyDDM charge (由 charge 引导的 PE 强度流先验)
     home_s = np.interp(istar, xp=np.insert(c_cha, 0, 0), fp=np.arange(N+1)) # 根据 p_cha 采样得到的 PE 序列。供以后的产生过程使用。这两行是使用了 InverseCDF 算法进行的MC采样。
 
+    # p_cha = interp1d(np.arange(N), p_cha)
+
+    # mu_t: μ_total，LucyDDM 给出的 μ 猜测；NPE0 是 PE 序列初值 s_0 的 PE 数。
     # NPE0 = int(mu_t + 0.5)
-    NPE0 = round(mu_t) # mu_t: μ_total，LucyDDM 给出的 μ 猜测；NPE0 是 PE 序列初值 s_0 的 PE 数。
+    NPE0 = round(mu_t)
     # t 的位置，取值为 [0, N)
     s = list(np.interp((np.arange(NPE0) + 0.5) / NPE0, xp=np.insert(c_cha, 0, 0), fp=np.arange(N+1))) # MCMC 链的 PE configuration 初值 s0
     ν = 0
@@ -310,6 +313,7 @@ def flow(cx, p1, z, N, sig2s, sig2w, mus, A, p_cha, mu_t, TRIALS=2000):
                     Δν1, Δcx1, Δz1 = move(*combine(A, cx + Δcx, nloc), z + Δz, 1, mus, sig2s, A)
                     Δν += Δν1
                     Δν += np.log(p_cha[int(nloc)]) - np.log(p_cha[int(loc)])
+                    # Δν += np.log(p_cha(nloc)) - np.log(p_cha(loc))
                     if Δν >= accept:
                         s[op] = nloc
                         Δcx += Δcx1

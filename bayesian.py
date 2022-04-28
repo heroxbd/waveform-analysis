@@ -254,8 +254,10 @@ def fsmp_inference(a0, a1):
         # nu_space_prior = np.array([wff.nu_direct(y, A, c_star[j], mus, sig2s, sig2w, p1_truth) for j in range(num)])
         # elbo_i = wff.elbo(nu_space_prior)
 
-        ilp_cha = interp1d(np.arange(len(cha)), np.log(cha.sum()) - np.log(cha))
-        guess = ilp_cha(np.clip(es_history['loc'], 0, len(cha) - 1))
+        ilp_cha = np.log(cha.sum()) - np.log(cha)
+        guess = ilp_cha[es_history['loc'].astype(int)]
+        # ilp_cha = interp1d(np.arange(len(cha)), np.log(cha.sum()) - np.log(cha))
+        # guess = ilp_cha(np.clip(es_history['loc'], 0, len(cha) - 1))
         es_history['loc'] = np.interp(es_history['loc'], xp=np.arange(0.5, len(tlist)), fp=tlist)
         ans = opti.fmin_l_bfgs_b(lambda x: -np.sum(wff.log_convolve_exp_norm(es_history['loc'] - x, Tau, Sigma)), x0=[t0_t], approx_grad=True, bounds=[b_t0], maxfun=500000)
         t00 = ans[0].item() if ans[-1]['warnflag'] == 0 else t0_t
@@ -356,7 +358,7 @@ elif method == 'fsmp':
     ts = np.zeros(N, dtype=sdtp)
     ts['TriggerNo'] = ent['TriggerNo'][:N]
     ts['ChannelID'] = ent['ChannelID'][:N]
-    fsmp_inference(0, 200)
+    # fsmp_inference(0, 200)
     # import sys
     # sys.exit()
     with Pool(min(args.Ncpu, cpu_count())) as pool:
