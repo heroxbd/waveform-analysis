@@ -132,7 +132,7 @@ whigh = np.max(whigh[~np.isnan(whigh)]) * 1.05
 rhigh = np.array([[np.max(mts[key]['RSS'])] for key in mts.keys()])
 rhigh = np.max(rhigh[~np.isnan(rhigh)]) * 1.05
 
-lim = {'deltadiv':np.array([[0.3, 0.5]]), 'wdist':np.array([[1.0, 1.5]]), 'rss':np.array([[100, 200]])}
+lim = {'deltadiv':np.array([[0.3, 0.5]]), 'wdist':np.array([[1.5, 2.0]]), 'rss':np.array([[150, 300]])}
 
 fig_t0_resolution = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
 gs_t0_resolution = gridspec.GridSpec(len(Sigma), len(Tau), figure=fig_t0_resolution, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
