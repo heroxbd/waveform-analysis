@@ -116,7 +116,7 @@ We have added a paragraph to explain the motivation of waveform shifting.  Our p
 What waveform is being shifted ? What is $\Delta t$ ? How is it chosen according to single PE ?
 \end{quote}
 
-If we regard the waveform as a set of smeared PE time. It should be shifted by $\Delta t$ to minimize the wasserstain distance between one PE time and a PE pulse. We have reorganized this section to reflect your question, hopefully explaining it better.
+If we regard the waveform as a set of smeared PE time. It should be shifted by $\Delta t$ to minimize the Wasserstain distance between one PE time and a PE pulse. We have reorganized this section to reflect your question, hopefully explaining it better.
 
 \begin{quote}
 Line 193: ``shift $\Delta t$ ...'' too much is left unexplained here. It is very confusing.
@@ -124,7 +124,7 @@ Line 193: ``shift $\Delta t$ ...'' too much is left unexplained here. It is very
 Section 3.3: This section introduction is thoroughly too brief and unhelpful. Deconvolution is known to be unreliable due to poor conditioning of the data. How is that handled for real analysis of data ?
 \end{quote}
 
-This is very true.  We don't think the devoncolution is suitable for waveform analysis, although many smoothing tricks exist to mitigate the poor conditioning issue.  However there is a rising trend to use deconvolution in the neutrino-experiment community.
+This is very true.  We don't think the deconvolution is suitable for waveform analysis, although many smoothing tricks exist to mitigate the poor conditioning issue.  However, there is a rising trend to use deconvolution in the neutrino-experiment community.
 
 We want to make an objective comparison here to advise against using deconvolution, in addition to the theoretical arguments.  We updated the section introduction to make it clear.  Thanks!
 
@@ -150,19 +150,19 @@ We modified Line 222 and other places to be more formal and concise.
 Line 232: thoroughly confusing and undefined.
 \end{quote}
 
-That section is lack of discussion.  We added more descriptions of CNN's mechanism in section 3.4.
+That section is lack discussion.  We added more descriptions of CNN's mechanism in section 3.4.
 
 \begin{quote}
 Line 234: As discussed in section 3.1.3 ... sparsity ... The issue of sparsity is not discussed in section 3.1.3.
 \end{quote}
 
-Sorry, that was our mistake. We now discuss sparsity of CNN just after this line in section 3.4. Sparsity is also discussed in 4.2, but not in 3.1.3, so we have corrected the hyperlink.
+Sorry, that was our mistake. We now discuss the sparsity of CNN just after this line in section 3.4. Sparsity is also discussed in 4.2, but not in 3.1.3, so we have corrected the hyperlink.
 
 \begin{quote}
 Figure 7 caption, line 238, line 242: This whole section has many undefined concepts and issues. what is a ``kernel = 21'' ? what are number of channels ?
 \end{quote}
 
-By expanding the CNN section and give the explicit calculation formulae, those concepts are defined in the manuscript.
+By expanding the CNN section and giving the explicit calculation formulae, those concepts are defined in the manuscript.
 
 \begin{quote}
     The behavior of $D_W$ depends on the assumed parameters of the pulse. The statement on line 238 is stated as a general statement. It is not a general result. 
@@ -173,7 +173,8 @@ We remove the statement ``the PE times are the most challenging to extract at ab
 \begin{quote}
     What is ``matching of waveforms horizontally'' ?
 \end{quote}
-We change ``precise matching of waveforms horizontally'' to ``precise matching of waveforms horizontally in the time axis'' to be more clear. The ``precise matching'' means PE time are estimated more precisely. 
+
+We change ``precise matching of waveforms horizontally'' to ``precise matching of waveforms horizontally in the time axis'' to be more clear. The ``precise matching'' means PE time is estimated more precisely. 
 
 \begin{quote}
     What is effective $\hat{\alpha}$ scaling ?
@@ -197,7 +198,7 @@ Yes! If NPE is large, all the methods have the same resolution as charge integra
 If $N_{PE}$ is small the gain fluctuation will prevent a good estimate, but it is still reasonably known.
 \end{quote}
 
-In photon-counting mode it is reasonably known, but in section 2.3.2 and eq. (2.8) we show that there is (1 + Var[q]) room of improvement from integration.
+In photon-counting mode, it is reasonably known, but in section 2.3.2 and eq. (2.8) we show that there is (1 + Var[q]) room for improvement from integration.
 
 Any small improvement in the precision of counting NPE directly converts to a boost in energy resolution. For example, an improvement of 10\% energy resolution will shorten the JUNO measurement of neutrino mass ordering from 6 years to 3 years.
 
@@ -211,7 +212,7 @@ With the grid $t'$, PE times are fixed and only $q'$ can be varied.  No PEs at s
 Fig. 9: The demonstration is just not generic enough. The pulse structure assumed is relatively compact with only a few photons and with good single PE resolution.
 \end{quote}
 
-No it is not generic, but it is typical in neutrino and dark matter experiments to have $\sim 4$ PEs in a PMT channel.  Some of them are even lower. The purpose is to plot different algorithms on the same waveform, as supplementary illustrations to the formulae.
+No, it is not generic, but it is typical in neutrino and dark matter experiments to have $\sim 4$ PEs in a PMT channel.  Some of them are even lower. The purpose is to plot different algorithms on the same waveform, as supplementary illustrations to the formulae.
 
 The 20-30 PE cases are covered later in the final figure.
 
@@ -233,12 +234,11 @@ On line 238 for CNN, $D_\mathrm{w}$ is a loss function, it stops increasing mean
 Line 324: I very much suggest the authors rewrite this paper based on only the FSMP technique and provide evidence with data that it works well. And provide much more detail on its performance for a variety of conditions.
 \end{quote}
 
-On line 324 for the efficiency of MCMC, the MCMC is a critical step towards FSMP.  FSMP it built upon MCMC, only employing several clever tricks to deal with nuisance parameters, likelihoods and varying number
-of variables.
+On line 324 for the efficiency of MCMC, the MCMC is a critical step toward FSMP.  FSMP is built upon MCMC, only employing several clever tricks to deal with nuisance parameters, likelihoods and a varying number of variables.
 
-The suggestion is well considered.  We shall follow up a paper on FSMP tested with data from different PMTs and various conditions, and also on the convergence, hyperparameters of FSMP.  This paper fits in the gap of all the undocumented algorithms in the wild, and sets the stage for the upcoming one.
+The suggestion is well considered.  We shall follow up a paper on FSMP tested with data from different PMTs and various conditions, and also on the convergence, and hyperparameters of FSMP.  This paper fits in the gap of all the undocumented algorithms in the wild, and sets the stage for the upcoming one.
 
-Our coverage of methods in this paper are based on 2 criteria:
+Our coverage of methods in this paper is based on 2 criteria:
 
 \begin{itemize}
     \item widely used but poorly documented algorithms
@@ -263,6 +263,6 @@ A few percent worse is significant for neutrino and dark matter experiments.  Ev
 Secondly, the result is inconsistent with the earlier Fig. 3. Only modest improvement is expected with waveform analysis and only under some circumstances according to Fig. 3.
 \end{quote}
 
-We have reformed the tonality around the text of Fig. 3 to emphasize the resolution losses by 1st-PE estimator.  Except only 2 special cases (exponential light curve or 0-1 count region), the improvement is far more significant (x2 difference) in most of the experimental setups.
+We have reformed the tonality around the text of Fig. 3 to emphasize the resolution losses by the 1st-PE estimator.  Except for only 2 special cases (exponential light curve or 0-1 count region), the improvement is far more significant (x2 difference) in most of the experimental setups.
 
 \end{document}
