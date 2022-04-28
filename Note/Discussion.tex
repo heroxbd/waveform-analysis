@@ -12,7 +12,7 @@ We constrain the candidates by time consumption, algorithm category and $D_\math
     \caption{\label{fig:chargesummary} Performance of algorithms in terms of $D_\mathrm{w}$ and time consumption, evaluated on the same dataset as figure~\ref{fig:method}. Central points are the average results of $\num[retain-unity-mantissa=false]{1e4}$ waveforms from specific $\mu$ values.  Error bars are 5--95 percentiles.  Fitting stands for direct charge fitting. The time consumed by Fitting, MCMC and FSMP include the LucyDDM pre-conditioner's initialization time.  CNN's time consumption is measured for inference in two conditions: GPU\protect\footnotemark~(dashed error bars) and CPU\protect\footnotemark~(solid error bars).  Training a CNN is a one-time job, and its cost is not included in the plot.}
 \end{figure}
 \addtocounter{footnote}{-2}
-\stepcounter{footnote}\footnotetext{Graphics card of NVIDIA\textsuperscript{\textregistered} Tesla A100. }
+\stepcounter{footnote}\footnotetext{One NVIDIA\textsuperscript{\textregistered} A100 GPU (40GB PCIe). }
 \stepcounter{footnote}\footnotetext{One CPU core of AMD EYPC\texttrademark\ 7742. }
 
 The $D_\mathrm{w}$ performance of waveform shifting, peak finding and Fourier deconvolution are suboptimal.  Like CNN, they are the fastest because no iteration is involved.  Fitting has $\num{\sim 100}$ iterations, while LucyDDM and FSMP have $\num{\sim 1000}$ iterations, making them 1-2 orders of magnitudes slower.  MCMC is too expansive and its principle is not too different from FSMP.  We shall focus on CNN, LucyDDM, Fitting and FSMP in the following.  
@@ -35,10 +35,11 @@ The $D_\mathrm{w}$ and RSS dependence on $\mu$ of LucyDDM, Fitting, CNN and FSMP
 CNN and Fitting are the kings of $D_\mathrm{w}$ and RSS, because their loss functions are chosen accordingly.  It is informative to study the $\hat{q}_i$ distribution that is not related to the loss function of any method.
 
 \subsection{Charge fidelity and sparsity}
+\label{sec:sparsity}
 
 All the discussed methods output $\hat{q}_i$ as the inferred charge of the PE at $t_i'$.  Evident in figure~\ref{fig:recchargehist}, FSMP retains the true charge distribution.  It is the only method modeling PE correctly.
 
-In contrast, LucyDDM, Fitting and CNN distributions are severely distorted.  During the optimization process of $D_\mathrm{w}$ or RSS, $N_\mathrm{s}$ is a constant. Many $\hat{q}_i$ are inferred to be fragmented values.  Retaining charge distribution is a manifestation of sparsity.  FSMP has the best sparsity because it chooses a PE configuration $\bm{z}$ before fitting $\hat{q}_i$.  CNN is somehow better than Fitting, although the latter in theory has self-regulated sparsity.  It is interesting to notice, but the mechanism is unknown to us.
+In contrast, LucyDDM, Fitting and CNN distributions are severely distorted.  During the optimization process of $D_\mathrm{w}$ or RSS, $N_\mathrm{s}$ is a constant. Many $\hat{q}_i$ are inferred to be fragmented values.  Retaining charge distribution is a manifestation of sparsity.  FSMP has the best sparsity because it chooses a PE configuration $\bm{z}$ before fitting $\hat{q}_i$.  Since CNN is $D_\mathrm{w}$ orientated discussed in section~\ref{sec:cnn}, it is better than fitting, although the latter has self-regulated sparsity in theory.
 
 \begin{figure}[H]
   \centering
