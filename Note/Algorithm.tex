@@ -275,27 +275,27 @@ Similar to eq.~\eqref{eq:fdconv2}, the output of CNN should be scaled by $\hat{\
 \label{sec:regression}
 With the generative waveform model in eq.~\eqref{eq:1}, regression is ideal for analysis. Although computational complexity hinders the applications of regression by the vast volumes of raw data, the advancement of sparse models and big data infrastructures strengthens the advantage of regression.
 
+The truth $N_\mathrm{PE}$ is unknown and formulating an explicit trans-dimensional model is expansive.  So, in the first two methods, we use the grid representation of PE sequence $q'_j, j\in \{1\cdots N_\mathrm{s}\}$ introduced in \ref{sec:cnn} in order to avoid cross-dimensional issue.  We shall solve the issue and turn back to length-varying representation in section~\ref{subsec:fsmp}.
+
+Regression methods adjust $\{q'_j\}$ to fit eq.~\eqref{eq:gd}:
 \begin{equation}
   \label{eq:gd}
-  w'(t) = \sum_{i=1}^{N_\mathrm{s}}q'_iV_\mathrm{PE}(t-t'_i).
+  w'(t) = \sum_{j=1}^{N_\mathrm{s}}q'_jV_\mathrm{PE}(t-t'_j).
 \end{equation}
-When $\{t'_i\}$ is dense enough, $\{\hat{q}_i\}$ determines the inferred PE distribution $\hat{\phi}(t)$,
+When $\{t'_i\}$ is dense enough, $\{\hat{q}_j\}$ determines the inferred PE distribution $\hat{\phi}(t)$,
 \begin{equation}
   \label{eq:gd-phi}
-  \hat{\phi}(t) = \sum_{i=1}^{N_\mathrm{s}}\hat{q}_i\delta(t-t'_i).
+  \hat{\phi}(t) = \sum_{j=1}^{N_\mathrm{s}}\hat{q}_j\delta(t-t'_j).
 \end{equation}
-From the output $\hat{\phi}_\mathrm{dec}(t)$ of a deconvolution method in section~\ref{sec:lucyddm}, we confidently leave out all the $t'_i$ that $\hat{\phi}_\mathrm{dec}(t_i')=0$ in eq.~\eqref{eq:gd-phi} to reduce the number of parameters and the complexity.
-
-
-We attempted to replace the dense $\bm{t'}$ grid in eq.~\eqref{eq:gd} with a length-varying vector of sparse PEs. However, the truth $N_\mathrm{PE}$ is unknown and formulating an explicit trans-dimensional model is expansive.  We shall leave it to section~\ref{subsec:fsmp}.
+From the output $\hat{\phi}_\mathrm{dec}(t)$ of a deconvolution method in section~\ref{sec:lucyddm}, we confidently leave out all the $t'_j$ that $\hat{\phi}_\mathrm{dec}(t_j')=0$ in eq.~\eqref{eq:gd-phi} to reduce the number of parameters and the complexity.
 
 \subsubsection{Direct charge fitting}
 \label{sec:dcf}
 
-Fitting the charges $q'_i$ in eq.~\eqref{eq:gd} directly by minimizing RSS of $w'(t)$ and $w(t)$, we get
+Fitting the charges $q'_j$ in eq.~\eqref{eq:gd} directly by minimizing RSS of $w'(t)$ and $w(t)$, we get
 \begin{equation}
   \label{eq:gd-q}
-  \bm{\hat{q}} = \arg \underset{q'_i \ge 0}{\min}~\mathrm{RSS}\left[w'(t),w(t)\right].
+  \bm{\hat{q}} = \arg \underset{q'_j \ge 0}{\min}~\mathrm{RSS}\left[w'(t),w(t)\right].
 \end{equation}
 RSS of eq.~\eqref{eq:gd-q} does not suffer at the sparse configuration in figure~\ref{fig:l2} provided that the dense grid in eq.~\eqref{eq:gd} covers all the PEs.
 
@@ -324,19 +324,19 @@ Chaining the $q'_i$ distribution~(section~\ref{subsec:spe}), the charge fitting 
 \begin{equation}
   \begin{aligned}
     t_{0} &\sim \mathcal{U}(0, \overline{t_0}) \\
-    \mu_i &= \mu \int_{t'_i-\frac{\Delta t'}{2}}^{t'_i+\frac{\Delta t'}{2}} \phi(t' - t_0)\mathrm{d}t' \approx \mu\phi(t'_i - t_0)\Delta{t'} \\
-    z_i &\sim \mathcal{B}(\mu_i) \\
-    q'_{i,0}&=0\\
-    q'_{i,1}& \sim \Gamma(k=1/0.4^2, \theta=0.4^2)\\
-    q'_i &= q'_{i,z_i}\\
-    w'(t) & = \sum_{i=1}^{N_\mathrm{s}}q'_iV_\mathrm{PE}(t-t'_i)\\
+    \mu_j &= \mu \int_{t'_j-\frac{\Delta t'}{2}}^{t'_j+\frac{\Delta t'}{2}} \phi(t' - t_0)\mathrm{d}t' \approx \mu\phi(t'_j - t_0)\Delta{t'} \\
+    z_j &\sim \mathcal{B}(\mu_j) \\
+    q'_{j,0}&=0\\
+    q'_{j,1}& \sim \Gamma(k=1/0.4^2, \theta=0.4^2)\\
+    q'_j &= q'_{j,z_j}\\
+    w'(t) & = \sum_{j=1}^{N_\mathrm{s}}q'_jV_\mathrm{PE}(t-t'_j)\\
     w(t) &\sim \mathcal{N}(w'(t), \Var[\epsilon])
   \end{aligned}
   \label{eq:mixnormal}
 \end{equation}
-where $\mathcal{U}$, $\mathcal{B}$ and $\Gamma$ stand for uniform, Bernoulli and gamma distributions, $\overline{t_0}$ is an upper bound of $t_0$, and $q'_i$ is a mixture of 0 (no PE) and normally distributed $q'_{i,1}$ (1 PE). When the expectation $\mu_i$ of a PE hitting $(t'_{i} - \frac{\Delta t'}{2}, t'_{i} + \frac{\Delta t'}{2})$ is small enough, that 0-1 approximation is valid.  The inferred waveform $w'(t)$ differs from observable $w(t)$ by a white noise $\epsilon(t) \sim \mathcal{N}(0, \Var[\epsilon])$ motivated by eq.~\eqref{eq:1}.  When an indicator $z_i=0$, it turns off $q'_i$, reducing the number of parameters by one.  That is how eq.~\eqref{eq:mixnormal} achieves sparsity.
+where $\mathcal{U}$, $\mathcal{B}$ and $\Gamma$ stand for uniform, Bernoulli and gamma distributions, $\overline{t_0}$ is an upper bound of $t_0$, and $q'_j$ is a mixture of 0 (no PE) and normally distributed $q'_{j,1}$ (1 PE). When the expectation $\mu_j$ of a PE hitting $(t'_{j} - \frac{\Delta t'}{2}, t'_{j} + \frac{\Delta t'}{2})$ is small enough, that 0-1 approximation is valid.  The inferred waveform $w'(t)$ differs from observable $w(t)$ by a white noise $\epsilon(t) \sim \mathcal{N}(0, \Var[\epsilon])$ motivated by eq.~\eqref{eq:1}.  When an indicator $z_j=0$, it turns off $q'_j$, reducing the number of parameters by one.  That is how eq.~\eqref{eq:mixnormal} achieves sparsity.
 
-We generate posterior samples of $t_0$ and $\bm{q'}$ by Hamiltonian Monte Carlo~(HMC)~\cite{neal_mcmc_2012}, a variant of Markov chain Monte Carlo suitable for high-dimensional problems. Construct $\hat{t}$ and $\hat{q}_i$ as the mean estimators of posterior samples $t_0$ and $q'_i$ at $z_i=1$.  Unlike the $\hat{t}_\mathrm{KL}$ discussed in section~\ref{sec:pseudo}, $\hat{t}_0$ is a direct Bayesian estimator from eq.~\eqref{eq:mixnormal}.  We construct $\hat{\phi}(t)$ by eq.~\eqref{eq:gd-phi} and $\hat{w}(t)$ by $\hat{\phi} \otimes V_\mathrm{PE}$. RSS and $D_\mathrm{w}$ are then calculated according to eqs.~\eqref{eq:rss} and \eqref{eq:numerical}.
+We generate posterior samples of $t_0$ and $\bm{q'}$ by Hamiltonian Monte Carlo~(HMC)~\cite{neal_mcmc_2012}, a variant of Markov chain Monte Carlo suitable for high-dimensional problems. Construct $\hat{t}$ and $\hat{q}_j$ as the mean estimators of posterior samples $t_0$ and $q'_j$ at $z_j=1$.  Unlike the $\hat{t}_\mathrm{KL}$ discussed in section~\ref{sec:pseudo}, $\hat{t}_0$ is a direct Bayesian estimator from eq.~\eqref{eq:mixnormal}.  We construct $\hat{\phi}(t)$ by eq.~\eqref{eq:gd-phi} and $\hat{w}(t)$ by $\hat{\phi} \otimes V_\mathrm{PE}$. RSS and $D_\mathrm{w}$ are then calculated according to eqs.~\eqref{eq:rss} and \eqref{eq:numerical}.
 
 \begin{figure}[H]
   \begin{subfigure}{.5\textwidth}
@@ -351,7 +351,7 @@ We generate posterior samples of $t_0$ and $\bm{q'}$ by Hamiltonian Monte Carlo~
   \end{subfigure}
   \caption{\label{fig:mcmc-performance}Demonstration of MCMC with $\num[retain-unity-mantissa=false]{1e4}$ waveforms in~\subref{fig:mcmc-npe} and one waveform in~\subref{fig:mcmc} sampled from the same setup as figure~\ref{fig:method}.  Although using a more dedicated model, MCMC performs worse than the direct charge fitting in figure~\ref{fig:dcf}. We suspect the Markov chain is not long enough.}
 \end{figure}
-Although we imposed a prior distribution in eq.~\eqref{eq:mixnormal} with $\E[q_i]=1$, The charges $\hat{q}_i$ in figure~\ref{fig:fitting} are still less than 1.  The $D_\mathrm{w}$ marginal distribution in figure~\ref{fig:mcmc-npe} is less smooth than that of the direct charge fitting in figure~\ref{fig:fitting-npe}.  Similarly, RSS in figure~\ref{fig:mcmc} is slightly worse than that in figure~\ref{fig:fitting}.  We suspect the Markov chain has not finally converged due to the trans-dimensional property of eq.~\eqref{eq:mixnormal}.  Extending the chain is not a solution because MCMC is already much slower than direct fitting in section~\ref{sec:dcf}.  We need an algorithm that pertains to the model of eq.~\eqref{eq:mixnormal} but much faster than MCMC.
+Although we imposed a prior distribution in eq.~\eqref{eq:mixnormal} with $\E[q_j]=1$, The charges $\hat{q}_j$ in figure~\ref{fig:fitting} are still less than 1.  The $D_\mathrm{w}$ marginal distribution in figure~\ref{fig:mcmc-npe} is less smooth than that of the direct charge fitting in figure~\ref{fig:fitting-npe}.  Similarly, RSS in figure~\ref{fig:mcmc} is slightly worse than that in figure~\ref{fig:fitting}.  We suspect the Markov chain has not finally converged due to the trans-dimensional property of eq.~\eqref{eq:mixnormal}.  Extending the chain is not a solution because MCMC is already much slower than direct fitting in section~\ref{sec:dcf}.  We need an algorithm that pertains to the model of eq.~\eqref{eq:mixnormal} but much faster than MCMC.
 
 \subsubsection{Fast stochastic matching pursuit}
 \label{subsec:fsmp}
