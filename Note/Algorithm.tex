@@ -3,7 +3,7 @@
 
 Waveform analysis is to obtain $t_i$ and $q_i$ estimators $\hat{t}_i$ and $\hat{q}_i$ from waveform $w(t)$, where the output indices $i$ are from 1 to $\hat{N}_\mathrm{PE}$ and $\hat{N}_\mathrm{PE}$ is an estimator of $N_\mathrm{PE}$ in eq.~\eqref{eq:lc-sample}. Figure~\ref{fig:pile} illustrates the input waveform $w(t)$ and the outputs charge $\bm{\hat{t}}, \hat{\bm{q}}$ obtained from $w(t)$, where boldface $\hat{\bm{t}}$ denotes the vector $\hat{t}_i$. 
 
-$\hat{N}_\mathrm{PE}$ fails to estimate $N_\mathrm{PE}$ due to the fluctuation of $q_i$ and the ambiguity of $\hat{t}_i$. For example, 1, 2 and even 3~PEs can generate the same charge as $1.6$ units.  A single PE charged $1$ might be misinterpreted as 2~PEs at consecutive $\hat{t}_i$ and $\hat{t}_{i+1}$ with $\hat{q}_i=\hat{q}_{i+1}=0.5$.
+$\hat{N}_\mathrm{PE}$ may fail to estimate $N_\mathrm{PE}$ due to the fluctuation of $q_i$ and the ambiguity of $\hat{t}_i$. For example, 1, 2 and even 3~PEs can generate the same charge as $1.6$ units.  A single PE charged $1$ might be misinterpreted as 2~PEs at consecutive $\hat{t}_i$ and $\hat{t}_{i+1}$ with $\hat{q}_i=\hat{q}_{i+1}=0.5$.
 
 \subsection{Evaluation criteria}
 \label{sec:criteria}
@@ -38,7 +38,7 @@ where $C$ is a constant regarding $t_0$ and $\mu$.  Define the time KL estimator
   \end{aligned}
 \end{equation}
 which reduces to an MLE like eq.~\eqref{eq:2} if $\hat{q}_i\equiv 1$.  $\hat{t}_\mathrm{KL}$ estimates $t_0$ when $t_i, q_i, N_\mathrm{PE}$ are all uncertain.
-Denoting $\Delta t_0$ as $\hat{t}_\mathrm{KL} - t_0$, the standard deviation $\sigma_\mathrm{KL}$ of $\Delta t_0$ on a batch of waveforms is the resolution of an algorithm.
+Similar to $\hat{t}_\mathrm{1st}$ and $\hat{t}_\mathrm{ALL}$, we define the standard deviation $\sqrt{\Var[\hat{t}_\mathrm{KL} - t_0]}$ to the resolution of an algorithm via KL divergence.
 
 The intensity KL estimator is,
 \begin{equation}
@@ -103,12 +103,12 @@ Since the whole over-threshold waveform sample points are treated as PEs, one PE
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/threshold.pgf}}
-    \caption{\label{fig:shifting} A waveform shifting example gives \\ $\Delta t_0=\SI{-0.69}{ns}$, $\mathrm{RSS}=\SI{369.6}{mV^2}$, $D_\mathrm{w}=\SI{3.11}{ns}$.}
+    \caption{\label{fig:shifting} A waveform shifting example gives \\ $\hat{t}_\mathrm{KL}-t_0=\SI{-0.69}{ns}$, $\mathrm{RSS}=\SI{369.6}{mV^2}$, $D_\mathrm{w}=\SI{3.11}{ns}$.}
   \end{subfigure}
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/findpeak.pgf}}
-    \caption{\label{fig:peak} A peak finding example gives \\ $\Delta t_0=\SI{-1.93}{ns}$, $\mathrm{RSS}=\SI{266.9}{mV^2}$, $D_\mathrm{w}=\SI{2.40}{ns}$.}
+    \caption{\label{fig:peak} A peak finding example gives \\ $\hat{t}_\mathrm{KL} - t_0=\SI{-1.93}{ns}$, $\mathrm{RSS}=\SI{266.9}{mV^2}$, $D_\mathrm{w}=\SI{2.40}{ns}$.}
   \end{subfigure}
   \caption{\label{fig:method}Demonstrations of heuristic methods on a waveform sampled from $\mu=4$, $\tau_\ell=\SI{20}{ns}$, $\sigma_\ell=\SI{5}{ns}$ light curve conditions.  Peak finding in~\subref{fig:peak} handles charges more realistically than waveform shifting in~\subref{fig:shifting}, giving better numbers by the $\mathrm{RSS}$ and $D_\mathrm{w}$ criteria in section \ref{sec:criteria}. $\Delta t_0$ is the bias of the $\hat{t}_\mathrm{KL}$ estimator.}
 \end{figure}
@@ -156,12 +156,12 @@ Figure~\ref{fig:fd} illustrates that Fourier deconvolution outperforms heuristic
   \begin{subfigure}{0.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/fftrans.pgf}}
-    \caption{\label{fig:fd} A Fourier deconvolution example: \\ $\Delta t_0=\SI{-1.16}{ns}$, $\mathrm{RSS}=\SI{124.7}{mV^2}$, $D_\mathrm{w}=\SI{2.03}{ns}$.}
+    \caption{\label{fig:fd} A Fourier deconvolution example: \\ $\hat{t}_\mathrm{KL} - t_0=\SI{-1.16}{ns}$, $\mathrm{RSS}=\SI{124.7}{mV^2}$, $D_\mathrm{w}=\SI{2.03}{ns}$.}
   \end{subfigure}
   \begin{subfigure}{0.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/lucyddm.pgf}}
-    \caption{\label{fig:lucy} A Richardson-Lucy direct demodulation example:\\ $\Delta t_0=\SI{-0.75}{ns}$, $\mathrm{RSS}=\SI{70.3}{mV^2}$, $D_\mathrm{w}=\SI{1.10}{ns}$.}
+    \caption{\label{fig:lucy} A Richardson-Lucy direct demodulation example:\\ $\hat{t}_\mathrm{KL} - t_0=\SI{-0.75}{ns}$, $\mathrm{RSS}=\SI{70.3}{mV^2}$, $D_\mathrm{w}=\SI{1.10}{ns}$.}
   \end{subfigure}
   \caption{\label{fig:deconv}Demonstrations of deconvolution methods on a waveform sampled from the same setup as figure~\ref{fig:method}. Richardson-Lucy direct demodulation in~\subref{fig:lucy} imposes positive charges in iterations and obtains better results than Fourier deconvolution in~\subref{fig:fd}.}
 \end{figure}
@@ -232,7 +232,7 @@ Such small $D_\mathrm{w}$ in figure~\ref{fig:cnn-npe} provides a precise matchin
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/takara.pgf}}
-    \caption{\label{fig:cnn}An example giving \\ $\Delta t_0=\SI{-3.05}{ns}$, $\mathrm{RSS}=\SI{10.0}{mV^2}$, $D_\mathrm{w}=\SI{0.64}{ns}$.}
+    \caption{\label{fig:cnn}An example giving \\ $\hat{t}_\mathrm{KL} - t_0=\SI{-3.05}{ns}$, $\mathrm{RSS}=\SI{10.0}{mV^2}$, $D_\mathrm{w}=\SI{0.64}{ns}$.}
   \end{subfigure}
   \caption{\label{fig:cnn-performance}Demonstration of CNN on $\num[retain-unity-mantissa=false]{1e4}$ waveforms in~\subref{fig:cnn-npe} and one waveform in~\subref{fig:cnn} sampled from the same setup as figure~\ref{fig:method}. In figure~\subref{fig:cnn-npe}, the middle line is the mean of the distribution. The size of errorbar is from \SIrange{15.8}{84.1}{\percent} quantiles, corresponding to $\SI{\pm 1}{\sigma}$ of a Gaussian distribution. }
 \end{figure}
@@ -277,7 +277,7 @@ Slawski and Hein~\cite{slawski_non-negative_2013} proved that in deconvolution p
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/xiaopeip.pgf}}
-    \caption{\label{fig:fitting}An example giving \\ $\Delta{t_0}=\SI{-3.23}{ns}$, $\mathrm{RSS}=\SI{7.64}{mV^2}$,$D_\mathrm{w}=\SI{0.68}{ns}$.}
+    \caption{\label{fig:fitting}An example giving \\ $\hat{t}_\mathrm{KL} - t_0=\SI{-3.23}{ns}$, $\mathrm{RSS}=\SI{7.64}{mV^2}$,$D_\mathrm{w}=\SI{0.68}{ns}$.}
   \end{subfigure}
   \caption{\label{fig:dcf}Demonstration of direct charge fitting with $\num[retain-unity-mantissa=false]{1e4}$ waveforms in~\subref{fig:fitting-npe} and one waveform in~\subref{fig:fitting} sampled from the same setup as figure~\ref{fig:method}.  Direct charge fitting shows a better performance than LucyDDM in figure~\ref{fig:lucy} and a comparable $D_\mathrm{w}$ to CNN in figure~\ref{fig:cnn}.}
 \end{figure}
@@ -297,11 +297,11 @@ Chaining the $q'_i$ distribution~(section~\ref{subsec:spe}), the charge fitting 
     q'_{i,1}& \sim \Gamma(k=1/0.4^2, \theta=0.4^2)\\
     q'_i &= q'_{i,z_i}\\
     w'(t) & = \sum_{i=1}^{N_\mathrm{s}}q'_iV_\mathrm{PE}(t-t'_i)\\
-    w(t) &\sim \mathcal{N}(w'(t), \sigma_\epsilon^2)
+    w(t) &\sim \mathcal{N}(w'(t), \Var[\epsilon])
   \end{aligned}
   \label{eq:mixnormal}
 \end{equation}
-where $\mathcal{U}$, $\mathcal{B}$ and $\Gamma$ stand for uniform, Bernoulli and gamma distributions, $\overline{t_0}$ is an upper bound of $t_0$, and $q'_i$ is a mixture of 0 (no PE) and normally distributed $q'_{i,1}$ (1 PE). When the expectation $\mu_i$ of a PE hitting $(t'_{i} - \frac{\Delta t'}{2}, t'_{i} + \frac{\Delta t'}{2})$ is small enough, that 0-1 approximation is valid.  The inferred waveform $w'(t)$ differs from observable $w(t)$ by a white noise $\epsilon(t) \sim \mathcal{N}(0, \sigma_\epsilon^2)$ motivated by eq.~\eqref{eq:1}.  When an indicator $z_i=0$, it turns off $q'_i$, reducing the number of parameters by one.  That is how eq.~\eqref{eq:mixnormal} achieves sparsity.
+where $\mathcal{U}$, $\mathcal{B}$ and $\Gamma$ stand for uniform, Bernoulli and gamma distributions, $\overline{t_0}$ is an upper bound of $t_0$, and $q'_i$ is a mixture of 0 (no PE) and normally distributed $q'_{i,1}$ (1 PE). When the expectation $\mu_i$ of a PE hitting $(t'_{i} - \frac{\Delta t'}{2}, t'_{i} + \frac{\Delta t'}{2})$ is small enough, that 0-1 approximation is valid.  The inferred waveform $w'(t)$ differs from observable $w(t)$ by a white noise $\epsilon(t) \sim \mathcal{N}(0, \Var[\epsilon])$ motivated by eq.~\eqref{eq:1}.  When an indicator $z_i=0$, it turns off $q'_i$, reducing the number of parameters by one.  That is how eq.~\eqref{eq:mixnormal} achieves sparsity.
 
 We generate posterior samples of $t_0$ and $\bm{q'}$ by Hamiltonian Monte Carlo~(HMC)~\cite{neal_mcmc_2012}, a variant of Markov chain Monte Carlo suitable for high-dimensional problems. Construct $\hat{t}$ and $\hat{q}_i$ as the mean estimators of posterior samples $t_0$ and $q'_i$ at $z_i=1$.  Unlike the $\hat{t}_\mathrm{KL}$ discussed in section~\ref{sec:pseudo}, $\hat{t}_0$ is a direct Bayesian estimator from eq.~\eqref{eq:mixnormal}.  We construct $\hat{\phi}(t)$ by eq.~\eqref{eq:gd-phi} and $\hat{w}(t)$ by $\hat{\phi} \otimes V_\mathrm{PE}$. RSS and $D_\mathrm{w}$ are then calculated according to eqs.~\eqref{eq:rss} and \eqref{eq:numerical}.
 
@@ -314,7 +314,7 @@ We generate posterior samples of $t_0$ and $\bm{q'}$ by Hamiltonian Monte Carlo~
   \begin{subfigure}{.5\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/mcmc.pgf}}
-    \caption{\label{fig:mcmc}An example with \\ $\Delta{t_0}=\SI{-2.48}{ns}$, $\mathrm{RSS}=\SI{16.25}{mV^2}$, $D_\mathrm{w}=\SI{0.76}{ns}$.}
+    \caption{\label{fig:mcmc}An example with \\ $\hat{t}_0 - t_0=\SI{-2.48}{ns}$, $\mathrm{RSS}=\SI{16.25}{mV^2}$, $D_\mathrm{w}=\SI{0.76}{ns}$.}
   \end{subfigure}
   \caption{\label{fig:mcmc-performance}Demonstration of MCMC with $\num[retain-unity-mantissa=false]{1e4}$ waveforms in~\subref{fig:mcmc-npe} and one waveform in~\subref{fig:mcmc} sampled from the same setup as figure~\ref{fig:method}.  Although using a more dedicated model, MCMC performs worse than the direct charge fitting in figure~\ref{fig:dcf}. We suspect the Markov chain is not long enough.}
 \end{figure}
@@ -365,10 +365,10 @@ We name the method \emph{fast stochastic matching pursuit}~(FSMP) after \emph{fa
   \begin{subfigure}[b]{.55\textwidth}
     \centering
     \resizebox{\textwidth}{!}{\input{figures/demoe2c0.pgf}}
-    \caption{\label{fig:fsmp} An example giving \\ $\Delta{t_0}=\SI{-3.97}{ns}$, $\mathrm{RSS}=\SI{17.8}{mV^2}$, $D_\mathrm{w}=\SI{0.64}{ns}$.}
+    \caption{\label{fig:fsmp} An example giving \\ $\hat{t}_0 - t_0=\SI{-3.97}{ns}$, $\mathrm{RSS}=\SI{17.8}{mV^2}$, $D_\mathrm{w}=\SI{0.64}{ns}$.}
   \end{subfigure}
   \caption{\label{fig:fsmp-performance}Demonstration of FSMP with $\num[retain-unity-mantissa=false]{1e4}$ waveforms in~\subref{fig:fsmp-npe} and one waveform in~\subref{fig:fsmp} sampled from the same setup as figure~\ref{fig:method}.  FSMP reconstructs the waveform and charges flawlessly.}
 \end{figure}
-In terms of $D_\mathrm{w}$, figure~\ref{fig:fsmp-npe} shows that FSMP is on par with CNN in figure~\ref{fig:cnn-npe}.  Figure~\ref{fig:fsmp} is a perfect reconstruction example where the true and reconstructed charges and waveforms overlap.  A bias of $\Delta{t_0}=\SI{-3.97}{ns}$ aligns with $\hat{t}_\mathrm{ALL}$ in eq.~\eqref{eq:2}, which will be covered in section~\ref{subsec:timeresolution}.  The superior performance of FSMP attributes to sparsity and positiveness of $q'_i$, correct modeling of $V_\mathrm{PE}$, $q'$ distribution and white noise.
+In terms of $D_\mathrm{w}$, figure~\ref{fig:fsmp-npe} shows that FSMP is on par with CNN in figure~\ref{fig:cnn-npe}.  Figure~\ref{fig:fsmp} is a perfect reconstruction example where the true and reconstructed charges and waveforms overlap.  A bias of $\hat{t}_0 - t_0=\SI{-3.97}{ns}$ aligns with $\hat{t}_\mathrm{ALL}$ in eq.~\eqref{eq:2}, which will be covered in section~\ref{subsec:timeresolution}.  The superior performance of FSMP attributes to sparsity and positiveness of $q'_i$, correct modeling of $V_\mathrm{PE}$, $q'$ distribution and white noise.
 
 Estimators for $t_0$ and $\mu$ in eq.~\eqref{eq:fsmpcharge} is an elegant interface to event reconstruction, eliminating the need of $\hat{t}_\mathrm{KL}$ and $\hat{\mu}_\mathrm{KL}$ in section~\ref{sec:pseudo}.
