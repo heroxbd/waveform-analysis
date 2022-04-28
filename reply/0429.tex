@@ -15,7 +15,7 @@
 \maketitle
 Dear Editor,
 
-We thank the referees for their critical comments.  They pointed out the key points to improve the paper into a clearer and more useful form to the community.
+We sincerely thank the referees for their critical comments.  They pointed out the key points to improve the paper into a clearer and more useful form to the community.
 
 \begin{quote}
 This paper is a survey of various methods for fitting and extracting optical photon intensity versus time from a photo-sensor/photo-multiplier waveform. The paper has a number of interesting points and some novel ideas, however I do not recommend publication in the present form.
@@ -51,7 +51,7 @@ Lack of data: the paper is entirely based on simulations level analysis. If the 
 
 The focus of this paper is on comparing all the available waveform analysis algorithms known to us.  It is the central theme to score the algorithms in terms of PE time and counting accuracies, which is only possible with simulation data whose truth information is known without uncertainty.
 
-To employ real world data for the benchmark of, for example, particle identification, detector optical response needs to be included besides the waveform analysis.  This will complicate the comparison and enlengthen and manuscript.
+To employ real world data for the benchmark of, for example, particle identification, detector optical response needs to be included besides the waveform analysis.  This will complicate the comparison and lengthen the manuscript.
 
 The value of this study is to establish in an ideal case the algorithm of choice.  Building upon such an understanding, we will apply it to neutrino and dark matter experiments in the field, and report in subsequent papers for the real world performance improvements in energy resolution, event topology and particle momentum reconstructions, etc.
 
@@ -65,17 +65,17 @@ Line 90: Referee is surprised by the choice of using a lognormal PDF for descrip
 
 First, it is well known that the risetime and falltime of a PMT comes from the RC constants in the equivalent (Thevenin) circuit of the PMT and cable. 
 
-Secondly, the lognormal sufffers from two problems: it is only valid for the range $t>0$, and its parameters do not have a good relationship with theunderlying PMT equivalent circuit.
+Secondly, the lognormal suffers from two problems: it is only valid for the range $t>0$, and its parameters do not have a good relationship with the underlying PMT equivalent circuit.
 
 I very much suggest the authors seriously consider redoing this analysis with a distribution that has more physical meaning than the lognormal. 
 \end{quote}
 
-We regard the distribution only valid for $t>0$ a feature for modeling PE-waveform causality.  The tail of lognormal asymptotically approaches exponential dacay shape of RC circuit. Lognormal is not an ideal shape to use, but it is the most convenient form we know of.  We speculate our conclusions do not change substantially by using a different SER pulse shape.
+We regard the distribution only valid for $t>0$ a feature for modeling PE-waveform causality.  The tail of lognormal asymptotically approaches exponential decay shape of RC circuit. Lognormal is not an ideal shape to use, but it is the most convenient form we know of.  We speculate our conclusions do not change substantially by using a different SER pulse shape.
 
-We seriously studied the literature and added a paragraph to the manuscript to explain why we use lognormal.  We look forward to more reference suggestions from our referee if the survey is incomplete.
+We seriously studied the literature and added a paragraph to the manuscript to explain why we use lognormal.  Furthermore, we look forward to more reference suggestions from our referee if the survey is incomplete.
 
 \begin{quote}
-Line 95: This number 0.25 for the relative variance of the gain seems rather small. It would correspond to a first stage gain of 16. A much more reasonable gain variance is $\sim$ 0.4 which corresponds to first stage gain of $\sim$ 6. However this creates a problem for the model if the gain is assumed to fluctuate as a Gaussian. A much more reasonable assumption is a gamma distribution as is well known in the literature.
+Line 95: This number 0.25 for the relative variance of the gain seems rather small. It would correspond to a first stage gain of 16. A much more reasonable gain variance is $\sim$ 0.4 which corresponds to first stage gain of $\sim$ 6. However, this creates a problem for the model if the gain is assumed to fluctuate as a Gaussian. A much more reasonable assumption is a gamma distribution as is well known in the literature.
 \end{quote}
 
 Very good point, thank you!  Our assumptions were not realistic.  We work the simulation with a gamma distribution of charge with 0.4*0.4 relative gain variance, and update the texts and plots.  The conclusions do not change, implying that our benchmarks are robust. 
@@ -124,7 +124,7 @@ Line 193: ``shift $\Delta t$ ...'' too much is left unexplained here. It is very
 Section 3.3: This section introduction is thoroughly too brief and unhelpful. Deconvolution is known to be unreliable due to poor conditioning of the data. How is that handled for real analysis of data ?
 \end{quote}
 
-This is very true.  We don't think the devoncolution is suitable for waveform analysis, although many smoothing trick exist to mitigate the poor conditioning issue.  However there is a rising trend to use deconvolution in the neutrino-experiment community.
+This is very true.  We don't think the devoncolution is suitable for waveform analysis, although many smoothing tricks exist to mitigate the poor conditioning issue.  However there is a rising trend to use deconvolution in the neutrino-experiment community.
 
 We want to make an objective comparison here to advise against using deconvolution, in addition to the theoretical arguments.  We updated the section introduction to make it clear.  Thanks!
 
@@ -205,23 +205,23 @@ Any small improvement in the precision of counting NPE directly converts to a bo
 Section 3.5.1: There some conceptual problems here. I do not see how RSS can work well with noise and with pulses that have a sparse tail of photons. I think this method is also too specific for a pulse that has relatively compact shape. For pulses that are long with sparse tails this will not work.
 \end{quote}
 
-With the grid $t'$, PE times are fixed and only $q'$ can be varied.  No PEs at some candidate $t_i'$ is represented by $q'=0$.  If the grid $t'$ covers all the PEs, it will work.  We added a sentense in the text to better explain it.
+With the grid $t'$, PE times are fixed and only $q'$ can be varied.  No PEs at some candidate $t_i'$ is represented by $q'=0$.  If the grid $t'$ covers all the PEs, it will work.  We added a sentence in the text to better explain it.
 
 \begin{quote}
 Fig. 9: The demonstration is just not generic enough. The pulse structure assumed is relatively compact with only a few photons and with good single PE resolution.
 \end{quote}
 
-No it is not generic, but it is typical in neutrino and dark matter experiments to have $\sim 4$ PEs in a PMT channel.  Some of them are even lower. The purpose is to plot different algorithms on the same waveform, as supplimentary illustrations to the formulae.
+No it is not generic, but it is typical in neutrino and dark matter experiments to have $\sim 4$ PEs in a PMT channel.  Some of them are even lower. The purpose is to plot different algorithms on the same waveform, as supplementary illustrations to the formulae.
 
 The 20-30 PE cases are covered later in the final figure.
 
 That said, if you insist, we can put another waveform example with more PEs.
 
 \begin{quote}
-Eq. 3.17: As remarked earlier, the assumption of a normal distribution for the charge gain is wrong. And it creates a problem for the model since with a normal distribution the charge can be negative which is unphysical.
+Eq. 3.17: As remarked earlier, the assumption of a normal distribution for the charge gain is wrong. And it creates a problem for the model since with a normal distribution the charge can be negative which is nonphysical.
 \end{quote}
 
-Gaussian is not the best model to describe the charge distribution, especially when the variance is large. We change the Gaussian to Gamma distribution to avoid unphysical negative charges. The analysis methods are mostly not affected, because for a Gaussian with mean 1 and variance $0.4^2$, 99.4\% of the distribution is positive.
+Gaussian is not the best model to describe the charge distribution, especially when the variance is large. We change the Gaussian to Gamma distribution to avoid nonphysical negative charges. The analysis methods are mostly not affected, because for a Gaussian with mean 1 and variance $0.4^2$, 99.4\% of the distribution is positive.
 
 \begin{quote}
 Line 238: I suggest not spending time in the paper on techniques that do not work well.
@@ -236,7 +236,7 @@ Line 324: I very much suggest the authors rewrite this paper based on only the F
 On line 324 for the efficiency of MCMC, the MCMC is a critical step towards FSMP.  FSMP it built upon MCMC, only employing several clever tricks to deal with nuisance parameters, likelihoods and varying number
 of variables.
 
-The suggestion is well considered.  We shall follow up a paper on FSMP tested with data from different PMTs and various conditions, and also on the convergence, hyperparameters of FSMP.  This paper fits in the gap of all the undocumented algorithms in the wild, and sets the stage for the up coming one.
+The suggestion is well considered.  We shall follow up a paper on FSMP tested with data from different PMTs and various conditions, and also on the convergence, hyperparameters of FSMP.  This paper fits in the gap of all the undocumented algorithms in the wild, and sets the stage for the upcoming one.
 
 Our coverage of methods in this paper are based on 2 criteria:
 
@@ -263,6 +263,6 @@ A few percent worse is significant for neutrino and dark matter experiments.  Ev
 Secondly, the result is inconsistent with the earlier Fig. 3. Only modest improvement is expected with waveform analysis and only under some circumstances according to Fig. 3.
 \end{quote}
 
-We have reformed the tonality around the text of Fig. 3 to ephasize the resolution losses by 1st-PE estimator.  Except only 2 special cases (exponential light curve or 0-1 count region), the improvement is far more significant (x2 difference) in most of the experimental setups.
+We have reformed the tonality around the text of Fig. 3 to emphasize the resolution losses by 1st-PE estimator.  Except only 2 special cases (exponential light curve or 0-1 count region), the improvement is far more significant (x2 difference) in most of the experimental setups.
 
 \end{document}
