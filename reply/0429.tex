@@ -1,0 +1,87 @@
+\documentclass[12pt]{article}
+\usepackage{setspace} % for \onehalfspacing and \singlespacing macros
+\onehalfspacing 
+\usepackage{amsmath}
+
+\usepackage{etoolbox}
+\AtBeginEnvironment{quote}{\par\singlespacing\small}
+
+
+\title{Reply to report on JINST\_063P\_1221}
+\date{April 29, 2022}
+
+\begin{document}
+\maketitle
+
+\begin{quote}
+This paper is a survey of various methods for fitting and extracting optical photon intensity versus time from a photo-sensor/photo-multiplier waveform. The paper has a number of interesting points and some novel ideas, however I do not recommend publication in the present form.
+
+The paper has a number of issues from conceptual to detail that need to be worked out. Most importantly, there is no central theme to the paper despite the title that claims to be searching for the ultimate waveform analysis tool. To have this claim there needs to be a detailed analysis of a single preferred tool that shows its function for a variety of circumstances and not just the idealized circumstance.
+
+While inferring PEs from a waveform is a laudable (and a very ambitious) goal, the performance needed depends on the light source type, the geometry of the source (detector type), as well as the physics requirements. None of the requirements are truly examined in the paper.
+
+I will now comment on various issues in more detail.
+
+Clarity: because of the very ambitious goal, the authors have examined numerous algorithms and methods. Each of these comes with its own jargon and complicated syntax. The result is that paper lacks clarity. It is just impossible in the end to tell what variable has a hat and which one has a twiddle, etc. There is a lot of unnecessary jargon that must be coming from the world of advanced statistics and machine language. I cannot tell why something is ``heuristic'' and the rest is not. What is ``posterior charge distribution'' ? I very much suggest eliminating all such jargon and write in plain language.
+
+Assumptions: there are some errors in the assumptions regarding the op- eration of the photo-sensor or phototube as an instrument.
+
+Lack of data: the paper is entirely based on simulations level analysis. If the authors were to apply the best selected method to a particular data type from a real detector or instrument, it would add considerable value.
+
+Detailed comments:
+
+Line 90: Referee is surprised by the choice of using a lognormal PDF for description of a single PE waveform. This needs clarification given that the authors want to construct the ``ultimate waveform''.
+
+First, it is well known that the risetime and falltime of a PMT comes from the RC constants in the equivalent (Thevenin) circuit of the PMT and cable. 
+
+Secondly, the lognormal sufffers from two problems: it is only valid for the range $t>0$, and its parameters do not have a good relationship with theunderlying PMT equivalent circuit.
+
+I very much suggest the authors seriously consider redoing this analysis with a distribution that has more physical meaning than the lognormal. 
+
+Line 95: This number 0.25 for the relative variance of the gain seems rather small. It would correspond to a first stage gain of 16. A much more reasonable gain variance is $\sim$ 0.4 which corresponds to first stage gain of $\sim$ 6. However this creates a problem for the model if the gain is assumed to fluctuate as a Gaussian. A much more reasonable assumption is a gamma distribution as is well known in the literature.
+
+Line 129: ``compound Poisson distribution with a Gaussian jump''
+
+Line 148-150: This example highly depends on the gain variance assumed. The gain variance assumed here (25\%) is quite small compared to most real PMTs.
+
+Equation 3.2:
+
+The term $\mu\phi(t-t_0)-\hat{\phi}(t)$ appears to be a normalization correction to the usual KL divergence formula. Could you please explain in the text ?
+
+Please put $\log\mu$ in brackets to avoid confusion.
+
+Line 185-186: waveform shifting: This is extremely confusing. What was actually done for this calculation ? What is the method. What waveform is being shifted ? What is $\Delta t$ ? How is it chosen according to single PE ?
+
+Line 193: ``shift $\Delta t$ ...'' too much is left unexplained here. It is very confusing.
+
+Section 3.3: This section introduction is thoroughly too brief and unhelpful. Deconvolution is known to be unreliable due to poor conditioning of the data. How is that handled for real analysis of data ?
+
+Equation 3.10: what is $q_{th}$ ?
+
+Equation 3.12: Too much notation is being introduced and not enough definitions. What is twiddle ? What is a smoothed ``w'' ? How was it smoothed ?
+
+Line 222: This line illustrated the issue with this paper. It is written in the style of class room notes. It needs to be deeply edited to focus only on the essential message and a single chain of logic that supports the conclusion.
+
+Line 232: thoroughly confusing and undefined.
+
+Line 234: As discussed in section 3.1.3 ... sparsity ... The issue of sparsity is not discussed in section 3.1.3.
+
+Figure 7 caption, line 238, line 242: This whole section has many undefined concepts and issues. what is a ``kernel = 21'' ? what are number of channels ? The behavior of $D_W$ depends on the assumed parameters of the pulse. The statement on line 238 is stated as a general statement. It is not a general result. What is ``matching of waveforms horizontally'' ? What is effective $\hat{\alpha}$ scaling ?
+
+Figure 8: This uses language that is probably unfamiliar to the readers of JINST. What is a ``hinge'' and what are ``whiskers'' ? We do not do 25\% and 75\% confidence intervals usually.
+
+Line 253: The referee has a hard time understanding why $N_{PE}$ needs to be left unknown. If $N_{PE}$ is large then the integral of the pulse divided by the mean gain should be a very close estimate of $N_{PE}$. If $N_{PE}$ is small the gain fluctuation will prevent a good estimate, but it is still reasonably known.
+
+Section 3.5.1: There some conceptual problems here. I do not see how RSS can work well with noise and with pulses that have a sparse tail of photons. I think this method is also too specific for a pulse that has relatively compact shape. For pulses that are long with sparse tails this will not work.
+
+Fig. 9: The demonstration is just not generic enough. The pulse structure assumed is relatively compact with only a few photons and with good single PE resolution.
+
+Eq. 3.17: As remarked earlier, the assumption of a normal distribution for the charge gain is wrong. And it creates a problem for the model since with a normal distribution the charge can be negative which is unphysical.
+
+Line 238: I suggest not spending time in the paper on techniques that do not work well.
+
+Line 324: I very much suggest the authors rewrite this paper based on only the FSMP technique and provide evidence with data that it works well. And provide much more detail on its performance for a variety of conditions.
+
+Line 362: ``the message is clear'' ? I do not think so. Fig 15b is very confusing. The ``ratio'' is undefined. The performance of ``1st'' is only a few percent worse. Secondly, the result is inconsistent with the earlier Fig. 3. Only modest improvement is expected with waveform analysis and only under some circumstances according to Fig. 3.
+\end{quote}
+\end{document}
