@@ -15,10 +15,10 @@ Like figure~\ref{fig:detector}, a typical neutrino or dark matter detector has a
   \resizebox{\linewidth}{!}{\input{figures/profile.pgf}}
   \caption{\label{fig:time-pro} Effective light curves in the three target medium and PMT configuration settings.}
 \end{subfigure}
-  \caption{\subref{fig:detector} The target volume maybe of cylinder or polyhedra shapes.  The PMTs' size varies from several to tens of \si{cm}.  The target medium could be pure water or ice, organic or inorganic scintillators. The principle of PMT photon counting remains the same. \subref{fig:time-pro} A scintillator paired with ultra-fast photo-sensors gives the green curve with $\tau_\ell \gg \sigma_\ell$.  A fast Cherenkov detector by the red curve has $\tau_\ell \ll \sigma_\ell$.  The blue curve combining $\tau_\ell=\SI{20}{ns}$ and $\sigma_\ell=\SI{5}{ns}$ represents a typical scintillation detector.  We can regard $\phi(t)\mathrm{d}t$ as a probability density function of PE times.}
+  \caption{\subref{fig:detector} The target volume could be cylinder or polyhedra.  The PMTs' size varies from several to tens of \si{cm}.  The target medium could be pure water or ice, organic or inorganic scintillators. The principle of PMT photon counting remains the same. \subref{fig:time-pro} A scintillator paired with ultra-fast photo-sensors gives the green curve with $\tau_\ell \gg \sigma_\ell$.  A fast Cherenkov detector by the red curve has $\tau_\ell \ll \sigma_\ell$.  The blue curve combining $\tau_\ell=\SI{20}{ns}$ and $\sigma_\ell=\SI{5}{ns}$ represents a typical scintillation detector.  We can regard $\phi(t)$ as a probability density function of PE times.}
 \end{figure}
 
-The larger the detector, the smaller the solid angle each PMT covers.  The light intensity seen by a PMT can be extremely low.  A PMT works in \textit{photon counting} or \textit{digital mode}, where it is viable to count individual PEs.  \textit{Analog mode} is the opposite, where there are so many PE pulses overlapping that the output is a continuous electric current.  Even in one event of the same detector, PMTs can operate in different modes, depending on the proximity of them to the event vertex.  A unified waveform algorithm should handle both extremes, and the intermediate ``overlap, but distinguishable'' mode with an example in figure~\ref{fig:pile}.  In this study,  we cover most of the cases with PE occupancy from 0.5 to 30.
+The larger the detector, the smaller the solid angle each PMT covers.  The light intensity seen by a PMT can be extremely low.  A PMT works in \textit{photon counting} or \textit{digital mode}, where it is viable to count individual PEs.  \textit{Analog mode} is the opposite, where there are so many PE pulses overlapping that the output is a continuous electric current.  Even in one event of the same detector, PMTs can operate in different modes, depending on the proximity of them to the event vertex.  A unified waveform algorithm should handle both extremes, and the intermediate ``overlapped, but distinguishable'' mode with an example in figure~\ref{fig:pile}.  In this study,  we cover most of the cases with PE occupancy from 0.5 to 30.
 
 The PE, waveform and their estimators are hierarchical and intercorelated.  We explicitly summarize the symbol conventions of this article in table~\ref{tab:symbol}.
 
@@ -36,7 +36,7 @@ The PE, waveform and their estimators are hierarchical and intercorelated.  We e
     $\hat{N}_\mathrm{PE}$ & estimator for $N_\mathrm{PE}$ & \secref{sec:time} \\
     $t'_i, N_\mathrm{s}$ & grid of PE candidate times and its size & \secref{sec:regression} \\
     $q'_i, \bm{q}'$ & total charge at $t'_i$ and its vector (r.v.) & \secref{sec:regression} \\
-    $\alpha, \hat{\alpha}$ & scaling factor of $\bm{q}'$ and its estimator & \secref{sec:fourier} \\
+    $\alpha, \hat{\alpha}$ & scaling factor of $\bm{q}'$ and its estimator & \secref{sec:shifting} \\
     $q_\mathrm{th}$ & threshold regularizer of $\bm{q}'$ & \secref{sec:fourier} \\
     $z_i, \bm{z}$ & number of PEs at $t'_i$ and its vector (r.v.) & \secref{subsec:mcmc} \\
     \hline
@@ -119,7 +119,7 @@ where shape parameters $\tau_\mathrm{PE}=\SI{8}{ns}$, $\sigma_\mathrm{PE}=\SI{0.
     \resizebox{\textwidth}{!}{\input{figures/wave.pgf}}
     \caption{\label{fig:pile} PE pile-up and white noise in an PMT waveform.}
   \end{subfigure}
-  \caption{A single PE from a PMT induces a voltage pulse in \subref{fig:spe}. Multiple PEs pile up at a PMT form an input waveform $w(t)$ in \subref{fig:pile}, when PEs are barely visually separable from each other. Output charge $\hat{\bm{t}}, \hat{\bm{q}}$ also in \subref{fig:pile}, which we will discuss in section~\ref{sec:algorithm}. }
+  \caption{A single PE from a PMT induces a voltage pulse in \subref{fig:spe}. Multiple PEs pile up at a PMT form an input waveform $w(t)$ in \subref{fig:pile}, when PEs are barely separable from each other visually. Output charge $\hat{\bm{t}}, \hat{\bm{q}}$ also in \subref{fig:pile}, which we will discuss in section~\ref{sec:algorithm}. }
 \end{figure}
 
 A noise-free waveform $\tilde{w}(t)$ is a convolution of $\tilde{\phi}(t)$ and $V_\mathrm{PE}(t)$, and the PMT voltage output waveform $w(t)$ is a time series modeled by the sum of $\tilde{w}(t)$ and a Gaussian white noise $\epsilon(t)$,
@@ -162,7 +162,7 @@ To characterize the difference between $\hat{t}_\mathrm{1st}$ and $\hat{t}_\math
     \resizebox{\textwidth}{!}{\input{figures/vs-deltadiv-r.pgf}}
     \caption{\label{fig:reso-diff-r} Relative time resolution, $\sigma_{\mathrm{1st}}/\sigma_{\mathrm{ALL}}$}
   \end{subfigure}
-  \caption{Time resolution comparisons between $\hat{t}_{\mathrm{ALL}}$~(solid lines, when using the information of all PEs) and $\hat{t}_\mathrm{1st}$~(dashed lines, using the first PE instead of the threshold crossing time to eliminate the influence from TDC).  The difference is manifested especially when $\sigma_\ell$ and $\mu$ are large. The three cases of $(\tau_\ell, \sigma_\ell)/\si{ns}$ represent the scintillation with ultra-fast PMTs~$(20, 0)$, Cherenkov~$(0, 5)$ and scintillation coupled with PMT TTS~$(20, 5)$. The performance of waveform analysis lies between $\sigma_{\mathrm{1st}}$ and $\sigma_{\mathrm{ALL}}$. }
+  \caption{Time resolution comparisons between $\hat{t}_{\mathrm{ALL}}$~(solid lines, when using the information of all PEs) and $\hat{t}_\mathrm{1st}$~(dashed lines, using the first PE instead of the threshold crossing time to eliminate the influence from TDC).  The difference is manifested especially when $\sigma_\ell$ and $\mu$ are large. The three colors are different cases of $(\tau_\ell, \sigma_\ell)/\si{ns}$ representing the scintillation with ultra-fast PMTs~$(20, 0)$, Cherenkov~$(0, 5)$ and scintillation coupled with PMT TTS~$(20, 5)$. The performance of waveform analysis lies between $\sigma_{\mathrm{1st}}$ and $\sigma_{\mathrm{ALL}}$. }
 \end{figure}
 
 Nevertheless, in general for $\sigma_\ell > 0$ and $\mu >0$, we notice that TDC or equivalent algorithms to $\hat{t}_\mathrm{1st}$ imposes significant resolution losses.  For Cherenkov and scintillation experiments with non-negligible PMT TTS and occupancy, we shall explore more sophisticated waveform analysis algorithms to go beyond $\hat{t}_{\mathrm{1st}}$ and recover the accuracy of $\hat{t}_\mathrm{ALL}$ in eq.~\eqref{eq:2} from waveform in eq.~\eqref{eq:1}.
@@ -184,11 +184,11 @@ Its expectation and variance are,
   \begin{aligned}
     \E[\hat{\mu}_Q] &= \E[N_\mathrm{PE}] \\
     \Var[\hat{\mu}_Q] &= \Var\left[\sum_{i=1}^{N_\mathrm{PE}} q_i\right] + \Var\left[\frac{1}{Q_0} \int \epsilon(t) \mathrm{d} t\right] \\
-    &= \E[q^2] \Var(N_\mathrm{PE}) + \frac{T}{Q_0^2} \Var[\epsilon] \\
-    &= (1 + \Var[q]) \Var(N_\mathrm{PE}) + \frac{T}{Q_0^2} \Var[\epsilon]. \\
+    &= \E[q^2] \Var[N_\mathrm{PE}] + \frac{T}{Q_0^2} \Var[\epsilon] \\
+    &= (1 + \Var[q]) \Var[N_\mathrm{PE}] + \frac{T}{Q_0^2} \Var[\epsilon]. \\
   \end{aligned}
 \end{equation}
-where the first term of the variance is the that of a compound Poisson distribution with a Gaussian jump, and $T$ in the second one is a constant proportional to the time window.  Carefully lowering $T$ could reduce the disturbance of $\Var[\epsilon]$. Resolution of $\hat{\mu}_Q$ is affected by the Poisson fluctuation of $N_\mathrm{PE}$, the charge resolution of a PE $\sigma_\mathrm{q}$ and the while noise $\sigma_\epsilon$.
+where the first term of the variance is from a compound Poisson distribution with a Gaussian jump, and $T$ in the second one is a constant proportional to the time window.  Carefully lowering $T$ could reduce the disturbance of $\Var[\epsilon]$. Resolution of $\hat{\mu}_Q$ is affected by the Poisson fluctuation of $N_\mathrm{PE}$, the charge resolution of a PE $\sigma_\mathrm{q}$ and the while noise $\sigma_\epsilon$.
 
 Sometimes we mitigate the impact of $\Var[q]$ and $\Var[\epsilon]$ by rounding $\hat{\mu}_Q$ to integers.  It works well for $N_\mathrm{PE} \le 1$, which is equivalently a hit-based 0-1 $\mu$ estimator $\hat{\mu}_\mathrm{hit}$.  But for $N_\mathrm{PE} \ge 2$, it is hard to interpret $\hat{\mu}_Q$ rounding by physics principles and $\hat{\mu}_\mathrm{hit}$ does not gain any additional information from the extra PEs.
 
