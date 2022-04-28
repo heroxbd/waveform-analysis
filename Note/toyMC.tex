@@ -188,7 +188,7 @@ Its expectation and variance are,
     &= (1 + \Var[q]) \Var[N_\mathrm{PE}] + \frac{T}{Q_0^2} \Var[\epsilon]. \\
   \end{aligned}
 \end{equation}
-where the first term of the variance is from a compound Poisson distribution with a Gaussian jump, and $T$ in the second one is a constant proportional to the time window.  Carefully lowering $T$ could reduce the disturbance of $\Var[\epsilon]$. Resolution of $\hat{\mu}_Q$ is affected by the Poisson fluctuation of $N_\mathrm{PE}$, the charge resolution of a PE $\sigma_\mathrm{q}$ and the while noise $\sigma_\epsilon$.
+where the first term of the variance is from a compound Poisson distribution with a Gaussian jump, and $T$ in the second one is a constant proportional to the time window.  Carefully lowering $T$ could reduce the disturbance of $\Var[\epsilon]$. Resolution of $\hat{\mu}_Q$ is affected by the Poisson fluctuation of $N_\mathrm{PE}$, the charge resolution of a PE $\sigma_\mathrm{q}$ and the white noise $\sigma_\epsilon$.
 
 Sometimes we mitigate the impact of $\Var[q]$ and $\Var[\epsilon]$ by rounding $\hat{\mu}_Q$ to integers.  It works well for $N_\mathrm{PE} \le 1$, which is equivalently a hit-based 0-1 $\mu$ estimator $\hat{\mu}_\mathrm{hit}$.  But for $N_\mathrm{PE} \ge 2$, it is hard to interpret $\hat{\mu}_Q$ rounding by physics principles and $\hat{\mu}_\mathrm{hit}$ does not gain any additional information from the extra PEs.
 
