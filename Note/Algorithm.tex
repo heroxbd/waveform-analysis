@@ -352,28 +352,44 @@ In reality, $w(t)$ is discretized as $\bm{w}$. If we rewrite the hierarchical mo
 \begin{equation}
   \label{eq:universe}
   \begin{aligned}
-    p(\bm{w}, t_0, \mu) &= \sum_{\bm{z}} \int \mathrm{d}\bm{q}' p(\bm{w}, \bm{q}', \bm{z}, t_0, \mu) \\
-    &= p(t_0, \mu) \sum_{\bm{z}} \left[\int \mathrm{d}\bm{q}' p(\bm{w}|\bm{q}') p(\bm{q}'|\bm{z}) \right] p(\bm{z}|t_0, \mu) \\
-    &= p(t_0, \mu) \sum_{\bm{z}} p(\bm{w}|\bm{z}) p(\bm{z}|t_0, \mu) \\
-    &= p(t_0, \mu) p(\bm{w}|t_0, \mu) \\
+    p(\bm{w}, \mu) &= \sum_{\bm{z}} \int \mathrm{d}\bm{q}' p(\bm{w}, \bm{q}', \bm{z}, t_0, \mu) \\
+    &= p(\mu) \sum_{\bm{z}, t_0} \left[\int \mathrm{d}\bm{q}' p(\bm{w}|\bm{q}') p(\bm{q}'|\bm{z}, t_0) \right] p(\bm{z}, t_0|\mu) \\
+    &= p(\mu) \sum_{\bm{z}, t_0} p(\bm{w}|\bm{z}, t_0) p(\bm{z}, t_0|\mu) \\
+    &= p(\mu) p(\bm{w}|\mu) \\
   \end{aligned}
 \end{equation}
-The integration over $\bm{q}'$ is the probability density of a multi-normal distribution $p(\bm{w}|\bm{z})$, with a fast algorithm to iteratively compute by Schniter~et al.~\cite{schniter_fast_2008}. The summation over $\bm{z}$, however, takes an exploding number of combinations.
+The integration over $\bm{q}'$ is the probability density of a multi-normal distribution $p(\bm{w}|\bm{z}, t_0)$, with a fast algorithm to iteratively compute by Schniter~et al.~\cite{schniter_fast_2008}. The summation over $\bm{z}$ and $t_0$, however, takes an exploding number of combinations.
 
-Let's approximate the summation with a sample from $S = (\bm{s}_1, \bm{s}_2, \cdots, \bm{s}_M)$ by Metropolis-Hasings~\cite{metropolis_equation_1953, hastings_monte_1970, mackay_information_2003} from $p(\bm{z}) = C p(\bm{w} | \bm{z}) h( \bm{z})$. $C$ is independent of $\bm{z}$, and $h(\bm{z})$ is an educated guess for $p(\bm{z}|t_0, \mu)$ from a previous method like LucyDDM~(section~\ref{sec:lucyddm}). Then,
+Let's approximate the summation with a sample from $S = (\bm{s}_1, \bm{s}_2, \cdots, \bm{s}_M)$ together with corresponding $T = (t_{01}, t_{02}, \cdots, t_{0M})$ by Metropolis-Hasings~\cite{metropolis_equation_1953, hastings_monte_1970, mackay_information_2003} based Gibbs hybrid MCMC~\cite{tierney_1994}. $S$ is sampled from $p(\bm{z}|\mu, t_0) = C p(\bm{w} | \bm{z}) h(\bm{z}, t_0)$. $C$ is independent of $\bm{z}$, and $h(\bm{z}, t_0) = p(\bm{z}|\mu_0, t_0)p(t_0)$, where $\mu_0$ is an educated guess from a previous method like LucyDDM~(section~\ref{sec:lucyddm}). $T$ is sampled from $p(t_0|\mu, \bm{z}) \propto p(\bm{z}|\mu, t_0)p(t_0)$. For a specific $\bm{s}_i$, we have $t_0\equiv t_{0\,i-1}$; and for a specific $t_{0i}$, we have $\bm{z}\equiv \bm{s}_{i-1}$. Then,
 \begin{equation}
   \label{eq:mh}
   \begin{aligned}
-    p(\bm{w}|\mu, t_0) &= \sum_{\bm{z}} p(\bm{w}|\bm{z}) p(\bm{z}|t_0, \mu) = \frac{1}{C}\sum_{\bm{z}} p(\bm{z}) \frac{p(\bm{z} | \mu, t_0)}{h(\bm{z})} \\
-    &= \frac{1}{C} \E_{\bm{z}}\left[ \frac{p(\bm{z} | \mu, t_0)}{h(\bm{z})} \right] \approx \frac{1}{CM} \sum_{i=1}^M \frac{p(\bm{s}_i | \mu, t_0)}{h(\bm{s}_i)}. \\
+    p(\bm{w}|\mu) &= \sum_{\bm{z}, t_0} p(\bm{w}|\bm{z}, t_0) p(\bm{z}, t_0|\mu) = \frac{1}{C}\sum_{\bm{z}, t_0} p(\bm{z}|\mu, t_0) \frac{p(\bm{z}, t_0 | \mu)}{h(\bm{z}, t_0)} \\
+    &= \frac{1}{C} \E_{\bm{z}}\left[ \frac{p(\bm{z}, t_0 | \mu)}{h(\bm{z}, t_0)} \right] = \frac{1}{C} \E_{\bm{z}}\left[ \frac{p(\bm{z} | \mu, t_0)p(t_0)}{p(\bm{z} | \mu_0, t_0)p(t_0)} \right]\\
+    &\approx \frac{1}{CM} \sum_{i=1}^M \frac{p(\bm{s}_i | \mu, t_{0i})}{p(\bm{s}_i | \mu_0, t_{0i})}
   \end{aligned}
 \end{equation}
-Construct approximate MLEs for $t_0$, $\mu$ and $\bm{z}$, and the expectation estimation of $\hat{\bm{q}}$,
+As we have
+\begin{equation}
+  \label{eq:light_curve_sample_p}
+  \begin{aligned}
+    p( \bm{z} | \mu, t_0) \mathrm{d}\bm{z} & = e^{-\mu}\prod_{i=1}^{\Vert \bm{z} \Vert_0} \mu \phi(t_i - t_0) \mathrm{d}t_i \\
+    & = e^{-\mu} \mu^{\Vert \bm{z} \Vert_0} \prod_{i=1}^{\Vert \bm{z} \Vert_0}  \phi(t_i - t_0) \mathrm{d}t_i \\
+    & = e^{-\mu} \mu^{\Vert \bm{z} \Vert_0} \phi(\bm{z} - t_0) \mathrm{d}\bm{z}
+  \end{aligned}
+\end{equation}
+there we get
+\begin{equation}
+  \label{eq:final_mh}
+  p(\bm{w}|\mu) \approx \frac{1}{CM} \sum_{i=1}^M \mathrm{e}^{-(\mu-\mu_0)}{\left(\frac{\mu}{\mu_0}  \right)}^{\Vert \bm{s}_i \Vert_0}
+\end{equation}
+Construct approximate MLEs for $\mu$ and $\bm{z}$, and the expectation estimation of $t_0$ and $\hat{\bm{q}}$,
 \begin{equation}
   \label{eq:fsmpcharge}
   \begin{aligned}
-    \left(\hat{t}_0, \hat{\mu}\right) &= \arg\underset{t_0,\mu}{\max}~p(\bm{w}|\mu, t_0) = \arg\underset{t_0,\mu}{\max} \sum_{i=1}^M \frac{p(\bm{s}_i | \mu, t_0)}{h(\bm{s}_i)}\\
-    \hat{\bm{z}} &= \arg \underset{\bm{s}_i \in S}{\max}~p(\bm{w}|\bm{s}_i) h(\bm{s}_i) \\
+    \hat{t}_0 &= \frac{1}{M}\sum_{i=0}^M t_{0i}\\
+    \hat{\mu} &= \arg\underset{\mu}{\max}~p(\bm{w}|\mu) = \arg\underset{\mu}{\max} \sum_{i=1}^M \mathrm{e}^{-(\mu-\mu_0)}{\left(\frac{\mu}{\mu_0}  \right)}^{\Vert \bm{s}_i \Vert_0}\\
+    \hat{\bm{z}} &= \arg \underset{\bm{s}_i \in S, t_{0i} \in T}{\max}~p(\bm{w}|\bm{s}_i) h(\bm{s}_i, t_{0i}) \\
     \hat{\bm{q}}|{\hat{\bm{z}}} &= \E(\bm{q}'|\bm{w},\hat{\bm{z}})
   \end{aligned}
 \end{equation}
