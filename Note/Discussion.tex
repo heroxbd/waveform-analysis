@@ -39,7 +39,7 @@ CNN and Fitting are the kings of $D_\mathrm{w}$ and RSS, because their loss func
 
 All the discussed methods output $\hat{q}_i$ as the inferred charge of the PE at $t_i'$.  Evident in figure~\ref{fig:recchargehist}, FSMP retains the true charge distribution.  It is the only method modeling PE correctly.
 
-In contrast, LucyDDM, Fitting and CNN distributions are severely distorted.  During the optimization process of $D_\mathrm{w}$ or RSS, $N_\mathrm{s}$ is a constant. Many $\hat{q}_i$ are inferred to be fragmented values.  Retaining charge distribution is a manifestation of sparsity.  FSMP has the best sparsity because it chooses a PE configuration $\bm{z}$ before fitting $\hat{q}_i$.  CNN is somehow better than Fitting, although the latter in theory has self-regulated sparsity.  It is interesting to notice, but the mechanism is unknown to us.
+In contrast, LucyDDM, Fitting and CNN distributions are severely distorted.  During the optimization process of $D_\mathrm{w}$ or RSS, $N_\mathrm{s}$ is a constant. Many $\hat{q}_i$ are inferred to be fragmented values.  Retaining charge distribution is a manifestation of sparsity.  FSMP has the best sparsity because it chooses a PE configuration $\bm{z}$ before fitting $\hat{q}_i$.  Since CNN is $D_\mathrm{w}$ orientated discussed in section~\ref{sec:cnn}, it is better than fitting, although the latter has self-regulated sparsity in theory.
 
 \begin{figure}[H]
   \centering
