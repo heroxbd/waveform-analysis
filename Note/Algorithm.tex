@@ -205,11 +205,11 @@ We choose a shallow network structure of 5 layers to recognize patterns as shown
 \end{equation}
 As 1D vectors, $\bm{K}^{(1)}_m$ share the same length $||\bm{K}^{(1)}_m||_0$, which is called ``kernel size''. $M$ is the ``number of channels''. As shown in figure~\ref{fig:struct}, we choose $||\bm{K}^{(1)}_m||_0 = 21$ and $M=25$. The kernel sizes are selected considering the localized nature of $V_\mathrm{PE}(t)$.
 
-After this linear operation called ``links'', a point-wise nonlinear transformation called ``activation'' is applied. In the network we constructed, leaky relu function $R$ is used:
+After this linear operation called ``links'', a point-wise nonlinear transformation called ``activation'' is applied. In the network we constructed, leaky rectified linear function $\mathrm{LReL}$\cite{leakyReLU} is used:
 \begin{equation}
   \begin{aligned}
-    & \bm{v'}^{(1)}_m = R(\bm{v}^{(1)}_m) \\
-    \text{where  } & R(x) = \left\{ \begin{aligned}
+    & \bm{v'}^{(1)}_m = \mathrm{LReL}(\bm{v}^{(1)}_m) \\
+    \text{where  } & \mathrm{LReL}(x) = \left\{ \begin{aligned}
       & 0.05 x & x<0 \\
       & x & x\geqslant 0 \\
     \end{aligned} \right.
@@ -220,7 +220,7 @@ Together the two operation forms the first layer. The second layer is similar:
 \begin{equation}
   \begin{aligned}
     & \bm{v}^{(2)}_n = \sum_{m=1}^{M} \bm{K}^{(2)}_{nm} \otimes \bm{v'}^{(1)}_m,\ n\in \{1,\ldots,N\} \\
-    & \bm{v'}^{(2)}_n = R(\bm{v}^{(2)}_n) \\
+    & \bm{v'}^{(2)}_n = \mathrm{LReL}(\bm{v}^{(2)}_n) \\
   \end{aligned}
   \label{eq:1DCNN-2}
 \end{equation}
