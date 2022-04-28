@@ -38,7 +38,7 @@ CNN and Fitting are the kings of $D_\mathrm{w}$ and RSS, because their loss func
 
 All the discussed methods output $\hat{q}_i$ as the inferred charge of the PE at $t_i'$.  Evident in figure~\ref{fig:recchargehist}, FSMP retains the true charge distribution.  It is the only method modeling PE correctly.
 
-In contrast, LucyDDM, Fitting and CNN distributions are severely distorted.  During the optimization process of $D_\mathrm{w}$ or RSS, $N_s$~(the number of $q_i$) is a constant. Many $\hat{q}_i$ are inferred to be fragmented values.  Retaining charge distribution is a manifestation of sparsity.  FSMP has the best sparsity because it chooses a PE configuration $\bm{z}$ before fitting $\hat{q}_i$.  CNN is somehow better than Fitting, although the latter in theory has self-regulated sparsity.  It is interesting to notice, but the mechanism is unknown to us.
+In contrast, LucyDDM, Fitting and CNN distributions are severely distorted.  During the optimization process of $D_\mathrm{w}$ or RSS, $N_\mathrm{s}$ is a constant. Many $\hat{q}_i$ are inferred to be fragmented values.  Retaining charge distribution is a manifestation of sparsity.  FSMP has the best sparsity because it chooses a PE configuration $\bm{z}$ before fitting $\hat{q}_i$.  CNN is somehow better than Fitting, although the latter in theory has self-regulated sparsity.  It is interesting to notice, but the mechanism is unknown to us.
 
 \begin{figure}[H]
   \centering
@@ -62,7 +62,7 @@ The message is clear from figure~\ref{fig:deltamethods}: any PMT-based experimen
     \centering
     \resizebox{0.99\textwidth}{!}{\input{figures/vs-biast0.pgf}}
     \vspace{-0.5em}
-    \caption{\label{fig:biasmethods} Sample average of time reconstruction biases $\overline{\Delta t}$, where $\Delta t = \hat{t} - t_0$.}
+    \caption{\label{fig:biasmethods} Sample average estimations of time-reconstruction biases $\E[\hat{t} - t_0]$.}
   \end{subfigure}
 
   \vspace{0.5em}
@@ -70,7 +70,7 @@ The message is clear from figure~\ref{fig:deltamethods}: any PMT-based experimen
     \centering
     \resizebox{0.99\textwidth}{!}{\input{figures/vs-sigmat0-r.pgf}}
     \vspace{-0.5em}
-    \caption{\label{fig:deltamethods} Ratios of resolution $\sigma_{\hat{t}_0}/\sigma_{\mathrm{ALL}}$ for time reconstruction. ``1st'' is a reproduction of figure~\ref{fig:reso-diff}.}
+    \caption{\label{fig:deltamethods} Sample variance estimations of time-resolution ratios $\sqrt{\frac{\Var[\hat{t} - t_0]}{\Var[\hat{t}_\mathrm{ALL} - t_0]}}$. ``1st'' is a reproduction of figure~\ref{fig:reso-diff}.}
   \end{subfigure}
 
   \vspace{0.5em}
@@ -78,7 +78,7 @@ The message is clear from figure~\ref{fig:deltamethods}: any PMT-based experimen
     \centering
     \resizebox{0.99\textwidth}{!}{\input{figures/vs-biasmu-r.pgf}}
     \vspace{-0.5em}
-    \caption{\label{fig:biasmu} Relative sample average of intensity reconstruction biases $\frac{\overline{\Delta \mu}}{\mu}$, where $\Delta \mu = \hat{\mu} - \mu$.}
+    \caption{\label{fig:biasmu} Sample average estimation of intensity-reconstruction biases $\frac{\E[\hat{\mu} - \mu]}{\mu}$.}
   \end{subfigure}
 
   \vspace{0.5em}
@@ -86,15 +86,15 @@ The message is clear from figure~\ref{fig:deltamethods}: any PMT-based experimen
     \centering
     \resizebox{0.99\textwidth}{!}{\input{figures/vs-sigmamu-r.pgf}}
     \vspace{-0.5em}
-    \caption{\label{fig:deltamu} Ratios of resolution $\frac{\sigma_{\hat{\mu}}}{\underline{\sigma}_\mu}/\left(1 + \frac{\overline{\Delta \mu}}{\mu}\right)$ for intensity reconstruction.  The factor $1 + \frac{\overline{\Delta \mu}}{\mu}$ neutralizes biases of $\hat{\mu}$.}
+    \caption{\label{fig:deltamu} Sample variance estimation of intensity-resolution ratios $\frac{\sqrt{\Var[\hat{\mu}]} / \E[\hat{\mu}]}{\sqrt{\Var[N_\mathrm{PE}]} / \E[N_\mathrm{PE}]}$.}
   \end{subfigure}
-  \caption{Incident light analysis results for the two typical cases of Cherenkov~(left) and scintillation~(right).  ``ALL'' and ``1st'' are the $\hat{t}_\mathrm{ALL}$ estimator defined in eq.~\eqref{eq:2}. ``int'' is the $\hat{\mu}_Q$ by eq.~\eqref{eq:mu-q}.  LucyDDM, Fitting, CNN use eqs.~\eqref{eq:pseudo} and \eqref{eq:pseudo-mu}.  FSMP has its own natural $\hat{t}_0$ and $\hat{\mu}$ estimators in eq.~\eqref{eq:fsmpcharge}. $\underline{\sigma}_\mu = \sqrt{\mu}$ is the lower bound of intensity resolution~(section~\ref{sec:intensity-mu}). Error bars are 5--95 percentiles calculated from $t$~(figures~\ref{fig:biasmethods} and \ref{fig:biasmu}), $F$~\subref{fig:deltamethods} and $\chi^2$~\subref{fig:deltamu} statistics.}
+  \caption{Incident light analysis results for the two typical cases of Cherenkov~(left) and scintillation~(right).  ``ALL'' and ``1st'' are the $\hat{t}_\mathrm{ALL}$ estimator defined in eq.~\eqref{eq:2}. ``int'' is the $\hat{\mu}_Q$ by eq.~\eqref{eq:mu-q}.  LucyDDM, Fitting, CNN use eqs.~\eqref{eq:pseudo} and \eqref{eq:pseudo-mu}.  FSMP has its own natural $\hat{t}_0$ and $\hat{\mu}$ estimators in eq.~\eqref{eq:fsmpcharge}. Error bars are 5--95 percentiles calculated from $t$~(figures~\ref{fig:biasmethods} and \ref{fig:biasmu}), $F$~\subref{fig:deltamethods} and $\chi^2$~\subref{fig:deltamu} statistics.}
 \end{figure}
 
 In contrast to time, inference of light intensity uses empty waveforms as well.  We append the waveform samples by $10^4 \times e^{-\mu} / (1-e^{-\mu})$ empty ones.  The number is proportional to the Poisson prediction.  It is equivalent to appending the same amount of zeros to the $\hat{\mu}$'s. The QDC integration estimator $\hat{\mu}_Q$~(``int'' in figures~\ref{fig:biasmu} and~\ref{fig:deltamu}) is ubiquitous and is plotted together with the four waveform analysis methods.
 
 In figure~\ref{fig:biasmu}, the biases of $\hat{\mu}$ of the four methods are within \SI{2}{\percent} and disappear for large $\mu$ expect LucyDDM.  The tendency of LucyDDM comes from the thresholding and scaling in eq.~\eqref{eq:fdconv2}.  For low $\mu$, the upward bias of FSMP and Fitting is due to PE granularity.  The charge $q$ of one PE can fluctuate close to 2 or 0, but eqs.~\eqref{eq:gd-q} and \eqref{eq:fsmpcharge} favor 2 more than 0 in waveforms.  We shall leave the amendment of the bias to event reconstruction in our subsequent publications.
 
-For large $\mu$ the four methods are similar in intensity resolution to $\hat{\mu}_Q$~(figure~\ref{fig:deltamu}).  The resolution ratios of them all approach $1.03 = \sqrt{1 + 0.25^2}$, consistent with eq.~\eqref{eq:energy} if white noise is ignored.  For small $\mu$, FSMP gives the best resolution by correctly modeling charge distributions, as predicted in figure~\ref{fig:recchargehist}.  Like the hit estimator $\hat{\mu}_\mathrm{hit}$ in section~\ref{sec:intensity-mu}, it eliminates the influence of $\sigma_\mathrm{q}$ and $\sigma_\epsilon$ in eq.~\eqref{eq:energy}.  But unlike $\hat{\mu}_\mathrm{hit}$, FSMP also works well for a few PEs.  More importantly, it provides a smooth transition from the ``hit mode'' to the ``charge mode'' with the best intensity resolution of all.   In the scintillation case of figure~\ref{fig:deltamu}, FSMP approaches the resolution lower bound $\underline{\sigma}_\mu$ set by the PE truths for $\mu < 5$, which is the ultimate waveform analysis in that we can hardly do any better.
+For large $\mu$ the four methods are similar in intensity resolution to $\hat{\mu}_Q$~(figure~\ref{fig:deltamu}).  The resolution ratios of them all approach $1.08 = \sqrt{1 + 0.4^2}$, consistent with eq.~\eqref{eq:energy} if white noise is ignored.  For small $\mu$, FSMP gives the best resolution by correctly modeling charge distributions, as predicted in figure~\ref{fig:recchargehist}.  Like the hit estimator $\hat{\mu}_\mathrm{hit}$ in section~\ref{sec:intensity-mu}, it eliminates the influence of $\Var[q]$ and $\Var[\epsilon]$ in eq.~\eqref{eq:energy}.  But unlike $\hat{\mu}_\mathrm{hit}$, FSMP also works well for a few PEs.  More importantly, it provides a smooth transition from the photon-counting mode to the analog mode with the best intensity resolution of all.   In the scintillation case of figure~\ref{fig:deltamu}, FSMP approaches the resolution lower bound $\Var[N_\mathrm{PE}]$ set by the PE truths for $\mu < 5$, which is the ultimate waveform analysis in that we can hardly do any better.
 
-In the fluid-based neutrino and dark matter experiments, $\mu < 5$ is the sweet spot for \si{MeV} and \si{keV} physics respectively.  The intensity resolution boost in figure~\ref{fig:deltamu} converts directly into energy resolution.  It varies depending on PMT models for different $\sigma_\mathrm{q}$ and $\sigma_\epsilon$.  In our scintillation setup, the improvement is up to $\times 1.04$~(figure~\ref{fig:deltamu}) . Good waveform analysis has the potential to accelerate discovery and broaden the physics reach of existing detectors. 
+In the fluid-based neutrino and dark matter experiments, $\mu < 5$ is the sweet spot for \si{MeV} and \si{keV} physics respectively.  The intensity resolution boost in figure~\ref{fig:deltamu} converts directly into energy resolution.  It varies depending on PMT models for different $\Var[q]$ and $\Var[\epsilon]$.  In our scintillation setup, the improvement is up to $\times 1.07$~(figure~\ref{fig:deltamu}) . Good waveform analysis has the potential to accelerate discovery and broaden the physics reach of existing detectors. 
