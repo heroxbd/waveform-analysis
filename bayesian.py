@@ -358,7 +358,7 @@ elif method == 'fsmp':
     ts = np.zeros(N, dtype=sdtp)
     ts['TriggerNo'] = ent['TriggerNo'][:N]
     ts['ChannelID'] = ent['ChannelID'][:N]
-    # fsmp_inference(0, 200)
+    fsmp_inference(0, 200)
     # import sys
     # sys.exit()
     with Pool(min(args.Ncpu, cpu_count())) as pool:
