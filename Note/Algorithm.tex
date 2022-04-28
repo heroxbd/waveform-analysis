@@ -85,7 +85,7 @@ By directly extracting the patterns in the waveforms, \textit{heuristics} refer 
 \label{sec:shifting}
 Some experiments use waveforms as direct input of analysis. Proton decay search at KamLAND~\cite{kamland_collaboration_search_2015} sums up all the PMT waveforms after shifting by time-of-flight for each event candidate.  The total waveform shape is used for a $\chi^2$-based particle identification (PID). The Double Chooz experiment also superposes waveforms to extract PID information by Fourier transformation~\cite{chooz_2018}. Samani~et~al.\cite{samani_pulse_2020} extracts pulse width from a raw waveform and use it as a PID discriminator.  Such techniques are extensions of pulse shape discrimination~(PSD) to large neutrino and dark matter experiments.  In the view of this study, extended PSD uses shifted waveform to approximate PE hit pattern, thus named \textit{waveform shifting}.
 
-As illustrated in figure~\ref{fig:shifting}, we firstly select all the $t_i$'s where the waveform $w(t_i)$ exceeds a threshold $V_\mathrm{th}$ to suppress noise, shift them by a constant $\Delta t$. For a SER pulse $V_\mathrm{PE}(t)$ whose truth PE time is $t=0$, $\Delta t$ should minimize the Wasserstein distance $D_\mathrm{W}$. Thus,
+As illustrated in figure~\ref{fig:shifting}, we firstly select all the $t_i$'s where the waveform $w(t_i)$ exceeds a threshold $V_\mathrm{th}$ to suppress noise, shift them by a constant $\Delta t$. For a SER pulse $V_\mathrm{PE}(t)$ whose truth PE time is $t=0$, $\Delta t$ should minimize the Wasserstein distance $D_\mathrm{w}$. Thus,
 \begin{equation}
     \Delta t \equiv \arg\underset{\Delta t'}{\min} D_\mathrm{w}\left[ V_\mathrm{PE*}(t), \delta(t-\Delta t') \right] \implies \int_{0}^{\Delta t} V_\mathrm{PE}(t) \mathrm{d}t = \frac{1}{2} \int_{0}^{\infty} V_\mathrm{PE}(t) \mathrm{d}t.
   \label{eq:waveform-shift-dt}
@@ -198,16 +198,18 @@ Convolutional neural networks~(CNN) made breakthroughs in various fields like co
 
 The input discretized waveform $\bm{w}$ is an 1 dimensional vector.  However, $\hat{q}_i$ and $\hat{t}_i$ are two variable length ($\hat{N}_\mathrm{PE}$) vectors, which is not a well-defined output for a 1 dimensional CNN (1D-CNN).  Instead, we replace $\hat{N}_\mathrm{PE}$ with a fixed sample size $N_\mathrm{s}$ and $\hat{t}_i$ with a fixed grid of times $t'_j$ and associating $q'_j$. For most $j$, $q'_j = 0$ which means there is no PE on time grid $t'_j$. By stripping out $j$ where $q'_j=0$, the remaining $q'_j$, $t'_j$ are $\hat{q}_i$ and $\hat{t}_i$.  Now $q'_j$ is a 1D vector with fixed length $N_\mathrm{s}$, suitable for 1D-CNN.
 
-We choose a shallow network structure of 5 layers to recognize patterns as shown in figure~\ref{fig:struct}, motivated by the pulse shape and universality of $V_\mathrm{PE}(t)$ for all the PEs. The input vector is convoluted by several kernels $K^{(1)}_m$ into several new vectors $v_m$:
+We choose a shallow network structure of 5 layers to recognize patterns as shown in figure~\ref{fig:struct}, motivated by the pulse shape and universality of $V_\mathrm{PE}(t)$ for all the PEs. The input waveform vector $\bm{w}$ is convoluted by several kernels $\bm{K}^{(1)}_m$ into several new vectors $v_m$:
 \begin{equation}
-  \bm{v}^{(1)}_m = K^{(1)}_m \otimes \bm{w}
+  \bm{v}^{(1)}_m = \bm{K}^{(1)}_m \otimes \bm{w},\ m\in \{1,\ldots,M\}
   \label{eq:1DCNN-11}
 \end{equation}
-After this linear operation called ``links'', a point-wise nonlinear transformation called ``activation'' is applied. In this study leaky relu function $R$ is used:
+As 1D vectors, $\bm{K}^{(1)}_m$ share the same length $||\bm{K}^{(1)}_m||_0$, which is called ``kernel size''; while the $M$, is the ``number of channels''. As shown in figure~\ref*{fig:struct}, we choose $||\bm{K}^{(1)}_m||_0 = 21$ and $M=25$. The kernel sizes are selected considering the localized nature of $V_\mathrm{PE}(t)$.  
+
+After this linear operation called ``links'', a point-wise nonlinear transformation called ``activation'' is applied. In the network we constructed, leaky relu function $R$ is used:
 \begin{equation}
   \begin{aligned}
-    & \bm{v'}^{(1)}_m = \mathrm{leaky\_relu}(\bm{v}^{(1)}_m) \\
-    \text{where  } & \mathrm{leaky\_relu}(x) = \left\{ \begin{aligned}
+    & \bm{v'}^{(1)}_m = R(\bm{v}^{(1)}_m) \\
+    \text{where  } & R(x) = \left\{ \begin{aligned}
       & 0.05 x & x<0 \\
       & x & x\geqslant 0 \\
     \end{aligned} \right.
@@ -217,17 +219,13 @@ After this linear operation called ``links'', a point-wise nonlinear transformat
 Together the two operation forms the first layer. The second layer is similar:
 \begin{equation}
   \begin{aligned}
-    & \bm{v}^{(2)}_m = \sum_{m} K^{(2)}_{nm} \otimes \bm{v'}^{(1)}_m \\
-    & \bm{v'}^{(2)}_m = \mathrm{leaky\_relu}(\bm{v}^{(2)}_m) \\
+    & \bm{v}^{(2)}_n = \sum_{m=1}^{M} \bm{K}^{(2)}_{nm} \otimes \bm{v'}^{(1)}_m,\ n\in \{1,\ldots,N\} \\
+    & \bm{v'}^{(2)}_n = R(\bm{v}^{(2)}_n) \\
   \end{aligned}
   \label{eq:1DCNN-2}
 \end{equation}
 
-The convolutional widths are selected considering the localized nature of $V_\mathrm{PE}(t)$.  
-
-The workflow of data processing consists of training and predicting. We find a mapping from waveform $w(t)$ to PE $\tilde{\phi}(t)$ with the backpropagation method and supervised learning. We formulate the training loss as optimizing $D_\mathrm{w}[\hat{\phi}, \tilde{\phi}] $, the Wasserstein distance between the truth $\tilde{\phi}$ and predicted $\hat{\phi}$. As discussed in section~\ref{sec:W-dist}, $D_w$ can handle the PE sparsity in training iterations. Figure~\ref{fig:loss} shows the convergence of Wasserstein distance during training.
-
-The output of CNN is scaled by $\hat{\alpha}$ following eq.~\eqref{eq:fdconv2} to get $\hat{\phi}$.
+Turning $M$-channel $\bm{v'}^{(1)}_m$ to $N$-channel $\bm{v'}^{(2)}_n$.
 
 \begin{figure}[H]
   \begin{subfigure}{.4\textwidth}
@@ -242,13 +240,20 @@ The output of CNN is scaled by $\hat{\alpha}$ following eq.~\eqref{eq:fdconv2} t
     \resizebox{\textwidth}{!}{\input{figures/epoch.pgf}}
     \caption{\label{fig:loss} Evolution of loss.}
   \end{subfigure}
-  \caption{\label{fig:CNN} Training process of a CNN. A shallow network structure of 5 layers in~\subref{fig:struct} is trained to converge in Wasserstein distance as shown in~\subref{fig:loss}.  ``kernel=21'' stands for a 1 dimensional convolutional kernel of length 21. ``1029'' is the number of voltage samples in a waveform.  $1\times$ represents the number of channels in each layer.}
+  \caption{\label{fig:CNN} Training process of a CNN. A shallow network structure of 5 layers in~\subref{fig:struct} is trained to converge in Wasserstein distance as shown in~\subref{fig:loss}.  ``kernel=21'' stands for a 1-D convolutional kernel size 21. ``1029'' is the number of voltage samples in a waveform.  $1\times$ represents the number of channels in each layer.}
 \end{figure}
+\vspace{-0.8cm}
 
-\vspace{-0.5cm}
+\begin{equation}
+  \bm{K}^{(1\cdots 5)}_{m,n,\cdots} = \arg\underset{\bm{K'}^{(1\cdots 5)}_{m,n,\cdots}}{\min} D_\mathrm{w}(\mathrm{CNN}(\bm{w}; \bm{K'}^{(1\cdots 5)}_{m,n,\cdots}), \tilde{\phi})
+  \label{eq:CNN-train}
+\end{equation}
+
+After 5 layers, 1D-CNN gives the desired output, a one channel vector $q'_j$, and the network itself is a non-linear function $\mathrm{CNN}(\bm{w})$ with numerous free parameters $\bm{K}^{(1\cdots5)}_{m,n,\cdots}$. As shown in eq.~\eqref{eq:CNN-train}, we fitted $\hat{\phi}=\bm{q}'=\mathrm{CNN}(\bm{w})$ using truth $\tilde{\phi}$ and $D_\mathrm{w}$ as loss function. Backpropagation method is used to adjust $\bm{K}^{(1\cdots5)}_{m,n,\cdots}$ in minimization, and figure~\ref{fig:loss} shows the convergence of Wasserstein distance during training. Such fitting process is called ``supervised learning''.
+
 In figure~\ref{fig:cnn-npe}, $D_w$ is the smallest for one PE.  $D_w$ stops increasing with $N_\mathrm{PE}$ at about 6 PEs, where the PE times are the most challenging to extract.  When $N_\mathrm{PE}$ is more than 6, pile-ups tend to produce a continuous waveform and the average PE time accuracy stays flat. Thus waveform analysis is the most important in recovering time accuracy for PEs less than 10.
 
-Such small $D_\mathrm{w}$ in figure~\ref{fig:cnn-npe} provides a precise matching of waveforms horizontally to guarantee effective $\hat{\alpha}$ scaling, explaining why $\mathrm{RSS}$ is also small in figure~\ref{fig:cnn}.
+Similar to eq.~\eqref{eq:fdconv2}, the output of CNN should be scaled by $\hat{\alpha}$ to get $\hat{\phi}$. Such small $D_\mathrm{w}$ in figure~\ref{fig:cnn-npe} provides a precise matching of waveforms horizontally to guarantee effective $\hat{\alpha}$ scaling, explaining why $\mathrm{RSS}$ is also small in figure~\ref{fig:cnn}.
 
 \begin{figure}[H]
   \begin{subfigure}{.5\textwidth}
