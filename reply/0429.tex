@@ -4,7 +4,7 @@
 \usepackage{amsmath}
 
 \usepackage{etoolbox}
-\AtBeginEnvironment{quote}{\par\singlespacing\small}
+\AtBeginEnvironment{quote}{\par\singlespacing\small\itshape}
 
 
 \title{Reply to report on JINST\_063P\_1221}
@@ -147,9 +147,15 @@ Line 232: thoroughly confusing and undefined.
 Line 234: As discussed in section 3.1.3 ... sparsity ... The issue of sparsity is not discussed in section 3.1.3.
 
 Figure 7 caption, line 238, line 242: This whole section has many undefined concepts and issues. what is a ``kernel = 21'' ? what are number of channels ? The behavior of $D_W$ depends on the assumed parameters of the pulse. The statement on line 238 is stated as a general statement. It is not a general result. What is ``matching of waveforms horizontally'' ? What is effective $\hat{\alpha}$ scaling ?
+\end{quote}
 
+% TBD
+
+\begin{quote}
 Figure 8: This uses language that is probably unfamiliar to the readers of JINST. What is a ``hinge'' and what are ``whiskers'' ? We do not do 25\% and 75\% confidence intervals usually.
 \end{quote}
+
+Using boxplots is a confusing way. We change the "hinge" and what are "whiskers" to the quantile of Gaussian distribution's positive and negative standard deviation, which are 15.8\% and 84.1\%. This errorbar setting is widely used in describing non-Gaussian distribution.
 
 \begin{quote}
 Line 253: The referee has a hard time understanding why $N_{PE}$ needs to be left unknown. If $N_{PE}$ is large then the integral of the pulse divided by the mean gain should be a very close estimate of $N_{PE}$. 
