@@ -97,6 +97,7 @@ d_index = [
     ("t0", np.float32),
     ("NPE", np.uint32),
     ("l_t", np.uint32),
+    ("l_interval", np.uint32),
     ("a_wave", np.uint32),
     ("b_wave", np.uint32),
     ("l_wave", np.uint32),
@@ -106,6 +107,7 @@ d_index = [
     ("consumption", np.float32),
 ]
 
+interval_l = []
 t_l = []
 q_l = []
 cq_l = []  # cumulative q
@@ -193,6 +195,7 @@ for ie, (e, wave, char) in enumerate(zip(ent, waves, cp.asnumpy(wave_deconv))):
     cx = phi_inv @ A
     z -= np.sum(A_vec, axis=1) * mus
 
+    interval_l.append(tlist[-1] - tlist[0] + 1)
     t_l.append(tlist)
     q_l.append(p_cha)
     cq_l.append(cq)
@@ -213,6 +216,7 @@ for ie, (e, wave, char) in enumerate(zip(ent, waves, cp.asnumpy(wave_deconv))):
 A_shape = np.array([x.shape for x in A_l])
 # lengths of waveform and tlist
 l_wave, l_t = np.max(A_shape, axis=0)
+l_interval = np.max(interval_l)
 mNPE = np.max(NPE_l)
 
 opts = {"compression": "gzip", "shuffle": True}
@@ -222,6 +226,7 @@ z = np.zeros((n_wave, l_wave), np.float32)
 cx = np.zeros((n_wave, l_wave, l_t), np.float32)
 s = np.zeros((n_wave, mNPE), np.float32)
 tq = np.zeros((n_wave, l_t), d_tq)
+t_index = np.zeros((n_wave, l_interval), np.uint32)
 
 for loc, _lw, _lt, _npe, _t, _q, _cq, _z, _A, _cx, _s in zip(
     range(n_wave),
@@ -243,6 +248,9 @@ for loc, _lw, _lt, _npe, _t, _q, _cq, _z, _A, _cx, _s in zip(
     A[loc, :_lw, :_lt] = _A
     cx[loc, :_lw, :_lt] = _cx
     s[loc, :_npe] = _s
+    t_index[loc, _t - _t[0]] = 1
+
+t_index = np.cumsum(t_index, axis=1, dtype=np.uint32) - 1
 
 with h5.File(fopt, "w") as opt:
     opt.create_dataset("A", data=A, **opts)
@@ -250,6 +258,7 @@ with h5.File(fopt, "w") as opt:
     opt.create_dataset("s", data=s, **opts)
     opt.create_dataset("tq", data=tq, **opts)
     opt.create_dataset("z", data=z, **opts)
+    opt.create_dataset("t_index", data=t_index, **opts)
     index = opt.create_dataset("index", shape=(n_wave,), dtype=d_index, **opts)
 
     index["loc"] = np.arange(n_wave, dtype=np.uint32)
@@ -265,5 +274,6 @@ with h5.File(fopt, "w") as opt:
     index["b_wave"] = b_w
     index["l_wave"] = A_shape[:, 0]
     index["l_t"] = A_shape[:, 1]
+    index["l_interval"] = interval_l
     index["consumption"] = consumption
 print(f"Sparsify finished, real time {np.sum(consumption):.02f}s")

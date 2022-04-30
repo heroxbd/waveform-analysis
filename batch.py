@@ -10,7 +10,7 @@ import numpy as np
 import cupy as cp
 
 from scipy.special import erf
-from scipy.stats import norm
+from scipy.stats import norm, exponnorm
 
 import wf_func as wff
 
@@ -95,21 +95,15 @@ with h5py.File(args.ref, 'r', libver='latest', swmr=True) as ipt:
     sigma = ipt['Readout/Waveform'].attrs['sigma'].item()
     start = ipt['SimTruth/T'][:]
 
-pi = np.pi
 b_t0 = [0., 600.]
-
-# def lc(t):
-#     return co + np.log(1.0 - erf((ass - t)/s2s)) - alpha*t
-
-def lc(t):
-    return wff.log_convolve_exp_norm(t, tau, sigma)
 
 if tau == 0.0:
     sel_lc = cp.ElementwiseKernel(
         'float32 t, bool sel',
         'float32 lprob',
-        f"lprob = sel ? -log({sigma}) - 0.5 * log(2.0 * {pi}) - 0.5 * (t / {sigma}) * (t / {sigma}) : 0",
+        f"lprob = sel ? -log({sigma}) - 0.5 * log(2.0 * {np.pi}) - 0.5 * (t / {sigma}) * (t / {sigma}) : 0",
         'sel_lc')
+    lcs = norm(scale = sigma)
 elif sigma == 0.0:
     sel_lc = cp.ElementwiseKernel(
         'float32 t, bool sel',
@@ -126,12 +120,13 @@ else:
         'float32 lprob',
         f"lprob = sel ? {co} + log(1.0 - erf(({ass} - t) / {s2s})) - {alpha} * t : 0",
         'sel_lc')
+    lcs = exponnorm(K = tau/sigma, scale = sigma)
 
 sel_add = cp.ElementwiseKernel('float32 delta, bool sel', 'float32 dest', "if(sel) dest += delta", "sel_add")
 sel_assign = cp.ElementwiseKernel('float32 value, bool sel', 'float32 dest', "if(sel) dest = value", "sel_assign")
 
 #profile
-def batch(A, cx, index, tq, s, z, t0_min=100, t0_max=500):
+def batch(A, cx, index, tq, t_index, s, z, t0_min=100, t0_max=500):
     """
     batch
     ====
@@ -140,8 +135,9 @@ def batch(A, cx, index, tq, s, z, t0_min=100, t0_max=500):
     s: list of PE locations
     mu_t: LucyDDM 的估算 PE 数
     z: residue waveform (raw - predicted)
+    t_index: 从实际时间到 tq["t_s"] 坐标时间的映射
 
-    home_s 是在指标意义上的连续变量
+    home_s 是在时间意义上的连续变量，从 light curve 抽样
 
     0   1   2   3   4   5   6   7   8   9   l_t = 10
     +---+---+---+---+---+---+---+---+---+
@@ -163,14 +159,15 @@ def batch(A, cx, index, tq, s, z, t0_min=100, t0_max=500):
     l_e = len(index)
     l_s = s.shape[1]
     w_all = cp.arange(l_e) # index of all the waveforms
+    nw_all = np.arange(l_e)
 
     l_t = tq.shape[1]
     # istar [0, 1) 之间的随机数，用于点中 PE
     istar = np.random.rand(l_e, TRIALS) # 同时可用于创生位置的选取
 
-    # 根据 p_cha 采样得到的 PE 序列。供以后的产生过程使用。这两行是使用了 InverseCDF 算法进行的MC采样。
-    fp = np.arange(l_t)
-    home_s = np.array([np.interp(_is, xp=_xp[:_lt], fp=fp[:_lt]) for _is, _xp, _lt in zip(istar, tq["cq"], index["l_t"])])
+    home_rt = lcs.rvs(size = istar.shape)
+    ts_min = tq['t_s'][:, 0]
+    ts_length = tq['t_s'][np.arange(l_e), index["l_t"]-1] - ts_min
 
     t0 = np.zeros(l_e, np.float32)
     e_hit = NPE > 0
@@ -208,7 +205,7 @@ def batch(A, cx, index, tq, s, z, t0_min=100, t0_max=500):
         zip(
             istar.T,
             flip.T,
-            home_s.T,
+            home_rt.T,
             np.random.normal(size=(TRIALS, l_e)),
             np.random.normal(scale=10, size=(TRIALS, l_e)),
             *np.log(np.random.rand(2, TRIALS, l_e)),
@@ -238,37 +235,37 @@ def batch(A, cx, index, tq, s, z, t0_min=100, t0_max=500):
 
         e_create = step == 1
         e_minus = ~e_create
+        create_rt = t0[e_create] + home[e_create] - ts_min[e_create]
+        acc_e_create = np.logical_and(create_rt >= 0, create_rt <= ts_length[e_create])
+        e_create[nw_all[e_create][~acc_e_create]] = False
+        create_i = v_rt(create_rt[acc_e_create], t_index, e_create) # from time to index.
+
         e_move = step == 2
-        e_pm = ~e_move
         e_annihilate = step == -1
-        e_plus = ~e_annihilate
+        e_pm = np.logical_and(e_create, e_annihilate)
+        e_plus = np.logical_and(e_create, e_move)
         loc[e_create, 0] = l_t # 0 A_vec
         op = np.array(t * NPE, dtype=np.int32)
         loc[e_minus, 0] = s[e_minus, op[e_minus]] # annihilate + move
         loc[e_move, 1] = periodic(loc[e_move, 0] + wander[e_move], index["l_t"][e_move])
-        loc[e_create, 1] = periodic(home[e_create], index["l_t"][e_create])
+        loc[e_create, 1] = create_i
         loc[e_annihilate, 1] = l_t
-
-        ### 矩阵 Δν 计算
+        
+        ### 矩阵 Δν 计算, 即使无意义的 e_create 也一起计算，否则有较大 GPU 性能损失
+        # 原则：fancy index 只在 CPU 上使用。
         vA, vc = vcombine(A, cx, cp.asarray(loc, np.float32), w_all[:, None])
         Δν_g, beta = vmove1(vA, vc, z, fmu, fsig2s_inv, det_fsig2s_inv, b0)
 
-        ## -1 cases, step == 2, -1
-        Δν[e_minus] -= lc(v_rt(loc[e_minus, 0], tq["t_s"], e_minus) - t0[e_minus])
-        ## +1 cases, step == 2, 1
-        Δν[e_plus] += lc(v_rt(loc[e_plus, 1], tq["t_s"], e_plus) - t0[e_plus])
         ## non-move cases, step == 1, -1
         NPE[e_create] += 1
-        loc[e_annihilate, 1] = loc[e_annihilate, 0]
-        Δν[e_pm] += step[e_pm] * (log_mu[e_pm] - np.log(tq["q_s"][e_pm, np.array(loc[e_pm, 1], dtype=np.int32) + 1]) - np.log(NPE[e_pm]))
-        loc[e_annihilate, 1] = l_t
+        Δν[e_pm] += step[e_pm] * (log_mu[e_pm] - np.log(NPE[e_pm]))
         NPE[e_create] -= 1
         ########
         Δν += cp.asnumpy(Δν_g)
         #######
 
         ### 计算 Δcx, Δz, 更新 cx 和 z。对 accept 进行特别处理
-        e_accept = Δν >= accept
+        e_accept = np.logical_and(Δν >= accept, np.logical_or(e_create, e_minus))
         _e_accept = cp.asarray(e_accept)
         Δcx, Δz = vmove2(vA, vc, fmu, A, beta)
         sel_add(Δcx, _e_accept[:, None, None], cx)
@@ -341,6 +338,7 @@ with h5py.File(fipt, "r", libver="latest", swmr=True) as ipt:
     s = ipt["s"][:]
     tq = ipt["tq"][:]
     z = ipt["z"][:]
+    t_index = ipt["t_index"][:]
 
 l_e = len(index)
 s_t = np.argsort(index["l_t"])
@@ -389,6 +387,7 @@ for part in range(l_e // args.size + 1):
     if l_part:
         ind_part = index[i_part]
         lp_t = np.max(ind_part["l_t"])
+        lp_interval = np.max(ind_part["l_interval"])
         lp_wave = np.max(ind_part["l_wave"])
         lp_NPE = np.max(ind_part["NPE"])
         print(lp_t, lp_wave, lp_NPE)
@@ -399,10 +398,10 @@ for part in range(l_e // args.size + 1):
          ) = batch(cp.asarray(np.append(A[i_part, :lp_wave, :lp_t], null, axis=2), np.float32),
                    cp.asarray(np.append(cx[i_part, :lp_wave, :lp_t], null, axis=2), np.float32),
                    index[i_part], 
-                   tq[i_part, :lp_t], 
+                   tq[i_part, :lp_t],
+                   t_index[i_part, :lp_interval],
                    np.append(s[i_part, :lp_NPE], s_null, axis=1),
                    cp.asarray(z[i_part, :lp_wave], np.float32))
-        t0, mu = get_t0_pool(s0_history, t0_history, loc, flip, index[i_part], tq[i_part, :lp_t], start['T0'][i_part])
         fi_part = (i_part * TRIALS)[:, None] + np.arange(TRIALS)[None, :]
         fip = fi_part.flatten()
         sample["flip"][fip] = flip.flatten()
@@ -415,8 +414,6 @@ for part in range(l_e // args.size + 1):
         min_col = min(last_max_s.shape[1], index['l_t'].max())
         s_max["s_max"][i_part, :min_col] = last_max_s[:, :min_col]
         s_max["consumption"][i_part] = (time.time() - time_start) / l_part
-        s_max["t0"][i_part] = t0
-        s_max["mu"][i_part] = mu
 print(f"FSMP finished, real time {s_max['consumption'].sum():.02f}s")
 
 with h5py.File(fopt, "w") as opt:
