@@ -309,31 +309,6 @@ def batch(A, cx, index, tq, t_index, s, z, t0_min=100, t0_max=500):
     last_max_s[last_max_s.sum(axis=1) == 0] = s_init
     return flip, s0_history, t0_history, Δν_history, s_max_index, last_max_s, s_history, mu_history
 
-def get_t0(a0, a1, s0_history, t0_history, loc, flip, index, tq, t00_l):
-    l_e = a1 - a0
-    l_s = loc.shape[1] // TRIALS
-    t0_l = np.empty(l_e)
-    mu_l = np.empty(l_e)
-    for i in range(a0, a1):
-        accept = np.full(len(flip[i]), True)
-        NPE = s0_history[i]
-        number_sample_zero = np.sum(NPE == 0)
-        t00_list = np.repeat(t0_history[i][accept], NPE[accept])
-        step = np.repeat(np.arange(TRIALS)[accept], NPE[accept])
-        idx_base = np.arange(TRIALS)[accept] * l_s
-        idx = np.hstack([i_b + np.arange(npe) for i_b, npe in zip(idx_base, NPE[accept])])
-        mu_t = index["mu0"][i]
-        b_mu = [max(1e-8, mu_t - 5 * np.sqrt(mu_t)), mu_t + 5 * np.sqrt(mu_t)]
-        l_t = index["l_t"][i]
-        loc_i = loc[i][idx]
-        ilp_cha = np.log(1 / tq["q_s"][i][:l_t])
-        guess = ilp_cha[loc[i][idx].astype(int)]
-        loc_i = np.interp(loc_i, xp=np.arange(0.5, l_t), fp=tq["t_s"][i][:l_t])
-        # t00 = index["t0"][i]
-        # t00 = loc_i.mean() + 1
-        t00 = t00_l[i]
-        t0_l[i - a0], mu_l[i - a0] = wff.fit_t0mu_gibbs(loc_i, t00_list, step, number_sample_zero, tau, sigma, mu_t, t00, b_mu, b_t0, TRIALS)
-    return t0_l, mu_l
 
 with h5py.File(fipt, "r", libver="latest", swmr=True) as ipt:
     A = ipt["A"][:]
@@ -361,27 +336,6 @@ s_max = np.zeros(l_e, dtype=[("TriggerNo", "u4"),
                              ("mu", "f8"),])
 s_max["TriggerNo"] = index["TriggerNo"]
 s_max["ChannelID"] = index["ChannelID"]
-
-def get_t0_pool(s0_history, t0_history, loc, flip, index, tq, t00_l):
-    N = s0_history.shape[0]
-    if args.Ncpu == 1:
-        slices = [[0, N]]
-    else:
-        chunk = N // args.Ncpu + 1
-        slices = np.vstack((np.arange(0, N, chunk), np.append(np.arange(chunk, N, chunk), N))).T.astype(int).tolist()
-    # result = (lambda a0, a1: get_t0(a0, a1, s0_history, t0_history, loc, flip, index, tq, t00_l))(*slices[0])
-    with Pool(min(args.Ncpu, cpu_count())) as pool:
-        result = pool.starmap(partial(get_t0, 
-                                      s0_history=s0_history, 
-                                      t0_history=t0_history, 
-                                      loc=loc, 
-                                      flip=flip, 
-                                      index=index, 
-                                      tq=tq, 
-                                      t00_l=t00_l), slices)
-    t0 = np.hstack([result[i][0] for i in range(len(slices))])
-    mu = np.hstack([result[i][1] for i in range(len(slices))])
-    return t0, mu
 
 for part in range(l_e // args.size + 1):
     time_start = time.time()
