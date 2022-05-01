@@ -11,8 +11,6 @@ psr.add_argument("--ref", type=str, help="truth file")
 args = psr.parse_args()
 
 sample = pd.read_hdf(args.ipt, "sample").set_index(["TriggerNo", "ChannelID"])
-with h5py.File(args.ipt,"r") as ipt:
-    mu_true = ipt["sample"].attrs["mu_true"]
 index = pd.read_hdf(args.sparse, "index").set_index(["TriggerNo", "ChannelID"])
 mu0 = index["mu0"]
 pe = pd.read_hdf(args.ref, "SimTriggerInfo/PEList").set_index(["TriggerNo", "PMTId"])
