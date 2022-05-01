@@ -359,3 +359,4 @@ for part in range(l_e // args.size + 1):
 
 with h5py.File(fopt, "w") as opt:
     opt.create_dataset("sample", data=sample, compression="gzip", shuffle=True)
+    opt.create_dataset("s_max", data=s_max, compression="gzip", shuffle=True)
