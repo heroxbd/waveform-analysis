@@ -1,27 +1,18 @@
 #!/usr/bin/env python3
 import time
 import argparse
-import itertools as it
-from functools import partial
-from multiprocessing import Pool, cpu_count
 
 import h5py
 import numpy as np
 import cupy as cp
 
-from scipy.special import erf
 from scipy.stats import norm, exponnorm, erlang
-
-import wf_func as wff
-
-np.random.seed(32)
 
 psr = argparse.ArgumentParser()
 psr.add_argument("-o", dest="opt", type=str, help="output file")
 psr.add_argument("ipt", type=str, help="input file")
 psr.add_argument("--ref", type=str, help="truth file")
 psr.add_argument("--size", type=int, default=100, help="batch size")
-psr.add_argument('-N', '--Ncpu', dest='Ncpu', type=int, default=50)
 args = psr.parse_args()
 
 fipt = args.ipt
@@ -195,9 +186,6 @@ def batch(A, cx, index, tq, t_index, s, z, t0_min=100, t0_max=500):
     det_fsig2s_inv = cp.linalg.det(fsig2s_inv)
     fmu = vstep[None, :] * mus[:, None]
 
-    last_max_s = s.copy()
-    s_max_index = np.zeros(l_e, dtype=np.uint32)
-
     for i, (t, step, home, wander, wt, accept, acct) in enumerate(
         zip(
             istar.T,
@@ -244,7 +232,6 @@ def batch(A, cx, index, tq, t_index, s, z, t0_min=100, t0_max=500):
         e_move = step == 2
         e_annihilate = step == -1
         e_pm = np.logical_and(e_create, e_annihilate)
-        e_plus = np.logical_and(e_create, e_move)
         loc[e_create, 0] = l_t # 0 A_vec
         op = np.array(t * NPE, dtype=np.int32)
         loc[e_minus, 0] = s[e_minus, op[e_minus]] # annihilate + move
@@ -275,13 +262,11 @@ def batch(A, cx, index, tq, t_index, s, z, t0_min=100, t0_max=500):
 
         # 增加
         ea_create = np.logical_and(e_accept, e_create)
-        ea_plus = np.logical_and(e_accept, e_plus)
 
         s[ea_create, NPE[ea_create]] = loc[ea_create, 1]
         NPE[ea_create] += 1
         # 减少
         ea_annihilate = np.logical_and(e_accept, step == -1)
-        ea_minus = np.logical_and(e_accept, e_minus)
 
         NPE[ea_annihilate] -= 1
         s[ea_annihilate, op[ea_annihilate]] = s[ea_annihilate, NPE[ea_annihilate]]
@@ -295,19 +280,13 @@ def batch(A, cx, index, tq, t_index, s, z, t0_min=100, t0_max=500):
         ν += Δν
         breakthrough = ν > ν_max
         ν_max[breakthrough] = ν[breakthrough]
-        s_max_index[breakthrough] = i
-        last_max_s[breakthrough] = s[breakthrough]
         Δν_history[:, i] = Δν
         flip[:, i] = step
         s0_history[:, i] = NPE
         mu_history[:, i] = log_mu
         s_history[:, i*l_s:(i+1)*l_s] = s
     # print("t0 acceptance:", t0_accept / TRIALS)
-    # Assign one PE to the waveform without any PE
-    s_init = np.full(l_s, 0.)
-    s_init[0] = 1.
-    last_max_s[last_max_s.sum(axis=1) == 0] = s_init
-    return flip, s0_history, t0_history, Δν_history, s_max_index, last_max_s, s_history, mu_history
+    return flip, s0_history, t0_history, Δν_history, s_history, mu_history
 
 
 with h5py.File(fipt, "r", libver="latest", swmr=True) as ipt:
@@ -327,15 +306,6 @@ sample = np.zeros((l_e * TRIALS), dtype=[("TriggerNo", "u4"), ("ChannelID", "u4"
                                          ("mu", "f8"), ("delta_nu", "f4")])
 sample["TriggerNo"] = np.repeat(index["TriggerNo"], TRIALS)
 sample["ChannelID"] = np.repeat(index["ChannelID"], TRIALS)
-s_max = np.zeros(l_e, dtype=[("TriggerNo", "u4"),
-                             ("ChannelID", "u4"),
-                             ("s_max_index", "u4"),
-                             ("s_max", "f4", index['l_t'].max()),
-                             ("consumption", "f8"),
-                             ("t0", "f8"),
-                             ("mu", "f8"),])
-s_max["TriggerNo"] = index["TriggerNo"]
-s_max["ChannelID"] = index["ChannelID"]
 
 for part in range(l_e // args.size + 1):
     time_start = time.time()
@@ -351,7 +321,7 @@ for part in range(l_e // args.size + 1):
 
         null = np.zeros((l_part, lp_wave, 1), np.float32) # cx, A[:, :, -1] = 0  用于 +- 的空白维度
         s_null = np.zeros((l_part, lp_NPE * 2), np.float32) # 富余的 PE 活动空间
-        (flip, s0_history, t0_history, Δν_history, s_max_index, last_max_s, loc, mu_history
+        (flip, s0_history, t0_history, Δν_history, loc, mu_history
          ) = batch(cp.asarray(np.append(A[i_part, :lp_wave, :lp_t], null, axis=2), np.float32),
                    cp.asarray(np.append(cx[i_part, :lp_wave, :lp_t], null, axis=2), np.float32),
                    index[i_part], 
@@ -366,12 +336,6 @@ for part in range(l_e // args.size + 1):
         sample["t0"][fip] = t0_history.flatten()
         sample["mu"][fip] = mu_history.flatten()
         sample["delta_nu"][fip] = Δν_history.flatten()
-        s_max["s_max_index"][i_part] = s_max_index
-        min_col = min(last_max_s.shape[1], index['l_t'].max())
-        s_max["s_max"][i_part, :min_col] = last_max_s[:, :min_col]
-        s_max["consumption"][i_part] = (time.time() - time_start) / l_part
-print(f"FSMP finished, real time {s_max['consumption'].sum():.02f}s")
 
 with h5py.File(fopt, "w") as opt:
     opt.create_dataset("sample", data=sample, compression="gzip", shuffle=True)
-    opt.create_dataset("s_max", data=s_max, compression="gzip", shuffle=True)
