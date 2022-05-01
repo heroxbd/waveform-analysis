@@ -92,10 +92,10 @@ def collect(a0, a1):
         cha = cha * gmu
         end = start + len(cha)
 
-        # ts['muwave'][i - a0] = mu[i]['mu']
-        ts['muwave'][i - a0] = s_max[i]['mu'] # use 2D MLE fitted mu
-        # ts['tswave'][i - a0] = mu[i]['t0'] # use Gibbs sampled t0
-        ts['tswave'][i - a0] = s_max[i]['t0'] # use 2D MLE fitted t0
+        ts['muwave'][i - a0] = mu[i]['mu']
+        # ts['muwave'][i - a0] = s_max[i]['mu'] # use 2D MLE fitted mu
+        ts['tswave'][i - a0] = mu[i]['t0'] # use Gibbs sampled t0
+        # ts['tswave'][i - a0] = s_max[i]['t0'] # use 2D MLE fitted t0
         ts['mucharge'][i - a0] = mu_i
         ts['tscharge'][i - a0] = t0_i
         ts['TriggerNo'][i - a0] = ent[i]['TriggerNo']
