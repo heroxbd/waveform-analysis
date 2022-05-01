@@ -15,10 +15,10 @@ Like figure~\ref{fig:detector}, a typical neutrino or dark matter detector has a
   \resizebox{\linewidth}{!}{\input{figures/profile.pgf}}
   \caption{\label{fig:time-pro} Effective light curves in the three target medium and PMT configuration settings.}
 \end{subfigure}
-  \caption{\subref{fig:detector} The target volume maybe of cylinder or polyhedra shapes.  The PMTs' size varies from several to tens of \si{cm}.  The target medium could be pure water or ice, organic or inorganic scintillators. The principle of PMT photon counting remains the same. \subref{fig:time-pro} A scintillator paired with ultra-fast photo-sensors gives the green curve with $\tau_\ell \gg \sigma_\ell$.  A fast Cherenkov detector by the red curve has $\tau_\ell \ll \sigma_\ell$.  The blue curve combining $\tau_\ell=\SI{20}{ns}$ and $\sigma_\ell=\SI{5}{ns}$ represents a typical scintillation detector.  We can regard $\phi(t)\mathrm{d}t$ as a probability density function~(PDF at the vertical axis) of PE times.}
+  \caption{\subref{fig:detector} The target volume could be cylinder or polyhedra.  The PMTs' size varies from several to tens of \si{cm}.  The target medium could be pure water or ice, organic or inorganic scintillators. The principle of PMT photon counting remains the same. \subref{fig:time-pro} A scintillator paired with ultra-fast photo-sensors gives the green curve with $\tau_\ell \gg \sigma_\ell$.  A fast Cherenkov detector by the red curve has $\tau_\ell \ll \sigma_\ell$.  The blue curve combining $\tau_\ell=\SI{20}{ns}$ and $\sigma_\ell=\SI{5}{ns}$ represents a typical scintillation detector.  We can regard $\phi(t)$ as a probability density function of PE times.}
 \end{figure}
 
-The larger the detector, the smaller the solid angle each PMT covers.  The light intensity seen by a PMT can be extremely low.  A PMT works in \textit{photon counting} or \textit{digital mode}, where it is viable to count individual PEs.  \textit{Analog mode} is the opposite, where there are so many PE pulses overlapping that the output is a continuous electric current.  Even in one event of the same detector, PMTs can operate in different modes, depending on the proximity of them to the event vertex.  A unified waveform algorithm should handle both extremes, and the intermediate ``overlap, but distinguishable'' mode with an example in figure~\ref{fig:pile}.  In this study,  we cover most of the cases with PE occupancy from 0.5 to 30.
+The larger the detector, the smaller the solid angle each PMT covers.  The light intensity seen by a PMT can be extremely low.  A PMT works in \textit{photon counting} or \textit{digital mode}, where it is viable to count individual PEs.  \textit{Analog mode} is the opposite, where there are so many PE pulses overlapping that the output is a continuous electric current.  Even in one event of the same detector, PMTs can operate in different modes, depending on the proximity of them to the event vertex.  A unified waveform algorithm should handle both extremes, and the intermediate ``overlapped, but distinguishable'' mode with an example in figure~\ref{fig:pile}.  In this study,  we cover most of the cases with PE occupancy from 0.5 to 30.
 
 The PE, waveform and their estimators are hierarchical and intercorelated.  We explicitly summarize the symbol conventions of this article in table~\ref{tab:symbol}.
 
@@ -34,37 +34,42 @@ The PE, waveform and their estimators are hierarchical and intercorelated.  We e
     $N_\mathrm{PE}$ & number of PEs (r.v.) & \secref{subsec:spe} \\
     $\hat{t}_i, \hat{q}_i$ & estimators for $t_i, q_i$ & \secref{sec:algorithm} \\
     $\hat{N}_\mathrm{PE}$ & estimator for $N_\mathrm{PE}$ & \secref{sec:time} \\
-    $t'_i, N_s$ & grid of PE candidate times and its size & \secref{sec:regression} \\
-    $q'_i, \bm{q}'$ & total charge at $t'_i$ and its vector (r.v.) & \secref{sec:regression} \\
-    $\alpha, \hat{\alpha}$ & scaling factor of $\bm{q}'$ and its estimator & \secref{sec:fourier} \\
-    $q_\mathrm{th}$ & threshold regularizer of $\bm{q}'$ & \secref{sec:fourier} \\
+    $t'_j, N_\mathrm{s}$ & grid of PE candidate times and its size & \secref{sec:cnn} \\
+    $q'_j, \bm{q}'$ & total charge at $t'_j$ and its vector (r.v.) & \secref{sec:cnn} \\
+    $\alpha, \hat{\alpha}$ & scaling factor of $\bm{q}$ and its estimator & \secref{sec:shifting} \\
+    $q_\mathrm{th}$ & threshold regularizer of $\bm{q}$ & \secref{sec:fourier} \\
     $z_i, \bm{z}$ & number of PEs at $t'_i$ and its vector (r.v.) & \secref{subsec:mcmc} \\
+    $\bm{z}^i$ & sample of $\bm{z}$ from a Markov chain & \secref{subsec:fsmp} \\
     \hline
     $\mu$ & light intensity~(r.v.) & \secref{sec:lc} \\
     $\hat{\mu}_Q$ & charge estimator for $\mu$ & \secref{sec:intensity-mu}\\
     $t_0$ & time shift of the light curve~(r.v.) & \secref{sec:lc} \\
+    $t_0^i$ & sample of $t_0$ from a Markov chain & \secref{subsec:fsmp} \\
     $\hat{t}_\mathrm{ALL}$ & ideal estimator for $t_0$ by truth $\bm{t}$ & \secref{sec:time-shift-t_0} \\
     $\hat{t}_\mathrm{1st}$ & first PE estimator for $t_0$ & \secref{sec:time-shift-t_0} \\
     $\hat{t}_\mathrm{KL}$, $\hat{\mu}_\mathrm{KL}$ & KL estimators for $t_0$ and $\mu$ & \secref{sec:pseudo} \\
     $\Delta{t_0}$ & bias of a $t_0$ estimator & \secref{sec:time-shift-t_0} \\
     $\phi(t)$ & normalized light curve & \secref{sec:lc} \\
     $\tilde{\phi}$ & PE-sampled light curve & \secref{subsec:spe} \\
+    $\phi'$ & $\sum_{j=1}^{N_\mathrm{s}}q'_j\delta(t-t'_j)$ from grid $\bm{t}'$ & \secref{sec:cnn} \\
     $\hat{\phi}$ & waveform estimator for $\tilde{\phi}$ & \secref{sec:pseudo} \\
     $\tilde{\phi}_*, \hat{\phi}_*$ & normalized $\tilde{\phi}$ and $\hat{\phi}$ & \secref{sec:W-dist} \\
     $\tilde{\Phi}(t), \hat{\Phi}(t)$ & $\int_{-\infty}^t\tilde{\phi}_*(s)\mathrm{d}s$ and $\int_{-\infty}^t\hat{\phi}_*(s)\mathrm{d}s$ & \secref{sec:W-dist}\\
     \hline
     $V_\mathrm{PE}(t)$ & shape of a single electron response & \secref{subsec:spe} \\
     $w(t), \epsilon(t)$ & PMT waveform and white noise & \secref{subsec:spe} \\
+    $V_\mathrm{th}$ & threshold regularizer of $w(t)$ & \secref{sec:shifting} \\
     $\bm{w}$ & vector notion of discretized $w(t)$ & \secref{subsec:fsmp} \\
     $\tilde{w}$ & smoothed $w$, approximating $w - \epsilon$ & \secref{sec:fourier} \\
     $\tilde{w}_*$, $V_{\mathrm{PE}*}$ & normalized $\tilde{w}$ and $V_\mathrm{PE}$ & \secref{sec:lucyddm} \\
     $\hat{w}$ & $\hat{\phi} \otimes V_\mathrm{PE}$ for estimating $w$ & \secref{sec:rss} \\
+    $w'$ & $\phi' \otimes V_\mathrm{PE}$ from grid $\bm{t}'$ & \secref{sec:regression} \\
     \hline\hline
   \end{tabular}
   \label{tab:symbol}
 \end{table}
     %  &  & $\bm{w}, w'$ & random & PMT waveform \\
-    % $D_w$ & & & random & Wasserstein distance \\
+    % $D_\mathrm{w}$ & & & random & Wasserstein distance \\
     % RSS &&&& rasidual sum of squares \\
     % $(\sigma_\ell, \tau_\ell)$ & & & constant & light curve shape parameters \\
     % $(V_0, \tau_\mathrm{PE}, \sigma_\mathrm{PE})$ & & & constant & shape parameters of $V_\mathrm{PE}(\cdot)$ \\
@@ -90,16 +95,16 @@ where subscript $\ell$ stands for ``light curve'' and $\sigma_\ell$ encodes the 
 \subsection{Single electron response}
 \label{subsec:spe}
 
-A PE induced by a photon at the PMT photocathode is accelerated, collected, and amplified by several stages into $\num[retain-unity-mantissa=false]{\sim 1e7}$ electrons, forming a voltage pulse $V_\mathrm{PE}(t)$ in the PMT output.  Wright~et~al.~\cite{wright_low_1954} formulated the cascade multiplication of secondary electrons assuming the amplification of each stage following Poisson distribution.  Breitenberger~\cite{breitenberger_scintillation_1955} compared the statistical model with a summary of laboratory measurements observing the gain variance to be larger than predicted. Percott~\cite{prescott_statistical_1966} used Polya distribution to account for extra variance of Poisson rate non-uniformity.  With modern high gain PMTs ($\num[retain-unity-mantissa=false]{\sim 1e7}$), Caldwell et al.~\cite{caldwell_characterization_2013} from MiniCLEAN and Amaudruz et al.~\cite{amaudruz_-situ_2019} from DEAP-3600 suggested Gamma distribution as the continuous counterpart of the Polya.  Neves et al.~\cite{neves_calibration_2010} from ZEPLIN-III did a survey of the literature but prefer to model the gain in a data-driven way by calibration, without assuming any well-known probability distributions.  We choose Gamma distribution in this work over Gaussian because the amplification is always positive.
+A PE induced by a photon at the PMT photocathode is accelerated, collected, and amplified by several stages into $\num[retain-unity-mantissa=false]{\sim 1e7}$ electrons, forming a voltage pulse $V_\mathrm{PE}(t)$ in the PMT output.  Wright~et~al.~\cite{wright_low_1954} formulated the cascade multiplication of secondary electrons assuming the amplification of each stage following Poisson distribution.  Breitenberger~\cite{breitenberger_scintillation_1955} compared the statistical model with a summary of laboratory measurements observing the gain variance to be larger than predicted. Percott~\cite{prescott_statistical_1966} used Polya distribution to account for extra variance of Poisson rate non-uniformity.  With modern high gain PMTs ($\num[retain-unity-mantissa=false]{\sim 1e7}$), Caldwell et al.~\cite{caldwell_characterization_2013} from MiniCLEAN and Amaudruz et al.~\cite{amaudruz_-situ_2019} from DEAP-3600 suggested gamma distribution as the continuous counterpart of the Polya.  Neves et al.~\cite{neves_calibration_2010} from ZEPLIN-III did a survey of the literature but prefer to model the gain in a data-driven way by calibration, without assuming any well-known probability distributions.  We choose gamma distribution in this work over Gaussian because the amplification is always positive.
 
 A sample of PEs from the light curve $\phi(t)$ in eq.~\eqref{eq:time-pro} can be formulated as several delta functions, also known as sparse spike train~\cite{levy_reconstruction_1981}, 
 \begin{equation}
   \label{eq:lc-sample}
   \tilde{\phi}(t) = \sum_{i=1}^{N_{\mathrm{PE}}} q_i \delta(t-t_i),
 \end{equation}
-where $N_\mathrm{PE}$ is the number of PEs following Poisson distribution with parameter $\mu$.  $t_i$ is the hit time of the $i$-th PE, $q_i$ is the relative charge of the $i$-th PE from Gamma distribution.  We set the shape and scale parameters of Gamma so that $\E[q_i] = 1$ and $\Var[q_i] = 0.4^2$, corresponding to a typical first-stage amplification of 6--7\footnote{For a large gain and many stages, $\Var[q_i] \approx 1 / M_1$, in which $M_1$ is the first-stage amplicication factor.}.
+where $N_\mathrm{PE}$ is the number of PEs following Poisson distribution with parameter $\mu$.  $t_i$ is the hit time of the $i$-th PE, $q_i$ is the relative charge of the $i$-th PE from gamma distribution.  We set the shape ($k=1/0.4^2$) and scale ($\theta=0.4^2$) parameters of gamma so that $\E[q_i] = 1$ and $\Var[q_i] = 0.4^2$, corresponding to a typical first-stage amplification of 7--8\footnote{For large gain and Poisson-distributed first-stage amplicication $M_1$, $\Var[q_i] \approx \frac{1}{M_1-1}$.}.
 
-Birks~\cite{birks_theory_1967} summarized laboratory measurements of single-electron-response~(SER) pulse shape and indicated a crude assumption of Gaussian shape is adequate, but also mentioned asymmetric model of $t e^{-bt}$ having a faster rise than decay by Hamilton and Wright~\cite{hamilton_transit_1956}.  To better model the rising edge curvature than Hamilton and Wright, S.~Jetter~et al.~\cite{jetter_pmt_2012} from DayaBay used log-normal shape as a convenient phenomenological representation of the SER pulse.  As in figure~\ref{fig:spe}, the smooth rising curve of log-normal fits measurements better and the falling component captures the exponential decay characteristics of RC circuit in the electronics readout.  Caldwell et al.~\cite{caldwell_characterization_2013}, Caravaca et al.~\cite{caravaca_experiment_2017} from CHESS and Kaptanoglu~\cite{kaptanoglu_characterization_2018} used the same parameterization and found reasonable match with experimental data.  A better model embracing underlying physics mechanism may be developed in the future, but for this waveform analysis study, we adopt the log-normal SER pulse as eq.~\eqref{eq:dayaspe} without loss of generality.
+Birks~\cite{birks_theory_1967} summarized laboratory measurements of single-electron-response~(SER) pulse shape and indicated a crude assumption of Gaussian shape is adequate, but also mentioned asymmetric model of $t e^{-bt}$ having a faster rise than decay by Hamilton and Wright~\cite{hamilton_transit_1956}.  To better model the rising edge curvature than Hamilton and Wright, S.~Jetter~et al.~\cite{jetter_pmt_2012} from DayaBay used log-normal as a convenient phenomenological representation of the SER pulse.  As in figure~\ref{fig:spe}, the smooth rising curve of log-normal fits measurements better and the falling component captures the exponential decay characteristics of RC circuit in the electronics readout.  Caldwell~et~al.~\cite{caldwell_characterization_2013}, Caravaca et al.~\cite{caravaca_experiment_2017} from CHESS and Kaptanoglu~\cite{kaptanoglu_characterization_2018} used the same parameterization and found reasonable match with experimental data.  A better model embracing underlying physics mechanism may be developed in the future, but for this waveform analysis study, we adopt the log-normal SER pulse as eq.~\eqref{eq:dayaspe} without loss of generality.
 \begin{equation}
   V_\mathrm{PE}(t) = V_{0}\exp\left[-\frac{1}{2}\left(\frac{\log(t/\tau_\mathrm{PE})}{\sigma_\mathrm{PE}}\right)^{2}\right],
   \label{eq:dayaspe}
@@ -117,7 +122,7 @@ where shape parameters $\tau_\mathrm{PE}=\SI{8}{ns}$, $\sigma_\mathrm{PE}=\SI{0.
     \resizebox{\textwidth}{!}{\input{figures/wave.pgf}}
     \caption{\label{fig:pile} PE pile-up and white noise in an PMT waveform.}
   \end{subfigure}
-  \caption{A single PE from a PMT induces a voltage pulse in \subref{fig:spe}. Multiple PEs pile up at a PMT form an input waveform $w(t)$ in \subref{fig:pile}, when PEs are barely visually separable from each other. Output charge $\hat{\bm{t}}, \hat{\bm{q}}$ also in \subref{fig:pile}, which we will discuss in section~\ref{sec:algorithm}. }
+  \caption{A single PE from a PMT induces a voltage pulse in \subref{fig:spe}. Multiple PEs pile up at a PMT form an input waveform $w(t)$ in \subref{fig:pile}, when PEs are barely separable from each other visually. Output charge $\hat{\bm{t}}, \hat{\bm{q}}$ also in \subref{fig:pile}, which we will discuss in section~\ref{sec:algorithm}. }
 \end{figure}
 
 A noise-free waveform $\tilde{w}(t)$ is a convolution of $\tilde{\phi}(t)$ and $V_\mathrm{PE}(t)$, and the PMT voltage output waveform $w(t)$ is a time series modeled by the sum of $\tilde{w}(t)$ and a Gaussian white noise $\epsilon(t)$,
@@ -130,7 +135,7 @@ A noise-free waveform $\tilde{w}(t)$ is a convolution of $\tilde{\phi}(t)$ and $
 \end{equation}
 See figure~\ref{fig:pile} for an example.
 
-We do not dive into pedestals or saturation for simplicity.  We also assume the single PE pulse $V_\mathrm{PE}(t)$, the variance of charge $\Var[q_i]$ and the distribution of noise $\epsilon(t)$ are known.  Otherwise, they should be measured by PMT calibrations and modeled with uncertainty.
+We do not dive into pedestals or saturation for simplicity.  We also assume the SER pulse $V_\mathrm{PE}(t)$, the variance of charge $\Var[q_i]$ and the distribution of noise $\epsilon(t)$ are known.  Otherwise, they should be measured by PMT calibrations and modeled with uncertainty.
 
 
 \subsection{Measurement of incident light}
@@ -140,27 +145,35 @@ We see in figure~\ref{fig:pile} that pile-ups and noises hinder the time $t_i$ a
 \subsubsection{Time $t_0$}
 \label{sec:time-shift-t_0}
 
-$\hat{t}_\mathrm{1st}$ is a biased estimator of $t_0$.  It is affected by the light intensity $\mu$, which we shall show in figure~\ref{fig:biasmethods} and section~\ref{subsec:timeresolution}. We define the resolution $\sigma_\mathrm{1st}$ for a batch of waveforms as the standard deviation of $\Delta t_0 = \hat{t}_\mathrm{1st} - t_0$. From a hypothetical perfect measurement of $t_i$, we define an ideal maximum likelihood estimator~(MLE) $\hat{t}_\mathrm{ALL}$ to capture time information of all the PEs,
+$\hat{t}_\mathrm{1st}$ is a biased estimator of $t_0$.  It is affected by the light intensity $\mu$: the larger the $\mu$, the more negative bias $\hat{t}_\mathrm{1st}$ has.  We define the resolution of $\hat{t}_\mathrm{1st}$ as the standard deviation of its bias $\sqrt{\Var[\hat{t}_\mathrm{1st} - t_0]}$. From a hypothetical perfect measurement of $t_i$, we define an ideal maximum likelihood estimator~(MLE) $\hat{t}_\mathrm{ALL}$ to capture time information of all the PEs,
 \begin{equation}
   \label{eq:2}
   \hat{t}_\mathrm{ALL} = \arg\underset{t_0}{\max} \prod_{i=1}^{N_\mathrm{PE}} \phi(t_i-t_0).
 \end{equation}
-The corresponding $\sigma_\mathrm{ALL}$ is the lower bound of time resolution. 
+The corresponding resolution $\sqrt{\Var[\hat{t}_\mathrm{ALL} - t_0]}$ serves as the reference for method evaluation.
 
-To characterize $\hat{t}_\mathrm{1st}$ and $\hat{t}_\mathrm{ALL}$, we scan $\mu$ from \numrange{0}{30} for each light curve in figure~\ref{fig:time-pro}. We generate a sample of $\num[retain-unity-mantissa=false]{1e4}$ waveforms having at least 1 PE for every triplet of $(\tau_\ell, \sigma_\ell, \mu)$.  Figure~\ref{fig:reso-diff} shows that $\sigma_{\mathrm{1st}}$ equals $\sigma_{\mathrm{ALL}}$ when $\tau_\ell \gg \sigma_\ell$, because $\hat{t}_\mathrm{ALL}$ reduces to $\hat{t}_\mathrm{1st}$(=$\min_i t_i$) for an exponential light curve. For $\mu \to 0$, $\sigma_{\mathrm{1st}}$ and $\sigma_{\mathrm{ALL}}$ are also equal because at most 1 PE is available.  TDC is effective in those cases.
+To characterize the difference between $\hat{t}_\mathrm{1st}$ and $\hat{t}_\mathrm{ALL}$, we scan $\mu$ from \numrange{0}{30} for each light curve in figure~\ref{fig:time-pro}. We generate a sample of $\num[retain-unity-mantissa=false]{1e4}$ waveforms having at least 1 PE for every triplet of $(\tau_\ell, \sigma_\ell, \mu)$.  Figure~\ref{fig:reso-diff} shows substantial difference between the two estimators, only except two cases: when $\tau_\ell \gg \sigma_\ell$, because $\hat{t}_\mathrm{ALL}$ reduces to $\hat{t}_\mathrm{1st}$(=$\min_i t_i$) for an exponential light curve; when $\mu \to 0$, because at most 1 PE is available.  
 
 \begin{figure}[H]
-  \centering
-  \resizebox{1.0\textwidth}{!}{\input{figures/vs-deltadiv.pgf}}
-  \caption{\label{fig:reso-diff} Time resolution comparisons between $\hat{t}_{\mathrm{ALL}}$~(solid lines, when using the information of all PEs) and $\hat{t}_\mathrm{1st}$~(dashed lines, using the first PE instead of the threshold crossing time to eliminate the influence from TDC).  The difference is manifested especially when $\sigma_\ell$ and $\mu$ are large. The three cases of $(\tau_\ell, \sigma_\ell)/\si{ns}$ represent the scintillation with ultra-fast PMTs~$(20, 0)$, Cherenkov~$(0, 5)$ and scintillation coupled with PMT TTS~$(20, 5)$. The performance of waveform analysis lies between $\sigma_{\mathrm{1st}}$ and $\sigma_{\mathrm{ALL}}$. }
+  \begin{subfigure}{.49\textwidth}
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/vs-deltadiv.pgf}}
+    \caption{\label{fig:reso-diff} Absolute time resolutions.}
+  \end{subfigure}
+  \begin{subfigure}{.49\textwidth}
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/vs-deltadiv-r.pgf}}
+    \caption{\label{fig:reso-diff-r} Relative time resolutions $\sqrt{\frac{\Var[\hat{t}_{\mathrm{1st}} - t_0]}{\Var[\hat{t}_\mathrm{ALL} - t_0]}}$.}
+  \end{subfigure}
+  \caption{Time resolution comparisons between $\hat{t}_{\mathrm{ALL}}$~(solid lines, when using the information of all PEs) and $\hat{t}_\mathrm{1st}$~(dashed lines, using the first PE instead of the threshold crossing time to eliminate the influence from TDC).  The difference is manifested especially when $\sigma_\ell$ and $\mu$ are large. The three colors are different cases of $(\tau_\ell, \sigma_\ell)/\si{ns}$ representing the scintillation with ultra-fast PMTs~$(20, 0)$, Cherenkov~$(0, 5)$ and scintillation coupled with PMT TTS~$(20, 5)$.}
 \end{figure}
 
-Nevertheless, for $\sigma_\ell > 0$ and $\mu >0$, the $\sigma_{\mathrm{1st}}$ significantly deteriorates from $\sigma_{\mathrm{ALL}}$.  For Cherenkov and scintillation experiments with non-negligible PMT TTS and occupancy, we shall explore more sophisticated waveform analysis algorithms to go beyond $\hat{t}_{\mathrm{1st}}$ and recover the accuracy of $\hat{t}_\mathrm{ALL}$ in eq.~\eqref{eq:2} from waveform in eq.~\eqref{eq:1}.
+Nevertheless, in general for $\sigma_\ell > 0$ and $\mu >0$, we notice that TDC or equivalent algorithms to $\hat{t}_\mathrm{1st}$ imposes significant resolution loss.  For Cherenkov and scintillation experiments with non-negligible PMT TTS and occupancy, we shall explore more sophisticated waveform analysis algorithms to go beyond $\hat{t}_{\mathrm{1st}}$ and recover the accuracy of $\hat{t}_\mathrm{ALL}$ in eq.~\eqref{eq:2} from waveform in eq.~\eqref{eq:1}.
 
 \subsubsection{Intensity $\mu$}
 \label{sec:intensity-mu}
 
-Noting $Q_0 = {\int V_\mathrm{PE}(t) \mathrm{d} t}$, the charge estimator $\hat{\mu}_Q$ for QDC is
+The classical way is to measure light intensity $\mu$ by integration. Noting $Q_0 = {\int V_\mathrm{PE}(t) \mathrm{d} t}$, the charge estimator $\hat{\mu}_Q$ for QDC is
 \begin{equation}
   \begin{aligned}
   \label{eq:mu-q}
@@ -174,15 +187,15 @@ Its expectation and variance are,
   \begin{aligned}
     \E[\hat{\mu}_Q] &= \E[N_\mathrm{PE}] \\
     \Var[\hat{\mu}_Q] &= \Var\left[\sum_{i=1}^{N_\mathrm{PE}} q_i\right] + \Var\left[\frac{1}{Q_0} \int \epsilon(t) \mathrm{d} t\right] \\
-    &= \E[q^2] \Var(N_\mathrm{PE}) + \frac{T}{Q_0^2} \sigma_\epsilon^2 \\
-    &= (1 + \sigma_\mathrm{q}^2) \Var(N_\mathrm{PE}) + \frac{T}{Q_0^2} \sigma_\epsilon^2. \\
+    &= \E[q^2] \Var[N_\mathrm{PE}] + \frac{T}{Q_0^2} \Var[\epsilon] \\
+    &= (1 + \Var[q]) \Var[N_\mathrm{PE}] + \frac{T}{Q_0^2} \Var[\epsilon]. \\
   \end{aligned}
 \end{equation}
-where the first term of the variance is the that of a compound Poisson distribution with a Gaussian jump, and $T$ in the second one is a constant proportional to the time window.  Resolution of $\hat{\mu}_Q$ is affected by the Poisson fluctuation of $N_\mathrm{PE}$, the charge resolution of a PE $\sigma_\mathrm{q}$ and the while noise $\sigma_\epsilon$.
+where the first term of the variance is from a compound Poisson distribution with a Gaussian jump, and $T$ in the second one is a constant proportional to the time window.  Carefully lowering $T$ could reduce the disturbance of $\Var[\epsilon]$. Resolution of $\hat{\mu}_Q$ is affected by the Poisson fluctuation of $N_\mathrm{PE}$, the charge resolution of a PE $\sigma_\mathrm{q}$ and the white noise $\sigma_\epsilon$.
 
-Sometimes we mitigate the impact of $\sigma_\mathrm{q}$ and $\sigma_\epsilon$ by rounding $\hat{\mu}_Q$ to integers.  It works well for $N_\mathrm{PE} \le 1$, which is equivalently a hit-based 0-1 $\mu$ estimator $\hat{\mu}_\mathrm{hit}$.  But for $N_\mathrm{PE} \ge 2$, it is hard to interpret $\hat{\mu}_Q$ rounding by physics principles and $\hat{\mu}_\mathrm{hit}$ does not gain any additional information from the extra PEs.
+Sometimes we mitigate the impact of $\Var[q]$ and $\Var[\epsilon]$ by rounding $\hat{\mu}_Q$ to integers.  It works well for $N_\mathrm{PE} \le 1$, which is equivalently a hit-based 0-1 $\mu$ estimator $\hat{\mu}_\mathrm{hit}$.  But for $N_\mathrm{PE} \ge 2$, it is hard to interpret $\hat{\mu}_Q$ rounding by physics principles and $\hat{\mu}_\mathrm{hit}$ does not gain any additional information from the extra PEs.
 
-The goal of waveform analysis is to eliminate the impact of $\sigma_\mathrm{q}$ and $\sigma_\epsilon$ as much as possible.  The pure Poisson fluctuation of $N_\mathrm{PE}$ is the resolution lower bound $\underline{\sigma}_\mu = \sqrt{\mu}$ of any $\mu$ estimator.
+The goal of waveform analysis is to eliminate the impact from $\Var[q]$ and $\Var[\epsilon]$ as much as possible.  The pure Poisson fluctuation of true PE counts $\sqrt{\Var[N_\mathrm{PE}]} = \sqrt{\mu}$ is the resolution lower bound and reference to $\mu$ estimators.
 
 \subsubsection{Shape $\phi(\cdot)$}
 \label{sec:shape-phicdot}

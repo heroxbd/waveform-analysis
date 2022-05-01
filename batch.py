@@ -302,6 +302,11 @@ def batch(A, cx, index, tq, t_index, s, z, t0_min=100, t0_max=500):
         s0_history[:, i] = NPE
         mu_history[:, i] = log_mu
         s_history[:, i*l_s:(i+1)*l_s] = s
+    # print("t0 acceptance:", t0_accept / TRIALS)
+    # Assign one PE to the waveform without any PE
+    s_init = np.full(l_s, 0.)
+    s_init[0] = 1.
+    last_max_s[last_max_s.sum(axis=1) == 0] = s_init
     return flip, s0_history, t0_history, Δν_history, s_max_index, last_max_s, s_history, mu_history
 
 def get_t0(a0, a1, s0_history, t0_history, loc, flip, index, tq, t00_l):
@@ -312,6 +317,7 @@ def get_t0(a0, a1, s0_history, t0_history, loc, flip, index, tq, t00_l):
     for i in range(a0, a1):
         accept = np.full(len(flip[i]), True)
         NPE = s0_history[i]
+        number_sample_zero = np.sum(NPE == 0)
         t00_list = np.repeat(t0_history[i][accept], NPE[accept])
         step = np.repeat(np.arange(TRIALS)[accept], NPE[accept])
         idx_base = np.arange(TRIALS)[accept] * l_s
@@ -326,7 +332,7 @@ def get_t0(a0, a1, s0_history, t0_history, loc, flip, index, tq, t00_l):
         # t00 = index["t0"][i]
         # t00 = loc_i.mean() + 1
         t00 = t00_l[i]
-        t0_l[i - a0], mu_l[i - a0] = wff.fit_t0mu_gibbs(loc_i, t00_list, step, tau, sigma, mu_t, t00, b_mu, b_t0, TRIALS)
+        t0_l[i - a0], mu_l[i - a0] = wff.fit_t0mu_gibbs(loc_i, t00_list, step, number_sample_zero, tau, sigma, mu_t, t00, b_mu, b_t0, TRIALS)
     return t0_l, mu_l
 
 with h5py.File(fipt, "r", libver="latest", swmr=True) as ipt:

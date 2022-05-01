@@ -14,6 +14,7 @@ from scipy import optimize as opti
 import scipy.special as special
 from scipy.signal import convolve
 from scipy.signal import savgol_filter
+from tqdm import tqdm
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
@@ -166,33 +167,36 @@ def waveformfft(wave, spe_pre):
     return pet, cha
 
 def threshold(wave, spe_pre):
-    pet = np.argwhere(wave[spe_pre['peak_c']:] > spe_pre['std'] * 5).flatten()
-    cha = wave[spe_pre['peak_c']:][pet]
+    pc = spe_pre['wd_c']
+    pet = np.argwhere(wave[pc:] > spe_pre['std'] * 5).flatten()
+    cha = wave[pc:][pet]
     cha = cha / cha.sum() * np.abs(wave.sum()) / spe_pre['spe'].sum()
     if len(pet) == 0:
-        pet = np.array([np.argmax(wave[spe_pre['peak_c']:])])
+        pet = np.array([np.argmax(wave[pc:])])
         cha = np.array([1])
     return pet, cha
 
 def firstthres(wave, spe_pre):
-    pet = np.argwhere(wave[spe_pre['peak_c']:] > spe_pre['std'] * 5).flatten()
+    pc = spe_pre['peak_c']
+    pet = np.argwhere(wave[pc:] > spe_pre['std'] * 5).flatten()
     if len(pet) == 0:
-        pet = np.array([np.argmax(wave[spe_pre['peak_c']:])])
+        pet = np.array([np.argmax(wave[pc:])])
     else:
         pet = pet[:1]
     cha = np.array([1])
     return pet, cha
 
 def findpeak(wave, spe_pre):
+    pc = spe_pre['peak_c']
     w = savgol_filter(wave, 11, 2)
     dpta = np.where(np.diff(w, prepend=w[0]) > 0, 1, -1)
     dpta = np.diff(dpta, prepend=dpta[0])
-    petr = np.argwhere((w > spe_pre['std'] * 5) & (dpta < 0)).flatten() - spe_pre['peak_c']
+    petr = np.argwhere((w > spe_pre['std'] * 5) & (dpta < 0)).flatten() - pc
     pet = petr[petr >= 0]
-    cha = wave[pet + spe_pre['peak_c']]
+    cha = wave[pet + pc]
     cha = cha / np.sum(cha) * np.abs(np.sum(wave)) / np.sum(spe_pre['spe'])
     if len(pet) == 0:
-        pet = np.array([np.argmax(wave[spe_pre['peak_c']:])])
+        pet = np.array([np.argmax(wave[pc:])])
         cha = np.array([1])
     return pet, cha
 
@@ -248,7 +252,11 @@ def flow(cx, p1, z, N, sig2s, sig2w, mus, A, p_cha, mu_t, TRIALS=2000):
     c_cha = np.cumsum(p_cha) # cha: charge; p_cha: pdf of LucyDDM charge (由 charge 引导的 PE 强度流先验)
     home_s = np.interp(istar, xp=np.insert(c_cha, 0, 0), fp=np.arange(N+1)) # 根据 p_cha 采样得到的 PE 序列。供以后的产生过程使用。这两行是使用了 InverseCDF 算法进行的MC采样。
 
-    NPE0 = int(mu_t + 0.5) # mu_t: μ_total，LucyDDM 给出的 μ 猜测；NPE0 是 PE 序列初值 s_0 的 PE 数。
+    # p_cha = interp1d(np.arange(N), p_cha)
+
+    # mu_t: μ_total，LucyDDM 给出的 μ 猜测；NPE0 是 PE 序列初值 s_0 的 PE 数。
+    # NPE0 = int(mu_t + 0.5)
+    NPE0 = round(mu_t)
     # t 的位置，取值为 [0, N)
     s = list(np.interp((np.arange(NPE0) + 0.5) / NPE0, xp=np.insert(c_cha, 0, 0), fp=np.arange(N+1))) # MCMC 链的 PE configuration 初值 s0
     ν = 0
@@ -270,6 +278,8 @@ def flow(cx, p1, z, N, sig2s, sig2w, mus, A, p_cha, mu_t, TRIALS=2000):
     log_mu = np.log(mu_t) # 猜测的 Poisson 流强度
     T_list = []
     c_star_list = []
+
+    number_sample_zero = 0
 
     for i, (t, step, home, wander, accept) in enumerate(zip(istar, flip, home_s, wander_s, np.log(np.random.rand(TRIALS)))):
         # 不设左右边界
@@ -303,6 +313,7 @@ def flow(cx, p1, z, N, sig2s, sig2w, mus, A, p_cha, mu_t, TRIALS=2000):
                     Δν1, Δcx1, Δz1 = move(*combine(A, cx + Δcx, nloc), z + Δz, 1, mus, sig2s, A)
                     Δν += Δν1
                     Δν += np.log(p_cha[int(nloc)]) - np.log(p_cha[int(loc)])
+                    # Δν += np.log(p_cha(nloc)) - np.log(p_cha(loc))
                     if Δν >= accept:
                         s[op] = nloc
                         Δcx += Δcx1
@@ -313,13 +324,16 @@ def flow(cx, p1, z, N, sig2s, sig2w, mus, A, p_cha, mu_t, TRIALS=2000):
         if Δν >= accept:
             cx += Δcx
             z += Δz
+            # What if len(s) == 0? 
             si1 = si + len(s)
-            es_history[si:si1]['step'] = i
+            es_history[si:si1]['step'] = i - number_sample_zero
             es_history[si:si1]['loc'] = s
             si = si1
         else: # reject proposal
             Δν = 0
             step = 0
+        if len(s) == 0:
+            number_sample_zero += 1
         T_list.append(np.sort(np.digitize(s, bins=np.arange(N)) - 1))
         t, c = np.unique(T_list[-1], return_counts=True)
         c_star = np.zeros(N, dtype=int)
@@ -328,7 +342,7 @@ def flow(cx, p1, z, N, sig2s, sig2w, mus, A, p_cha, mu_t, TRIALS=2000):
 
         Δν_history[i] = Δν
         flip[i] = step
-    return flip, [Δν_history, ν], es_history[:si1], c_star_list, T_list
+    return flip, [Δν_history, ν], es_history[:si1], c_star_list, T_list, NPE0, number_sample_zero
 
 def metropolis_fsmp(y, A, sig2w, sig2s, mus, p1, p_cha, mu_t, TRIALS=2000):
     '''
@@ -352,7 +366,7 @@ def metropolis_fsmp(y, A, sig2w, sig2s, mus, p1, p_cha, mu_t, TRIALS=2000):
     z = y.copy()
 
     # Metropolis flow
-    flip, Δν_history, es_history, c_star_list, T_list = flow(cx_root, p1, z, N, sig2s, sig2w, mus, A, p_cha, mu_t, TRIALS=TRIALS)
+    flip, Δν_history, es_history, c_star_list, T_list, NPE0, number_sample_zero = flow(cx_root, p1, z, N, sig2s, sig2w, mus, A, p_cha, mu_t, TRIALS=TRIALS)
     num = len(T_list)
 
     c_star = np.vstack(c_star_list)
@@ -363,10 +377,10 @@ def metropolis_fsmp(y, A, sig2w, sig2s, mus, p1, p_cha, mu_t, TRIALS=2000):
     T_list = T_list[burn:]
     c_star = c_star[burn:, :]
     flip[np.abs(flip) == 2] = 0 # 平移不改变 PE 数
-    NPE_evo = np.cumsum(np.insert(flip, 0, int(mu_t + 0.5)))[burn:]
+    NPE_evo = np.cumsum(np.insert(flip, 0, NPE0))[burn:]
     es_history = es_history[es_history['step'] >= burn]
 
-    return nu_star, T_list, c_star, es_history, NPE_evo
+    return nu_star, T_list, c_star, es_history, NPE_evo, number_sample_zero
 
 def nu_direct(y, A, nx, mus, sig2s, sig2w, la):
     M, N = A.shape
@@ -389,7 +403,7 @@ def elbo(nu_star_prior):
     # assert abs(e_star - e) < 1e-4
     return e
 
-def fit_t0mu_guess(loc, step, Tau, Sigma, guess, mu, t00, b_mu, b_t0, TRIALS):
+def fit_t0mu_guess(loc, step, number_sample_zero, Tau, Sigma, guess, mu, t00, b_mu, b_t0, TRIALS):
     def agg_NPE(t0):
         log_f = log_convolve_exp_norm(loc - t0, Tau, Sigma) + guess
         return jit_agg_NPE(step, log_f, TRIALS)
@@ -397,6 +411,9 @@ def fit_t0mu_guess(loc, step, Tau, Sigma, guess, mu, t00, b_mu, b_t0, TRIALS):
     def t_t0(t0):
         nonlocal mu
         NPE, f_agg = agg_NPE(t0)
+        if number_sample_zero != 0:
+            NPE = np.insert(NPE, 0, 0)
+            f_agg = np.insert(f_agg, 0, np.log(number_sample_zero))
         ans = opti.fmin_l_bfgs_b(lambda μ: μ - special.logsumexp(NPE * np.log(μ / mu) + f_agg), 
                                  x0=[mu], 
                                  approx_grad=True, 
@@ -408,22 +425,17 @@ def fit_t0mu_guess(loc, step, Tau, Sigma, guess, mu, t00, b_mu, b_t0, TRIALS):
     # ans = opti.fmin_l_bfgs_b(t_t0, x0=[t00], approx_grad=True, bounds=[b_t0], maxfun=10000)
     # t0 = ans[0].item()
     # fval_old = ans[1].item()
-    # print(ans[2]['task'])
-    # print(ans[2]['warnflag'])
 
     t0_list = np.linspace(b_t0[0], b_t0[-1], 501)
     fval = np.array([t_t0(t_i) for t_i in t0_list])
-    t0 = t0_list[fval.argmin()]
-    fval_new = t_t0(t0).item()
-
-    # print(f'Old minLL is {fval_old:.4f}, new minLL is {fval_new:.4f}')
-    # label = 0
-    # if fval_old > fval_new:
-    #     label = 1
-    # print(f'Label is {label}')
+    if np.std(fval) < 1e-4:
+        t0 = np.mean(b_t0)
+    else:
+        t0 = t0_list[fval.argmin()]
+    fval_new = t_t0(t0)
     return t0, mu
 
-def fit_t0mu_gibbs(loc, t00_list, step, Tau, Sigma, mu, t00, b_mu, b_t0, TRIALS):
+def fit_t0mu_gibbs(loc, t00_list, step, number_sample_zero, Tau, Sigma, mu, t00, b_mu, b_t0, TRIALS):
     def agg_NPE(t0):
         log_f = log_convolve_exp_norm(loc - t0, Tau, Sigma) - log_convolve_exp_norm(loc - t00_list, Tau, Sigma)
         return jit_agg_NPE(step, log_f, TRIALS)
@@ -431,6 +443,8 @@ def fit_t0mu_gibbs(loc, t00_list, step, Tau, Sigma, mu, t00, b_mu, b_t0, TRIALS)
     def t_t0(t0):
         nonlocal mu
         NPE, f_agg = agg_NPE(t0)
+        NPE = np.insert(NPE, 0, 0)
+        f_agg = np.insert(f_agg, 0, np.log(number_sample_zero))
         ans = opti.fmin_l_bfgs_b(lambda μ: μ - special.logsumexp(NPE * np.log(μ / mu) + f_agg), 
                                  x0=[mu], 
                                  approx_grad=True, 
@@ -441,7 +455,10 @@ def fit_t0mu_gibbs(loc, t00_list, step, Tau, Sigma, mu, t00, b_mu, b_t0, TRIALS)
 
     t0_list = np.linspace(b_t0[0], b_t0[-1], 501)
     fval = np.array([t_t0(t_i) for t_i in t0_list])
-    t0 = t0_list[fval.argmin()]
+    if np.std(fval) < 1e-4:
+        t0 = np.mean(b_t0)
+    else:
+        t0 = t0_list[fval.argmin()]
     fval_new = t_t0(t0)
     return t0, mu
 
@@ -547,7 +564,8 @@ def read_model(spe_path, n=1):
             # mar_l = 0
             # mar_r = 0
             ax.plot(spe[i])
-            spe_pre_i = {'spe':interp1d(np.arange(len(spe[i])), spe[i])(np.arange(0, len(spe[i]) - 1, 1 / n)), 'epulse':epulse, 'peak_c':peak_c * n, 'mar_l':mar_l * n, 'mar_r':mar_r * n, 'std':std[i], 'parameters':p[i]}
+            wd_c = np.argmin(np.abs(np.cumsum(spe / spe.sum()) - 0.5))
+            spe_pre_i = {'spe':interp1d(np.arange(len(spe[i])), spe[i])(np.arange(0, len(spe[i]) - 1, 1 / n)), 'epulse':epulse, 'peak_c':peak_c * n, 'wd_c':wd_c * n, 'mar_l':mar_l * n, 'mar_r':mar_r * n, 'std':std[i], 'parameters':p[i]}
             spe_pre.update({cid[i]:spe_pre_i})
         ax.grid()
         ax.set_xlabel(r'$\mathrm{Time}/\si{ns}$')

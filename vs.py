@@ -79,8 +79,11 @@ for key in tqdm(mts.keys()):
         mu = mts[key][i]['mu']
         tau = mts[key][i]['tau']
         sigma = mts[key][i]['sigma']
+        waveform = 'waveform'
+        if key == 'fsmp':
+            waveform = 'waveform_fsmp'
         try:
-            with h5py.File(os.path.join('result', key, 'solu', f), 'r', libver='latest', swmr=True) as soluf, h5py.File(os.path.join('result', key, 'dist', f), 'r', libver='latest', swmr=True) as distf, h5py.File(os.path.join('waveform', f), 'r', libver='latest', swmr=True) as wavef:
+            with h5py.File(os.path.join('result', key, 'solu', f), 'r', libver='latest', swmr=True) as soluf, h5py.File(os.path.join('result', key, 'dist', f), 'r', libver='latest', swmr=True) as distf, h5py.File(os.path.join(waveform, f), 'r', libver='latest', swmr=True) as wavef:
                 time = soluf['starttime'][:]
                 if key != 'fsmp':
                     mu_hat = time['muwave']
@@ -129,7 +132,7 @@ whigh = np.max(whigh[~np.isnan(whigh)]) * 1.05
 rhigh = np.array([[np.max(mts[key]['RSS'])] for key in mts.keys()])
 rhigh = np.max(rhigh[~np.isnan(rhigh)]) * 1.05
 
-lim = {'deltadiv':np.array([[0.3, 0.5]]), 'wdist':np.array([[1.0, 1.5]]), 'rss':np.array([[100, 200]])}
+lim = {'deltadiv':np.array([[0.3, 0.5]]), 'wdist':np.array([[1.5, 2.0]]), 'rss':np.array([[150, 300]])}
 
 fig_t0_resolution = plt.figure(figsize=(len(Tau) * 5, len(Sigma) * 3))
 gs_t0_resolution = gridspec.GridSpec(len(Sigma), len(Tau), figure=fig_t0_resolution, left=0.1, right=0.8, top=0.92, bottom=0.15, wspace=0.3, hspace=0.35)
@@ -286,8 +289,8 @@ plt.close(fig_rss)
 thresfirst = False
 marker2 = [['s', '^']]
 colors2 = [['r', 'b']]
-fig = plt.figure(figsize=(10, 4))
-gs = gridspec.GridSpec(1, 2, figure=fig, left=0.1, right=0.85, top=0.92, bottom=0.15, wspace=0.30, hspace=0.2)
+fig = plt.figure(figsize=(5, 4))
+gs = gridspec.GridSpec(1, 1, figure=fig, left=0.15, right=0.92, top=0.92, bottom=0.15, wspace=0.3, hspace=0.2)
 ax = fig.add_subplot(gs[0, 0])
 stdlist = mts['firstthres'][(mts['firstthres']['tau'] == Tau[0]) & (mts['firstthres']['sigma'] == Sigma[0])]
 std1sttruth = np.empty(len(stdlist['mu']))
@@ -318,7 +321,14 @@ ax.set_xlabel(r'$\mu$')
 ax.set_ylabel(r'$\mathrm{Time\ resolution}/\si{ns}$')
 ax.grid()
 # ax.legend(loc='upper right')
-ax = fig.add_subplot(gs[0, 1])
+fig.savefig('Note/figures/vs-deltadiv.pgf')
+fig.savefig('Note/figures/vs-deltadiv.pdf')
+fig.savefig('Note/figures/vs-deltadiv.png')
+plt.close(fig)
+
+fig = plt.figure(figsize=(5, 4))
+gs = gridspec.GridSpec(1, 1, figure=fig, left=0.15, right=0.92, top=0.92, bottom=0.15, wspace=0.3, hspace=0.2)
+ax = fig.add_subplot(gs[0, 0])
 sigma = 0
 tau = max(Tau)
 stdlist = mts['firstthres'][(mts['firstthres']['tau'] == Tau[0]) & (mts['firstthres']['sigma'] == Sigma[0])]
@@ -334,13 +344,15 @@ for i, sigma in enumerate(Sigma):
         yerr = np.vstack([stdlist['std1sttruth'] / stdlist['stdtruth']*(1-1/np.sqrt(stats.f.ppf(1-alpha, stdlist['N']-1, stdlist['N']-1))), (1/np.sqrt(stats.f.ppf(alpha, stdlist['N']-1, stdlist['N']-1))-1)*stdlist['std1sttruth']/stdlist['stdtruth']])
         ax.errorbar(stdlist['mu'], stdlist['std1sttruth'] / stdlist['stdtruth'], yerr=yerr, label=fr'$({tau},{sigma})$', marker=marker2[i][j], color=colors2[i][j])
 ax.set_xlabel(r'$\mu$')
-ax.set_ylabel(r'$\mathrm{\sigma_\mathrm{1st}/\sigma_\mathrm{ALL}\ ratio}$')
+# ax.set_ylabel(r'$\mathrm{\sigma_\mathrm{1st}/\sigma_\mathrm{ALL}\ ratio}$')
+ax.set_ylabel(r'$\mathrm{ratio}$')
 ax.set_ylim(0.9, 3.0)
 ax.grid()
-ax.legend(title=r'$(\tau_l, \sigma_l)/\si{ns}$', bbox_to_anchor=(1., 0.9))
-fig.savefig('Note/figures/vs-deltadiv.pgf')
-fig.savefig('Note/figures/vs-deltadiv.pdf')
-fig.savefig('Note/figures/vs-deltadiv.png')
+# ax.legend(title=r'$(\tau_l, \sigma_l)/\si{ns}$', bbox_to_anchor=(1., 0.9))
+ax.legend(title=r'$(\tau_l, \sigma_l)/\si{ns}$')
+fig.savefig('Note/figures/vs-deltadiv-r.pgf')
+fig.savefig('Note/figures/vs-deltadiv-r.pdf')
+fig.savefig('Note/figures/vs-deltadiv-r.png')
 plt.close(fig)
 
 # del mts['firstthres']
@@ -461,9 +473,11 @@ for key in tqdm(mts.keys()):
         mu = mts[key][i]['mu']
         tau = mts[key][i]['tau']
         sigma = mts[key][i]['sigma']
-
+        waveform = 'waveform'
+        if key == 'fsmp':
+            waveform = 'waveform_fsmp'
         try:
-            with h5py.File(os.path.join('result', key, 'solu', f), 'r', libver='latest', swmr=True) as soluf, h5py.File(os.path.join('result', key, 'dist', f), 'r', libver='latest', swmr=True) as distf, h5py.File(os.path.join('waveform', f), 'r', libver='latest', swmr=True) as wavef:
+            with h5py.File(os.path.join('result', key, 'solu', f), 'r', libver='latest', swmr=True) as soluf, h5py.File(os.path.join('result', key, 'dist', f), 'r', libver='latest', swmr=True) as distf, h5py.File(os.path.join(waveform, f), 'r', libver='latest', swmr=True) as wavef:
                 time = soluf['starttime'][:]
                 starttime_attrs = dict(soluf['starttime'].attrs)
                 start = wavef['SimTruth/T'][:]
