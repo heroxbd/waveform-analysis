@@ -10,7 +10,7 @@ import numpy as np
 import cupy as cp
 
 from scipy.special import erf
-from scipy.stats import norm, exponnorm
+from scipy.stats import norm, exponnorm, erlang
 
 import wf_func as wff
 
@@ -92,6 +92,7 @@ def v_rt(_s, _ts, w_all):
 
 with h5py.File(args.ref, 'r', libver='latest', swmr=True) as ipt:
     tau = ipt['Readout/Waveform'].attrs['tau'].item()
+    mu_true = ipt["Readout/Waveform"].attrs["mu"]
     sigma = ipt['Readout/Waveform'].attrs['sigma'].item()
     start = ipt['SimTruth/T'][:]
 
@@ -133,7 +134,6 @@ def batch(A, cx, index, tq, t_index, s, z, t0_min=100, t0_max=500):
     连续时间游走
     cx: Cov^-1 * A, 详见 FBMP
     s: list of PE locations
-    mu_t: LucyDDM 的估算 PE 数
     z: residue waveform (raw - predicted)
     t_index: 从实际时间到 tq["t_s"] 坐标时间的映射
 
@@ -184,15 +184,12 @@ def batch(A, cx, index, tq, t_index, s, z, t0_min=100, t0_max=500):
     ν = np.zeros(l_e, dtype=np.float32)
     ν_max = np.zeros(l_e, dtype=np.float32)
     Δν_history = np.zeros((l_e, TRIALS), dtype=np.float32) # list of Δν's
-    annihilations = np.zeros((l_e, TRIALS)) # float64
-    creations = np.zeros((l_e, TRIALS)) # float64
     t0_history = np.zeros((l_e, TRIALS), dtype=np.float32)
     s0_history = np.zeros((l_e, TRIALS), dtype=np.uint32) # 0-norm of s
+    mu_history = np.zeros((l_e, TRIALS), dtype=np.float32) # 0-norm of s
     s_history = np.zeros((l_e, TRIALS * l_s), dtype=np.float32)
 
     # t0_accept = 0
-
-    log_mu = np.log(index["mu0"])  # 猜测的 Poisson 流强度
     loc = np.zeros((l_e, 2)) # float64
     fsig2s_inv = cp.diag(vstep)[None, :, :] * (1/sig2s)[:, None, None]
     det_fsig2s_inv = cp.linalg.det(fsig2s_inv)
@@ -224,6 +221,10 @@ def batch(A, cx, index, tq, t_index, s, z, t0_min=100, t0_max=500):
         # t0_accept += np.sum(t0_acceptance) / len(t0_acceptance)
         np.putmask(t0, t0_acceptance, nt0)
         t0_history[:, i] = t0
+
+        ### mu 直接采样分布：e^{-\mu/\mu_p} * e^{-\mu} * \mu^N
+        # Erlang 分布 => scale = (\mu_0 + 1) / \mu_0, a = N + 1
+        log_mu = np.log(erlang.rvs(a = NPE+1, scale = mu_true / (mu_true + 1)))
 
         ### 光变曲线和移动计算
         Δν[:] = 0
@@ -275,14 +276,12 @@ def batch(A, cx, index, tq, t_index, s, z, t0_min=100, t0_max=500):
         # 增加
         ea_create = np.logical_and(e_accept, e_create)
         ea_plus = np.logical_and(e_accept, e_plus)
-        creations[ea_plus, i] = loc[ea_plus, 1]
 
         s[ea_create, NPE[ea_create]] = loc[ea_create, 1]
         NPE[ea_create] += 1
         # 减少
         ea_annihilate = np.logical_and(e_accept, step == -1)
         ea_minus = np.logical_and(e_accept, e_minus)
-        annihilations[ea_minus, i] = loc[ea_minus, 0]
 
         NPE[ea_annihilate] -= 1
         s[ea_annihilate, op[ea_annihilate]] = s[ea_annihilate, NPE[ea_annihilate]]
@@ -301,9 +300,9 @@ def batch(A, cx, index, tq, t_index, s, z, t0_min=100, t0_max=500):
         Δν_history[:, i] = Δν
         flip[:, i] = step
         s0_history[:, i] = NPE
+        mu_history[:, i] = log_mu
         s_history[:, i*l_s:(i+1)*l_s] = s
-    # print("t0 acceptance:", t0_accept / TRIALS)
-    return flip, s0_history, t0_history, Δν_history, s_max_index, last_max_s, annihilations, creations, s_history
+    return flip, s0_history, t0_history, Δν_history, s_max_index, last_max_s, s_history, mu_history
 
 def get_t0(a0, a1, s0_history, t0_history, loc, flip, index, tq, t00_l):
     l_e = a1 - a0
@@ -311,7 +310,6 @@ def get_t0(a0, a1, s0_history, t0_history, loc, flip, index, tq, t00_l):
     t0_l = np.empty(l_e)
     mu_l = np.empty(l_e)
     for i in range(a0, a1):
-        # accept = flip[i] != 0
         accept = np.full(len(flip[i]), True)
         NPE = s0_history[i]
         t00_list = np.repeat(t0_history[i][accept], NPE[accept])
@@ -344,9 +342,8 @@ l_e = len(index)
 s_t = np.argsort(index["l_t"])
 
 sample = np.zeros((l_e * TRIALS), dtype=[("TriggerNo", "u4"), ("ChannelID", "u4"),
-                                         ("flip", "i2"), ("s0", "u4"), ("t0", "f8"), 
-                                         ("annihilation", "f8"), ("creation", "f8"), 
-                                         ("delta_nu", "f4")])
+                                         ("flip", "i2"), ("s0", "u4"), ("t0", "f8"),
+                                         ("mu", "f8"), ("delta_nu", "f4")])
 sample["TriggerNo"] = np.repeat(index["TriggerNo"], TRIALS)
 sample["ChannelID"] = np.repeat(index["ChannelID"], TRIALS)
 s_max = np.zeros(l_e, dtype=[("TriggerNo", "u4"),
@@ -394,7 +391,7 @@ for part in range(l_e // args.size + 1):
 
         null = np.zeros((l_part, lp_wave, 1), np.float32) # cx, A[:, :, -1] = 0  用于 +- 的空白维度
         s_null = np.zeros((l_part, lp_NPE * 2), np.float32) # 富余的 PE 活动空间
-        (flip, s0_history, t0_history, Δν_history, s_max_index, last_max_s, annihilations, creations, loc
+        (flip, s0_history, t0_history, Δν_history, s_max_index, last_max_s, loc, mu_history
          ) = batch(cp.asarray(np.append(A[i_part, :lp_wave, :lp_t], null, axis=2), np.float32),
                    cp.asarray(np.append(cx[i_part, :lp_wave, :lp_t], null, axis=2), np.float32),
                    index[i_part], 
@@ -407,8 +404,7 @@ for part in range(l_e // args.size + 1):
         sample["flip"][fip] = flip.flatten()
         sample["s0"][fip] = s0_history.flatten()
         sample["t0"][fip] = t0_history.flatten()
-        sample["annihilation"][fip] = annihilations.flatten()
-        sample["creation"][fip] = creations.flatten()
+        sample["mu"][fip] = mu_history.flatten()
         sample["delta_nu"][fip] = Δν_history.flatten()
         s_max["s_max_index"][i_part] = s_max_index
         min_col = min(last_max_s.shape[1], index['l_t'].max())
