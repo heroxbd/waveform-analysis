@@ -47,11 +47,11 @@ sim : $(sim)
 define gibbs
 result/$(method)/sparsify/%.h5: waveform/%.h5 spe.h5
 	@mkdir -p $$(dir $$@)
-	sem --fg python3 sparsify.py $$< --ref $$(word 2,$$^) -o $$@ > $$@.log 2>&1
+	./sel_GPU python3 sparsify.py $$< --ref $$(word 2,$$^) -o $$@ > $$@.log 2>&1
 
 result/$(method)/batch/%.h5: result/$(method)/sparsify/%.h5 waveform/%.h5
 	@mkdir -p $$(dir $$@)
-	sem --fg python3 batch.py $$< --ref $$(word 2,$$^) -o $$@ --size 5000 > $$@.log 2>&1
+	./sel_GPU python3 batch.py $$< --ref $$(word 2,$$^) -o $$@ --size 5000 > $$@.log 2>&1
 
 result/$(method)/mu/%.h5: result/$(method)/batch/%.h5 result/$(method)/sparsify/%.h5 waveform/%.h5
 	@mkdir -p $$(dir $$@)
@@ -59,7 +59,7 @@ result/$(method)/mu/%.h5: result/$(method)/batch/%.h5 result/$(method)/sparsify/
 
 result/$(method)/char/%.h5: result/$(method)/batch/%.h5 result/$(method)/mu/%.h5 result/$(method)/sparsify/%.h5 waveform/%.h5
 	@mkdir -p $$(dir $$@)
-	python3 collect.py $$< --mu $$(word 2,$$^) --sparse $$(word 3,$$^) --ref $$(word 4,$$^) -N 100 -o $$@ > $$@.log 2>&1
+	python3 collect.py $$< --mu $$(word 2,$$^) --sparse $$(word 3,$$^) --ref $$(word 4,$$^) -N 4 -o $$@ > $$@.log 2>&1
 endef
 
 define bayesian
@@ -122,7 +122,7 @@ spe.h5 : $(sim) ;
 define batches
 batch/$(1)/%.h5: result/fsmp/sparsify/%.h5 waveform/%.h5
 	mkdir -p $$(dir $$@)
-	CUDA_VISIBLE_DEVICES=$(1) python3 batch.py $$< --ref $$(word 2,$$^) -o $$@ --size 5000
+	./sel_GPU python3 batch.py $$< --ref $$(word 2,$$^) -o $$@ --size 5000
 
 endef
 
