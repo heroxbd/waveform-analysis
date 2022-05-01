@@ -12,7 +12,7 @@ warnings.filterwarnings('ignore')
 import h5py
 import numpy as np
 from scipy import stats
-from scipy.stats import norm, poisson, uniform, chi2, t
+from scipy.stats import norm, poisson, uniform, chi2, t, expon
 from scipy.integrate import quad
 from tqdm import tqdm
 import matplotlib.pyplot as plt
@@ -485,6 +485,7 @@ for key in tqdm(mts.keys()):
                 waves = wavef['Readout/Waveform'][:]
                 npe_removed = wavef['Readout/Waveform'].attrs['npe_removed']
                 wavesum_removed = wavef['Readout/Waveform'].attrs['wavesum_removed']
+                mu_true = wavef["Readout/Waveform"].attrs["mu"]
                 gmu = wavef['SimTriggerInfo/PEList'].attrs['gmu']
                 gsigma = wavef['SimTriggerInfo/PEList'].attrs['gsigma']
                 # r = wavef['SimTruth/T'].attrs['r']
@@ -500,7 +501,10 @@ for key in tqdm(mts.keys()):
             npe = np.diff(i_ans)
             N = len(start) + len(npe_removed)
             N_add = N / (1 - poisson.cdf(0, mu)) - N
-            mu_add = np.hstack([np.zeros(round(N_add)), wavesum_removed / gmu])
+            if key == 'fsmp':
+                mu_add = expon.rvs(size=round(N_add) + len(wavesum_removed), scale=mu_true / (1 + mu_true))
+            else:
+                mu_add = np.hstack([np.zeros(round(N_add)), wavesum_removed / gmu])
             # mu_add = np.hstack([np.zeros(round(N_add)), npe_removed])
             mts[key][i]['N'] = N + round(N_add)
             s_npe = np.sqrt(mu)

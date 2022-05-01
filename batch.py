@@ -358,5 +358,4 @@ for part in range(l_e // args.size + 1):
         s_max["consumption"][i_part] = (time.time() - time_start) / l_part
 
 with h5py.File(fopt, "w") as opt:
-    sample = opt.create_dataset("sample", data=sample, compression="gzip", shuffle=True)
-    sample.attrs["mu_true"] = mu_true
+    opt.create_dataset("sample", data=sample, compression="gzip", shuffle=True)
