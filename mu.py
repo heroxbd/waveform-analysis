@@ -33,7 +33,7 @@ def rescale(ent):
 
     is_bracket = True
     
-    mu = np.average(ent["mu"].values[burn:])
+    mu = np.average(np.exp(ent["mu"].values[burn:]))
 
     t0 = np.average(ent["t0"].values[burn:])
 

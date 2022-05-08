@@ -22,7 +22,7 @@ t0 = []
 s0 = []
 for sample in samples:
     t0.append(np.vstack(sample.apply(lambda ent: ent["t0"].values)).T)
-    s0.append(np.vstack(sample.apply(lambda ent: ent["s0"].values)).T)
+    s0.append(np.vstack(sample.apply(lambda ent: np.exp(ent["s0"].values))).T)
 
 t0 = np.array(t0)
 s0 = np.array(s0)
