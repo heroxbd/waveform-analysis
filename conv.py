@@ -5,6 +5,8 @@ import arviz as az
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
+plt.rcParams['font.size'] = 12
+
 psr = argparse.ArgumentParser()
 psr.add_argument("ipt", type=str, nargs="+", help="input files")
 psr.add_argument("-o", dest="opt", type=str, help="output file")
@@ -22,7 +24,7 @@ t0 = []
 s0 = []
 for sample in samples:
     t0.append(np.vstack(sample.apply(lambda ent: ent["t0"].values)).T)
-    s0.append(np.vstack(sample.apply(lambda ent: ent["s0"].values)).T)
+    s0.append(np.vstack(sample.apply(lambda ent: np.exp(ent["mu"].values))).T)
 
 t0 = np.array(t0)
 s0 = np.array(s0)
@@ -30,7 +32,7 @@ s0 = np.array(s0)
 t0 = az.convert_to_dataset(t0)
 s0 = az.convert_to_dataset(s0)
 
-trials = range(100, 2500, 100)
+trials = range(100, 2600, 100)
 res_t0 = []
 res_s0 = []
 for i in trials:
@@ -44,20 +46,22 @@ res_t0 = np.array(res_t0)
 res_s0 = np.array(res_s0)
 
 with PdfPages(args.opt) as pp:
-    fig = plt.figure()
+    fig = plt.figure(figsize=(5, 4))
     ax = fig.add_subplot(1, 1, 1)
     ax.plot(np.array(trials) * 2, res_t0, label=[str(i) for i in range(11)])
     ax.set_xlabel("step")
-    ax.set_ylabel("\hat{R}")
-    ax.set_title("Convergence of t0")
+    ax.set_ylabel("$\hat{R}$")
+    ax.set_title("Convergence of $t_0$")
     ax.legend()
     pp.savefig(fig)
+    fig.savefig("conv_t0.pgf", transparent=True, bbox_inches = "tight")
 
-    fig = plt.figure()
+    fig = plt.figure(figsize=(5, 4))
     ax = fig.add_subplot(1, 1, 1)
     ax.plot(np.array(trials) * 2, res_s0, label=[str(i) for i in range(11)])
     ax.set_xlabel("step")
-    ax.set_ylabel("\hat{R}")
-    ax.set_title("Convergence of ||s||0")
+    ax.set_ylabel("$\hat{R}$")
+    ax.set_title("Convergence of $\mu$")
     ax.legend()
     pp.savefig(fig)
+    fig.savefig("conv_mu.pgf", transparent=True, bbox_inches = "tight")

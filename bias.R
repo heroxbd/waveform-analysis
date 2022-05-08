@@ -27,7 +27,7 @@ mu_long$NPE <- as.factor(mu_long$NPE)
 
 mu$NPE <- as.factor(mu$NPE)
 
-pdf(args$opt, 16, 9)
+pdf(args$opt, 4, 4)
 p0 <- ggplot(mu_long, aes(x=NPE , y=rbias)) + geom_boxplot() + facet_wrap(~variable)
 p0 <- p0 + ylab("Relative Bias")
 p1 <- p0 + aes(y=bias)

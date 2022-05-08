@@ -86,7 +86,7 @@ result/$(method)/dist/%.h5 : waveform/%.h5 result/$(method)/char/%.h5 spe.h5
 	OMP_NUM_THREADS=2 python3 test_dist.py $(word 2,$^) --ref $< $(word 3,$^) -o $@ -N 4 > $@.log 2>&1
 result/$(method)/solu/%.h5 : result/$(method)/char/%.h5 waveform/%.h5 spe.h5
 	@mkdir -p $(dir $@)
-	OMP_NUM_THREADS=2 python3 toyRec.py $< --ref $(wordlist 2,3,$^) -o $@ -N 4 > $@.log 2>&1
+	OMP_NUM_THREADS=2 python3 toyRec.py $< --ref $(wordlist 2,3,$^) -o $@ --Ncpu 4 > $@.log 2>&1
 result/$(method)/hist/%.pdf : result/$(method)/dist/%.h5 waveform/%.h5 result/$(method)/solu/%.h5 result/$(method)/char/%.h5
 	@mkdir -p $(dir $@)
 	python3 draw_dist.py $< --ref $(wordlist 2,4,$^) -o $@ > $@.log 2>&1
@@ -126,7 +126,7 @@ batch/$(1)/%.h5: result/fsmp/sparsify/%.h5 waveform/%.h5
 
 endef
 
-batch_id:=$(shell seq 0 4)
+batch_id:=$(shell seq 0 7)
 
 $(eval $(foreach i,$(batch_id),$(call batches,$(i))))
 

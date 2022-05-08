@@ -40,7 +40,7 @@ with open(args.conf) as f:
     Sigma = next(f_csv)
     Sigma = [float(i) for i in Sigma]
 
-default_method = 'lucyddm'
+default_method = 'fsmp'
 
 filelist = os.listdir(f'result/{default_method}/solu')
 filelist = [f for f in filelist if f[0] != '.' and os.path.splitext(f)[-1] == '.h5']
@@ -80,8 +80,6 @@ for key in tqdm(mts.keys()):
         tau = mts[key][i]['tau']
         sigma = mts[key][i]['sigma']
         waveform = 'waveform'
-        if key == 'fsmp':
-            waveform = 'waveform_fsmp'
         try:
             with h5py.File(os.path.join('result', key, 'solu', f), 'r', libver='latest', swmr=True) as soluf, h5py.File(os.path.join('result', key, 'dist', f), 'r', libver='latest', swmr=True) as distf, h5py.File(os.path.join(waveform, f), 'r', libver='latest', swmr=True) as wavef:
                 time = soluf['starttime'][:]
@@ -435,6 +433,22 @@ fig.savefig('Note/figures/summarycharge.png')
 fig.clf()
 plt.close(fig)
 
+fig_new = plt.figure(figsize=(5, 4))
+key = "fsmp"
+tau = 20
+sigma = 5
+ax = fig_new.add_subplot(1, 1, 1)
+stdlist = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
+yerrcha = np.vstack([-t.ppf(alpha, stdlist['N'])*stdlist['std']/np.sqrt(stdlist['N']), t.ppf(1-alpha, stdlist['N'])*stdlist['std']/np.sqrt(stdlist['N'])])
+ax.errorbar(stdlist['mu'] + jitter[key], stdlist['bias'], yerr=yerrcha, label="FSMP", marker=marker[key])
+ax.set_xlabel(r"$\mu$")
+ax.set_ylabel("bias/ns")
+ax.set_title(r"Bias of $t_0$")
+
+fig_new.savefig("bias_t0.pdf", transparent=True, bbox_inches = "tight")
+fig_new.savefig("bias_t0.pgf", transparent=True, bbox_inches = "tight")
+plt.close(fig_new)
+
 for key in mts.keys():
     print(key.rjust(10) + ' stdchargesuccess mean = {:.04%}'.format((mts[key]['stdsuccess'] / mts[key]['N']).mean()))
     print(key.rjust(10) + '  stdchargesuccess min = {:.04%}'.format((mts[key]['stdsuccess'] / mts[key]['N']).min()))
@@ -474,8 +488,6 @@ for key in tqdm(mts.keys()):
         tau = mts[key][i]['tau']
         sigma = mts[key][i]['sigma']
         waveform = 'waveform'
-        if key == 'fsmp':
-            waveform = 'waveform_fsmp'
         try:
             with h5py.File(os.path.join('result', key, 'solu', f), 'r', libver='latest', swmr=True) as soluf, h5py.File(os.path.join('result', key, 'dist', f), 'r', libver='latest', swmr=True) as distf, h5py.File(os.path.join(waveform, f), 'r', libver='latest', swmr=True) as wavef:
                 time = soluf['starttime'][:]
@@ -549,12 +561,12 @@ for i, sigma in enumerate(Sigma):
         ax = fig_mu_resolution_ratio.add_subplot(gs_mu_resolution_ratio[i, j])
         yerr = np.vstack([stdlist['stdmuint']-np.sqrt(np.power(stdlist['stdmuint'],2)*stdlist['N']/chi2.ppf(1-alpha, stdlist['N'])), 
                           np.sqrt(np.power(stdlist['stdmuint'],2)*stdlist['N']/chi2.ppf(alpha, stdlist['N']))-stdlist['stdmuint']]) / (stdlist['biasmuint'][:, 1] + stdlist['meanmutru'])
-        ax.errorbar(stdlist['mu'] + jitter['tru'], 
-                    stdlist['stdmuint'] / (stdlist['biasmuint'][:, 1] + stdlist['meanmutru']) / (1 / np.sqrt(stdlist['mu'])),
-                    yerr=yerr / (1 / np.sqrt(stdlist['mu'])), 
-                    label='$\mathrm{int}$', 
-                    c=color['1st'], 
-                    marker=marker['1st'])
+        #ax.errorbar(stdlist['mu'] + jitter['tru'], 
+        #            stdlist['stdmuint'] / (stdlist['biasmuint'][:, 1] + stdlist['meanmutru']) / (1 / np.sqrt(stdlist['mu'])),
+        #            yerr=yerr / (1 / np.sqrt(stdlist['mu'])), 
+        #            label='$\mathrm{int}$', 
+        #            c=color['1st'], 
+        #            marker=marker['1st'])
         for key in keylist:
             stdlist = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
             yerr = np.vstack([stdlist['stdmu']-np.sqrt(np.power(stdlist['stdmu'],2)*stdlist['N']/chi2.ppf(1-alpha, stdlist['N'])), 
@@ -582,7 +594,7 @@ for i, sigma in enumerate(Sigma):
         ax = fig_mu_resolution.add_subplot(gs_mu_resolution[i, j])
         yerr = np.vstack([stdlist['stdmuint']-np.sqrt(np.power(stdlist['stdmuint'],2)*stdlist['N']/chi2.ppf(1-alpha, stdlist['N'])), 
                           np.sqrt(np.power(stdlist['stdmuint'],2)*stdlist['N']/chi2.ppf(alpha, stdlist['N']))-stdlist['stdmuint']]) / (stdlist['biasmuint'][:, 1] + stdlist['meanmutru'])
-        ax.errorbar(stdlist['mu'] + jitter['tru'], stdlist['stdmuint'] / (stdlist['biasmuint'][:, 1] + stdlist['meanmutru']), yerr=yerr, label='$\mathrm{int}$', c=color['1st'], marker=marker['1st'])
+        #ax.errorbar(stdlist['mu'] + jitter['tru'], stdlist['stdmuint'] / (stdlist['biasmuint'][:, 1] + stdlist['meanmutru']), yerr=yerr, label='$\mathrm{int}$', c=color['1st'], marker=marker['1st'])
         for key in keylist:
             stdlist = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
             yerr = np.vstack([stdlist['stdmu']-np.sqrt(np.power(stdlist['stdmu'],2)*stdlist['N']/chi2.ppf(1-alpha, stdlist['N'])), np.sqrt(np.power(stdlist['stdmu'],2)*stdlist['N']/chi2.ppf(alpha, stdlist['N']))-stdlist['stdmu']]) / (stdlist['biasmu'][:, 1] + stdlist['meanmutru'])
@@ -605,7 +617,7 @@ for i, sigma in enumerate(Sigma):
         ax = fig_mu_bias_ratio.add_subplot(gs_mu_bias_ratio[i, j])
         yerr = np.vstack([-t.ppf(alpha, stdlist['N'])*stdlist['stdmuint']/np.sqrt(stdlist['N']), 
                           t.ppf(1-alpha, stdlist['N'])*stdlist['stdmuint']/np.sqrt(stdlist['N'])]) / stdlist['meanmutru']
-        ax.errorbar(stdlist['mu'] + jitter['tru'], stdlist['biasmuint'][:, 1] / stdlist['meanmutru'], yerr=yerr, label='$\mathrm{int}$', c=color['1st'], marker=marker['1st'])
+        #ax.errorbar(stdlist['mu'] + jitter['tru'], stdlist['biasmuint'][:, 1] / stdlist['meanmutru'], yerr=yerr, label='$\mathrm{int}$', c=color['1st'], marker=marker['1st'])
 
         # yerr = np.vstack([stdlist['biasmuint'][:, 1] - stdlist['biasmuint'][:, 0], stdlist['biasmuint'][:, 2] - stdlist['biasmuint'][:, 1]])
         # ax.errorbar(stdlist['mu'] + jitter['tru'], stdlist['biasmuint'][:, 1] / stdlist['meanmutru'], yerr=yerr / stdlist['meanmutru'], label='$\mathrm{int}$', c=color['1st'], marker=marker['1st'])
@@ -634,7 +646,7 @@ for i, sigma in enumerate(Sigma):
         stdlist = mts[default_method][(mts[default_method]['tau'] == tau) & (mts[default_method]['sigma'] == sigma)]
         ax = fig_mu_bias.add_subplot(gs_mu_bias[i, j])
         yerr = np.vstack([-t.ppf(alpha, stdlist['N'])*stdlist['stdmuint']/np.sqrt(stdlist['N']), t.ppf(1-alpha, stdlist['N'])*stdlist['stdmuint']/np.sqrt(stdlist['N'])])
-        ax.errorbar(stdlist['mu'] + jitter['tru'], stdlist['biasmuint'][:, 1], yerr=yerr, label='$\mathrm{int}$', c=color['1st'], marker=marker['1st'])
+        #ax.errorbar(stdlist['mu'] + jitter['tru'], stdlist['biasmuint'][:, 1], yerr=yerr, label='$\mathrm{int}$', c=color['1st'], marker=marker['1st'])
 
         # yerr = np.vstack([stdlist['biasmuint'][:, 1] - stdlist['biasmuint'][:, 0], stdlist['biasmuint'][:, 2] - stdlist['biasmuint'][:, 1]])
         # ax.errorbar(stdlist['mu'] + jitter['tru'], stdlist['biasmuint'][:, 1], yerr=yerr, label='$\mathrm{int}$', c=color['1st'], marker=marker['1st'])
@@ -672,3 +684,20 @@ fig_mu_bias.savefig('Note/figures/vs-biasmu.pgf')
 fig_mu_bias.savefig('Note/figures/vs-biasmu.pdf')
 fig_mu_bias.savefig('Note/figures/vs-biasmu.png')
 plt.close(fig_mu_bias)
+
+fig_new = plt.figure(figsize=(5, 4))
+key = "fsmp"
+tau = 20
+sigma = 5
+ax = fig_new.add_subplot(1, 1, 1)
+stdlist = mts[key][(mts[key]['tau'] == tau) & (mts[key]['sigma'] == sigma)]
+yerr = np.vstack([-t.ppf(alpha, stdlist['N'])*stdlist['stdmu']/np.sqrt(stdlist['N']), t.ppf(1-alpha, stdlist['N'])*stdlist['stdmu']/np.sqrt(stdlist['N'])]) / stdlist['meanmutru']
+ax.errorbar(stdlist['mu'] + jitter[key], stdlist['biasmu'][:, 1] / stdlist['meanmutru'], yerr=yerr, label="FSMP", marker=marker[key])
+ax.set_xlabel(r"$\mu$")
+ax.set_ylabel("bias")
+ax.set_title(r"Relative bias of $\mu$")
+
+fig_new.savefig("bias_mu.pdf", transparent=True, bbox_inches = "tight")
+fig_new.savefig("bias_mu.pgf", transparent=True, bbox_inches = "tight")
+plt.close(fig_new)
+
