@@ -3,9 +3,10 @@ import argparse
 
 import h5py
 import numpy as np
-import cupy as cp
+import numpy as cp
 
 from scipy.stats import norm, exponnorm, erlang
+from scipy.special import erf
 
 psr = argparse.ArgumentParser()
 psr.add_argument("ipt", type=str, help="input file")
@@ -27,7 +28,7 @@ def vcombine(A, cx, t, w_all):
     c_vec = (1 - frac)[:, :, None] * cx[w_all, :, ti] + frac[:, :, None] * cx[w_all, :, ti+1]
     return A_vec, c_vec
 
-vstep = cp.array((-1, 1), np.float32)
+vstep = cp.array((-1, 1))
 
 #profile
 def vmove1(A_vec, c_vec, z, fmu, fsig2s_inv, det_fsig2s_inv, b0):
@@ -86,32 +87,21 @@ with h5py.File(args.ref, 'r', libver='latest', swmr=True) as ipt:
 b_t0 = [0., 600.]
 
 if tau == 0.0:
-    sel_lc = cp.ElementwiseKernel(
-        'float32 t, bool sel',
-        'float32 lprob',
-        f"lprob = sel ? -log({sigma}) - 0.5 * log(2.0 * {np.pi}) - 0.5 * (t / {sigma}) * (t / {sigma}) : 0",
-        'sel_lc')
     lcs = norm(scale = sigma)
-elif sigma == 0.0:
-    sel_lc = cp.ElementwiseKernel(
-        'float32 t, bool sel',
-        'float32 lprob',
-        f"lprob = sel ? (t > 0 ? -log({tau}) - t / {tau} : -1e4) : 0",
-        'sel_lc')
 else:
-    alpha = 1 / tau
-    co = -np.log(2.0 * tau) + alpha * alpha * sigma * sigma / 2.0
-    ass = alpha * sigma * sigma
-    s2s = np.sqrt(2.0) * sigma
-    sel_lc = cp.ElementwiseKernel(
-        'float32 t, bool sel',
-        'float32 lprob',
-        f"lprob = sel ? {co} + log(1.0 - erf(({ass} - t) / {s2s})) - {alpha} * t : 0",
-        'sel_lc')
     lcs = exponnorm(K = tau/sigma, scale = sigma)
 
-sel_add = cp.ElementwiseKernel('float32 delta, bool sel', 'float32 dest', "if(sel) dest += delta", "sel_add")
-sel_assign = cp.ElementwiseKernel('float32 value, bool sel', 'float32 dest', "if(sel) dest = value", "sel_assign")
+def lc(x):
+    """
+    light curve
+    """
+    if tau == 0.0:
+        return norm.logpdf(x, loc=0, scale=sigma)
+    else:
+        alpha = 1 / tau
+        co = -np.log(2.0 * tau) + alpha * alpha * sigma * sigma / 2.0
+        x_erf = (alpha * sigma * sigma - x) / (np.sqrt(2.0) * sigma)
+        return co + np.log(1.0 - erf(x_erf)) - alpha * x
 
 #profile
 def batch(A, cx, index, tq, t_index, s, z, t0_min=100, t0_max=500):
@@ -135,9 +125,9 @@ def batch(A, cx, index, tq, t_index, s, z, t0_min=100, t0_max=500):
     int(_h) 是插值的下指标 占比为 1 - decimal(_h)
     int(_h) + 1 是插值的上指标 占比为 decimal(_h)
     """
-    sig2w = cp.asarray(index["sig2w"], np.float32)
-    sig2s = cp.asarray(index["sig2s"], np.float32)
-    mus = cp.asarray(index["mus"], np.float32)
+    sig2w = index["sig2w"]
+    sig2s = index["sig2s"]
+    mus = index["mus"]
     NPE = index["NPE"]
 
     a0 = A[:, :, 0]
@@ -156,7 +146,7 @@ def batch(A, cx, index, tq, t_index, s, z, t0_min=100, t0_max=500):
     ts_min = tq['t_s'][:, 0]
     ts_length = tq['t_s'][np.arange(l_e), index["l_t"]-1] - ts_min
 
-    t0 = np.zeros(l_e, np.float32)
+    t0 = np.zeros(l_e)
     e_hit = NPE > 0
 
     t0[e_hit] = v_rt(s[e_hit, 0], tq["t_s"], e_hit)
@@ -166,15 +156,15 @@ def batch(A, cx, index, tq, t_index, s, z, t0_min=100, t0_max=500):
 
     # step: +1 创生一个 PE， -1 消灭一个 PE， +2 向左或向右移动
     flip = np.random.choice((-1, 1, 2), (l_e, TRIALS), p=np.array((1, 1, 2)) / 4)
-    Δν_g = cp.zeros(l_e, dtype=np.float32)
-    Δν = np.zeros(l_e, dtype=np.float32)
-    ν = np.zeros(l_e, dtype=np.float32)
-    ν_max = np.zeros(l_e, dtype=np.float32)
-    Δν_history = np.zeros((l_e, TRIALS), dtype=np.float32) # list of Δν's
-    t0_history = np.zeros((l_e, TRIALS), dtype=np.float32)
+    Δν_g = cp.zeros(l_e)
+    Δν = np.zeros(l_e)
+    ν = np.zeros(l_e)
+    ν_max = np.zeros(l_e)
+    Δν_history = np.zeros((l_e, TRIALS)) # list of Δν's
+    t0_history = np.zeros((l_e, TRIALS))
     s0_history = np.zeros((l_e, TRIALS), dtype=np.uint32) # 0-norm of s
-    mu_history = np.zeros((l_e, TRIALS), dtype=np.float32) # 0-norm of s
-    s_history = np.zeros((l_e, TRIALS * l_s), dtype=np.float32)
+    mu_history = np.zeros((l_e, TRIALS)) # 0-norm of s
+    s_history = np.zeros((l_e, TRIALS * l_s))
 
     # t0_accept = 0
     loc = np.zeros((l_e, 2)) # float64
@@ -194,11 +184,11 @@ def batch(A, cx, index, tq, t_index, s, z, t0_min=100, t0_max=500):
     ):
         mNPE = np.max(NPE)
         rt = v_rt(s[:, :mNPE], tq["t_s"], np.arange(l_e)[:, None])
-        nt0 = t0 + wt.astype(np.float32)
-        sel = cp.asarray(np.arange(mNPE)[None, :] < NPE[:, None])
-        lc0 = cp.sum(sel_lc(cp.asarray(rt - t0[:, None]), sel), axis=1)
-        lc1 = cp.sum(sel_lc(cp.asarray(rt - nt0[:, None]), sel), axis=1)
-        t0_acceptance = np.logical_and(cp.asnumpy(lc1 - lc0) >= acct, np.logical_and(nt0 >= t0_min, nt0 <= t0_max))
+        nt0 = t0 + wt.astype(np.float64)
+        sel = np.arange(mNPE)[None, :] < NPE[:, None]
+        lc0 = cp.sum(np.where(sel, lc(rt - t0[:, None]), 0), axis=1)
+        lc1 = cp.sum(np.where(sel, lc(rt - nt0[:, None]), 0), axis=1)
+        t0_acceptance = np.logical_and(lc1 - lc0 >= acct, np.logical_and(nt0 >= t0_min, nt0 <= t0_max))
         # t0_accept += np.sum(t0_acceptance) / len(t0_acceptance)
         np.putmask(t0, t0_acceptance, nt0)
         t0_history[:, i] = t0
@@ -234,7 +224,7 @@ def batch(A, cx, index, tq, t_index, s, z, t0_min=100, t0_max=500):
         
         ### 矩阵 Δν 计算, 即使无意义的 e_create 也一起计算，否则有较大 GPU 性能损失
         # 原则：fancy index 只在 CPU 上使用。
-        vA, vc = vcombine(A, cx, cp.asarray(loc, np.float32), w_all[:, None])
+        vA, vc = vcombine(A, cx, loc, w_all[:, None])
         Δν_g, beta = vmove1(vA, vc, z, fmu, fsig2s_inv, det_fsig2s_inv, b0)
 
         ## non-move cases, step == 1, -1
@@ -242,15 +232,14 @@ def batch(A, cx, index, tq, t_index, s, z, t0_min=100, t0_max=500):
         Δν[e_pm] += step[e_pm] * (log_mu[e_pm] - np.log(NPE[e_pm]))
         NPE[e_create] -= 1
         ########
-        Δν += cp.asnumpy(Δν_g)
+        Δν += Δν_g
         #######
 
         ### 计算 Δcx, Δz, 更新 cx 和 z。对 accept 进行特别处理
         e_accept = np.logical_and(Δν >= accept, np.logical_or(e_create, e_minus))
-        _e_accept = cp.asarray(e_accept)
         Δcx, Δz = vmove2(vA, vc, fmu, A, beta)
-        sel_add(Δcx, _e_accept[:, None, None], cx)
-        sel_add(Δz, _e_accept[:, None], z)
+        cx[e_accept] += Δcx[e_accept]
+        z[e_accept] += Δz[e_accept]
         ########
 
         # 增加
@@ -311,16 +300,16 @@ for size in [2,5,10,50,100,200,300,400,500,600,700,800,900,1000,2000,3000,4000,5
         lp_wave = np.max(ind_part["l_wave"])
         lp_NPE = np.max(ind_part["NPE"])
 
-        null = np.zeros((l_part, lp_wave, 1), np.float32) # cx, A[:, :, -1] = 0  用于 +- 的空白维度
-        s_null = np.zeros((l_part, lp_NPE * 2), np.float32) # 富余的 PE 活动空间
+        null = np.zeros((l_part, lp_wave, 1)) # cx, A[:, :, -1] = 0  用于 +- 的空白维度
+        s_null = np.zeros((l_part, lp_NPE * 2)) # 富余的 PE 活动空间
         (flip, s0_history, t0_history, Δν_history, loc, mu_history
-         ) = batch(cp.asarray(np.append(A[i_part, :lp_wave, :lp_t], null, axis=2), np.float32),
-                   cp.asarray(np.append(cx[i_part, :lp_wave, :lp_t], null, axis=2), np.float32),
+         ) = batch(np.append(A[i_part, :lp_wave, :lp_t+1], null, axis=2),
+                   np.append(cx[i_part, :lp_wave, :lp_t+1], null, axis=2),
                    index[i_part], 
                    tq[i_part, :lp_t],
                    t_index[i_part, :lp_interval],
                    np.append(s[i_part, :lp_NPE], s_null, axis=1),
-                   cp.asarray(z[i_part, :lp_wave], np.float32))
+                   z[i_part, :lp_wave])
         fi_part = (i_part * TRIALS)[:, None] + np.arange(TRIALS)[None, :]
         fip = fi_part.flatten()
         sample["flip"][fip] = flip.flatten()
