@@ -193,9 +193,6 @@ def batch(A, cx, index, tq, t_index, s, z, t0_min=100, t0_max=500):
             *np.log(np.random.rand(2, TRIALS, l_e)),
         )
     ):
-        if i % 1000 == 0:
-            print(i)
-
         mNPE = np.max(NPE)
         rt = v_rt(s[:, :mNPE], tq["t_s"], np.arange(l_e)[:, None])
         nt0 = t0 + wt.astype(np.float32)
@@ -304,7 +301,7 @@ sample = np.zeros((l_e * TRIALS), dtype=[("TriggerNo", "u4"), ("ChannelID", "u4"
 sample["TriggerNo"] = np.repeat(index["TriggerNo"], TRIALS)
 sample["ChannelID"] = np.repeat(index["ChannelID"], TRIALS)
 
-for size in [1,10,50,100,200,300,400,500,600,700,800,900,1000,2000,3000,4000,5000]:
+for size in [2,5,10,50,100,200,300,400,500,600,700,800,900,1000,2000,3000,4000,5000]:
     time_start = time.time()
     i_part = s_t[:size]
     l_part = len(i_part)
@@ -314,7 +311,6 @@ for size in [1,10,50,100,200,300,400,500,600,700,800,900,1000,2000,3000,4000,500
         lp_interval = np.max(ind_part["l_interval"])
         lp_wave = np.max(ind_part["l_wave"])
         lp_NPE = np.max(ind_part["NPE"])
-        print(lp_t, lp_wave, lp_NPE)
 
         null = np.zeros((l_part, lp_wave, 1), np.float32) # cx, A[:, :, -1] = 0  用于 +- 的空白维度
         s_null = np.zeros((l_part, lp_NPE * 2), np.float32) # 富余的 PE 活动空间
