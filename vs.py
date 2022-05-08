@@ -450,6 +450,7 @@ fig_new.savefig("bias_t0.pgf", transparent=True, bbox_inches = "tight")
 plt.close(fig_new)
 
 fig_new = plt.figure(figsize=(5, 4))
+ax = fig_new.add_subplot(1, 1, 1)
 yerr = np.vstack([stdlist['std'] / stdlist['stdtruth']*(1-1/np.sqrt(stats.f.ppf(1-alpha, stdlist['N']-1, stdlist['N']-1))), 
                     (1/np.sqrt(stats.f.ppf(alpha, stdlist['N']-1, stdlist['N']-1))-1)*stdlist['std']/stdlist['stdtruth']])
 ax.errorbar(stdlist['mu'] + jitter[key], stdlist['std'] / stdlist['stdtruth'], yerr=yerr, label="FSMP", marker=marker[key])
@@ -714,6 +715,7 @@ fig_new.savefig("bias_mu.pgf", transparent=True, bbox_inches = "tight")
 plt.close(fig_new)
 
 fig_new = plt.figure(figsize=(5, 4))
+ax = fig_new.add_subplot(1, 1, 1)
 yerr = np.vstack([stdlist['stdmu']-np.sqrt(np.power(stdlist['stdmu'],2)*stdlist['N']/chi2.ppf(1-alpha, stdlist['N'])), 
                     np.sqrt(np.power(stdlist['stdmu'],2)*stdlist['N']/chi2.ppf(alpha, stdlist['N']))-stdlist['stdmu']]) / (stdlist['biasmu'][:, 1] + stdlist['meanmutru'])
 ax.errorbar(stdlist['mu'] + jitter[key], 
