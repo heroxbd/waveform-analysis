@@ -25,7 +25,7 @@ import wf_func as wff
 import matplotlib
 matplotlib.use('pgf')
 
-plt.rcParams['font.size'] = 12
+plt.rcParams['font.size'] = 14
 
 psr = argparse.ArgumentParser()
 psr.add_argument('--conf', type=str, help='configuration of tau & sigma')
@@ -449,6 +449,18 @@ fig_new.savefig("bias_t0.pdf", transparent=True, bbox_inches = "tight")
 fig_new.savefig("bias_t0.pgf", transparent=True, bbox_inches = "tight")
 plt.close(fig_new)
 
+fig_new = plt.figure(figsize=(5, 4))
+yerr = np.vstack([stdlist['std'] / stdlist['stdtruth']*(1-1/np.sqrt(stats.f.ppf(1-alpha, stdlist['N']-1, stdlist['N']-1))), 
+                    (1/np.sqrt(stats.f.ppf(alpha, stdlist['N']-1, stdlist['N']-1))-1)*stdlist['std']/stdlist['stdtruth']])
+ax.errorbar(stdlist['mu'] + jitter[key], stdlist['std'] / stdlist['stdtruth'], yerr=yerr, label="FSMP", marker=marker[key])
+ax.set_xlabel(r"$\mu$")
+ax.set_ylabel("ratio")
+ax.set_title(r"Resolution of $t_0$")
+
+fig_new.savefig("ratio_t0.pdf", transparent=True, bbox_inches = "tight")
+fig_new.savefig("ratio_t0.pgf", transparent=True, bbox_inches = "tight")
+plt.close(fig_new)
+
 for key in mts.keys():
     print(key.rjust(10) + ' stdchargesuccess mean = {:.04%}'.format((mts[key]['stdsuccess'] / mts[key]['N']).mean()))
     print(key.rjust(10) + '  stdchargesuccess min = {:.04%}'.format((mts[key]['stdsuccess'] / mts[key]['N']).min()))
@@ -701,3 +713,18 @@ fig_new.savefig("bias_mu.pdf", transparent=True, bbox_inches = "tight")
 fig_new.savefig("bias_mu.pgf", transparent=True, bbox_inches = "tight")
 plt.close(fig_new)
 
+fig_new = plt.figure(figsize=(5, 4))
+yerr = np.vstack([stdlist['stdmu']-np.sqrt(np.power(stdlist['stdmu'],2)*stdlist['N']/chi2.ppf(1-alpha, stdlist['N'])), 
+                    np.sqrt(np.power(stdlist['stdmu'],2)*stdlist['N']/chi2.ppf(alpha, stdlist['N']))-stdlist['stdmu']]) / (stdlist['biasmu'][:, 1] + stdlist['meanmutru'])
+ax.errorbar(stdlist['mu'] + jitter[key], 
+            stdlist['stdmu'] / (stdlist['biasmu'][:, 1] + stdlist['meanmutru']) / (1 / np.sqrt(stdlist['mu'])), 
+            yerr=yerr / (1 / np.sqrt(stdlist['mu'])), 
+            label="FSMP", 
+            marker=marker[key])
+ax.set_xlabel(r"$\mu$")
+ax.set_ylabel("ratio")
+ax.set_title(r"Resolution of $\mu$")
+
+fig_new.savefig("ratio_mu.pdf", transparent=True, bbox_inches = "tight")
+fig_new.savefig("ratio_mu.pgf", transparent=True, bbox_inches = "tight")
+plt.close(fig_new)
