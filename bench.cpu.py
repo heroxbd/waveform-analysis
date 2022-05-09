@@ -23,9 +23,9 @@ def vcombine(A, cx, t, w_all):
     t is 2 x l_e
     '''
     frac, ti = cp.modf(t)
-    ti = cp.array(ti, np.int32)
-    A_vec = (1 - frac)[:, :, None] * A[w_all, :, ti] + frac[:, :, None] * A[w_all, :, ti+1]
-    c_vec = (1 - frac)[:, :, None] * cx[w_all, :, ti] + frac[:, :, None] * cx[w_all, :, ti+1]
+    ti = cp.array(ti + 1, np.int32) % A.shape[2] # avoid ti + 1 to overflow
+    A_vec = (1 - frac)[:, :, None] * A[w_all, :, ti-1] + frac[:, :, None] * A[w_all, :, ti]
+    c_vec = (1 - frac)[:, :, None] * cx[w_all, :, ti-1] + frac[:, :, None] * cx[w_all, :, ti]
     return A_vec, c_vec
 
 vstep = cp.array((-1, 1))
@@ -303,8 +303,8 @@ for size in [2,5,10,50,100,200,300,400,500,600,700,800,900,1000,2000,3000,4000,5
         null = np.zeros((l_part, lp_wave, 1)) # cx, A[:, :, -1] = 0  用于 +- 的空白维度
         s_null = np.zeros((l_part, lp_NPE * 2)) # 富余的 PE 活动空间
         (flip, s0_history, t0_history, Δν_history, loc, mu_history
-         ) = batch(np.append(A[i_part, :lp_wave, :lp_t+1], null, axis=2),
-                   np.append(cx[i_part, :lp_wave, :lp_t+1], null, axis=2),
+         ) = batch(np.append(A[i_part, :lp_wave, :lp_t], null, axis=2),
+                   np.append(cx[i_part, :lp_wave, :lp_t], null, axis=2),
                    index[i_part], 
                    tq[i_part, :lp_t],
                    t_index[i_part, :lp_interval],

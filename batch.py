@@ -26,9 +26,9 @@ def vcombine(A, cx, t, w_all):
     t is 2 x l_e
     '''
     frac, ti = cp.modf(t)
-    ti = cp.array(ti, np.int32)
-    A_vec = (1 - frac)[:, :, None] * A[w_all, :, ti] + frac[:, :, None] * A[w_all, :, ti+1]
-    c_vec = (1 - frac)[:, :, None] * cx[w_all, :, ti] + frac[:, :, None] * cx[w_all, :, ti+1]
+    ti = cp.array(ti + 1, np.int32) % A.shape[2] # avoid ti + 1 to overflow
+    A_vec = (1 - frac)[:, :, None] * A[w_all, :, ti-1] + frac[:, :, None] * A[w_all, :, ti]
+    c_vec = (1 - frac)[:, :, None] * cx[w_all, :, ti-1] + frac[:, :, None] * cx[w_all, :, ti]
     return A_vec, c_vec
 
 vstep = cp.array((-1, 1), np.float32)
