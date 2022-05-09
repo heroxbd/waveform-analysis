@@ -433,7 +433,7 @@ fig.savefig('Note/figures/summarycharge.png')
 fig.clf()
 plt.close(fig)
 
-fig_new = plt.figure(figsize=(5, 4))
+fig_new = plt.figure(figsize=(5, 3))
 key = "fsmp"
 tau = 20
 sigma = 5
@@ -449,7 +449,7 @@ fig_new.savefig("bias_t0.pdf", transparent=True, bbox_inches = "tight")
 fig_new.savefig("bias_t0.pgf", transparent=True, bbox_inches = "tight")
 plt.close(fig_new)
 
-fig_new = plt.figure(figsize=(5, 4))
+fig_new = plt.figure(figsize=(5, 3))
 ax = fig_new.add_subplot(1, 1, 1)
 yerr = np.vstack([stdlist['std'] / stdlist['stdtruth']*(1-1/np.sqrt(stats.f.ppf(1-alpha, stdlist['N']-1, stdlist['N']-1))), 
                     (1/np.sqrt(stats.f.ppf(alpha, stdlist['N']-1, stdlist['N']-1))-1)*stdlist['std']/stdlist['stdtruth']])
@@ -698,7 +698,7 @@ fig_mu_bias.savefig('Note/figures/vs-biasmu.pdf')
 fig_mu_bias.savefig('Note/figures/vs-biasmu.png')
 plt.close(fig_mu_bias)
 
-fig_new = plt.figure(figsize=(5, 4))
+fig_new = plt.figure(figsize=(5, 3))
 key = "fsmp"
 tau = 20
 sigma = 5
@@ -714,7 +714,7 @@ fig_new.savefig("bias_mu.pdf", transparent=True, bbox_inches = "tight")
 fig_new.savefig("bias_mu.pgf", transparent=True, bbox_inches = "tight")
 plt.close(fig_new)
 
-fig_new = plt.figure(figsize=(5, 4))
+fig_new = plt.figure(figsize=(5, 3))
 ax = fig_new.add_subplot(1, 1, 1)
 yerr = np.vstack([stdlist['stdmu']-np.sqrt(np.power(stdlist['stdmu'],2)*stdlist['N']/chi2.ppf(1-alpha, stdlist['N'])), 
                     np.sqrt(np.power(stdlist['stdmu'],2)*stdlist['N']/chi2.ppf(alpha, stdlist['N']))-stdlist['stdmu']]) / (stdlist['biasmu'][:, 1] + stdlist['meanmutru'])
