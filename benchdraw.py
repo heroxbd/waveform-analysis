@@ -1,12 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-plt.rcParams["font.size"] = 14
+plt.rcParams["font.size"] = 16
 plt.switch_backend("pgf")
 
 bench_dtype = [("n", np.int_), ("t", np.float_)]
 
-keys = ["a100", "2080", "2060", "k80", "r7", "6700", "cpu"]
+keys = ["a100", "2080", "2060", "k80", "mi100", "r7", "6700", "cpu"]
 descriptions = {
     "2060": r"NVIDIA\textsuperscript{\textregistered} RTX 2060 Max-Q",
     "2080": r"NVIDIA\textsuperscript{\textregistered} RTX 2080 Ti",
@@ -14,6 +14,7 @@ descriptions = {
     "a100": r"NVIDIA\textsuperscript{\textregistered} A100",
     "6700": r"AMD Radeon\texttrademark RX 6700 XT",
     "r7": r"AMD Radeon\texttrademark \uppercase\expandafter{\romannumeral7}",
+    "mi100": r"AMD Instinct\texttrademark MI100 Accelerator",
     "cpu": r"AMD EPYC\texttrademark 7702 (CPU)",
 }
 bench = {}
@@ -22,7 +23,7 @@ for key in keys:
         "bench.{}.csv".format(key), dtype=bench_dtype, delimiter=","
     )
 
-fig = plt.figure(figsize=(5, 4))
+fig = plt.figure(figsize=(4, 4))
 ax = fig.add_subplot(1, 1, 1)
 
 for key in keys:
