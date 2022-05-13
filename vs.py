@@ -720,7 +720,7 @@ ax = fig_new.add_subplot(1, 1, 1)
 yerr = np.vstack([stdlist['stdmu']-np.sqrt(np.power(stdlist['stdmu'],2)*stdlist['N']/chi2.ppf(1-alpha, stdlist['N'])), 
                     np.sqrt(np.power(stdlist['stdmu'],2)*stdlist['N']/chi2.ppf(alpha, stdlist['N']))-stdlist['stdmu']]) / (stdlist['biasmu'][:, 1] + stdlist['meanmutru'])
 ax.errorbar(stdlist['mu'] + jitter[key], 
-            stdlist['stdmu'] / (stdlist['biasmu'][:, 1] + stdlist['meanmutru']) / stdlist['resnpe']), 
+            stdlist['stdmu'] / (stdlist['biasmu'][:, 1] + stdlist['meanmutru']) / stdlist['resnpe'], 
             yerr=yerr / (1 / np.sqrt(stdlist['mu'])), 
             label="FSMP", 
             marker=marker[key])
