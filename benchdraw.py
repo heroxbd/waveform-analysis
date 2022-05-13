@@ -24,6 +24,7 @@ for key in keys:
     )
 
 fig = plt.figure(figsize=(4, 4))
+# fig = plt.figure(figsize=(6, 4)) # For beamer
 ax = fig.add_subplot(1, 1, 1)
 
 for key in keys:
