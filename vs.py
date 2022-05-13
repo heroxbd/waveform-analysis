@@ -469,7 +469,7 @@ for m in ['mcmc', 'fsmp']:
     print((m + 'one').rjust(10) + '   stdwavesuccess mean = {:.04%}'.format((mts[m]['stdonesuccess'] / mts[m]['N']).mean()))
     print((m + 'one').rjust(10) + '    stdwavesuccess min = {:.04%}'.format((mts[m]['stdonesuccess'] / mts[m]['N']).min()))
 
-stype = np.dtype([('mu', np.float64), ('tau', np.float64), ('sigma', np.float64), ('n', np.uint), ('resnpe', np.float64), ('meanmutru', np.float64), ('stdmutru', np.float64), ('stdmuint', np.float64), ('stdmupe', np.float64), ('stdmumax', np.float64), ('biasmuint', np.float64, 3), ('mupe', np.float64), ('biasmupe', np.float64, 3), ('biasmumax', np.float64, 3), ('biasmu', np.float64, 3), ('N', np.uint)])
+stype = np.dtype([('mu', np.float64), ('tau', np.float64), ('sigma', np.float64), ('n', np.uint), ('resnpe', np.float64), ('meanmutru', np.float64), ('stdmutru', np.float64), ('stdmuint', np.float64), ('stdmupe', np.float64), ('stdmumax', np.float64), ('biasmuint', np.float64, 3), ('stdmu', np.float64), ('biasmupe', np.float64, 3), ('biasmumax', np.float64, 3), ('biasmu', np.float64, 3), ('N', np.uint)])
 mtsi = np.zeros(len(numbers), dtype=stype)
 mtsi['mu'] = np.array([i[0] for i in numbers])
 mtsi['tau'] = np.array([i[1] for i in numbers])
