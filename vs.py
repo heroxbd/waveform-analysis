@@ -553,7 +553,7 @@ for key in tqdm(mts.keys()):
             # mts[key][i]['biasmu'] = np.mean(muwave_recovered) - mu
             mts[key][i]['biasmu'] = np.insert(np.percentile(muwave_recovered, [alpha * 100, 100 - alpha * 100]), 1, muwave_recovered.mean()) - mu
 
-            mts[key][i]['resnpe'] = np.average(mts[key][i]['mu'] / (mts[key][i]['mu'] + 1) * (pe_sum_recovered + 1))
+            mts[key][i]['resnpe'] = np.average(mts[key][i]['mu'] / (mts[key][i]['mu'] + 1) * (pe_sum_recovered + 1) / pe_sum_recovered)
         except:
             pass
 
