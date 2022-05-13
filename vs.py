@@ -469,16 +469,16 @@ for m in ['mcmc', 'fsmp']:
     print((m + 'one').rjust(10) + '   stdwavesuccess mean = {:.04%}'.format((mts[m]['stdonesuccess'] / mts[m]['N']).mean()))
     print((m + 'one').rjust(10) + '    stdwavesuccess min = {:.04%}'.format((mts[m]['stdonesuccess'] / mts[m]['N']).min()))
 
-stype = np.dtype([('mu', np.float64), ('tau', np.float64), ('sigma', np.float64), ('n', np.uint), ('meanmutru', np.float64), ('stdmutru', np.float64), ('stdmuint', np.float64), ('stdmupe', np.float64), ('stdmumax', np.float64), ('stdmu', np.float64), ('biasmuint', np.float64, 3), ('mupe', np.float64), ('biasmupe', np.float64, 3), ('biasmumax', np.float64, 3), ('biasmu', np.float64, 3), ('N', np.uint)])
+stype = np.dtype([('mu', np.float64), ('tau', np.float64), ('sigma', np.float64), ('n', np.uint), ('resnpe', np.float64), ('meanmutru', np.float64), ('stdmutru', np.float64), ('stdmuint', np.float64), ('stdmupe', np.float64), ('stdmumax', np.float64), ('biasmuint', np.float64, 3), ('mupe', np.float64), ('biasmupe', np.float64, 3), ('biasmumax', np.float64, 3), ('biasmu', np.float64, 3), ('N', np.uint)])
 mtsi = np.zeros(len(numbers), dtype=stype)
 mtsi['mu'] = np.array([i[0] for i in numbers])
 mtsi['tau'] = np.array([i[1] for i in numbers])
 mtsi['sigma'] = np.array([i[2] for i in numbers])
 mtsi['n'] = np.arange(len(numbers))
+mtsi['resnpe'] = np.nan
 mtsi['meanmutru'] = np.nan
 mtsi['stdmutru'] = np.nan
 mtsi['stdmuint'] = np.nan
-mtsi['mupe'] = np.nan
 mtsi['stdmupe'] = np.nan
 mtsi['stdmumax'] = np.nan
 mtsi['stdmu'] = np.nan
@@ -545,7 +545,6 @@ for key in tqdm(mts.keys()):
             mts[key][i]['biasmuint'] = np.insert(np.percentile(wave_sum_recovered, [alpha * 100, 100 - alpha * 100]), 1, wave_sum_recovered.mean()) - mu
             mts[key][i]['stdmupe'] = np.std(pe_sum_recovered, ddof=-1)
             # mts[key][i]['biasmupe'] = np.mean(pe_sum_recovered) - mu
-            mts[key][i]['mupe'] = pe_sum_recovered
             mts[key][i]['biasmupe'] = np.insert(np.percentile(pe_sum_recovered, [alpha * 100, 100 - alpha * 100]), 1, pe_sum_recovered.mean()) - mu
             mts[key][i]['stdmumax'] = np.std(mucharge_recovered, ddof=-1)
             # mts[key][i]['biasmumax'] = np.mean(mucharge_recovered) - mu
@@ -553,6 +552,8 @@ for key in tqdm(mts.keys()):
             mts[key][i]['stdmu'] = np.std(muwave_recovered, ddof=-1)
             # mts[key][i]['biasmu'] = np.mean(muwave_recovered) - mu
             mts[key][i]['biasmu'] = np.insert(np.percentile(muwave_recovered, [alpha * 100, 100 - alpha * 100]), 1, muwave_recovered.mean()) - mu
+
+            mts[key][i]['resnpe'] = np.average(mts[key][i]['mu'] / (mts[key][i]['mu'] + 1) * (pe_sum_recovered + 1))
         except:
             pass
 
@@ -719,7 +720,7 @@ ax = fig_new.add_subplot(1, 1, 1)
 yerr = np.vstack([stdlist['stdmu']-np.sqrt(np.power(stdlist['stdmu'],2)*stdlist['N']/chi2.ppf(1-alpha, stdlist['N'])), 
                     np.sqrt(np.power(stdlist['stdmu'],2)*stdlist['N']/chi2.ppf(alpha, stdlist['N']))-stdlist['stdmu']]) / (stdlist['biasmu'][:, 1] + stdlist['meanmutru'])
 ax.errorbar(stdlist['mu'] + jitter[key], 
-            stdlist['stdmu'] / (stdlist['biasmu'][:, 1] + stdlist['meanmutru']) / (stdlist['mu'] / (stdlist['mu'] + 1) * (stdlist['mupe'] + 1)), 
+            stdlist['stdmu'] / (stdlist['biasmu'][:, 1] + stdlist['meanmutru']) / stdlist['resnpe']), 
             yerr=yerr / (1 / np.sqrt(stdlist['mu'])), 
             label="FSMP", 
             marker=marker[key])
