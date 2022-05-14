@@ -18,7 +18,7 @@ args = psr.parse_args()
 fipt = args.ipt
 fopt = args.opt
 
-TRIALS = 5000
+TRIALS = 50
 
 #profile
 def vcombine(A, cx, t, w_all):
@@ -114,17 +114,35 @@ else:
         'sel_lc')
     lcs = exponnorm(K = tau/sigma, scale = sigma)
 
-sel_add = cp.ElementwiseKernel('float32 delta, bool sel', 'float32 dest', "if(sel) dest += delta", "sel_add")
-sel_add_2D = cp.RawKernel(r'''
+sel_add_kern = cp.RawKernel(r'''
         extern "C" __global__
-        void sel_add_2D(const float *delta, const bool* sel, float *dest, int batchsize, int N) {
-            int tid = blockDim.x * blockIdx.x + threadIdx.x;
-            for(int i=0;i<batchsize;i++)
+        void sel_add_kern(const float *delta, const int* indexes, float *dest, int N, int total_add_operation) {
+            int accepted_waveform_index, location_in_this;
+            for(int i = blockDim.x * blockIdx.x + threadIdx.x;
+                i < total_add_operation;
+                i += blockDim.x * gridDim.x
+            )
             {
-                if(sel[i]) dest[i*N+tid] += delta[i*N+tid];
+                accepted_waveform_index = i / N;
+                location_in_this = i % N;
+                dest[indexes[accepted_waveform_index] * N + location_in_this] += delta[indexes[accepted_waveform_index] * N + location_in_this];
             }
-        }
-''', 'sel_add_2D')
+''', 'sel_add_kern')
+
+
+def sel_add(delta, indexes, dest):
+    N_to_be_add = len(indexes)
+    if N_to_be_add == 0: return
+    else :
+        other_dim = np.prod(dest.shape[1:])
+        total_to_process = N_to_be_add * other_dim
+        block_num = total_to_process // 1024 + 1;
+        if block_num == 1: thread_num = total_to_process
+        else : thread_num = 1024
+        block_num = np.min(block_num, 65535)
+        sel_add_kern((block_num,),(thread_num,),(delta, indexes, dest, other_dim, total_to_process))
+
+
 sel_assign = cp.ElementwiseKernel('float32 value, bool sel', 'float32 dest', "if(sel) dest = value", "sel_assign")
 
 #profile
@@ -160,7 +178,7 @@ def batch(A, cx, index, tq, t_index, s, z, t0_min=100, t0_max=500):
     l_e = len(index)
     l_s = s.shape[1]
     w_all = cp.arange(l_e) # index of all the waveforms
-    nw_all = np.arange(l_e)
+    nw_all = np.arange(l_e, dtype=np.int32)
 
     l_t = tq.shape[1]
     # istar [0, 1) 之间的随机数，用于点中 PE
@@ -267,11 +285,10 @@ def batch(A, cx, index, tq, t_index, s, z, t0_min=100, t0_max=500):
 
         ### 计算 Δcx, Δz, 更新 cx 和 z。对 accept 进行特别处理
         e_accept = np.logical_and(Δν >= accept, np.logical_or(e_create, e_minus))
-        _e_accept = cp.asarray(e_accept)
+        _e_accept = cp.asarray(nw_all[e_accept])  # An cupy array of accpeted waveform indexes(被接受下一步的波形的索引值)
         Δcx, Δz = vmove2(vA, vc, fmu, A, beta)
-        Shape = cx.shape
-        sel_add_2D((Shape[1],), (Shape[2],), (Δcx, _e_accept, cx, Shape[0], Shape[1] * Shape[2]))
-        sel_add(Δz, _e_accept[:, None], z)
+        cx[_e_accept] += Δcx[_e_accept]
+        z[_e_accept] += Δz[e_accept]
         ########
 
         # 增加
