@@ -115,6 +115,16 @@ else:
     lcs = exponnorm(K = tau/sigma, scale = sigma)
 
 sel_add = cp.ElementwiseKernel('float32 delta, bool sel', 'float32 dest', "if(sel) dest += delta", "sel_add")
+sel_add_2D = cp.RawKernel(r'''
+        extern "C" __global__
+        void sel_add_2D(const float *delta, const bool* sel, float *dest, int batchsize, int N) {
+            int tid = blockDim.x * blockIdx.x + threadIdx.x;
+            for(int i=0;i<batchsize;i++)
+            {
+                if(sel[i]) dest[i*N+tid] += delta[i*N+tid];
+            }
+        }
+''', 'sel_add_2D')
 sel_assign = cp.ElementwiseKernel('float32 value, bool sel', 'float32 dest', "if(sel) dest = value", "sel_assign")
 
 #profile
@@ -259,7 +269,8 @@ def batch(A, cx, index, tq, t_index, s, z, t0_min=100, t0_max=500):
         e_accept = np.logical_and(Δν >= accept, np.logical_or(e_create, e_minus))
         _e_accept = cp.asarray(e_accept)
         Δcx, Δz = vmove2(vA, vc, fmu, A, beta)
-        sel_add(Δcx, _e_accept[:, None, None], cx)
+        Shape = cx.shape
+        sel_add_2D((Shape[1],), (Shape[2],), (Δcx, _e_accept, cx, Shape[0], Shape[1] * Shape[2]))
         sel_add(Δz, _e_accept[:, None], z)
         ########
 
