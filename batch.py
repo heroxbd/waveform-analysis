@@ -127,6 +127,7 @@ sel_add_kern = cp.RawKernel(r'''
                 location_in_this = i % N;
                 dest[indexes[accepted_waveform_index] * N + location_in_this] += delta[indexes[accepted_waveform_index] * N + location_in_this];
             }
+        }
 ''', 'sel_add_kern')
 
 
@@ -139,7 +140,7 @@ def sel_add(delta, indexes, dest):
         block_num = total_to_process // 1024 + 1;
         if block_num == 1: thread_num = total_to_process
         else : thread_num = 1024
-        block_num = np.min(block_num, 65535)
+        block_num = np.min([block_num, 65535])
         sel_add_kern((block_num,),(thread_num,),(delta, indexes, dest, other_dim, total_to_process))
 
 
@@ -287,8 +288,8 @@ def batch(A, cx, index, tq, t_index, s, z, t0_min=100, t0_max=500):
         e_accept = np.logical_and(Δν >= accept, np.logical_or(e_create, e_minus))
         _e_accept = cp.asarray(nw_all[e_accept])  # An cupy array of accpeted waveform indexes(被接受下一步的波形的索引值)
         Δcx, Δz = vmove2(vA, vc, fmu, A, beta)
-        cx[_e_accept] += Δcx[_e_accept]
-        z[_e_accept] += Δz[e_accept]
+        sel_add(Δcx, _e_accept, cx)
+        sel_add(Δz, _e_accept, z)
         ########
 
         # 增加
