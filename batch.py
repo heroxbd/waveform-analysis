@@ -116,7 +116,7 @@ else:
 
 sel_add_kern = cp.RawKernel(r'''
         extern "C" __global__
-        void sel_add_kern(const float *delta, const int* indexes, float *dest, int N, int total_add_operation) {
+        void sel_add_kern(const float * __restrict__ delta, const int* __restrict__  indexes, float * __restrict__ dest, int N, int total_add_operation) {
             int accepted_waveform_index, location_in_this;
             for(int i = blockDim.x * blockIdx.x + threadIdx.x;
                 i < total_add_operation;
@@ -137,10 +137,10 @@ def sel_add(delta, indexes, dest):
     else :
         other_dim = np.prod(dest.shape[1:])
         total_to_process = N_to_be_add * other_dim
-        block_num = total_to_process // 1024 + 1;
+        block_num = total_to_process // 1024 + 1
         if block_num == 1: thread_num = total_to_process
         else : thread_num = 1024
-        block_num = np.min([block_num, 65535])
+        block_num = np.min([block_num, 2 ** 31 - 1])
         sel_add_kern((block_num,),(thread_num,),(delta, indexes, dest, other_dim, total_to_process))
 
 
